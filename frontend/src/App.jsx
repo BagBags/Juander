@@ -12,6 +12,7 @@ import AdminContent from "./components/adminComponents/adminContentComponents/ad
 
 // Guest Side
 import "./App.css";
+import Photobooth from "./components/userComponents/photoboothComponents/Photobooth";
 
 export default function App() {
   return (
@@ -26,6 +27,8 @@ export default function App() {
         {/* Tourist Side
 
         Guest Side */}
+
+        <Route path="Photobooth" element={<Photobooth />} />
       </Routes>
     </Router>
   );
