@@ -43,12 +43,15 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
           </div>
         )}
 
-        <button
-          onClick={toggleSidebar}
-          className="text-white hover:text-yellow-300 ml-auto"
+        <div
+          className={`${
+            isExpanded ? "ml-auto" : "mx-auto"
+          } text-white hover:text-yellow-300`}
         >
-          {isExpanded ? <ChevronsLeft /> : <ChevronsRight />}
-        </button>
+          <button onClick={toggleSidebar}>
+            {isExpanded ? <ChevronsLeft /> : <ChevronsRight />}
+          </button>
+        </div>
       </div>
 
       <hr className="border-white/30 mx-2" />
@@ -63,7 +66,12 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                 isActive ? "bg-white" : "hover:bg-white group"
               }`}
             >
-              <Link to={to} className="flex items-center space-x-3">
+              <Link
+                to={to}
+                className={`flex items-center transition-all duration-200 ${
+                  isExpanded ? "justify-start space-x-3" : "justify-center"
+                }`}
+              >
                 <Icon
                   size={28}
                   className={`transition-all duration-200 ${
