@@ -1,5 +1,5 @@
 // utils/model.js
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
+import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
 
 /**
  * Loads the face landmarks detection model with progress tracking
@@ -8,12 +8,13 @@ import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detec
  */
 export async function loadFaceModel(onProgress) {
   let timer;
-  
+
   // Start progress updates if callback provided
   if (onProgress) {
     let progress = 0;
     timer = setInterval(() => {
-      progress = progress >= 100 ? 100 : Math.round(progress + Math.random() * 20);
+      progress =
+        progress >= 100 ? 100 : Math.round(progress + Math.random() * 20);
       onProgress(progress);
     }, 200);
   }
@@ -23,7 +24,7 @@ export async function loadFaceModel(onProgress) {
       faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
       { runtime: "tfjs", maxFaces: 10 }
     );
-    
+
     if (timer) clearInterval(timer);
     if (onProgress) onProgress(100);
     return detector;

@@ -20,9 +20,6 @@
   height: min(932px, 100vh);
   position: relative;
   overflow: hidden;
-  border-radius: 40px;
-  border: 12px solid #111;
-  box-shadow: 0 0 0 2px #333, 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
 .camera-view {

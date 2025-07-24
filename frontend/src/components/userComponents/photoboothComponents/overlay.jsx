@@ -1,37 +1,52 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 
 const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
-  const mirrorX = (x) => videoDims.width - x;
+  const overlayRef = useRef();
   const faceSizeRef = useRef(null);
+  const frameCountRef = useRef(0);
+  // const stabilizationThreshold = 5;
 
-  // Size configuration constants
-  const SIZE_CONFIG = {
+  const getSizeConfig = () => ({
     glasses: {
-      width: selectedMeta?.width || 450,
-      height: selectedMeta?.height || 150,
-      imgScale: "130%",
-      verticalOffset: 120,
+      widthRatio: 1.4,
+      heightRatio: 0.35,
+      yOffsetRatio: 0.15,
     },
     hat: {
-      width: selectedMeta?.width || 600,
-      height: selectedMeta?.height || 550,
-      imgScale: "110%",
-      verticalOffset: 400, // Reduced from 400 for better positioning
-      minOffset: 220, // Minimum offset when zoomed in
-      maxOffset: 220, // Maximum offset when zoomed out
+      widthRatio: 1.6,
+      heightRatio: 1.2,
+      yOffsetRatio: 0.85,
     },
+  });
+
+  const getDisplayCoords = (x, y) => {
+    if (!overlayRef.current) return { x, y };
+    const rect = overlayRef.current.getBoundingClientRect();
+    const scaleX = rect.width / videoDims.width;
+    const scaleY = rect.height / videoDims.height;
+    return {
+      x: x * scaleX,
+      y: y * scaleY,
+    };
   };
+
+  useEffect(() => {
+    faceSizeRef.current = null;
+    frameCountRef.current = 0;
+  }, [videoDims]);
 
   return (
     <div
+      ref={overlayRef}
       style={{
         position: "absolute",
         top: 0,
         left: 0,
-        width: videoDims.width,
-        height: videoDims.height,
+        width: "100%",
+        height: "100%",
         pointerEvents: "none",
-        perspective: "1000px",
+        overflow: "hidden",
+        zIndex: 9999, // make sure it's on top
       }}
     >
       {faces.map((face, idx) => {
@@ -43,107 +58,112 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
         const noseTip = lm[4];
         const chin = lm[152];
         const forehead = lm[10];
+        const leftEar = lm[454];
+        const rightEar = lm[234];
 
-        const anchorX = mirrorX((leftEye.x + rightEye.x) / 2);
-        const anchorY = (leftEye.y + rightEye.y) / 2;
+        const currentFaceWidth = Math.hypot(
+          rightEye.x - leftEye.x,
+          rightEye.y - leftEye.y
+        );
+        const currentFaceHeight = Math.hypot(
+          chin.x - forehead.x,
+          chin.y - forehead.y
+        );
+        const earDistance = Math.hypot(
+          rightEar.x - leftEar.x,
+          rightEar.y - leftEar.y
+        );
 
-        // Face size logic
-        const faceHeight = Math.hypot(chin.x - forehead.x, chin.y - forehead.y);
-
+        // Initialize reference dimensions early for consistent overlay scaling
         if (!faceSizeRef.current) {
-          faceSizeRef.current = faceHeight;
+          faceSizeRef.current = {
+            width: currentFaceWidth,
+            height: currentFaceHeight,
+            earDistance,
+            landmarks: {
+              leftEye: { ...leftEye },
+              rightEye: { ...rightEye },
+              noseTip: { ...noseTip },
+              forehead: { ...forehead },
+            },
+          };
         }
 
-        const depthRatio = faceHeight / faceSizeRef.current;
-        const clampedDepth = Math.max(0.6, Math.min(depthRatio, 2.2));
+        const reference = faceSizeRef.current;
+        const config = getSizeConfig();
 
-        const scale = 0.8 + (clampedDepth - 1) * 0.6;
-        const translateY = (1 - clampedDepth) * 40; // Reduced from 80 for less vertical movement
-        const translateZ = (clampedDepth - 1) * 200;
+        // Determine which overlay to use
+        const overlayType =
+          selectedMeta?.category === "head" ? "hat" : "glasses";
+        const { widthRatio, heightRatio, yOffsetRatio } = config[overlayType];
 
-        // Face tilt calculation
+        const overlayWidth = reference.width * widthRatio;
+        const overlayHeight = reference.height * heightRatio;
+
+        const widthScale = currentFaceWidth / reference.width;
+        const heightScale = currentFaceHeight / reference.height;
+        const earScale = earDistance / reference.earDistance;
+        const avgScale = (widthScale + heightScale + earScale) / 3;
+
         const angleRad = Math.atan2(
           rightEye.y - leftEye.y,
           rightEye.x - leftEye.x
         );
         const angleDeg = (angleRad * 180) / Math.PI;
 
-        // Dynamic hat positioning that stays consistent during zoom
-        const hatVerticalPosition =
-          forehead.y - SIZE_CONFIG.hat.verticalOffset + translateY * 0.1; // Reduced vertical movement
+        const center =
+          overlayType === "hat"
+            ? {
+                x: noseTip.x,
+                y:
+                  forehead.y -
+                  overlayHeight *
+                    yOffsetRatio *
+                    (earDistance / reference.earDistance),
+              }
+            : {
+                x: (leftEye.x + rightEye.x) / 2,
+                y: (leftEye.y + rightEye.y) / 2 - overlayHeight * yOffsetRatio,
+              };
+
+        let screenCoords = getDisplayCoords(center.x, center.y);
+        screenCoords.x = overlayRef.current
+          ? overlayRef.current.getBoundingClientRect().width - screenCoords.x
+          : screenCoords.x;
+
+        const shouldRenderOverlay =
+          selectedMeta?.image &&
+          (selectedValue === "all" ||
+            selectedMeta?.category === overlayType ||
+            selectedMeta?.category === "eyes");
 
         return (
           <React.Fragment key={idx}>
-            {/* Glasses/Eyes Overlay */}
-            {(selectedValue === "all" || selectedMeta?.category === "eyes") &&
-              selectedMeta?.image && (
-                <div
+            {shouldRenderOverlay && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: screenCoords.x - (overlayWidth * avgScale) / 2,
+                  top: screenCoords.y - (overlayHeight * avgScale) / 2,
+                  width: overlayWidth,
+                  height: overlayHeight,
+                  transform: `rotate(${-angleDeg}deg) scale(${avgScale})`,
+                  transformOrigin: "center center",
+                  transition: "transform 0.05s linear",
+                  zIndex: overlayType === "hat" ? 90 : 100,
+                }}
+              >
+                <img
+                  src={selectedMeta.image}
+                  alt="overlay"
                   style={{
-                    position: "absolute",
-                    left: anchorX - SIZE_CONFIG.glasses.width / 2,
-                    top: anchorY - SIZE_CONFIG.glasses.height / 2 + translateY,
-                    width: SIZE_CONFIG.glasses.width,
-                    height: SIZE_CONFIG.glasses.height,
-                    transform: `
-                      scale(${scale})
-                      rotate(${-angleDeg}deg)
-                      translateZ(${translateZ}px)
-                    `,
-                    transformStyle: "preserve-3d",
-                    transformOrigin: "center center",
-                    transition: "transform 0.1s cubic-bezier(0.2, 0.8, 0.4, 1)",
-                    zIndex: Math.floor(scale * 100),
-                    willChange: "transform",
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
                   }}
-                >
-                  <img
-                    src={selectedMeta.image}
-                    alt="overlay"
-                    style={{
-                      width: SIZE_CONFIG.glasses.imgScale,
-                      height: "150%",
-                      display: "block",
-                      transform: "translateX(-5%)",
-                    }}
-                  />
-                </div>
-              )}
-
-            {/* Hat/Head Overlay - with fixed positioning */}
-            {(selectedValue === "all" || selectedMeta?.category === "head") &&
-              selectedMeta?.image && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: mirrorX(noseTip.x) - SIZE_CONFIG.hat.width / 2,
-                    top: hatVerticalPosition, // Using the new dynamic positioning
-                    width: SIZE_CONFIG.hat.width,
-                    height: SIZE_CONFIG.hat.height,
-                    transform: `
-                      rotate(${-angleDeg}deg)
-                      scale(${scale * 1.08})
-                      translateZ(${translateZ * 1.1}px)
-                    `,
-                    transformStyle: "preserve-3d",
-                    transformOrigin: "center bottom",
-                    transition:
-                      "transform 0.1s cubic-bezier(0.2, 0.8, 0.4, 1), top 0.1s ease-out",
-                    zIndex: Math.floor(scale * 90),
-                    willChange: "transform",
-                  }}
-                >
-                  <img
-                    src={selectedMeta.image}
-                    alt="overlay"
-                    style={{
-                      width: SIZE_CONFIG.hat.imgScale,
-                      height: "100%",
-                      display: "block",
-                      transform: "translateX(-5%)",
-                    }}
-                  />
-                </div>
-              )}
+                />
+              </div>
+            )}
           </React.Fragment>
         );
       })}
