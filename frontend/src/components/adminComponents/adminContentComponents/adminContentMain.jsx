@@ -18,23 +18,12 @@ export default function AdminContentMain() {
     {
       title: "Emergency Hotlines",
       iconPath: "/icons/emergency-hotlines.svg",
-      route: "/admin/emergency-hotlines",
+      route: "/AdminManageEmergency",
     },
     {
       title: "Chatbot",
       iconPath: "/icons/chatbot.svg",
       route: "/admin/chatbot",
-    },
-    {
-      title: "Placeholder 1",
-      iconPath: "/icons/placeholder.svg",
-      route: "#",
-    },
-    {
-      title: "Placeholder 2",
-      description: "Coming soon...",
-      iconPath: "/icons/placeholder.svg",
-      route: "#",
     },
   ];
 
@@ -47,15 +36,12 @@ export default function AdminContentMain() {
   return (
     <section>
       <h1 className="text-4xl font-bold text-[#f04e37] mb-6">Manage Content</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {cardData.map((card, idx) => (
           <div
             key={idx}
             onClick={() => handleCardClick(card.route)}
-            className={`cursor-pointer bg-white rounded-lg shadow transition-all px-6 py-8 text-center 
-              hover:shadow-lg hover:bg-gray-50 ${
-                card.route === "#" ? "opacity-60 cursor-not-allowed" : ""
-              }`}
+            className="cursor-pointer bg-white rounded-lg shadow transition-all px-6 py-8 text-center hover:shadow-lg hover:bg-gray-50"
           >
             {/* Title */}
             {card.title && (
@@ -67,7 +53,7 @@ export default function AdminContentMain() {
             {/* SVG Icon */}
             <img
               src={card.iconPath}
-              alt={`${card.title || "Add"} Icon`}
+              alt={`${card.title} Icon`}
               className="w-20 h-20 mx-auto"
             />
           </div>

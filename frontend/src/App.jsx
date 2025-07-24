@@ -8,6 +8,7 @@ import {
 // Admin Side
 import AdminHome from "./components/adminComponents/adminHomeComponents/adminHome";
 import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
+import ManageEmergency from "./components/adminComponents/manageEmergencyComponents/manageEmergency";
 //Tourist Side
 
 // Guest Side
@@ -23,6 +24,7 @@ export default function App() {
         {/* Admin Side */}
         <Route path="/AdminHome" element={<AdminHome />} />
         <Route path="/AdminManageContent" element={<AdminContent />} />
+        <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
         {/* Tourist Side
 
         Guest Side */}
