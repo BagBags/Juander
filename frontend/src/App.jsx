@@ -9,6 +9,7 @@ import {
 import AdminHome from "./components/adminComponents/adminHomeComponents/adminHome";
 import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
 import ManageEmergency from "./components/adminComponents/manageEmergencyComponents/manageEmergency";
+import LoginPage from "./components/loginComponents/loginPage";
 //Tourist Side
 
 // Guest Side
@@ -21,7 +22,10 @@ export default function App() {
       <Routes>
         {/* Redirect root to /AdminHome */}
         <Route path="/" element={<Navigate to="/AdminHome" replace />} />
+        {/* Login Page */}
+        <Route path="/login" element={<LoginPage />} />
 
+        {/* Protected Routes */}
         {/* Admin Side */}
         <Route path="/AdminHome" element={<AdminHome />} />
         <Route path="/AdminManageContent" element={<AdminContent />} />
