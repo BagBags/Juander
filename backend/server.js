@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import emergencyRoute from "./routes/emergencyRoute.js";
 import filters from "./routes/filterRoute.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +29,7 @@ const connectDB = async () => {
   }
 };
 connectDB();
-
+app.use("/api/emergency", emergencyRoute);
 app.use("/api/filters", filters);
 
 if (process.env.NODE_ENV === "production") {

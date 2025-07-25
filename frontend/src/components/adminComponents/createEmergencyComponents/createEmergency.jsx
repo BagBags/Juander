@@ -8,7 +8,7 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
   useEffect(() => {
     if (agencyToEdit) {
       setName(agencyToEdit.name);
-      setChannels(agencyToEdit.channels || [{ label: "", number: "" }]);
+      setChannels(agencyToEdit.contactChannels || [{ label: "", number: "" }]);
     } else {
       setName("");
       setChannels([{ label: "", number: "" }]);
@@ -26,7 +26,10 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newAgency = { name, channels };
+    const newAgency = {
+      name,
+      contactChannels: channels, // ✅ Match Mongoose schema
+    };
     onSave(newAgency);
   };
 
