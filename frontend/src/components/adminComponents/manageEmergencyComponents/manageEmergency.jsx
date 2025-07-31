@@ -4,16 +4,16 @@ import AdminSidebar from "../../sidebarComponents/admin-sidebar/adminSidebar";
 import CreateEmergency from "../createEmergencyComponents/createEmergency";
 import UpdateEmergency from "../updateEmergencyComponents/updateEmergency";
 import { Phone, Link2 } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 export default function ManageEmergency() {
   const [hotlines, setHotlines] = useState([]);
-  const [selectedAgency, setSelectedAgency] = useState(null); // Agency object
+  const [selectedAgency, setSelectedAgency] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   const toggleSidebar = () => setIsExpanded((prev) => !prev);
 
-  // Fetch data on load
   useEffect(() => {
     fetchHotlines();
   }, []);
@@ -21,7 +21,8 @@ export default function ManageEmergency() {
   const fetchHotlines = async () => {
     try {
       const res = await axios.get("/api/emergency");
-      setHotlines(res.data);
+      const sorted = res.data.sort((a, b) => a.position - b.position);
+      setHotlines(sorted);
     } catch (err) {
       console.error("Error fetching hotlines:", err);
     }
@@ -35,10 +36,9 @@ export default function ManageEmergency() {
   const handleSaveAgency = async (agencyData) => {
     try {
       if (selectedAgency) {
-        // Update existing
         await axios.put(`/api/emergency/${selectedAgency._id}`, agencyData);
       } else {
-        // Add new
+        agencyData.position = hotlines.length;
         await axios.post("/api/emergency", agencyData);
       }
       setShowForm(false);
@@ -63,6 +63,33 @@ export default function ManageEmergency() {
     }
   };
 
+  const handleDragEnd = async (result) => {
+    const { source, destination } = result;
+
+    if (!destination) return;
+
+    const reordered = Array.from(hotlines); // copy
+    const [movedItem] = reordered.splice(source.index, 1);
+    reordered.splice(destination.index, 0, movedItem);
+
+    // ✅ Update local state (this is the missing part in most bugs)
+    setHotlines(reordered);
+
+    // ✅ Reassign correct positions
+    const updated = reordered.map((item, index) => ({
+      _id: item._id,
+      position: index,
+    }));
+
+    console.log("UPDATED (to send):", updated);
+
+    try {
+      await axios.put("/api/emergency/reorder", { agencies: updated });
+    } catch (error) {
+      console.error("Error updating order:", error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-100">
       <AdminSidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
@@ -72,7 +99,7 @@ export default function ManageEmergency() {
           isExpanded ? "ml-80" : "ml-20"
         }`}
       >
-        <h1 className="text-3xl font-bold text-[#f04e37] mb-6">
+        <h1 className="text-4xl font-bold text-[#f04e37] mb-6">
           Emergency Hotlines
         </h1>
 
@@ -89,37 +116,54 @@ export default function ManageEmergency() {
               </button>
             </div>
 
-            <div className="space-y-3">
-              {hotlines.map((agency) => (
-                <div
-                  key={agency._id}
-                  className="bg-[#f04e37] text-white rounded-lg p-4 flex justify-between items-start"
-                >
-                  <div>
-                    <p className="font-bold text-lg">{agency.name}</p>
-                    {agency.contactChannels?.map((channel, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-2 ml-1 text-sm"
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="agency-list">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {hotlines.map((agency, index) => (
+                      <Draggable
+                        key={agency._id}
+                        draggableId={agency._id}
+                        index={index}
                       >
-                        {channel.number.startsWith("http") ? (
-                          <Link2 className="w-4 h-4 text-white" />
-                        ) : (
-                          <Phone className="w-4 h-4 text-white" />
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="bg-[#f04e37] text-white rounded-lg p-4 flex justify-between items-start mb-3"
+                          >
+                            <div>
+                              <p className="font-bold text-lg">{agency.name}</p>
+                              {agency.contactChannels?.map((channel, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center gap-2 ml-1 text-sm"
+                                >
+                                  {channel.number.startsWith("http") ? (
+                                    <Link2 className="w-4 h-4 text-white" />
+                                  ) : (
+                                    <Phone className="w-4 h-4 text-white" />
+                                  )}
+                                  <span>
+                                    {channel.label}: {channel.number}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <UpdateEmergency
+                              onEdit={() => handleEdit(agency)}
+                              onDelete={() => handleDelete(agency._id)}
+                            />
+                          </div>
                         )}
-                        <span>
-                          {channel.label}: {channel.number}
-                        </span>
-                      </div>
+                      </Draggable>
                     ))}
+                    {provided.placeholder}
                   </div>
-                  <UpdateEmergency
-                    onEdit={() => handleEdit(agency)}
-                    onDelete={() => handleDelete(agency._id)}
-                  />
-                </div>
-              ))}
-            </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
 
           {/* Form */}

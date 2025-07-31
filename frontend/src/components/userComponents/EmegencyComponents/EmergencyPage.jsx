@@ -1,39 +1,30 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import Card from "./Card";
 import SideButtons from "../sideButtons";
 
 export default function EmergencyPage() {
-  const hotlines = [
-    {
-      title: "National Capital Region Police Office",
-      contacts: [
-        { label: "GLOBE", value: "0915 888 8181" },
-        { label: "SMART", value: "0999 901 8181" },
-        { label: "FACEBOOK", value: "@NCRPO.PH" },
-        { label: "TWITTER", value: "@NCRPOreact" },
-      ],
-    },
-    {
-      title: "Manila Police District",
-      contacts: [
-        { label: "GLOBE", value: "0917 899 2092" },
-        { label: "SMART", value: "0999 905 0976" },
-        { label: "FACEBOOK", value: "@manilapolice.district2017" },
-        { label: "VIBER", value: "0905 453 4104" },
-      ],
-    },
-    {
-      title: "Intramuros Administration Hotline",
-      contacts: [{ label: "SMART", value: "0998 884 9224" }],
-    },
-    {
-      title: "Red Cross Intramuros Hotline",
-      contacts: [
-        { label: "Landline", value: "8527 – 2161" },
-        { label: "Mobile", value: "0998 190 2309" },
-      ],
-    },
-  ];
+  const [hotlines, setHotlines] = useState([]);
+
+  useEffect(() => {
+    const fetchHotlines = async () => {
+      try {
+        const res = await axios.get("/api/emergency");
+        const transformed = res.data.map((agency) => ({
+          title: agency.name,
+          contacts: agency.contactChannels.map((channel) => ({
+            label: channel.label,
+            value: channel.number,
+          })),
+        }));
+        setHotlines(transformed);
+      } catch (error) {
+        console.error("Failed to fetch emergency contacts:", error);
+      }
+    };
+
+    fetchHotlines();
+  }, []);
 
   return (
     <div className="bg-[#f04e37] min-h-screen py-10 px-4 text-white relative">

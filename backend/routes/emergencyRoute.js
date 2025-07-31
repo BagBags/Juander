@@ -4,6 +4,8 @@ const controller = require("../controllers/emergencyController");
 
 router.get("/", controller.getContacts);
 router.post("/", controller.createContact);
+router.put("/reorder", controller.reorderContacts);
+
 router.put("/:id", controller.updateContact);
 router.delete("/:id", controller.deleteContact);
 
