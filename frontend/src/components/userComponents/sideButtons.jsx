@@ -30,7 +30,7 @@ export default function SideButtons() {
     {
       url: "icons/photobooth.svg",
       label: "Profile",
-      to: "/ProfilePage",
+      to: "/Profile",
       Device: "All",
     }, // Placeholder, change if you have a Profile page
     {
