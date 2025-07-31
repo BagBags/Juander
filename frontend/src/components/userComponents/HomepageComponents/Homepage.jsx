@@ -29,6 +29,7 @@ export default function Homepage() {
       <div className="mt-8 w-full max-w-[90%] sm:max-w-sm md:max-w-md z-10 transition-all duration-300"></div>
       <SideButtons />
       <Button />
+   
     </div>
   );
 }

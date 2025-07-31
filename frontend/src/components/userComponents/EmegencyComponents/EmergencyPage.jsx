@@ -35,12 +35,12 @@ export default function EmergencyPage() {
             <Card key={index} title={item.title} contacts={item.contacts} />
           ))}
         </div>
-        <p className="mt-10 text-xs text-white opacity-70">
-          © 2024 Intramuros Administration
-        </p>
       </div>
 
       <SideButtons />
+      <p className="mt-10 text-xs text-center text-white opacity-70">
+        ©2025 Intramuros Administration
+      </p>
     </div>
   );
 }

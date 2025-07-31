@@ -30,7 +30,7 @@ export default function SideButtons() {
     {
       url: "icons/photobooth.svg",
       label: "Profile",
-      to: "/Homepage",
+      to: "/ProfilePage",
       Device: "All",
     }, // Placeholder, change if you have a Profile page
     {
@@ -42,7 +42,7 @@ export default function SideButtons() {
   ];
 
   return (
-    <div className="fixed right-4 top-[40%] md:top-[50%] -translate-y-1/2 flex flex-col gap-4 z-50">
+    <div className="fixed right-2 md:right-2 lg:right-8 top-[40%] md:top-[50%] -translate-y-1/2 flex flex-col gap-4 z-50">
       {icons.map((icon, index) => {
         let visibilityClass = "";
 

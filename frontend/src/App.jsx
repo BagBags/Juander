@@ -10,10 +10,11 @@ import AdminHome from "./components/adminComponents/adminHomeComponents/adminHom
 import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
 import ManageEmergency from "./components/adminComponents/manageEmergencyComponents/manageEmergency";
 import LoginPage from "./components/loginComponents/loginPage";
+
+//Tourist Side
 import Homepage from "./components/userComponents/HomepageComponents/Homepage";
 import EmergencyPage from "./components/userComponents/EmegencyComponents/EmergencyPage";
-//Tourist Side
-
+import ProfilePage from "./components/userComponents/ProfileComponents/Profile";
 // Guest Side
 import "./App.css";
 import Photobooth from "./components/userComponents/photoboothComponents/Photobooth";
@@ -35,10 +36,12 @@ export default function App() {
         {/* Tourist Side
 
         Guest Side */}
-        <Route path="Homepage" element={<Homepage />} />
-        <Route path="Emergency" element={<EmergencyPage />} />
+        <Route path="/ProfilePage" element={<ProfilePage />} />
 
-        <Route path="Photobooth" element={<Photobooth />} />
+        <Route path="/Homepage" element={<Homepage />} />
+        <Route path="/Emergency" element={<EmergencyPage />} />
+
+        <Route path="/Photobooth" element={<Photobooth />} />
       </Routes>
     </Router>
   );
