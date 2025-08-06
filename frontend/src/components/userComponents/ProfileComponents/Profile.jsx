@@ -27,7 +27,7 @@ export default function ProfilePage() {
     >
       <div className="w-full max-w-md">
         {/* Profile Card */}
-        <div className="mt-4 w-full bg-[#cf3325] rounded-2xl p-6 flex items-center text-white">
+        <div className="mt-4 w-full bg-[#f04e37] rounded-2xl p-6 flex items-center text-white">
           <img
             src="https://i.pravatar.cc/100?img=68"
             alt="Profile"
@@ -45,7 +45,7 @@ export default function ProfilePage() {
             <Link
               key={index}
               to={opt.to}
-              className="flex items-center justify-between px-4 py-4 bg-[#cf3325] rounded-xl text-white hover:bg-[#b42c21] transition"
+              className="flex items-center justify-between px-4 py-4 bg-[#f04e37] rounded-xl text-white hover:bg-[#b42c21] transition"
             >
               <div className="flex items-center gap-3">
                 <span className="text-lg">{opt.icon}</span>
