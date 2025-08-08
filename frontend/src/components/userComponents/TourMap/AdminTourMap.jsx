@@ -26,39 +26,67 @@ export default function AdminMap() {
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
 
-  // Enable Mask Editing
-  const enableMaskEditing = () => {
-    const map = adminMapRef.current.getMap();
-    if (drawRef.current) map.removeControl(drawRef.current);
+ const enableMaskEditing = () => {
+  const map = adminMapRef.current.getMap();
+  if (drawRef.current) map.removeControl(drawRef.current);
 
-    const draw = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: { polygon: false, trash: false },
-      styles: [
-        {
-          id: "gl-draw-polygon-fill",
-          type: "fill",
-          paint: {
-            "fill-color": "#ff6600",
-            "fill-opacity": 0.5,
-          },
+  const draw = new MapboxDraw({
+    displayControlsDefault: false,
+    controls: { polygon: false, trash: false },
+    styles: [
+      // Polygon fill
+      {
+        id: "gl-draw-polygon-fill",
+        type: "fill",
+        paint: {
+          "fill-color": "#ff6600",
+          "fill-opacity": 0.5,
         },
-        {
-          id: "gl-draw-polygon-stroke",
-          type: "line",
-          paint: {
-            "line-color": "#ff0000",
-            "line-width": 3,
-          },
+      },
+      // Polygon outline
+      {
+        id: "gl-draw-polygon-stroke",
+        type: "line",
+        paint: {
+          "line-color": "#ff0000",
+          "line-width": 3,
         },
-      ],
-    });
+      },
+      // ACTIVE vertex points
+      {
+        id: "gl-draw-polygon-and-line-vertex-halo-active",
+        type: "circle",
+        paint: {
+          "circle-radius": 7,
+          "circle-color": "#fff",
+        },
+      },
+      {
+        id: "gl-draw-polygon-and-line-vertex-active",
+        type: "circle",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "#ff0000",
+        },
+      },
+    ],
+  });
 
-    drawRef.current = draw;
-    map.addControl(draw, "top-left");
-    draw.add(maskGeoJson);
-    setIsMaskingMode(true);
-  };
+  drawRef.current = draw;
+  map.addControl(draw, "top-left");
+
+  // Add mask
+  const added = draw.add(maskGeoJson);
+  const featureId =
+    maskGeoJson.id || (Array.isArray(added) ? added[0] : added);
+
+  // Switch to direct_select so points show immediately
+  if (featureId) {
+    draw.changeMode("direct_select", { featureId });
+  }
+
+  setIsMaskingMode(true);
+};
 
   const exitMaskEditing = () => {
     const map = adminMapRef.current.getMap();
