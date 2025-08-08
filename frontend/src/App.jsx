@@ -27,6 +27,8 @@ import Country from "./components/userComponents/ProfileComponents/Country";
 import Language from "./components/userComponents/ProfileComponents/Language";
 import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
+import TourMap from "./components/userComponents/TourMap/TourMap";
+import AdminMap from "./components/userComponents/TourMap/AdminTourMap";
 // Helper wrapper to inject location for AnimatePresence
 function AnimatedRoutes() {
   const location = useLocation();
@@ -41,6 +43,7 @@ function AnimatedRoutes() {
         <Route path="/AdminHome" element={<AdminHome />} />
         <Route path="/AdminManageContent" element={<AdminContent />} />
         <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
+        <Route path="/AdminTourMap" element={<AdminMap />} />
 
         {/* Tourist */}
         <Route path="/Homepage" element={<Homepage />} />
@@ -48,6 +51,7 @@ function AnimatedRoutes() {
         <Route path="/Photobooth" element={<Photobooth />} />
         <Route path="/TripArchive" element={<TripArchives />} />
         <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
+        <Route path="/TourMap" element={<TourMap />} />
 
         {/* Profile Section with Persistent Header */}
         <Route path="/Profile" element={<ProfileLayout />}>

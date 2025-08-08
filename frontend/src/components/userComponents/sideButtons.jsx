@@ -3,10 +3,16 @@ import { Link } from "react-router-dom";
 
 export default function SideButtons() {
   const icons = [
+      {
+      url: "icons/tour-map.svg",
+      label: "Home",
+      to: "/Homepage",
+      Device: "All",
+    },
     {
       url: "icons/tour-map.svg",
       label: "Tour Map",
-      to: "/Homepage",
+      to: "/TourMap",
       Device: "All",
     },
     {
@@ -42,7 +48,7 @@ export default function SideButtons() {
   ];
 
   return (
-    <div className="fixed right-2 md:right-2 lg:right-8 top-[40%] md:top-[50%] -translate-y-1/2 flex flex-col gap-4 z-50">
+    <div className="fixed right-2 md:right-2 lg:right-8 top-[50%] md:top-[60%] -translate-y-1/2 flex flex-col gap-4 z-50">
       {icons.map((icon, index) => {
         let visibilityClass = "";
 
