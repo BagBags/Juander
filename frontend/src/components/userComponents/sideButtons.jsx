@@ -12,7 +12,7 @@ export default function SideButtons() {
     {
       url: "icons/photobooth.svg",
       label: "Create Itinerary",
-      to: "/Homepage",
+      to: "/CreateItinerary",
       Device: "All",
     }, // Adjust if you have a separate route later
     {
@@ -36,7 +36,7 @@ export default function SideButtons() {
     {
       url: "icons/photobooth.svg",
       label: "Trip Archives",
-      to: "/Homepage",
+      to: "/TripArchive",
       Device: "All",
     }, // Same here
   ];

@@ -36,6 +36,7 @@ export async function detectFaces(model, videoElement) {
     // }
 
     return predictions;
+  // eslint-disable-next-line no-unused-vars
   } catch (error) {
     // console.error("Face detection failed:", error);
     return [];
@@ -82,6 +83,7 @@ export function setupFaceDetection(model, webcamRef, setFaces) {
         // Sample ~5% of frames to avoid spam
         // console.log(`Current detection frame rate: ${getFrameRate()}fps`);
       }
+    // eslint-disable-next-line no-unused-vars
     } catch (error) {
       //   console.error("Detection loop error:", error);
     } finally {

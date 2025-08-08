@@ -12,6 +12,7 @@ import { baseFilters } from "./basefilter";
 import { loadFaceModel } from "./model";
 import { setupFaceDetection } from "./facedetect";
 import Overlays from "./overlay";
+import BackHeader from "../BackButton"; // ✅ Import your back header
 import "../../../Photobooth.css";
 
 const videoDims = {
@@ -42,25 +43,16 @@ export default function Photobooth() {
   const selectedMeta = repeatedFilters.find((f) => f.id === selectedFilterId);
   const selectedValue = selectedMeta?.value || null;
 
-  // Load face detection model
   useEffect(() => {
-    // console.log("Loading face detection model...");
     loadFaceModel()
       .then((loadedModel) => {
-        // console.log("Model loaded successfully");
         setModel(loadedModel);
       })
-      .catch((error) => {
-        // console.error("Failed to load model:", error);
-      });
+      .catch(() => {});
   }, []);
 
-  // Setup face detection with optimized performance
   useEffect(() => {
     if (model && webcamReady && webcamRef.current) {
-      // console.log("Starting face detection with model and ready webcam");
-
-      // Only run face detection when not dragging the slider
       const cleanup = setupFaceDetection(
         model,
         webcamRef,
@@ -69,28 +61,16 @@ export default function Photobooth() {
             setFaces(faces);
           }
         },
-        isDragging // Pass whether we're currently dragging
+        isDragging
       );
-
       return cleanup;
     }
   }, [model, webcamReady, isDragging]);
 
   const handleWebcamLoad = useCallback(() => {
-    // console.log("Webcam has loaded");
     setWebcamReady(true);
-
-    // if (webcamRef.current?.video) {
-    //   console.log("Webcam video element properties:", {
-    //     readyState: webcamRef.current.video.readyState,
-    //     videoWidth: webcamRef.current.video.videoWidth,
-    //     videoHeight: webcamRef.current.video.videoHeight,
-    //     playing: !webcamRef.current.video.paused,
-    //   });
-    // }
   }, []);
 
-  // Handle slider drag state
   const handleSliderDragStart = useCallback(() => {
     setIsDragging(true);
   }, []);
@@ -102,6 +82,19 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
+        {/* ✅ Back button header - matches Profile spacing */}
+       <div className="absolute top-0 left-0 w-full z-20 p-4 flex items-center justify-between">
+  <BackHeader />
+  
+  <button
+    className="refresh-btn"
+    onClick={() => window.location.reload()}
+  >
+    ↻
+  </button>
+</div>
+
+
         <div className="camera-view">
           <Webcam
             ref={webcamRef}
@@ -115,7 +108,7 @@ export default function Photobooth() {
               width: videoDims.width,
               height: videoDims.height,
               facingMode: "user",
-              frameRate: 15, // Reduced frame rate for better performance
+              frameRate: 15,
             }}
             screenshotFormat="image/jpeg"
             mirrored={true}
@@ -144,15 +137,6 @@ export default function Photobooth() {
               <div className="loading-text">Initializing camera...</div>
             </div>
           )}
-
-          <div className="top-controls">
-            <button
-              className="refresh-btn"
-              onClick={() => window.location.reload()}
-            >
-              ↻
-            </button>
-          </div>
         </div>
 
         <div className="bottom-controls">

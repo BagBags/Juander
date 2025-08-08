@@ -13,6 +13,7 @@ let modelPromise = null;
 export async function loadFaceModel(onProgress) {
   if (modelPromise) return modelPromise;
 
+  // eslint-disable-next-line no-async-promise-executor
   modelPromise = new Promise(async (resolve, reject) => {
     let timer;
     let isDone = false;

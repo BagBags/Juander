@@ -25,6 +25,8 @@ import Birthday from "./components/userComponents/ProfileComponents/Birthday";
 import Gender from "./components/userComponents/ProfileComponents/Gender";
 import Country from "./components/userComponents/ProfileComponents/Country";
 import Language from "./components/userComponents/ProfileComponents/Language";
+import TripArchives from "./components/userComponents/TripArchive/TripArchive";
+import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 // Helper wrapper to inject location for AnimatePresence
 function AnimatedRoutes() {
   const location = useLocation();
@@ -44,6 +46,8 @@ function AnimatedRoutes() {
         <Route path="/Homepage" element={<Homepage />} />
         <Route path="/Emergency" element={<EmergencyPage />} />
         <Route path="/Photobooth" element={<Photobooth />} />
+        <Route path="/TripArchive" element={<TripArchives />} />
+        <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
 
         {/* Profile Section with Persistent Header */}
         <Route path="/Profile" element={<ProfileLayout />}>
