@@ -47,6 +47,7 @@ function AnimatedRoutes() {
         <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
         <Route path="/AdminManageRole" element={<AdminRole />} />
         <Route path="/AdminLog" element={<AdminLog />} />
+        <Route path="/AdminTourMap" element={<AdminMap />} />
 
         {/* Tourist */}
         <Route path="/Homepage" element={<Homepage />} />
