@@ -9,6 +9,7 @@ const path = require("path");
 const authRoute = require("./routes/authRoute");
 const emergencyRoute = require("./routes/emergencyRoute");
 const filters = require("./routes/filterRoute");
+const adminRoutes = require("./routes/adminRoutes");
 
 // Needed for resolving __dirname in CommonJS
 const app = express();
@@ -36,6 +37,7 @@ connectDB();
 app.use("/api/auth", authRoute);
 app.use("/api/emergency", emergencyRoute);
 app.use("/api/filters", filters);
+app.use("/api/admin", adminRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {

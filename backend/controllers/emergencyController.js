@@ -1,15 +1,24 @@
 const EmergencyContact = require("../models/emergencyModel");
+const Log = require("../models/logModel"); // import Log model
 
 // CREATE
 exports.createContact = async (req, res) => {
   try {
-    // Count current documents to assign position if not provided
     const count = await EmergencyContact.countDocuments();
 
     const contact = await EmergencyContact.create({
       name: req.body.name,
       contactChannels: req.body.contactChannels,
-      position: req.body.position ?? count, // ✅ Assign position explicitly
+      position: req.body.position ?? count,
+    });
+
+    // Log action
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Created emergency contact agency: "${contact.name}"`,
     });
 
     res.status(201).json(contact);
@@ -18,10 +27,12 @@ exports.createContact = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// READ ALL
+
+// READ ALL (no log needed)
 exports.getContacts = async (req, res) => {
   try {
-    const contacts = await EmergencyContact.find().sort({ position: 1 }); // ✅ sort by position
+    const contacts = await EmergencyContact.find().sort({ position: 1 });
+    console.log("Fetched contacts:", contacts);
     res.status(200).json(contacts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -36,6 +47,16 @@ exports.updateContact = async (req, res) => {
       req.body,
       { new: true }
     );
+
+    // Log action
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Updated emergency contact agency: "${updated.name}"`,
+    });
+
     res.status(200).json(updated);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -45,17 +66,28 @@ exports.updateContact = async (req, res) => {
 // DELETE
 exports.deleteContact = async (req, res) => {
   try {
-    await EmergencyContact.findByIdAndDelete(req.params.id);
+    const deleted = await EmergencyContact.findByIdAndDelete(req.params.id);
+
+    // Log action
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    if (deleted) {
+      await Log.create({
+        adminName,
+        action: `Deleted emergency contact agency: "${deleted.name}"`,
+      });
+    }
+
     res.status(204).end();
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-//REORDER
+// REORDER
 exports.reorderContacts = async (req, res) => {
   try {
-    console.log("🛠️ Request body:", req.body);
     const { agencies } = req.body;
 
     if (!Array.isArray(agencies)) {
@@ -67,6 +99,15 @@ exports.reorderContacts = async (req, res) => {
         position: agency.position,
       });
     }
+
+    // Log action
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Reordered emergency contact agencies`,
+    });
 
     res.status(200).json({ message: "Reordered successfully" });
   } catch (err) {
