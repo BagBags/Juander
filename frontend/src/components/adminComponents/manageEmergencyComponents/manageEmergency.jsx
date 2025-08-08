@@ -20,7 +20,13 @@ export default function ManageEmergency() {
 
   const fetchHotlines = async () => {
     try {
-      const res = await axios.get("/api/emergency");
+      const token = localStorage.getItem("token"); // or wherever your token is stored
+
+      const res = await axios.get("/api/emergency", {
+        headers: {
+          Authorization: `Bearer ${token}`, // <-- Add this line
+        },
+      });
       const sorted = res.data.sort((a, b) => a.position - b.position);
       setHotlines(sorted);
     } catch (err) {
@@ -35,11 +41,21 @@ export default function ManageEmergency() {
 
   const handleSaveAgency = async (agencyData) => {
     try {
+      const token = localStorage.getItem("token");
+
       if (selectedAgency) {
-        await axios.put(`/api/emergency/${selectedAgency._id}`, agencyData);
+        await axios.put(`/api/emergency/${selectedAgency._id}`, agencyData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
       } else {
         agencyData.position = hotlines.length;
-        await axios.post("/api/emergency", agencyData);
+        await axios.post("/api/emergency", agencyData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
       }
       setShowForm(false);
       setSelectedAgency(null);
@@ -56,7 +72,13 @@ export default function ManageEmergency() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/emergency/${id}`);
+      const token = localStorage.getItem("token");
+
+      await axios.delete(`/api/emergency/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       fetchHotlines();
     } catch (err) {
       console.error("Error deleting agency:", err);
@@ -84,7 +106,17 @@ export default function ManageEmergency() {
     console.log("UPDATED (to send):", updated);
 
     try {
-      await axios.put("/api/emergency/reorder", { agencies: updated });
+      const token = localStorage.getItem("token");
+
+      await axios.put(
+        "/api/emergency/reorder",
+        { agencies: updated },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
     } catch (error) {
       console.error("Error updating order:", error);
     }

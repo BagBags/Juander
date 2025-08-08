@@ -12,6 +12,8 @@ import AdminHome from "./components/adminComponents/adminHomeComponents/adminHom
 import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
 import ManageEmergency from "./components/adminComponents/manageEmergencyComponents/manageEmergency";
 import LoginPage from "./components/loginComponents/loginPage";
+import AdminRole from "./components/adminComponents/adminRoleComponents/adminRole";
+import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
 
 // Tourist Side
 import Homepage from "./components/userComponents/HomepageComponents/Homepage";
@@ -43,7 +45,6 @@ function AnimatedRoutes() {
         <Route path="/AdminHome" element={<AdminHome />} />
         <Route path="/AdminManageContent" element={<AdminContent />} />
         <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
-        <Route path="/AdminTourMap" element={<AdminMap />} />
 
         {/* Tourist */}
         <Route path="/Homepage" element={<Homepage />} />

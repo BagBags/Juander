@@ -138,7 +138,12 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -178,7 +183,7 @@ exports.googleLogin = async (req, res) => {
         firstName: firstName || "",
         lastName: lastName || "",
         email,
-        password: await argon2.hash(googleId), // dummy password
+        password: await argon2.hash(googleId),
         role: isSuperAdmin ? "admin" : "tourist",
       });
     } else if (isSuperAdmin && user.role !== "admin") {
@@ -187,7 +192,12 @@ exports.googleLogin = async (req, res) => {
     }
 
     const jwtToken = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );

@@ -18,7 +18,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
     { icon: FolderClosed, label: "Contents", to: "/AdminManageContent" },
     { icon: UserRound, label: "Roles", to: "/AdminManageRole" },
     { icon: Newspaper, label: "Reports", to: "/AdminReports" },
-    { icon: History, label: "Logs", to: "/AdminLogs" },
+    { icon: History, label: "Logs", to: "/AdminLog" },
   ];
 
   return (
