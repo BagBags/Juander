@@ -14,6 +14,7 @@ import ManageEmergency from "./components/adminComponents/manageEmergencyCompone
 import LoginPage from "./components/loginComponents/loginPage";
 import AdminRole from "./components/adminComponents/adminRoleComponents/adminRole";
 import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
+import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
 
 // Tourist Side
 import Homepage from "./components/userComponents/HomepageComponents/Homepage";
@@ -31,6 +32,7 @@ import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 import TourMap from "./components/userComponents/TourMap/TourMap";
 import AdminMap from "./components/userComponents/TourMap/AdminTourMap";
+import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 // Helper wrapper to inject location for AnimatePresence
 function AnimatedRoutes() {
   const location = useLocation();
@@ -48,6 +50,7 @@ function AnimatedRoutes() {
         <Route path="/AdminManageRole" element={<AdminRole />} />
         <Route path="/AdminLog" element={<AdminLog />} />
         <Route path="/AdminTourMap" element={<AdminMap />} />
+        <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
 
         {/* Tourist */}
         <Route path="/Homepage" element={<Homepage />} />
@@ -56,6 +59,7 @@ function AnimatedRoutes() {
         <Route path="/TripArchive" element={<TripArchives />} />
         <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
         <Route path="/TourMap" element={<TourMap />} />
+        <Route path="/Chatbot" element={<Chatbot />} />
 
         {/* Profile Section with Persistent Header */}
         <Route path="/Profile" element={<ProfileLayout />}>

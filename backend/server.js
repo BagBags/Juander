@@ -10,6 +10,8 @@ const authRoute = require("./routes/authRoute");
 const emergencyRoute = require("./routes/emergencyRoute");
 const filters = require("./routes/filterRoute");
 const adminRoutes = require("./routes/adminRoutes");
+const adminBotRoute = require("./routes/adminBotRoute");
+const { verifyAdmin } = require("./middleware/authMiddleware");
 
 // Needed for resolving __dirname in CommonJS
 const app = express();
@@ -38,6 +40,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/emergency", emergencyRoute);
 app.use("/api/filters", filters);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin/bot", verifyAdmin, adminBotRoute);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {

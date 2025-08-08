@@ -23,7 +23,7 @@ export default function AdminContentMain() {
     {
       title: "Chatbot",
       iconPath: "/icons/chatbot.svg",
-      route: "/admin/chatbot",
+      route: "/AdminManageChatbot",
     },
   ];
 
