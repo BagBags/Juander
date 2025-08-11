@@ -28,14 +28,15 @@ exports.createContact = async (req, res) => {
   }
 };
 
-// READ ALL (no log needed)
 exports.getContacts = async (req, res) => {
   try {
-    const contacts = await EmergencyContact.find().sort({ position: 1 });
-    console.log("Fetched contacts:", contacts);
+    // Fetch contacts
+    const contacts = await EmergencyContact.find();
+
     res.status(200).json(contacts);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error fetching contacts:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

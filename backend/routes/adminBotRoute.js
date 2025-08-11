@@ -1,9 +1,16 @@
 const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
+const Log = require("../models/logModel");
 const BotEntry = require("../models/botEntryModel");
 
 // Helper: split multi-word keywords into single words, lowercase and trim
+function getAdminName(req) {
+  return req.user
+    ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+    : "Unknown Admin";
+}
+
 function processKeywords(keywords) {
   if (!keywords || !Array.isArray(keywords)) return [];
   return keywords
@@ -16,6 +23,7 @@ function processKeywords(keywords) {
 router.get("/", async (req, res) => {
   try {
     const entries = await BotEntry.find().sort({ createdAt: -1 });
+
     res.json(entries);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -40,6 +48,15 @@ router.post("/", async (req, res) => {
     });
 
     await newEntry.save();
+
+    // Log action
+    await Log.create({
+      adminName: getAdminName(req),
+      action: `Created chatbot entry with keywords: ${newEntry.keywords.join(
+        ", "
+      )}`,
+    });
+
     res.status(201).json(newEntry);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -58,6 +75,13 @@ router.put("/:id", async (req, res) => {
     if (keywords) entry.keywords = processKeywords(keywords);
 
     await entry.save();
+
+    // Log action
+    await Log.create({
+      adminName: getAdminName(req),
+      action: `Updated chatbot entry (ID: ${entry._id})`,
+    });
+
     res.json(entry);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -76,9 +100,18 @@ router.delete("/:id", async (req, res) => {
     if (!entry) return res.status(404).json({ message: "Entry not found" });
 
     await BotEntry.deleteOne({ _id: id });
+
+    // Log action
+    await Log.create({
+      adminName: getAdminName(req),
+      action: `Deleted chatbot entry with keywords: ${entry.keywords.join(
+        ", "
+      )}`,
+    });
+
     res.json({ message: "Entry deleted" });
   } catch (err) {
-    console.error("Error deleting entry:", err); // Log actual error to console
+    console.error("Error deleting entry:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
