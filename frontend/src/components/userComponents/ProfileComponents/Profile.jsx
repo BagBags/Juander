@@ -6,7 +6,7 @@ import { IoChevronForwardSharp } from "react-icons/io5";
 import { Link } from "react-router-dom";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion"; // 🟢 Import motion
-import BackHeader from "./Backheader"; // Adjust path if needed
+import BackHeader from "./BackHeader"; // Adjust path if needed
 
 export default function ProfilePage() {
   const options = [
