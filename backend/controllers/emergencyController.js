@@ -30,8 +30,8 @@ exports.createContact = async (req, res) => {
 
 exports.getContacts = async (req, res) => {
   try {
-    // Fetch contacts
-    const contacts = await EmergencyContact.find();
+    // Fetch contacts in sorted order
+    const contacts = await EmergencyContact.find().sort({ position: 1 });
 
     res.status(200).json(contacts);
   } catch (error) {
@@ -101,6 +101,9 @@ exports.reorderContacts = async (req, res) => {
       });
     }
 
+    // Fetch the updated sorted list
+    const updatedContacts = await EmergencyContact.find().sort({ position: 1 });
+
     // Log action
     const adminName = req.user
       ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
@@ -110,7 +113,7 @@ exports.reorderContacts = async (req, res) => {
       action: `Reordered emergency contact agencies`,
     });
 
-    res.status(200).json({ message: "Reordered successfully" });
+    res.status(200).json(updatedContacts);
   } catch (err) {
     console.error("❌ Error in reorderContacts:", err);
     res.status(500).json({ message: "Server error while reordering" });
