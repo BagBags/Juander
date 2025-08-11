@@ -36,21 +36,21 @@ const connectDB = async () => {
 connectDB();
 
 // API routes
-// app.use("/api/auth", authRoute);
-// app.use("/api/emergency", emergencyRoute);
-// app.use("/api/filters", filters);
-// app.use("/api/admin", adminRoutes);
-// app.use("/api/admin/bot", verifyAdmin, adminBotRoute);
+app.use("/api/auth", authRoute);
+app.use("/api/emergency", emergencyRoute);
+app.use("/api/filters", filters);
+app.use("/api/admin", adminRoutes);
+app.use("/api/admin/bot", verifyAdmin, adminBotRoute);
 
 // Serve frontend in production
-if (process.env.NODE_ENV === "production") {
-  const __dirname = path.resolve();
-  app.use(express.static(path.join(__dirname, "frontend", "build")));
+// if (process.env.NODE_ENV === "production") {
+//   const __dirname = path.resolve();
+//   app.use(express.static(path.join(__dirname, "frontend", "build")));
 
-//   app.get("*", (req, res) => {
-//     res.sendFile(path.join(__dirname, "frontend", "build", "index.html"));
-//   });
-// }
+// //   app.get("*", (req, res) => {
+// //     res.sendFile(path.join(__dirname, "frontend", "build", "index.html"));
+// //   });
+// // }
 
 // Global error handler
 app.use((err, req, res, next) => {
