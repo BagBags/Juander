@@ -8,7 +8,7 @@ export default function AdminContentMain() {
     {
       title: "Tour Map",
       iconPath: "/icons/tour-map.svg",
-      route: "/admin/tour-map",
+      route: "/AdminTourMap",
     },
     {
       title: "Photobooth",

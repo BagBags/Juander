@@ -31,7 +31,7 @@ import Language from "./components/userComponents/ProfileComponents/Language";
 import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 import TourMap from "./components/userComponents/TourMap/TourMap";
-import AdminMap from "./components/userComponents/TourMap/AdminTourMap";
+import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 // Helper wrapper to inject location for AnimatePresence
 function AnimatedRoutes() {

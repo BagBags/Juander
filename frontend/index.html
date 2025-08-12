@@ -2,12 +2,46 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/Juander Logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- App Title -->
     <title>Juander</title>
+
+    <!-- Favicon (kept your original SVG) -->
+    <link rel="icon" type="image/svg+xml" href="/Juander Logo.svg" />
+
+    <!-- Manifest for PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- iOS Fullscreen Mode -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="Juander" />
+
+    <!-- iOS Home Screen Icons -->
+    <link
+      rel="apple-touch-icon"
+      sizes="192x192"
+      href="/icons/icon-192x192.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="512x512"
+      href="/icons/icon-512x512.png"
+    />
+
+    <!-- Theme colors for Android PWA UI -->
+    <meta name="theme-color" content="#f04e37" />
+    <meta name="background-color" content="#ffffff" />
   </head>
+
   <body>
     <div id="root"></div>
+
+    <!-- Your scripts -->
     <script type="module" src="/src/main.jsx"></script>
     <script src="https://js.puter.com/v2/"></script>
   </body>

@@ -10,6 +10,29 @@ import {
   initialMaskFeature,
   createInverseMask,
 } from "./mapConfig";
+import * as THREE from "three";
+
+import "../../../App.css";
+
+function BouncingMarker() {
+  return (
+    <svg
+      className="bouncing-marker"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="36"
+      height="36"
+      fill="none"
+      stroke="#e03e2f"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 21C12 21 5 13.5 5 8.5a7 7 0 0 1 14 0c0 5-7 12.5-7 12.5z" />
+      <circle cx="12" cy="8.5" r="2.5" />
+    </svg>
+  );
+}
 
 export default function UserMap() {
   const [viewState, setViewState] = useState({
@@ -227,7 +250,7 @@ export default function UserMap() {
               }
             }}
           >
-            📍
+            <BouncingMarker />
           </Marker>
         ))}
 
