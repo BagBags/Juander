@@ -18,7 +18,11 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["https://juander-dbd5.onrender.com"], // your frontend Render URL
+    origin: [
+      "https://juander-dbd5.onrender.com",
+      "https://juander.onrender.com",
+      "http://localhost:3000",
+    ],
     credentials: true,
   })
 );
