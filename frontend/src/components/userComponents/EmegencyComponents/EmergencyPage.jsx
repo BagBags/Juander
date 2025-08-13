@@ -7,11 +7,12 @@ import BackHeader from "../BackButton";
 export default function EmergencyPage() {
   const [hotlines, setHotlines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const API_BASE = "https://juander.onrender.com";
 
   useEffect(() => {
     const fetchHotlines = async () => {
       try {
-        const res = await axios.get("/api/emergency"); // Public GET request
+        const res = await axios.get(`${API_BASE}/api/emergency`); // Public GET request
         const transformed = res.data.map((agency) => ({
           title: agency.name,
           contacts: agency.contactChannels.map((channel) => ({
