@@ -11,6 +11,7 @@ export default function ManageEmergency() {
   const [selectedAgency, setSelectedAgency] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const API_BASE = "https://juander.onrender.com";
 
   const toggleSidebar = () => setIsExpanded((prev) => !prev);
 
@@ -22,7 +23,7 @@ export default function ManageEmergency() {
     try {
       const token = localStorage.getItem("token"); // or wherever your token is stored
 
-      const res = await axios.get("/api/emergency", {
+      const res = await axios.get(`${API_BASE}/api/emergency`, {
         headers: {
           Authorization: `Bearer ${token}`, // <-- Add this line
         },
@@ -44,14 +45,18 @@ export default function ManageEmergency() {
       const token = localStorage.getItem("token");
 
       if (selectedAgency) {
-        await axios.put(`/api/emergency/${selectedAgency._id}`, agencyData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        await axios.put(
+          `${API_BASE}/api/emergency/${selectedAgency._id}`,
+          agencyData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       } else {
         agencyData.position = hotlines.length;
-        await axios.post("/api/emergency", agencyData, {
+        await axios.post(`${API_BASE}/api/emergency`, agencyData, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -74,7 +79,7 @@ export default function ManageEmergency() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`/api/emergency/${id}`, {
+      await axios.delete(`${API_BASE}/api/emergency/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -109,7 +114,7 @@ export default function ManageEmergency() {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        "/api/emergency/reorder",
+        `${API_BASE}/api/emergency/reorder`,
         { agencies: updated },
         {
           headers: {
