@@ -41,7 +41,8 @@ export default function SignupForm({ toggleForm }) {
     setError("");
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/register",
+        // "http://localhost:5000/api/auth/register",
+        "https://juander.onrender.com/api/auth/register",
         form
       );
       setMessage(res.data.message);
@@ -57,7 +58,8 @@ export default function SignupForm({ toggleForm }) {
     setError("");
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/verify-otp",
+        // "http://localhost:5000/api/auth/verify-otp",
+        "https://juander.onrender.com/api/auth/verify-otp",
         {
           email: form.email,
           otp,
@@ -74,7 +76,8 @@ export default function SignupForm({ toggleForm }) {
     try {
       const { credential } = credentialResponse;
       const res = await axios.post(
-        "http://localhost:5000/api/auth/google-login",
+        // "http://localhost:5000/api/auth/google-login",
+        "https://juander.onrender.com/api/auth/google-login",
         {
           token: credential,
         }

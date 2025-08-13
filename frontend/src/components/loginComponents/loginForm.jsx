@@ -15,7 +15,8 @@ export default function LoginForm({ toggleForm }) {
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/google-login",
+        // "http://localhost:5000/api/auth/google-login",
+        "https://juander.onrender.com/api/auth/google-login",
         {
           token: credentialResponse.credential,
         }
@@ -34,10 +35,14 @@ export default function LoginForm({ toggleForm }) {
 
   const handleEmailLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
+      const res = await axios.post(
+        // "http://localhost:5000/api/auth/login",
+        "https://juander.onrender.com/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
 
       const { user, token } = res.data;
       localStorage.setItem("user", JSON.stringify(user));
@@ -58,7 +63,11 @@ export default function LoginForm({ toggleForm }) {
 
     try {
       console.log("Sending OTP to:", email); // ✅ for debug
-      await axios.post("http://localhost:5000/api/auth/send-otp", { email });
+      await axios.post(
+        // "http://localhost:5000/api/auth/send-otp",
+        "https://juander.onrender.com/api/auth/send-otp",
+        { email }
+      );
       alert("OTP sent to your email.");
       setStep(2);
     } catch (err) {
@@ -69,11 +78,15 @@ export default function LoginForm({ toggleForm }) {
 
   const handleResetPassword = async () => {
     try {
-      await axios.post("http://localhost:5000/api/auth/reset-password", {
-        email,
-        otp,
-        newPassword,
-      });
+      await axios.post(
+        // "http://localhost:5000/api/auth/reset-password",
+        "https://juander.onrender.com/api/auth/reset-password",
+        {
+          email,
+          otp,
+          newPassword,
+        }
+      );
       alert("Password reset successful. Please log in.");
       setShowForgot(false);
       setStep(1);
