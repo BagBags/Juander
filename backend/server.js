@@ -16,7 +16,12 @@ const { verifyAdmin } = require("./middleware/authMiddleware");
 // Needed for resolving __dirname in CommonJS
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["https://juander-dbd5.onrender.com"], // your frontend Render URL
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // MongoDB connection
