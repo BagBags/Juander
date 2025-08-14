@@ -11,12 +11,13 @@ export default function LoginForm({ toggleForm }) {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [step, setStep] = useState(1);
+  const API_BASE = "https://juander.onrender.com";
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const res = await axios.post(
         // "http://localhost:5000/api/auth/google-login",
-        "https://juander.onrender.com/api/auth/google-login",
+        `${API_BASE}/api/auth/google-login`,
         {
           token: credentialResponse.credential,
         }
@@ -37,7 +38,7 @@ export default function LoginForm({ toggleForm }) {
     try {
       const res = await axios.post(
         // "http://localhost:5000/api/auth/login",
-        "https://juander.onrender.com/api/auth/login",
+        `${API_BASE}/api/auth/login`,
         {
           email,
           password,
@@ -65,7 +66,7 @@ export default function LoginForm({ toggleForm }) {
       console.log("Sending OTP to:", email); // ✅ for debug
       await axios.post(
         // "http://localhost:5000/api/auth/send-otp",
-        "https://juander.onrender.com/api/auth/send-otp",
+        `${API_BASE}/api/auth/send-otp`,
         { email }
       );
       alert("OTP sent to your email.");
@@ -80,7 +81,7 @@ export default function LoginForm({ toggleForm }) {
     try {
       await axios.post(
         // "http://localhost:5000/api/auth/reset-password",
-        "https://juander.onrender.com/api/auth/reset-password",
+        `${API_BASE}/api/auth/reset-password`,
         {
           email,
           otp,

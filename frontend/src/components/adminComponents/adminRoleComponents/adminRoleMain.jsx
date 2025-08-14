@@ -7,6 +7,7 @@ export default function RolesPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const API_BASE = "https://juander.onrender.com";
 
   useEffect(() => {
     fetchUsers();
@@ -16,11 +17,15 @@ export default function RolesPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token"); // Get token from storage
-      const res = await axios.get("/api/admin/users", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await axios.get(
+        // "/api/admin/users",
+        `${API_BASE}/api/admin/users`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       setUsers(res.data);
     } catch (err) {
       console.error("Error fetching users:", err);
@@ -49,7 +54,8 @@ export default function RolesPage() {
     try {
       const token = localStorage.getItem("token"); // Get token from storage
       await axios.put(
-        `/api/admin/users/${id}/role`,
+        // `/api/admin/users/${id}/role`,
+        `${API_BASE}/api/admin/users/${id}/role`,
         { role: newRole },
         {
           headers: {
