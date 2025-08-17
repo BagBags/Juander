@@ -4,7 +4,10 @@ import axios from "axios";
 export default function AdminLogMain() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const API_BASE = "https://juander.onrender.com";
+  // const API_BASE =
+  //   window.location.hostname === "localhost"
+  //     ? "http://localhost:5000"
+  //     : "https://juander.onrender.com";
 
   useEffect(() => {
     fetchLogs();
@@ -15,8 +18,8 @@ export default function AdminLogMain() {
       setLoading(true);
       const token = localStorage.getItem("token");
       const res = await axios.get(
-        // "/api/admin/logs",
-        `${API_BASE}/api/admin/logs`,
+        "/api/admin/logs",
+        // `${API_BASE}/api/admin/logs`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

@@ -16,16 +16,20 @@ const { verifyAdmin } = require("./middleware/authMiddleware");
 // Needed for resolving __dirname in CommonJS
 const app = express();
 
-app.use(
-  cors({
-    origin: [
-      "https://juander-dbd5.onrender.com",
-      "https://juander.onrender.com",
-      "http://localhost:3000",
-    ],
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: [
+//       "http://localhost:5173",
+//       "http://localhost:5000",
+//       "https://juander-dbd5.onrender.com",
+//       "https://juander.onrender.com",
+//     ],
+//     credentials: true,
+//   })
+// );
+
+app.use(cors());
+
 app.use(express.json());
 
 // MongoDB connection
@@ -51,15 +55,15 @@ app.use("/api/filters", filters);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/bot", verifyAdmin, adminBotRoute);
 
-// Serve frontend in production
+// // Serve frontend in production +++
 // if (process.env.NODE_ENV === "production") {
 //   const __dirname = path.resolve();
 //   app.use(express.static(path.join(__dirname, "frontend", "build")));
 
-// //   app.get("*", (req, res) => {
-// //     res.sendFile(path.join(__dirname, "frontend", "build", "index.html"));
-// //   });
-// // }
+//   app.get("*", (req, res) => {
+//     res.sendFile(path.join(__dirname, "frontend", "build", "index.html"));
+//   });
+// }
 
 // Global error handler
 app.use((err, req, res, next) => {

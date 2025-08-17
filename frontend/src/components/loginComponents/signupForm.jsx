@@ -18,7 +18,10 @@ export default function SignupForm({ toggleForm }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
-  const API_BASE = "https://juander.onrender.com";
+  // const API_BASE =
+  //   window.location.hostname === "localhost"
+  //     ? "http://localhost:5000"
+  //     : "https://juander.onrender.com";
 
   useEffect(() => {
     if (step === "verify" && timeLeft > 0) {
@@ -42,8 +45,8 @@ export default function SignupForm({ toggleForm }) {
     setError("");
     try {
       const res = await axios.post(
-        // "http://localhost:5000/api/auth/register",
-        `${API_BASE}/api/auth/register`,
+        "http://localhost:5000/api/auth/register",
+        // `${API_BASE}/api/auth/register`,
         form
       );
       setMessage(res.data.message);
@@ -59,8 +62,8 @@ export default function SignupForm({ toggleForm }) {
     setError("");
     try {
       const res = await axios.post(
-        // "http://localhost:5000/api/auth/verify-otp",
-        `${API_BASE}/api/auth/verify-otp`,
+        "http://localhost:5000/api/auth/verify-otp",
+        // `${API_BASE}/api/auth/verify-otp`,
         {
           email: form.email,
           otp,
@@ -77,8 +80,8 @@ export default function SignupForm({ toggleForm }) {
     try {
       const { credential } = credentialResponse;
       const res = await axios.post(
-        // "http://localhost:5000/api/auth/google-login",
-        `${API_BASE}/api/auth/google-login`,
+        "http://localhost:5000/api/auth/google-login",
+        // `${API_BASE}/api/auth/google-login`,
         {
           token: credential,
         }

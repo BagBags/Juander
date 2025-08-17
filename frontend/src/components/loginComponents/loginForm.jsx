@@ -11,13 +11,16 @@ export default function LoginForm({ toggleForm }) {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [step, setStep] = useState(1);
-  const API_BASE = "https://juander.onrender.com";
+  // const API_BASE =
+  //   window.location.hostname === "localhost"
+  //     ? "http://localhost:5000"
+  //     : "https://juander.onrender.com";
 
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const res = await axios.post(
-        // "http://localhost:5000/api/auth/google-login",
-        `${API_BASE}/api/auth/google-login`,
+        "http://localhost:5000/api/auth/google-login",
+        // `${API_BASE}/api/auth/google-login`,
         {
           token: credentialResponse.credential,
         }
@@ -37,8 +40,8 @@ export default function LoginForm({ toggleForm }) {
   const handleEmailLogin = async () => {
     try {
       const res = await axios.post(
-        // "http://localhost:5000/api/auth/login",
-        `${API_BASE}/api/auth/login`,
+        "http://localhost:5000/api/auth/login",
+        // `${API_BASE}/api/auth/login`,
         {
           email,
           password,
@@ -65,8 +68,8 @@ export default function LoginForm({ toggleForm }) {
     try {
       console.log("Sending OTP to:", email); // ✅ for debug
       await axios.post(
-        // "http://localhost:5000/api/auth/send-otp",
-        `${API_BASE}/api/auth/send-otp`,
+        "http://localhost:5000/api/auth/send-otp",
+        // `${API_BASE}/api/auth/send-otp`,
         { email }
       );
       alert("OTP sent to your email.");
@@ -80,8 +83,8 @@ export default function LoginForm({ toggleForm }) {
   const handleResetPassword = async () => {
     try {
       await axios.post(
-        // "http://localhost:5000/api/auth/reset-password",
-        `${API_BASE}/api/auth/reset-password`,
+        "http://localhost:5000/api/auth/reset-password",
+        // `${API_BASE}/api/auth/reset-password`,
         {
           email,
           otp,
@@ -142,12 +145,14 @@ export default function LoginForm({ toggleForm }) {
           <div className="text-center text-white font-semibold">or</div>
 
           <GoogleLogin
+            clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
             onSuccess={handleGoogleLoginSuccess}
             onError={() => console.log("Google login failed")}
           />
 
           <button
             type="button"
+            onClick={() => navigate("/Homepage")}
             className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
               hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
               active:scale-95"

@@ -11,7 +11,10 @@ export default function ManageEmergency() {
   const [selectedAgency, setSelectedAgency] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const API_BASE = "https://juander.onrender.com";
+  // const API_BASE =
+  //   window.location.hostname === "localhost"
+  //     ? "http://localhost:5000"
+  //     : "https://juander.onrender.com";
 
   const toggleSidebar = () => setIsExpanded((prev) => !prev);
 
@@ -23,11 +26,15 @@ export default function ManageEmergency() {
     try {
       const token = localStorage.getItem("token"); // or wherever your token is stored
 
-      const res = await axios.get(`${API_BASE}/api/emergency`, {
-        headers: {
-          Authorization: `Bearer ${token}`, // <-- Add this line
-        },
-      });
+      const res = await axios.get(
+        // ${API_BASE}
+        `/api/emergency`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // <-- Add this line
+          },
+        }
+      );
       const sorted = res.data.sort((a, b) => a.position - b.position);
       setHotlines(sorted);
     } catch (err) {
@@ -46,7 +53,8 @@ export default function ManageEmergency() {
 
       if (selectedAgency) {
         await axios.put(
-          `${API_BASE}/api/emergency/${selectedAgency._id}`,
+          // `${API_BASE}
+          `/api/emergency/${selectedAgency._id}`,
           agencyData,
           {
             headers: {
@@ -56,11 +64,16 @@ export default function ManageEmergency() {
         );
       } else {
         agencyData.position = hotlines.length;
-        await axios.post(`${API_BASE}/api/emergency`, agencyData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        await axios.post(
+          // `${API_BASE}
+          `/api/emergency`,
+          agencyData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
       }
       setShowForm(false);
       setSelectedAgency(null);
@@ -79,11 +92,15 @@ export default function ManageEmergency() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`${API_BASE}/api/emergency/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axios.delete(
+        // `${API_BASE}
+        `/api/emergency/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       fetchHotlines();
     } catch (err) {
       console.error("Error deleting agency:", err);
@@ -114,7 +131,8 @@ export default function ManageEmergency() {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `${API_BASE}/api/emergency/reorder`,
+        // `${API_BASE}
+        `/api/emergency/reorder`,
         { agencies: updated },
         {
           headers: {

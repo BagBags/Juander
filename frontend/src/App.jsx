@@ -33,6 +33,10 @@ import CreateItineraryPage from "./components/userComponents/CreateItinerary/Cre
 import TourMap from "./components/userComponents/TourMap/TourMap";
 import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
+
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import TouristProtectedRoute from "./components/TouristProtectedRoute";
+
 // Helper wrapper to inject location for AnimatePresence
 function AnimatedRoutes() {
   const location = useLocation();
@@ -40,37 +44,41 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to="/Homepage" replace />} />
+        <Route path="/" element={<Navigate to="/Login" replace />} />
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Admin */}
-        <Route path="/AdminHome" element={<AdminHome />} />
-        <Route path="/AdminManageContent" element={<AdminContent />} />
-        <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
-        <Route path="/AdminManageRole" element={<AdminRole />} />
-        <Route path="/AdminLog" element={<AdminLog />} />
-        <Route path="/AdminTourMap" element={<AdminMap />} />
-        <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
+        <Route element={<AdminProtectedRoute />}>
+          {/* Admin */}
+          <Route path="/AdminHome" element={<AdminHome />} />
+          <Route path="/AdminManageContent" element={<AdminContent />} />
+          <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
+          <Route path="/AdminManageRole" element={<AdminRole />} />
+          <Route path="/AdminLog" element={<AdminLog />} />
+          <Route path="/AdminTourMap" element={<AdminMap />} />
+          <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
+        </Route>
 
-        {/* Tourist */}
-        <Route path="/Homepage" element={<Homepage />} />
-        <Route path="/Emergency" element={<EmergencyPage />} />
-        <Route path="/Photobooth" element={<Photobooth />} />
-        <Route path="/TripArchive" element={<TripArchives />} />
-        <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
-        <Route path="/TourMap" element={<TourMap />} />
-        <Route path="/Chatbot" element={<Chatbot />} />
+        <Route element={<TouristProtectedRoute />}>
+          {/* Tourist */}
+          <Route path="/Homepage" element={<Homepage />} />
+          <Route path="/Emergency" element={<EmergencyPage />} />
+          <Route path="/Photobooth" element={<Photobooth />} />
+          <Route path="/TripArchive" element={<TripArchives />} />
+          <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
+          <Route path="/TourMap" element={<TourMap />} />
+          <Route path="/Chatbot" element={<Chatbot />} />
 
-        {/* Profile Section with Persistent Header */}
-        <Route path="/Profile" element={<ProfileLayout />}>
-          <Route index element={<ProfilePage />} />{" "}
-          {/* default view under /Profile */}
-          <Route path="Account" element={<Account />} />
-          <Route path="/Profile/Birthday" element={<Birthday />} />
-          <Route path="/Profile/Gender" element={<Gender />} />
-          <Route path="/Profile/Country" element={<Country />} />
-          <Route path="/Profile/Language" element={<Language />} />
-          {/* Future: Add /Birthday, /Gender, /Country, /Language */}
+          {/* Profile Section with Persistent Header */}
+          <Route path="/Profile" element={<ProfileLayout />}>
+            <Route index element={<ProfilePage />} />{" "}
+            {/* default view under /Profile */}
+            <Route path="Account" element={<Account />} />
+            <Route path="/Profile/Birthday" element={<Birthday />} />
+            <Route path="/Profile/Gender" element={<Gender />} />
+            <Route path="/Profile/Country" element={<Country />} />
+            <Route path="/Profile/Language" element={<Language />} />
+            {/* Future: Add /Birthday, /Gender, /Country, /Language */}
+          </Route>
         </Route>
       </Routes>
     </AnimatePresence>

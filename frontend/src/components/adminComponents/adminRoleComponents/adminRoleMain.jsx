@@ -7,7 +7,10 @@ export default function RolesPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const API_BASE = "https://juander.onrender.com";
+  // const API_BASE =
+  //   window.location.hostname === "localhost"
+  //     ? "http://localhost:5000"
+  //     : "https://juander.onrender.com";
 
   useEffect(() => {
     fetchUsers();
@@ -18,8 +21,8 @@ export default function RolesPage() {
       setLoading(true);
       const token = localStorage.getItem("token"); // Get token from storage
       const res = await axios.get(
-        // "/api/admin/users",
-        `${API_BASE}/api/admin/users`,
+        "/api/admin/users",
+        // `${API_BASE}/api/admin/users`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -54,8 +57,8 @@ export default function RolesPage() {
     try {
       const token = localStorage.getItem("token"); // Get token from storage
       await axios.put(
-        // `/api/admin/users/${id}/role`,
-        `${API_BASE}/api/admin/users/${id}/role`,
+        `/api/admin/users/${id}/role`,
+        // `${API_BASE}/api/admin/users/${id}/role`,
         { role: newRole },
         {
           headers: {
