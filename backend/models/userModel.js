@@ -21,6 +21,9 @@ const userSchema = new mongoose.Schema(
     otpExpires: {
       type: Date,
     },
+    birthday: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

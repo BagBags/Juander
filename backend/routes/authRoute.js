@@ -10,6 +10,7 @@ router.post("/verify-otp", authController.verifyOtp);
 router.post("/login", authController.login);
 router.post("/google-login", authController.googleLogin);
 router.post("/send-otp", authController.sendOtp);
+
 // GET currently logged-in user
 router.get("/me", verifyToken, async (req, res) => {
   try {
@@ -18,6 +19,52 @@ router.get("/me", verifyToken, async (req, res) => {
     res.json(user);
   } catch (err) {
     console.error("Error fetching current user:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update birthday
+router.post("/birthday", verifyToken, async (req, res) => {
+  try {
+    const { month, date, year } = req.body;
+
+    if (!month || !date || !year) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Convert month string (e.g., "Jan") into a number
+    const monthIndex = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ].indexOf(month);
+
+    if (monthIndex === -1) {
+      return res.status(400).json({ message: "Invalid month" });
+    }
+
+    // Construct a Date object
+    const birthday = new Date(year, monthIndex, date);
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { birthday },
+      { new: true, select: "-password -otp -otpExpires" }
+    );
+
+    res.json({ message: "Birthday updated successfully", user });
+  } catch (err) {
+    console.error("Error updating birthday:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -151,7 +151,13 @@ exports.login = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: { id: user._id, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: "Login failed", error: err.message });
@@ -205,7 +211,13 @@ exports.googleLogin = async (req, res) => {
     res.json({
       message: "Google login successful",
       token: jwtToken,
-      user: { id: user._id, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
     });
   } catch (err) {
     console.error("Google login error:", err);

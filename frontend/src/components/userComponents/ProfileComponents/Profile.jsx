@@ -1,14 +1,25 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars } from "react-icons/fa";
 import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
-import { Link } from "react-router-dom";
-// eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion"; // 🟢 Import motion
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import BackHeader from "./BackHeader"; // Adjust path if needed
 
 export default function ProfilePage() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      console.log("Stored user:", parsedUser); // 👀 check this
+      setCurrentUser(parsedUser);
+    }
+  }, []);
+
   const options = [
     { icon: <FaUser />, label: "Account", to: "/Profile/Account" },
     { icon: <FaBirthdayCake />, label: "Birthday", to: "/Profile/Birthday" },
@@ -17,25 +28,37 @@ export default function ProfilePage() {
     { icon: <MdLanguage />, label: "Language", to: "/Profile/Language" },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/"); // Redirect to login/homepage
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }} // ⚡ Fast fade (0.25s)
+      transition={{ duration: 0.15 }}
       className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
       <div className="w-full max-w-md">
         {/* Profile Card */}
         <div className="mt-4 w-full bg-[#f04e37] rounded-2xl p-6 flex items-center text-white">
           <img
-            src="https://i.pravatar.cc/100?img=68"
+            src={
+              currentUser?.profilePicture || "https://i.pravatar.cc/100?img=68"
+            }
             alt="Profile"
             className="w-30 h-30 rounded-full border-4 border-white object-cover mr-6"
           />
           <div>
             <p className="text-base">Mabuhay!</p>
-            <h1 className="text-3xl font-bold leading-tight">John Santos</h1>
+            <h1 className="text-3xl font-bold leading-tight">
+              {currentUser
+                ? `${currentUser.firstName} ${currentUser.lastName}`
+                : "Guest"}
+            </h1>
           </div>
         </div>
 
@@ -66,7 +89,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Logout Button */}
-        <button className="absolute bottom-30 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#cf3325] text-white font-semibold py-4 rounded-xl shadow-md">
+        <button
+          onClick={handleLogout}
+          className="absolute bottom-30 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#f04e37] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#b42c21] transition-colors"
+        >
           Log out
         </button>
 

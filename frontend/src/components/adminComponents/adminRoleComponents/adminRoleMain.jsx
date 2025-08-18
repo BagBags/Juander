@@ -137,6 +137,7 @@ export default function RolesPage() {
                 <th className="px-6 py-3">Email</th>
                 <th className="px-6 py-3">Role</th>
                 <th className="px-6 py-3">Action</th>
+                <th className="px-6 py-3">Birthday</th>
                 <th className="px-6 py-3">Date Created</th>
               </tr>
             </thead>
@@ -178,6 +179,9 @@ export default function RolesPage() {
                       <option value="tourist">Tourist</option>
                       <option value="admin">Admin</option>
                     </select>
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {user.birthday ? formatDate(user.birthday) : "—"}
                   </td>
                   <td className="px-6 py-3 text-gray-500">
                     {user.createdAt ? formatDate(user.createdAt) : "—"}
