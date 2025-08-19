@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { countries } from "countries-list";
-// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
+import axios from "axios";
 
 export default function CountrySelector() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -20,6 +21,38 @@ export default function CountrySelector() {
       code: code,
     }))
     .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleSave = async () => {
+    if (!selected) {
+      alert("Please select a country before saving.");
+      return;
+    }
+
+    const token =
+      sessionStorage.getItem("token") || localStorage.getItem("token");
+
+    if (!token) {
+      alert("You are not logged in.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.post(
+        "http://localhost:5000/api/auth/country",
+        { country: selected },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      alert("Country saved successfully!");
+    } catch (error) {
+      console.error("Error saving country:", error.response?.data || error);
+      alert(error.response?.data?.message || "Failed to save country");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <motion.div
@@ -69,22 +102,31 @@ export default function CountrySelector() {
       </div>
 
       {/* Sticky Footer */}
-      <div className="pb-7 pt-3 text-center text-sm text-gray-500 border-t shrink-0">
-        Selected Country:{" "}
-        {selected ? (
-          <span className="inline-flex items-center gap-2 font-medium text-black">
-            <img
-              src={`https://flagcdn.com/w40/${countryArray
-                .find((c) => c.name === selected)
-                ?.code.toLowerCase()}.png`}
-              alt={`${selected} flag`}
-              className="w-6 h-4 object-cover rounded-sm"
-            />
-            {selected}
-          </span>
-        ) : (
-          <span className="font-medium text-black">None</span>
-        )}
+      <div className="pb-7 pt-3 text-center text-sm text-gray-500 border-t shrink-0 flex flex-col items-center gap-2">
+        <div>
+          Selected Country:{" "}
+          {selected ? (
+            <span className="inline-flex items-center gap-2 font-medium text-black">
+              <img
+                src={`https://flagcdn.com/w40/${countryArray
+                  .find((c) => c.name === selected)
+                  ?.code.toLowerCase()}.png`}
+                alt={`${selected} flag`}
+                className="w-6 h-4 object-cover rounded-sm"
+              />
+              {selected}
+            </span>
+          ) : (
+            <span className="font-medium text-black">None</span>
+          )}
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="mt-2 px-6 py-2 rounded-lg bg-[#cf3325] text-white font-medium hover:bg-red-600 disabled:opacity-50"
+        >
+          {loading ? "Saving..." : "Save"}
+        </button>
       </div>
     </motion.div>
   );

@@ -1,11 +1,53 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 
 export default function Birthday() {
-  const [month, setMonth] = useState("Jan");
+  const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [year, setYear] = useState("");
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  // Fetch birthday on mount
+  useEffect(() => {
+    const fetchBirthday = async () => {
+      try {
+        const token =
+          sessionStorage.getItem("token") || localStorage.getItem("token");
+
+        if (!token) return;
+
+        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (data?.birthday) {
+          const d = new Date(data.birthday);
+          setMonth(months[d.getMonth()]);
+          setDate(d.getDate().toString());
+          setYear(d.getFullYear().toString());
+        }
+      } catch (err) {
+        console.error("Error fetching birthday:", err.response?.data || err);
+      }
+    };
+
+    fetchBirthday();
+  }, []);
 
   const handleSave = async () => {
     try {
@@ -22,15 +64,10 @@ export default function Birthday() {
         return;
       }
 
-      // Send as 3 fields (month, date, year)
       const { data } = await axios.post(
         "http://localhost:5000/api/auth/birthday",
         { month, date, year },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       console.log("Birthday saved:", data);
@@ -43,21 +80,6 @@ export default function Birthday() {
       alert(err.response?.data?.message || "Failed to save birthday.");
     }
   };
-
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
 
   return (
     <motion.div
@@ -78,6 +100,7 @@ export default function Birthday() {
             onChange={(e) => setMonth(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
           >
+            <option value="">Month</option>
             {months.map((m) => (
               <option key={m} value={m}>
                 {m}

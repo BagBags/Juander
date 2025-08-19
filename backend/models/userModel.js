@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema(
     birthday: {
       type: Date,
     },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Other"],
+    },
+    country: { type: String },
+    language: { type: String },
   },
   { timestamps: true }
 );

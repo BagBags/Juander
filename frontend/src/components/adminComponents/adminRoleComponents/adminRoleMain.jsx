@@ -138,7 +138,11 @@ export default function RolesPage() {
                 <th className="px-6 py-3">Role</th>
                 <th className="px-6 py-3">Action</th>
                 <th className="px-6 py-3">Birthday</th>
+                <th className="px-6 py-3">Gender</th>
+                <th className="px-6 py-3">Country</th>
+                <th className="px-6 py-3">Language</th>
                 <th className="px-6 py-3">Date Created</th>
+                <th className="px-6 py-3">Last Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -156,7 +160,7 @@ export default function RolesPage() {
                   <td className="px-6 py-3 font-medium text-gray-800">
                     {formatName(user.lastName)}
                   </td>
-                  <td className="px-6 py-3 text-gray-600">{user.email}</td>
+                  <td className="px-5 py-3 text-gray-600">{user.email}</td>
                   <td className="px-6 py-3">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold mr-2 ${
@@ -183,8 +187,20 @@ export default function RolesPage() {
                   <td className="px-6 py-3 text-gray-600">
                     {user.birthday ? formatDate(user.birthday) : "—"}
                   </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {user.gender || "—"}
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {user.country || "—"}
+                  </td>
+                  <td className="px-6 py-3 text-gray-500">
+                    {user.language || "—"}
+                  </td>
                   <td className="px-6 py-3 text-gray-500">
                     {user.createdAt ? formatDate(user.createdAt) : "—"}
+                  </td>
+                  <td className="px-6 py-3 text-gray-500">
+                    {user.updatedAt ? formatDate(user.updatedAt) : "—"}
                   </td>
                 </tr>
               ))}

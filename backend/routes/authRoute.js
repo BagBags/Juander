@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
 const User = require("../models/userModel");
+const { saveCountry } = require("../controllers/authController");
+const { saveLanguage } = require("../controllers/authController");
+
 const { verifyToken } = require("../middleware/authMiddleware");
 
 router.post("/reset-password", authController.resetPassword);
@@ -68,5 +71,29 @@ router.post("/birthday", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Update gender
+router.post("/gender", verifyToken, async (req, res) => {
+  try {
+    const { gender } = req.body;
+    if (!gender) return res.status(400).json({ message: "Gender is required" });
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { gender },
+      { new: true, select: "-password -otp -otpExpires" }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    console.error("Error updating gender:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/country", verifyToken, saveCountry);
+router.post("/language", verifyToken, saveLanguage);
 
 module.exports = router;
