@@ -8,7 +8,13 @@ export default function BackHeader({ title }) {
     <div className="sticky top-0 z-20 pt-4 pb-2 px-4 flex items-center  border-gray-200">
       <span
         className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
-        onClick={() => navigate(-1)}
+        onClick={() => {
+          if (window.history.state && window.history.state.idx > 0) {
+            navigate(-1);
+          } else {
+            navigate("Homepage"); // fallback
+          }
+        }}
       >
         &lt;
       </span>

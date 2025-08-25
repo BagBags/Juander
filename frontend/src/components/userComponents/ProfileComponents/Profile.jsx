@@ -12,12 +12,20 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      console.log("Stored user:", parsedUser); // 👀 check this
-      setCurrentUser(parsedUser);
-    }
+    const loadUser = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    };
+
+    // Initial load
+    loadUser();
+
+    // Listen for changes from Account.jsx
+    window.addEventListener("storage", loadUser);
+
+    return () => {
+      window.removeEventListener("storage", loadUser);
+    };
   }, []);
 
   const options = [

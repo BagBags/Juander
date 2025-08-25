@@ -70,14 +70,12 @@ function AnimatedRoutes() {
 
           {/* Profile Section with Persistent Header */}
           <Route path="/Profile" element={<ProfileLayout />}>
-            <Route index element={<ProfilePage />} />{" "}
-            {/* default view under /Profile */}
+            <Route index element={<ProfilePage />} />
             <Route path="Account" element={<Account />} />
-            <Route path="/Profile/Birthday" element={<Birthday />} />
-            <Route path="/Profile/Gender" element={<Gender />} />
-            <Route path="/Profile/Country" element={<Country />} />
-            <Route path="/Profile/Language" element={<Language />} />
-            {/* Future: Add /Birthday, /Gender, /Country, /Language */}
+            <Route path="Birthday" element={<Birthday />} />
+            <Route path="Gender" element={<Gender />} />
+            <Route path="Country" element={<Country />} />
+            <Route path="Language" element={<Language />} />
           </Route>
         </Route>
       </Routes>

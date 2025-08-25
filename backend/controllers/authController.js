@@ -255,6 +255,132 @@ exports.verifyOtp = async (req, res) => {
       .json({ message: "Verification failed", error: err.message });
   }
 };
+
+// Save account info (firstName, lastName, email, password)
+exports.saveAccount = async (req, res) => {
+  try {
+    const { firstName, lastName, email, password } = req.body;
+
+    const updates = {};
+    if (firstName) updates.firstName = firstName;
+    if (lastName) updates.lastName = lastName;
+
+    if (email) {
+      // 🔎 Check if email is already taken
+      const existingUser = await User.findOne({ email });
+      if (existingUser && existingUser._id.toString() !== req.user.id) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      updates.email = email;
+    }
+
+    if (password) {
+      updates.password = await argon2.hash(password);
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, {
+      new: true,
+      select: "-password -otp -otpExpires",
+    });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ message: "Account updated successfully", user });
+  } catch (err) {
+    console.error("Error updating account:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// Update Profile Pre-req Save Account Info
+exports.updateProfile = async (req, res) => {
+  try {
+    const updates = { ...req.body };
+    if (updates.password) {
+      updates.password = await argon2.hash(updates.password);
+    }
+
+    const user = await User.findByIdAndUpdate(req.user.id, updates, {
+      new: true,
+      select: "-password -otp -otpExpires",
+    });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    console.error("Error updating profile:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Save Birthday
+exports.saveBirthday = async (req, res) => {
+  try {
+    const { month, date, year } = req.body;
+
+    if (!month || !date || !year) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Convert month string (e.g., "Jan") into a number
+    const monthIndex = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ].indexOf(month);
+
+    if (monthIndex === -1) {
+      return res.status(400).json({ message: "Invalid month" });
+    }
+
+    // Construct a Date object
+    const birthday = new Date(year, monthIndex, date);
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { birthday },
+      { new: true, select: "-password -otp -otpExpires" }
+    );
+
+    res.json({ message: "Birthday updated successfully", user });
+  } catch (err) {
+    console.error("Error updating birthday:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Save Gender
+exports.saveGender = async (req, res) => {
+  try {
+    const { gender } = req.body;
+    if (!gender) return res.status(400).json({ message: "Gender is required" });
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { gender },
+      { new: true, select: "-password -otp -otpExpires" }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    console.error("Error updating gender:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // Save Country
 exports.saveCountry = async (req, res) => {
   try {

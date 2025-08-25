@@ -1,26 +1,66 @@
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export default function LoginForm({ toggleForm }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showForgot, setShowForgot] = useState(false);
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(""); // store full OTP string
   const [newPassword, setNewPassword] = useState("");
   const [step, setStep] = useState(1);
-  // const API_BASE =
-  //   window.location.hostname === "localhost"
-  //     ? "http://localhost:5000"
-  //     : "https://juander.onrender.com";
 
+  // OTP Input handling
+  const otpLength = 6; // 6-digit OTP
+  const inputRefs = useRef([]);
+
+  const handleOtpChange = (value, index) => {
+    if (/^\d$/.test(value)) {
+      const newOtp = otp.split("");
+      newOtp[index] = value;
+      setOtp(newOtp.join(""));
+
+      // move to next input automatically
+      if (index < otpLength - 1) {
+        inputRefs.current[index + 1].focus();
+      }
+    } else if (value === "") {
+      // clear digit
+      const newOtp = otp.split("");
+      newOtp[index] = "";
+      setOtp(newOtp.join(""));
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    const pasteData = e.clipboardData.getData("text").trim();
+    if (/^\d+$/.test(pasteData)) {
+      const digits = pasteData.split("").slice(0, otpLength);
+      setOtp(digits.join(""));
+      digits.forEach((d, i) => {
+        if (inputRefs.current[i]) {
+          inputRefs.current[i].value = d;
+        }
+      });
+      if (digits.length < otpLength) {
+        inputRefs.current[digits.length]?.focus();
+      }
+    }
+  };
+
+  // ---------- Existing Login Handlers ----------
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     try {
       const res = await axios.post(
         "http://localhost:5000/api/auth/google-login",
-        // `${API_BASE}/api/auth/google-login`,
         {
           token: credentialResponse.credential,
         }
@@ -39,14 +79,10 @@ export default function LoginForm({ toggleForm }) {
 
   const handleEmailLogin = async () => {
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        // `${API_BASE}/api/auth/login`,
-        {
-          email,
-          password,
-        }
-      );
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
+      });
 
       const { user, token } = res.data;
       localStorage.setItem("user", JSON.stringify(user));
@@ -66,12 +102,8 @@ export default function LoginForm({ toggleForm }) {
     }
 
     try {
-      console.log("Sending OTP to:", email); // ✅ for debug
-      await axios.post(
-        "http://localhost:5000/api/auth/send-otp",
-        // `${API_BASE}/api/auth/send-otp`,
-        { email }
-      );
+      console.log("Sending OTP to:", email);
+      await axios.post("http://localhost:5000/api/auth/send-otp", { email });
       alert("OTP sent to your email.");
       setStep(2);
     } catch (err) {
@@ -82,15 +114,11 @@ export default function LoginForm({ toggleForm }) {
 
   const handleResetPassword = async () => {
     try {
-      await axios.post(
-        "http://localhost:5000/api/auth/reset-password",
-        // `${API_BASE}/api/auth/reset-password`,
-        {
-          email,
-          otp,
-          newPassword,
-        }
-      );
+      await axios.post("http://localhost:5000/api/auth/reset-password", {
+        email,
+        otp,
+        newPassword,
+      });
       alert("Password reset successful. Please log in.");
       setShowForgot(false);
       setStep(1);
@@ -210,20 +238,34 @@ export default function LoginForm({ toggleForm }) {
 
           {step === 2 && (
             <>
-              <input
-                type="text"
-                placeholder="Enter OTP"
-                className="w-full p-2 rounded bg-white text-black"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
+              <div
+                className="flex justify-center space-x-2"
+                onPaste={handlePaste}
+              >
+                {Array.from({ length: otpLength }).map((_, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    maxLength="1"
+                    className="w-10 h-12 text-center text-black text-lg 
+             bg-white border border-gray-300 rounded-md 
+             focus:outline-none focus:ring-2 focus:ring-[#f04e37]"
+                    value={otp[index] || ""}
+                    onChange={(e) => handleOtpChange(e.target.value, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    ref={(el) => (inputRefs.current[index] = el)}
+                  />
+                ))}
+              </div>
+
               <input
                 type="password"
                 placeholder="New Password"
-                className="w-full p-2 rounded bg-white text-black"
+                className="w-full p-2 rounded bg-white text-black mt-4"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
+
               <button
                 onClick={handleResetPassword}
                 className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
