@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export default function SideButtons() {
   const icons = [
-      {
+    {
       url: "icons/tour-map.svg",
       label: "Home",
       to: "/Homepage",
@@ -61,6 +61,7 @@ export default function SideButtons() {
         return (
           <Link
             to={icon.to}
+            state={{ from: "/Homepage" }}
             key={index}
             className={`${visibilityClass} flex flex-col items-center group`}
           >

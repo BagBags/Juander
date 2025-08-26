@@ -113,12 +113,10 @@ export default function Chatbot() {
       )
       .join("\n\n");
   }
-
   const handleSend = async () => {
     if (!input.trim()) return;
 
     const userMessage = input.trim();
-
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setInput("");
 
@@ -126,30 +124,55 @@ export default function Chatbot() {
 
     const SYSTEM_PROMPT =
       lang === "filipino"
-        ? `You are a bilingual tour guide chatbot for Intramuros, fluent in English and Filipino.
-Use ONLY the provided information to answer user questions.
-If you don't know the answer, politely say so.
-Answer in Filipino.`
-        : `You are a bilingual tour guide chatbot for Intramuros, fluent in English and Filipino.
-Use ONLY the provided information to answer user questions.
-If you don't know the answer, politely say so.
-Answer in English.`;
+        ? `You are a chatbot guide for Intramuros. 
+You must ONLY use the provided knowledge base to answer questions.
+If the knowledge base does not contain the answer, reply exactly:
+"Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base." 
+Always answer in Filipino.`
+        : `You are a chatbot guide for Intramuros. 
+You must ONLY use the provided knowledge base to answer questions.
+If the knowledge base does not contain the answer, reply exactly:
+"Sorry, I don’t have information about that in my knowledge base." 
+Always answer in English.`;
 
+    // Extract keywords from user query
     const keywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
+
+    // Find relevant entries
     const relevantEntries = botEntries.filter((entry) =>
-      keywords.some(
-        (kw) =>
-          entry.keywords.some((k) => k.toLowerCase().includes(kw)) ||
-          entry.info_en.toLowerCase().includes(kw) ||
-          (entry.info_fil && entry.info_fil.toLowerCase().includes(kw))
+      entry.keywords.some((k) =>
+        keywords.some(
+          (kw) => kw.includes(k.toLowerCase()) || k.toLowerCase().includes(kw)
+        )
       )
     );
 
-    const entriesToUse = relevantEntries.length ? relevantEntries : botEntries;
+    // const relevantEntries = botEntries.filter((entry) =>
+    //   keywords.some(
+    //     (kw) =>
+    //       entry.keywords.some((k) => k.toLowerCase().includes(kw)) ||
+    //       entry.info_en.toLowerCase().includes(kw) ||
+    //       (entry.info_fil && entry.info_fil.toLowerCase().includes(kw))
+    //   )
+    // );
 
-    const knowledgeText = buildKnowledgeText(entriesToUse);
+    // 🚨 Only use relevant entries. If none, force "I don’t know"
+    if (relevantEntries.length === 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            lang === "filipino"
+              ? "Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base."
+              : "Sorry, I don’t have information about that in my knowledge base.",
+        },
+      ]);
+      return;
+    }
 
-    const fullPrompt = `${SYSTEM_PROMPT}\nUse this information:\n${knowledgeText}\nUser: ${userMessage}`;
+    const knowledgeText = buildKnowledgeText(relevantEntries);
+    const fullPrompt = `${SYSTEM_PROMPT}\n\nKnowledge Base:\n${knowledgeText}\n\nUser: ${userMessage}`;
 
     if (!window.puter) {
       setMessages((prev) => [
@@ -165,23 +188,14 @@ Answer in English.`;
     try {
       const response = await window.puter.ai.chat(fullPrompt, {
         model: "gpt-4.1-nano",
-        temperature: 0.3,
+        temperature: 0.0, // 🚨 make it deterministic
         max_tokens: 500,
       });
 
-      let reply = "";
-
-      if (typeof response === "string") {
-        reply = response;
-      } else if (response && typeof response === "object") {
-        if (response.message && typeof response.message.content === "string") {
-          reply = response.message.content;
-        } else {
-          reply = JSON.stringify(response);
-        }
-      } else {
-        reply = String(response);
-      }
+      let reply =
+        typeof response === "string"
+          ? response
+          : response?.message?.content || JSON.stringify(response);
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
@@ -195,6 +209,88 @@ Answer in English.`;
       ]);
     }
   };
+
+  //   const handleSend = async () => {
+  //     if (!input.trim()) return;
+
+  //     const userMessage = input.trim();
+
+  //     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+  //     setInput("");
+
+  //     const lang = detectLanguage(userMessage);
+
+  //     const SYSTEM_PROMPT =
+  //       lang === "filipino"
+  //         ? `You are a bilingual tour guide chatbot for Intramuros, fluent in English and Filipino.
+  // Use ONLY the provided information to answer user questions.
+  // If you don't know the answer, politely say so.
+  // Answer in Filipino.`
+  //         : `You are a bilingual tour guide chatbot for Intramuros, fluent in English and Filipino.
+  // Use ONLY the provided information to answer user questions.
+  // If you don't know the answer, politely say so.
+  // Answer in English.`;
+
+  //     const keywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
+  //     const relevantEntries = botEntries.filter((entry) =>
+  //       keywords.some(
+  //         (kw) =>
+  //           entry.keywords.some((k) => k.toLowerCase().includes(kw)) ||
+  //           entry.info_en.toLowerCase().includes(kw) ||
+  //           (entry.info_fil && entry.info_fil.toLowerCase().includes(kw))
+  //       )
+  //     );
+
+  //     const entriesToUse = relevantEntries.length ? relevantEntries : botEntries;
+
+  //     const knowledgeText = buildKnowledgeText(entriesToUse);
+
+  //     const fullPrompt = `${SYSTEM_PROMPT}\nUse this information:\n${knowledgeText}\nUser: ${userMessage}`;
+
+  //     if (!window.puter) {
+  //       setMessages((prev) => [
+  //         ...prev,
+  //         {
+  //           role: "assistant",
+  //           content: "Juan is not loaded yet. Please wait a moment.",
+  //         },
+  //       ]);
+  //       return;
+  //     }
+
+  //     try {
+  //       const response = await window.puter.ai.chat(fullPrompt, {
+  //         model: "gpt-4.1-nano",
+  //         temperature: 0.3,
+  //         max_tokens: 500,
+  //       });
+
+  //       let reply = "";
+
+  //       if (typeof response === "string") {
+  //         reply = response;
+  //       } else if (response && typeof response === "object") {
+  //         if (response.message && typeof response.message.content === "string") {
+  //           reply = response.message.content;
+  //         } else {
+  //           reply = JSON.stringify(response);
+  //         }
+  //       } else {
+  //         reply = String(response);
+  //       }
+
+  //       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+  //     } catch (err) {
+  //       console.error("Puter.js API error:", err);
+  //       setMessages((prev) => [
+  //         ...prev,
+  //         {
+  //           role: "assistant",
+  //           content: "Sorry, I couldn't get an answer. Please try again.",
+  //         },
+  //       ]);
+  //     }
+  //   };
 
   return (
     <div className="max-w-md mx-auto p-4 border rounded shadow bg-white">

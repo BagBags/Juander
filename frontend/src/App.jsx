@@ -34,8 +34,12 @@ import TourMap from "./components/userComponents/TourMap/TourMap";
 import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 
+// Guest Side
+import GuestHomepage from "./components/userComponents/HomepageComponents/GuestHomepage";
+
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TouristProtectedRoute from "./components/TouristProtectedRoute";
+// import GuestProtectedRoute from "./components/GuestProtectedRoute";
 
 // Helper wrapper to inject location for AnimatePresence
 function AnimatedRoutes() {
@@ -44,9 +48,14 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Navigate to="/Login" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
-
+        {/* Public Pages */}\
+        <Route path="/GuestHomepage" element={<GuestHomepage />} />
+        <Route path="/TourMap" element={<TourMap />} />
+        <Route path="/Chatbot" element={<Chatbot />} />
+        <Route path="/Emergency" element={<EmergencyPage />} />
+        <Route path="/Photobooth" element={<Photobooth />} />
         <Route element={<AdminProtectedRoute />}>
           {/* Admin */}
           <Route path="/AdminHome" element={<AdminHome />} />
@@ -57,17 +66,11 @@ function AnimatedRoutes() {
           <Route path="/AdminTourMap" element={<AdminMap />} />
           <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
         </Route>
-
         <Route element={<TouristProtectedRoute />}>
           {/* Tourist */}
-          <Route path="/Homepage" element={<Homepage />} />
-          <Route path="/Emergency" element={<EmergencyPage />} />
-          <Route path="/Photobooth" element={<Photobooth />} />
+          <Route path="/Homepage" element={<Homepage />} />{" "}
           <Route path="/TripArchive" element={<TripArchives />} />
           <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
-          <Route path="/TourMap" element={<TourMap />} />
-          <Route path="/Chatbot" element={<Chatbot />} />
-
           {/* Profile Section with Persistent Header */}
           <Route path="/Profile" element={<ProfileLayout />}>
             <Route index element={<ProfilePage />} />
@@ -78,6 +81,8 @@ function AnimatedRoutes() {
             <Route path="Language" element={<Language />} />
           </Route>
         </Route>
+        {/* <Route element={<GuestProtectedRoute />}> */}
+        {/* </Route> */}
       </Routes>
     </AnimatePresence>
   );

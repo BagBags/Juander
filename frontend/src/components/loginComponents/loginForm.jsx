@@ -90,6 +90,7 @@ export default function LoginForm({ toggleForm }) {
       );
 
       const { user, token } = res.data;
+      localStorage.removeItem("guest"); // clear guest
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
 
@@ -114,6 +115,7 @@ export default function LoginForm({ toggleForm }) {
       });
 
       const { user, token } = res.data;
+      localStorage.removeItem("guest");
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
 
@@ -242,10 +244,13 @@ export default function LoginForm({ toggleForm }) {
 
           <button
             type="button"
-            onClick={() => navigate("/Homepage")}
-            className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
-              hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
-              active:scale-95"
+            onClick={() => {
+              localStorage.setItem("guest", "true");
+              localStorage.removeItem("token"); // ✅ clear token
+              localStorage.removeItem("user"); // ✅ clear user too
+              navigate("/GuestHomepage", { replace: true });
+            }}
+            className="w-full bg-gray-200 text-black px-4 py-2 rounded-md hover:bg-gray-300 active:scale-95"
           >
             Continue as Guest
           </button>
