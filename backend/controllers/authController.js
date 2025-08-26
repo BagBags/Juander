@@ -27,7 +27,7 @@ exports.register = async (req, res) => {
       lastName,
       email,
       password: hashedPassword,
-      role,
+      role: "tourist",
       otp,
       otpExpires,
       isVerified: false, // Add this to your User model
