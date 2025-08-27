@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   House,
@@ -6,8 +6,8 @@ import {
   UserRound,
   Newspaper,
   History,
-  ChevronsLeft,
-  ChevronsRight,
+  ChevronLeft,
+  ChevronRight,
   LogOut,
 } from "lucide-react";
 import axios from "axios";
@@ -24,7 +24,19 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
     { icon: Newspaper, label: "Reports", to: "/AdminReports" },
     { icon: History, label: "Logs", to: "/AdminLog" },
   ];
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
   // Fetch logged-in admin info
   useEffect(() => {
     const fetchUser = async () => {
@@ -85,7 +97,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
               onClick={toggleSidebar}
               className="p-2 rounded-full hover:bg-white/20 transition"
             >
-              {isExpanded ? <ChevronsLeft /> : <ChevronsRight />}
+              {isExpanded ? <ChevronLeft /> : <ChevronRight />}
             </button>
           </div>
         </div>
@@ -144,25 +156,72 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
         {isExpanded && currentAdmin && (
           <>
             {/* Avatar + name */}
-            <div className="flex flex-col items-center">
-              <div className="w-12 h-12 rounded-full bg-white text-[#f04e37] flex items-center justify-center font-bold text-lg shadow">
-                {currentAdmin.firstName.charAt(0)}
-                {currentAdmin.lastName?.charAt(0)}
+            <div className="flex items-center space-x-3" ref={dropdownRef}>
+              {/* Avatar */}
+              {currentAdmin.profileImage ? (
+                <img
+                  src={currentAdmin.profileImage}
+                  alt={`${currentAdmin.firstName} ${currentAdmin.lastName}`}
+                  className="w-12 h-12 rounded-full object-cover shadow"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-white text-[#f04e37] flex items-center justify-center font-bold text-lg shadow">
+                  {currentAdmin.firstName?.charAt(0)}
+                  {currentAdmin.lastName?.charAt(0)}
+                </div>
+              )}
+
+              {/* Name + role */}
+              <div className="flex flex-col">
+                <span className="text-white/80 text-xs">Logged in as</span>
+                <h2 className="text-white font-medium text-sm truncate max-w-[140px]">
+                  {currentAdmin.firstName} {currentAdmin.lastName}
+                </h2>
               </div>
-              <span className="text-white/80 text-xs mt-2">Logged in as</span>
-              <h2 className="text-white font-medium text-sm text-center truncate w-full">
-                {currentAdmin.firstName} {currentAdmin.lastName}
-              </h2>
+
+              {/* Dropdown wrapper (isolated) */}
+              <div className="relative">
+                <button
+                  onClick={() => setOpen(!open)}
+                  className="ml-2 text-white hover:text-gray-300 focus:outline-none transition-transform duration-200"
+                >
+                  <span
+                    className={`inline-block transform transition-transform duration-200 ${
+                      open ? "rotate-180" : "rotate-0"
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                {/* Dropdown menu */}
+                {open && (
+                  <div className="absolute right-0 bottom-full mb-2 w-40 bg-white rounded-lg shadow-lg py-2 z-50">
+                    <button
+                      className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                      onClick={() => alert("Go to Profile")}
+                    >
+                      Profile
+                    </button>
+                    <button
+                      className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                      // onClick={onLogout}
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Logout button */}
-            <button
+            {/* <button
               onClick={handleLogout}
               className="flex items-center gap-2 bg-white text-[#f04e37] px-5 py-2 rounded-full hover:bg-gray-100 transition-colors shadow-md text-sm font-semibold"
             >
               <LogOut size={18} />
               Logout
-            </button>
+            </button> */}
           </>
         )}
 
