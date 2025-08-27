@@ -50,6 +50,7 @@ export default function AdminLogMain() {
 
   return (
     <div className="bg-white rounded-2xl shadow-md p-6">
+      <h2>Activities</h2>
       <p className=" font-medium text-gray-500 mb-4">
         Track user and system activites
       </p>
@@ -58,8 +59,8 @@ export default function AdminLogMain() {
       ) : logs.length === 0 ? (
         <p className="text-gray-500 italic">No logs available.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-200">
-          <table className="min-w-full text-sm text-left">
+        <div className="overflow-hidden rounded-xl  border-gray-200">
+          <table className="min-w-full text-sm text-left border-0">
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="px-6 py-3">ID</th>

@@ -51,60 +51,69 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
 
   return (
     <div
-      className={`bg-[#f04e37] fixed top-0 left-0 h-full flex flex-col justify-between transition-all duration-300 z-40 ${
-        isExpanded ? "w-80" : "w-20"
-      }`}
+      className={`fixed top-0 left-0 h-full flex flex-col justify-between transition-all duration-300 z-40 shadow-xl
+        bg-gradient-to-b from-[#f04e37] via-[#e03d2d] to-[#c72b1f]
+        ${isExpanded ? "w-80" : "w-20"}
+      `}
     >
       {/* Top: Logo and toggle */}
       <div>
-        <div className="flex items-center justify-between px-4 py-3">
+        {/* Top: Logo + toggle (no pushing) */}
+        <div className="relative px-4 h-20 flex items-center">
           {isExpanded && (
-            <div className="flex items-center gap-4 mx-auto">
+            <div className=" flex items-center">
               <img
-                src="/IA Logo.svg"
+                src="/IA Logo White.png"
                 alt="IA Logo"
-                className="w-20 h-20 object-contain"
+                className="h-12 w-auto object-contain drop-shadow-md pointer-events-none select-none"
               />
-              <img
-                src="/Juander Logo.svg"
-                alt="Juander Logo"
-                className="w-20 h-20 object-contain"
-              />
+              {/* If you re-enable the second logo, keep it small too:
+      <img
+        src="/Juander Logo.svg"
+        alt="Juander Logo"
+        className="h-10 w-auto ml-3 object-contain drop-shadow-md"
+      /> */}
             </div>
           )}
+
           <div
-            className={`${
-              isExpanded ? "ml-auto" : "mx-auto"
-            } text-white hover:text-yellow-300`}
+            className={`absolute top-1/2 -translate-y-1/2 text-white  ${
+              isExpanded ? "right-4" : "left-1/2 -translate-x-1/2"
+            }`}
           >
-            <button onClick={toggleSidebar}>
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-full hover:bg-white/20 transition"
+            >
               {isExpanded ? <ChevronsLeft /> : <ChevronsRight />}
             </button>
           </div>
         </div>
 
-        <hr className="border-white/30 mx-2" />
+        <hr className="border-white/30 mx-4" />
 
         {/* Links */}
-        <ul className="mt-3 font-semibold">
+        <ul className="mt-6 font-medium space-y-1 px-2">
           {sidebarLinks.map(({ icon: Icon, label, to }) => {
             const isActive = location.pathname === to;
             return (
               <li
                 key={label}
-                className={`mb-2 rounded py-3 px-3 transition-all duration-200 ${
-                  isActive ? "bg-white" : "hover:bg-white group"
+                className={`rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? "bg-white shadow-md"
+                    : "hover:bg-white/10 hover:backdrop-blur-sm"
                 }`}
               >
                 <Link
                   to={to}
-                  className={`flex items-center transition-all duration-200 ${
+                  className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 ${
                     isExpanded ? "justify-start space-x-3" : "justify-center"
                   }`}
                 >
                   <Icon
-                    size={28}
-                    className={`transition-all duration-200 ${
+                    size={24}
+                    className={`transition-colors duration-200 ${
                       isActive
                         ? "text-[#f04e37]"
                         : "text-white group-hover:text-[#f04e37]"
@@ -112,10 +121,8 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                   />
                   {isExpanded && (
                     <span
-                      className={`text-lg font-bold transition-all duration-200 ${
-                        isActive
-                          ? "text-[#f04e37]"
-                          : "text-white group-hover:text-[#f04e37]"
+                      className={`text-base transition-colors duration-200 ${
+                        isActive ? "text-[#f04e37] font-semibold" : "text-white"
                       }`}
                     >
                       {label}
@@ -128,21 +135,22 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
         </ul>
       </div>
 
+      {/* Bottom: Admin info + logout */}
       <div
-        className={`px-4 py-4 border-t border-white/30 flex flex-col items-center gap-3 transition-all duration-200 ${
-          isExpanded ? "justify-end" : "justify-center"
-        }`}
+        className={`px-4 py-5 border-t border-white/20 flex flex-col items-center gap-4 transition-all duration-200
+          ${isExpanded ? "justify-end" : "justify-center"}
+        `}
       >
         {isExpanded && currentAdmin && (
           <>
             {/* Avatar + name */}
             <div className="flex flex-col items-center">
-              <div className="w-12 h-12 rounded-full bg-white text-[#f04e37] flex items-center justify-center font-bold text-lg">
+              <div className="w-12 h-12 rounded-full bg-white text-[#f04e37] flex items-center justify-center font-bold text-lg shadow">
                 {currentAdmin.firstName.charAt(0)}
                 {currentAdmin.lastName?.charAt(0)}
               </div>
-              <span className="text-white text-xs mt-2">Logged in as</span>
-              <h2 className="text-white font-semibold text-sm text-center truncate w-full">
+              <span className="text-white/80 text-xs mt-2">Logged in as</span>
+              <h2 className="text-white font-medium text-sm text-center truncate w-full">
                 {currentAdmin.firstName} {currentAdmin.lastName}
               </h2>
             </div>
@@ -150,7 +158,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
             {/* Logout button */}
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 bg-white text-[#f04e37] px-4 py-2 rounded-full hover:bg-gray-100 transition-colors shadow-sm text-sm font-medium"
+              className="flex items-center gap-2 bg-white text-[#f04e37] px-5 py-2 rounded-full hover:bg-gray-100 transition-colors shadow-md text-sm font-semibold"
             >
               <LogOut size={18} />
               Logout
