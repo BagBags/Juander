@@ -20,12 +20,7 @@ export default function SignupForm({ toggleForm }) {
   const [errors, setErrors] = useState("");
   const [message, setMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
-  // const API_BASE =
-  //   window.location.hostname === "localhost"
-  //     ? "http://localhost:5000"
-  //     : "https://juander.onrender.com";
 
-  // reveal password states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -44,7 +39,7 @@ export default function SignupForm({ toggleForm }) {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" }); // clear specific error on typing
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
   const validateForm = () => {
@@ -136,13 +131,24 @@ export default function SignupForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-[#f04e37] p-6 rounded-2xl shadow-md space-y-4 text-white">
-      <h2 className="text-2xl font-bold text-center">Sign Up</h2>
+    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 border border-gray-200">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-800">Sign Up</h2>
+        <p className="text-gray-500 text-sm mt-0">
+          Create an account to get started
+        </p>
+      </div>
 
       {errors.general && (
-        <p className="text-sm text-red-200">{errors.general}</p>
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
+          {errors.general}
+        </p>
       )}
-      {message && <p className="text-sm text-green-200">{message}</p>}
+      {message && (
+        <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-2 rounded">
+          {message}
+        </p>
+      )}
 
       {step === "form" ? (
         <form onSubmit={handleFormSubmit} className="space-y-3">
@@ -154,12 +160,12 @@ export default function SignupForm({ toggleForm }) {
                 placeholder="First Name"
                 value={form.firstName}
                 onChange={handleChange}
-                className={`w-full p-2 rounded bg-white text-black border ${
+                className={`w-full p-3 rounded-lg border ${
                   errors.firstName ? "border-red-400" : "border-gray-300"
-                }`}
+                } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
               />
               {errors.firstName && (
-                <p className="text-xs text-red-200">{errors.firstName}</p>
+                <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>
               )}
             </div>
 
@@ -170,12 +176,12 @@ export default function SignupForm({ toggleForm }) {
                 placeholder="Last Name"
                 value={form.lastName}
                 onChange={handleChange}
-                className={`w-full p-2 rounded bg-white text-black border ${
+                className={`w-full p-3 rounded-lg border ${
                   errors.lastName ? "border-red-400" : "border-gray-300"
-                }`}
+                } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
               />
               {errors.lastName && (
-                <p className="text-xs text-red-200">{errors.lastName}</p>
+                <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
               )}
             </div>
           </div>
@@ -187,12 +193,12 @@ export default function SignupForm({ toggleForm }) {
               placeholder="Email"
               value={form.email}
               onChange={handleChange}
-              className={`w-full p-2 rounded bg-white text-black border ${
+              className={`w-full p-3 rounded-lg border ${
                 errors.email ? "border-red-400" : "border-gray-300"
-              }`}
+              } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
             />
             {errors.email && (
-              <p className="text-xs text-red-200">{errors.email}</p>
+              <p className="text-xs text-red-600 mt-1">{errors.email}</p>
             )}
           </div>
 
@@ -204,19 +210,19 @@ export default function SignupForm({ toggleForm }) {
               placeholder="Password"
               value={form.password}
               onChange={handleChange}
-              className={`w-full p-2 rounded bg-white text-black border ${
+              className={`w-full p-3 rounded-lg border ${
                 errors.password ? "border-red-400" : "border-gray-300"
-              } pr-10`} // add padding-right for icon space
+              } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800 pr-10`}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
             {errors.password && (
-              <p className="text-xs text-red-200">{errors.password}</p>
+              <p className="text-xs text-red-600 mt-1">{errors.password}</p>
             )}
           </div>
 
@@ -228,32 +234,34 @@ export default function SignupForm({ toggleForm }) {
               placeholder="Retype Password"
               value={form.confirmPassword}
               onChange={handleChange}
-              className={`w-full p-2 rounded bg-white text-black border ${
+              className={`w-full p-3 rounded-lg border ${
                 errors.confirmPassword ? "border-red-400" : "border-gray-300"
-              } pr-10`}
+              } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800 pr-10`}
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
             {errors.confirmPassword && (
-              <p className="text-xs text-red-200">{errors.confirmPassword}</p>
+              <p className="text-xs text-red-600 mt-1">
+                {errors.confirmPassword}
+              </p>
             )}
           </div>
 
           <button
             type="submit"
-            className="w-full bg-white text-black px-4 py-2 rounded-md hover:bg-[#ffe2de] active:scale-95"
+            className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md font-semibold hover:bg-[#d9442f] transition duration-200 active:scale-95"
           >
             Create an Account
           </button>
         </form>
       ) : (
         <form onSubmit={handleOtpSubmit} className="space-y-3">
-          <p className="text-sm">
+          <p className="text-sm text-gray-600">
             OTP expires in: <strong>{formatTime(timeLeft)}</strong>
           </p>
 
@@ -263,24 +271,32 @@ export default function SignupForm({ toggleForm }) {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               placeholder="Enter OTP"
-              className={`w-full p-2 rounded bg-white text-black border ${
+              className={`w-full p-2 rounded-lg border ${
                 errors.otp ? "border-red-400" : "border-gray-300"
-              }`}
+              } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
             />
-            {errors.otp && <p className="text-xs text-red-200">{errors.otp}</p>}
+            {errors.otp && (
+              <p className="text-xs text-red-600 mt-1">{errors.otp}</p>
+            )}
           </div>
 
           <button
             type="submit"
-            className="w-full bg-white text-black px-4 py-2 rounded-md hover:bg-[#ffe2de] active:scale-95"
+            className="w-full bg-[#f04e37] text-white px-4 py-2 rounded-lg shadow-md font-semibold hover:bg-[#d9442f] active:scale-95"
           >
             Verify OTP
           </button>
         </form>
       )}
 
-      <div className="text-center font-semibold">or</div>
+      {/* Divider */}
+      <div className="flex items-center gap-2">
+        <hr className="flex-1 border-gray-300" />
+        <span className="text-gray-500 text-sm">or</span>
+        <hr className="flex-1 border-gray-300" />
+      </div>
 
+      {/* Google Login */}
       <GoogleLogin
         onSuccess={handleGoogleSignup}
         onError={() => setErrors({ general: "Google sign-up error" })}
@@ -288,16 +304,17 @@ export default function SignupForm({ toggleForm }) {
         text="signup_with"
       />
 
-      <p className="text-xs text-center mt-4 bg-white/70 text-black px-4 py-2 rounded-md shadow-md">
+      <p className="text-xs text-center mt-4 text-gray-600">
         By signing up, you agree to our{" "}
-        <span className="font-bold underline cursor-pointer">Terms</span> and{" "}
-        <span className="font-bold underline cursor-pointer">Privacy</span>
+        <span className="font-semibold underline cursor-pointer">Terms</span>{" "}
+        and{" "}
+        <span className="font-semibold underline cursor-pointer">Privacy</span>
       </p>
 
-      <p className="text-sm text-center mt-2">
+      <p className="text-sm text-center text-gray-700 mt-2">
         Already have an account?{" "}
         <span
-          className="underline font-bold cursor-pointer"
+          className="text-[#f04e37] font-semibold cursor-pointer hover:underline"
           onClick={toggleForm}
         >
           Log in here

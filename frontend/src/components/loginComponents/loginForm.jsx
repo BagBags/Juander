@@ -173,24 +173,34 @@ export default function LoginForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-[#f04e37] p-6 rounded-2xl shadow-md space-y-4 text-white">
-      <h2 className="text-2xl font-bold text-center">Login</h2>
+    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 border border-gray-200">
+      {/* Title */}
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
+        <p className="text-gray-500 text-sm mt-0">
+          Login to continue to your account
+        </p>
+      </div>
 
+      {/* Error / Success messages */}
       {error && (
-        <p className="text-red-500 text-sm bg-red-100 p-2 rounded">{error}</p>
+        <p className="text-red-600 text-sm bg-red-50 border border-red-200 p-2 rounded">
+          {error}
+        </p>
       )}
       {success && (
-        <p className="text-green-600 text-sm bg-green-100 p-2 rounded">
+        <p className="text-green-600 text-sm bg-green-50 border border-green-200 p-2 rounded">
           {success}
         </p>
       )}
 
       {!showForgot ? (
         <>
+          {/* Email */}
           <input
             type="email"
             placeholder="Email"
-            className="w-full p-2 rounded bg-white text-black"
+            className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -200,31 +210,31 @@ export default function LoginForm({ toggleForm }) {
             <input
               type={showPassword ? "text" : "password"}
               placeholder="Password"
-              className="w-full p-2 rounded bg-white text-black pr-10"
+              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
 
+          {/* Login button */}
           <button
             onClick={handleEmailLogin}
-            className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
-              hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
-              active:scale-95"
+            className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95"
           >
             Login
           </button>
 
+          {/* Forgot password link */}
           <div className="text-center">
             <button
-              className="text-sm underline"
+              className="text-sm text-[#f04e37] hover:underline"
               onClick={() => {
                 setShowForgot(true);
                 setStep(1);
@@ -234,31 +244,41 @@ export default function LoginForm({ toggleForm }) {
             </button>
           </div>
 
-          <div className="text-center text-white font-semibold">or</div>
+          {/* Divider */}
+          <div className="flex items-center gap-2">
+            <hr className="flex-1 border-gray-300" />
+            <span className="text-gray-500 text-sm">or</span>
+            <hr className="flex-1 border-gray-300" />
+          </div>
 
-          <GoogleLogin
-            clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
-            onSuccess={handleGoogleLoginSuccess}
-            onError={() => setError("Google login failed.")}
-          />
+          {/* Google Login */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
+              onSuccess={handleGoogleLoginSuccess}
+              onError={() => setError("Google login failed.")}
+            />
+          </div>
 
+          {/* Continue as guest */}
           <button
             type="button"
             onClick={() => {
               localStorage.setItem("guest", "true");
-              localStorage.removeItem("token"); // ✅ clear token
-              localStorage.removeItem("user"); // ✅ clear user too
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
               navigate("/GuestHomepage", { replace: true });
             }}
-            className="w-full bg-gray-200 text-black px-4 py-2 rounded-md hover:bg-gray-300 active:scale-95"
+            className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95"
           >
             Continue as Guest
           </button>
 
-          <p className="text-sm text-center mt-2">
+          {/* Switch to signup */}
+          <p className="text-sm text-center text-gray-700 mt-2">
             New user?{" "}
             <span
-              className="underline font-bold cursor-pointer"
+              className="text-[#f04e37] font-semibold cursor-pointer hover:underline"
               onClick={toggleForm}
             >
               Create an account here
@@ -266,11 +286,13 @@ export default function LoginForm({ toggleForm }) {
           </p>
         </>
       ) : (
+        // Forgot Password Steps (same structure, just re-styled consistently)
         <>
+          {/* Email */}
           <input
             type="email"
             placeholder="Enter your email"
-            className="w-full p-2 rounded bg-white text-black"
+            className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={step !== 1}
@@ -280,9 +302,7 @@ export default function LoginForm({ toggleForm }) {
             <>
               <button
                 onClick={handleForgotRequest}
-                className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
-                  hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
-                  active:scale-95 mt-2"
+                className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg hover:bg-[#d9442f] active:scale-95 mt-2"
               >
                 Send OTP
               </button>
@@ -296,9 +316,7 @@ export default function LoginForm({ toggleForm }) {
                   setError("");
                   setSuccess("");
                 }}
-                className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
-                  hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
-                  active:scale-95 mt-2"
+                className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95 mt-2"
               >
                 Back to Login
               </button>
@@ -307,10 +325,10 @@ export default function LoginForm({ toggleForm }) {
 
           {step === 2 && (
             <>
-              <p className="text-sm">
+              {/* OTP */}
+              <p className="text-sm text-gray-600">
                 OTP expires in: <strong>{formatTime(timeLeft)}</strong>
               </p>
-
               <div
                 className="flex justify-center space-x-2"
                 onPaste={handlePaste}
@@ -320,9 +338,7 @@ export default function LoginForm({ toggleForm }) {
                     key={index}
                     type="text"
                     maxLength="1"
-                    className="w-10 h-12 text-center text-black text-lg 
-             bg-white border border-gray-300 rounded-md 
-             focus:outline-none focus:ring-2 focus:ring-[#f04e37]"
+                    className="w-10 h-12 text-center text-lg text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f04e37]"
                     value={otp[index] || ""}
                     onChange={(e) => handleOtpChange(e.target.value, index)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
@@ -331,19 +347,19 @@ export default function LoginForm({ toggleForm }) {
                 ))}
               </div>
 
-              {/* New password with reveal toggle */}
+              {/* New Password */}
               <div className="relative w-full mt-4">
                 <input
                   type={showNewPassword ? "text" : "password"}
                   placeholder="New Password"
-                  className="w-full p-2 rounded bg-white text-black pr-10"
+                  className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
                   {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -351,9 +367,7 @@ export default function LoginForm({ toggleForm }) {
 
               <button
                 onClick={handleResetPassword}
-                className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
-                  hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
-                  active:scale-95 mt-2"
+                className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg hover:bg-[#d9442f] active:scale-95 mt-2"
               >
                 Reset Password
               </button>
@@ -367,9 +381,7 @@ export default function LoginForm({ toggleForm }) {
                   setError("");
                   setSuccess("");
                 }}
-                className="w-full bg-white text-black px-4 py-2 rounded-md shadow-md 
-              hover:bg-[#ffe2de] transition-colors duration-200 ease-in-out 
-              active:scale-95"
+                className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95 mt-2"
               >
                 Back to Login
               </button>
