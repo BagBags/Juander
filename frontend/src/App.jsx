@@ -15,7 +15,8 @@ import LoginPage from "./components/loginComponents/loginPage";
 import AdminRole from "./components/adminComponents/adminRoleComponents/adminRole";
 import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
 import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
-
+import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
+import AdminItinerary from "./components/adminComponents/adminItineraryComponents/adminItinerary";
 // Tourist Side
 import Homepage from "./components/userComponents/HomepageComponents/Homepage";
 import EmergencyPage from "./components/userComponents/EmegencyComponents/EmergencyPage";
@@ -31,7 +32,6 @@ import Language from "./components/userComponents/ProfileComponents/Language";
 import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 import TourMap from "./components/userComponents/TourMap/TourMap";
-import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 
 // Guest Side
@@ -65,6 +65,7 @@ function AnimatedRoutes() {
           <Route path="/AdminLog" element={<AdminLog />} />
           <Route path="/AdminTourMap" element={<AdminMap />} />
           <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
+          <Route path="/AdminItinerary" element={<AdminItinerary />} />
         </Route>
         <Route element={<TouristProtectedRoute />}>
           {/* Tourist */}

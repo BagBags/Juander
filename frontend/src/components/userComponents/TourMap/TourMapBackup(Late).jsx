@@ -1,31 +1,19 @@
-// components/userComponents/UserMap.jsx
 import React, { useState, useEffect } from "react";
-import Map, { Marker, Source, Layer } from "react-map-gl";
+import Map, { Marker, Popup, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
-import axios from "axios";
-
 import {
   MAPBOX_TOKEN,
   INTRAMUROS_BOUNDS,
   directionsClient,
+  initialMaskFeature,
   createInverseMask,
 } from "./mapConfig";
+import * as THREE from "three";
 
 import "../../../App.css";
 
-// Axios instance aligned with admin
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "/api",
-});
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// Marker SVG
 function BouncingMarker() {
   return (
     <svg
@@ -52,139 +40,76 @@ export default function UserMap() {
     longitude: 120.9747,
     zoom: 16,
   });
-
-  const [maskGeoJson, setMaskGeoJson] = useState(null);
+  const [maskGeoJson, setMaskGeoJson] = useState(initialMaskFeature);
   const [inverseMaskGeoJson, setInverseMaskGeoJson] = useState(null);
-
-  const [pins, setPins] = useState([]); // from backend
+  const [pins] = useState([
+    {
+      latitude: 14.5896,
+      longitude: 120.9747,
+      title: "Welcome to Intramuros!",
+      description:
+        "Curabitur pretium tincidunt lacus. Nulla gravida orci a odio. Nullam varius, turpis et commodo pharetra, est eros bibendum elit, nec luctus.",
+      mediaType: "image",
+      mediaUrl:
+        "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885_960_720.jpg",
+      reviews: [
+        {
+          name: "George Olsen",
+          date: "July 25",
+          review: "Sample review from user who visited the tour mode site.",
+          stars: 5,
+          img: "https://via.placeholder.com/40",
+        },
+        {
+          name: "Ares Bautista",
+          date: "July 25",
+          review: "Had a great time here, such educational and fun site walk.",
+          stars: 4,
+          img: "https://via.placeholder.com/40",
+        },
+        {
+          name: "Martin Gonzales",
+          date: "July 25",
+          review: "Love the AR mode, such an informative learning walk.",
+          stars: 5,
+          img: "https://via.placeholder.com/40",
+        },
+      ],
+    },
+  ]);
   const [userLocation, setUserLocation] = useState(null);
   const [selectedPin, setSelectedPin] = useState(null);
   const [selectedDistance, setSelectedDistance] = useState(null);
   const [routeGeoJson, setRouteGeoJson] = useState(null);
+  const [isInsideMask, setIsInsideMask] = useState(false);
 
-  // --- Fetch mask from backend (same route as admin) ---
   useEffect(() => {
-    const loadMask = async () => {
-      try {
-        const res = await api.get("/mask");
-        // Controller returns an array; use the latest (or only) one
-        const m =
-          Array.isArray(res.data) && res.data.length > 0
-            ? res.data[res.data.length - 1]
-            : null;
+    setInverseMaskGeoJson(createInverseMask(maskGeoJson));
+  }, [maskGeoJson]);
 
-        if (!m) {
-          console.warn("No mask in DB yet; mask layers will be hidden.");
-          setMaskGeoJson(null);
-          setInverseMaskGeoJson(null);
-          return;
-        }
-
-        // Build a GeoJSON Feature from stored geometry
-        const feature = {
-          type: "Feature",
-          properties: {},
-          geometry: m.geometry?.type
-            ? m.geometry
-            : // if your controller later returns a full Feature, keep it compatible
-              m.geometry || m, // fallback
-        };
-
-        setMaskGeoJson(feature);
-        setInverseMaskGeoJson(createInverseMask(feature));
-      } catch (err) {
-        console.error("Error fetching mask:", err);
-        setMaskGeoJson(null);
-        setInverseMaskGeoJson(null);
-      }
-    };
-    loadMask();
-  }, []);
-
-  // --- Fetch pins from backend (same data used by AdminTourMapMain) ---
-  useEffect(() => {
-    const loadPins = async () => {
-      try {
-        const res = await api.get("/pins");
-        const rawPins = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.pins)
-          ? res.data.pins
-          : [];
-
-        // Normalize to the shape the user map expects
-        const normalized = rawPins
-          .filter((p) => (p.status || "active") === "active")
-          .map((p) => ({
-            _id: p._id,
-            latitude: p.latitude,
-            longitude: p.longitude,
-            title: p.siteName || "Site",
-            description: p.siteDescription || "",
-            mediaType: p.mediaType || "image",
-            mediaUrl: p.mediaUrl || "",
-            arEnabled: !!p.arEnabled,
-            arLink: p.arLink || "",
-          }));
-
-        setPins(normalized);
-      } catch (err) {
-        console.error("Error fetching pins:", err);
-        setPins([]);
-      }
-    };
-    loadPins();
-  }, []);
-
-  // --- Track user location & (optionally) test against mask ---
   useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLocation({ latitude, longitude });
         setViewState((prev) => ({ ...prev, latitude, longitude }));
+
+        const inside = booleanPointInPolygon(
+          point([longitude, latitude]),
+          maskGeoJson
+        );
+        setIsInsideMask(inside);
       },
       (err) => console.error("GPS error:", err),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
-  }, []);
-
-  const openPin = async (idx) => {
-    setSelectedPin(idx);
-    setSelectedDistance(null);
-    setRouteGeoJson(null);
-
-    const pin = pins[idx];
-    if (!userLocation || !pin) return;
-
-    try {
-      const resp = await directionsClient
-        .getDirections({
-          profile: "walking",
-          geometries: "geojson",
-          waypoints: [
-            { coordinates: [userLocation.longitude, userLocation.latitude] },
-            { coordinates: [pin.longitude, pin.latitude] },
-          ],
-        })
-        .send();
-
-      const distance = resp.body.routes[0].distance;
-      setSelectedDistance(distance);
-      setRouteGeoJson({
-        type: "Feature",
-        geometry: resp.body.routes[0].geometry,
-        properties: {},
-      });
-    } catch (e) {
-      console.error("Directions error:", e);
-    }
-  };
+  }, [maskGeoJson]);
 
   const renderSiteCard = (pin) => (
     <div className="absolute top-1/2 left-1/2 z-50 w-[320px] -translate-x-1/2 -translate-y-1/2">
       <div className="relative bg-white border border-gray-200 rounded-xl shadow-lg p-4 font-sans">
+        {/* Close Button */}
         <button
           onClick={() => {
             setSelectedPin(null);
@@ -196,52 +121,68 @@ export default function UserMap() {
           ✕
         </button>
 
-        <div className="mb-2">
-          <h3 className="text-base font-semibold">{pin.title}</h3>
-        </div>
-
+        {/* Info Box */}
         <div className="flex gap-4">
           <div className="flex-1 flex flex-col">
             <p className="text-sm leading-snug text-gray-700 mb-3">
               {pin.description}
             </p>
-            {pin.arEnabled && pin.arLink && (
-              <a
-                href={pin.arLink}
-                target="_blank"
-                rel="noreferrer"
-                className="bg-blue-600 hover:bg-blue-700 transition text-white px-4 py-2 text-sm font-medium rounded-lg shadow-sm w-fit"
-              >
-                View in AR Mode
-              </a>
-            )}
+            <button className="bg-blue-600 hover:bg-blue-700 transition text-white px-4 py-2 text-sm font-medium rounded-lg shadow-sm w-fit">
+              View in AR Mode
+            </button>
           </div>
           <div className="flex-shrink-0">
-            {pin.mediaType === "video" ? (
+            {pin.mediaType === "image" ? (
+              <img
+                src={pin.mediaUrl}
+                alt="media"
+                className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+              />
+            ) : (
               <video
                 src={pin.mediaUrl}
                 className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                 muted
-                controls
-              />
-            ) : (
-              <img
-                src={
-                  pin.mediaUrl ||
-                  "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&q=60"
-                }
-                alt={pin.title}
-                className="w-16 h-16 object-cover rounded-lg border border-gray-200"
               />
             )}
           </div>
         </div>
 
+        {/* Distance */}
         {selectedDistance !== null && (
           <div className="bg-gray-50 text-xs px-3 py-2 mt-3 rounded-md shadow-sm border border-gray-200">
             🛣️ Distance: {(selectedDistance / 1000).toFixed(2)} km
           </div>
         )}
+
+        {/* Reviews */}
+        <div className="bg-white rounded-xl overflow-hidden shadow-lg mt-3 border border-gray-200">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-white font-semibold text-center text-sm tracking-wide">
+            Reviews
+          </div>
+          <div className="max-h-[160px] overflow-y-auto px-4 py-3 space-y-3">
+            {pin.reviews.map((r, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <img
+                  src={r.img}
+                  alt={r.name}
+                  className="w-10 h-10 rounded-full border border-gray-300"
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-sm">{r.name}</strong>
+                    <span className="text-xs text-gray-500">{r.date}</span>
+                  </div>
+                  <div className="text-yellow-400 text-xs">
+                    {"★".repeat(r.stars)}
+                    {"☆".repeat(5 - r.stars)}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">{r.review}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -262,7 +203,6 @@ export default function UserMap() {
           setRouteGeoJson(null);
         }}
       >
-        {/* User Location */}
         {userLocation && (
           <Marker
             latitude={userLocation.latitude}
@@ -273,39 +213,58 @@ export default function UserMap() {
           </Marker>
         )}
 
-        {/* Pins from backend */}
         {pins.map((pin, index) => (
           <Marker
-            key={pin._id || index}
+            key={index}
             latitude={pin.latitude}
             longitude={pin.longitude}
             anchor="bottom"
             onClick={(e) => {
               e.originalEvent.stopPropagation();
-              openPin(index);
+              setSelectedPin(index);
+              if (userLocation) {
+                directionsClient
+                  .getDirections({
+                    profile: "walking",
+                    geometries: "geojson",
+                    waypoints: [
+                      {
+                        coordinates: [
+                          userLocation.longitude,
+                          userLocation.latitude,
+                        ],
+                      },
+                      { coordinates: [pin.longitude, pin.latitude] },
+                    ],
+                  })
+                  .send()
+                  .then((res) => {
+                    const distance = res.body.routes[0].distance;
+                    setSelectedDistance(distance);
+                    setRouteGeoJson({
+                      type: "Feature",
+                      geometry: res.body.routes[0].geometry,
+                      properties: {},
+                    });
+                  });
+              }
             }}
           >
             <BouncingMarker />
           </Marker>
         ))}
 
-        {/* Selected Pin Card */}
-        {selectedPin !== null &&
-          pins[selectedPin] &&
-          renderSiteCard(pins[selectedPin])}
+        {selectedPin !== null && renderSiteCard(pins[selectedPin])}
 
-        {/* Mask (if available) */}
-        {maskGeoJson && (
-          <Source id="mask" type="geojson" data={maskGeoJson}>
-            <Layer
-              id="mask-layer"
-              type="fill"
-              paint={{ "fill-color": "#000", "fill-opacity": 0.3 }}
-            />
-          </Source>
-        )}
+        {/* Mask Layers */}
+        <Source id="mask" type="geojson" data={maskGeoJson}>
+          <Layer
+            id="mask-layer"
+            type="fill"
+            paint={{ "fill-color": "#000", "fill-opacity": 0.3 }}
+          />
+        </Source>
 
-        {/* Inverse mask to dim outside area */}
         {inverseMaskGeoJson && (
           <Source id="inverse-mask" type="geojson" data={inverseMaskGeoJson}>
             <Layer
@@ -316,7 +275,6 @@ export default function UserMap() {
           </Source>
         )}
 
-        {/* Route */}
         {routeGeoJson && (
           <Source id="route" type="geojson" data={routeGeoJson}>
             <Layer
@@ -328,7 +286,7 @@ export default function UserMap() {
         )}
       </Map>
 
-      {/* Go To Next Site button */}
+      {/* Go To Next Site button outside popup */}
       {selectedPin !== null && (
         <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2">
           <button className="bg-blue-700 text-white px-5 py-2 rounded-md cursor-pointer shadow-lg">
@@ -337,7 +295,7 @@ export default function UserMap() {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Tour Map Footer fixed */}
       <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-50">
         Tour Map
       </div>

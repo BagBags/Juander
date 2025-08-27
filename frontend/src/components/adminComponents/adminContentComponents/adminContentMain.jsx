@@ -28,7 +28,7 @@ export default function AdminContentMain() {
     {
       title: "Iteneraries",
       iconPath: "/icons/tour-map.svg",
-      route: "/AdminIteneraries",
+      route: "/AdminItinerary",
     },
   ];
 

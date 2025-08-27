@@ -13,6 +13,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const adminBotRoute = require("./routes/adminBotRoute");
 const pinRoute = require("./routes/pinRoute");
 const maskRoute = require("./routes/maskRoute");
+const itineraryRoute = require("./routes/itineraryRoute");
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
 // Needed for resolving __dirname in CommonJS
@@ -58,6 +59,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/admin/bot", verifyAdmin, adminBotRoute);
 app.use("/api/pins", pinRoute);
 app.use("/api/mask", maskRoute);
+app.use("/api/itineraries", itineraryRoute);
 
 // // Serve frontend in production +++
 // if (process.env.NODE_ENV === "production") {
