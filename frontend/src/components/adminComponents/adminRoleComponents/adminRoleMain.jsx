@@ -7,33 +7,37 @@ export default function RolesPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  // const API_BASE =
-  //   window.location.hostname === "localhost"
-  //     ? "http://localhost:5000"
-  //     : "https://juander.onrender.com";
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     fetchUsers();
+    fetchCurrentUser();
   }, []);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("token"); // Get token from storage
-      const res = await axios.get(
-        "/api/admin/users",
-        // `${API_BASE}/api/admin/users`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/api/admin/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setUsers(res.data);
     } catch (err) {
       console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCurrentUser(res.data);
+    } catch (err) {
+      console.error("Error fetching current user:", err);
     }
   };
 
@@ -55,22 +59,19 @@ export default function RolesPage() {
 
   const handleRoleChange = async (id, newRole) => {
     try {
-      const token = localStorage.getItem("token"); // Get token from storage
+      const token = localStorage.getItem("token");
       await axios.put(
         `/api/admin/users/${id}/role`,
-        // `${API_BASE}/api/admin/users/${id}/role`,
         { role: newRole },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setUsers((prev) =>
         prev.map((user) =>
           user._id === id ? { ...user, role: newRole } : user
         )
       );
+
       Swal.fire("Updated!", "User role has been changed.", "success");
     } catch (err) {
       console.error("Error updating role:", err);
@@ -102,6 +103,8 @@ export default function RolesPage() {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   };
+
+  const isSuperAdmin = currentUser?.email === "aaronbagain@gmail.com";
 
   return (
     <section>
@@ -137,10 +140,10 @@ export default function RolesPage() {
                 <th className="px-6 py-3">Email</th>
                 <th className="px-6 py-3">Role</th>
                 <th className="px-6 py-3">Action</th>
-                <th className="px-6 py-3">Birthday</th>
-                <th className="px-6 py-3">Gender</th>
                 <th className="px-6 py-3">Country</th>
                 <th className="px-6 py-3">Language</th>
+                <th className="px-6 py-3">Gender</th>
+                <th className="px-6 py-3">Birthday</th>
                 <th className="px-6 py-3">Date Created</th>
                 <th className="px-6 py-3">Last Updated</th>
               </tr>
@@ -173,28 +176,42 @@ export default function RolesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-3">
-                    <select
-                      value={user.role}
-                      onChange={(e) =>
-                        confirmRoleChange(user._id, e.target.value)
-                      }
-                      className="border rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-[#f04e37]"
-                    >
-                      <option value="tourist">Tourist</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-3 text-gray-600">
-                    {user.birthday ? formatDate(user.birthday) : "—"}
-                  </td>
-                  <td className="px-6 py-3 text-gray-600">
-                    {user.gender || "—"}
+                    {user.email === "aaronbagain@gmail.com" ? (
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                        Super
+                      </span>
+                    ) : isSuperAdmin ? (
+                      <select
+                        value={user.role}
+                        onChange={(e) =>
+                          confirmRoleChange(user._id, e.target.value)
+                        }
+                        className="border rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-[#f04e37]"
+                      >
+                        <option value="tourist">Tourist</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : (
+                      <select
+                        value={user.role}
+                        disabled
+                        className="border rounded-lg px-3 py-1 text-sm bg-gray-100 text-gray-400"
+                      >
+                        <option>{user.role}</option>
+                      </select>
+                    )}
                   </td>
                   <td className="px-6 py-3 text-gray-600">
                     {user.country || "—"}
                   </td>
                   <td className="px-6 py-3 text-gray-500">
                     {user.language || "—"}
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {user.gender || "—"}
+                  </td>
+                  <td className="px-6 py-3 text-gray-600">
+                    {user.birthday ? formatDate(user.birthday) : "—"}
                   </td>
                   <td className="px-6 py-3 text-gray-500">
                     {user.createdAt ? formatDate(user.createdAt) : "—"}
@@ -207,7 +224,7 @@ export default function RolesPage() {
               {filteredUsers.length === 0 && (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="12"
                     className="text-center py-6 text-gray-500 italic"
                   >
                     No users found

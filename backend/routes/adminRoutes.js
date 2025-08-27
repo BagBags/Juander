@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../models/userModel"); // adjust path if needed
+const User = require("../models/userModel");
 const Log = require("../models/logModel");
 const { verifyAdmin } = require("../middleware/authMiddleware");
+const { SUPER_ADMIN_EMAIL } = require("../config/superAdmin");
 
-// GET all users (exclude otp, otpExpires, and password)
+// GET all users
 router.get("/users", async (req, res) => {
   try {
     const users = await User.find({}, "-password -otp -otpExpires");
@@ -23,18 +24,38 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
       return res.status(400).json({ message: "Invalid role" });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true, select: "-password -otp -otpExpires" }
-    );
-
-    if (!updatedUser) {
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // log with real admin's name
-    const adminName = `${req.user.firstName} ${req.user.lastName || ""}`;
+    const requester = req.user;
+
+    // 🚫 Nobody can change the super admin
+    if (targetUser.email === SUPER_ADMIN_EMAIL) {
+      return res
+        .status(403)
+        .json({ message: "Super Admin role cannot be modified" });
+    }
+
+    // ✅ If requester is admin (but not super admin)
+    if (requester.email !== SUPER_ADMIN_EMAIL) {
+      // Admins can modify tourists and admins
+      if (!["tourist", "admin"].includes(targetUser.role)) {
+        return res
+          .status(403)
+          .json({ message: "Admins can only modify Tourists or Admins" });
+      }
+    }
+
+    // ✅ Apply role change
+    targetUser.role = role;
+    const updatedUser = await targetUser.save();
+
+    // Log action
+    const adminName = `${requester.firstName} ${
+      requester.lastName || ""
+    }`.trim();
     await Log.create({
       adminName,
       action: `Changed role of ${updatedUser.firstName} ${updatedUser.lastName} to ${role}`,
