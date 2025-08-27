@@ -149,8 +149,8 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
 
       {/* Bottom: Admin info + logout */}
       <div
-        className={`px-4 py-5 border-t border-white/20 flex flex-col items-center gap-4 transition-all duration-200
-          ${isExpanded ? "justify-end" : "justify-center"}
+        className={`px-4 py-5 border-t border-white/20 flex flex-col items-left gap-4 transition-all duration-200
+          ${isExpanded ? "justify-end" : "justify-center items-center"}
         `}
       >
         {isExpanded && currentAdmin && (
