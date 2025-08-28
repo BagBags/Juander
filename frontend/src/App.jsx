@@ -36,9 +36,11 @@ import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 
 // Guest Side
 import GuestHomepage from "./components/userComponents/HomepageComponents/GuestHomepage";
-
+import GuestProfile from "./components/userComponents/GuestProfileComponents/GuestProfile";
+import GuestProfileLayout from "./components/userComponents/GuestProfileComponents/GuestProfileLayout";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TouristProtectedRoute from "./components/TouristProtectedRoute";
+import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
 
 // Helper wrapper to inject location for AnimatePresence
@@ -56,6 +58,11 @@ function AnimatedRoutes() {
         <Route path="/Chatbot" element={<Chatbot />} />
         <Route path="/Emergency" element={<EmergencyPage />} />
         <Route path="/Photobooth" element={<Photobooth />} />
+        {/* Guest Profile Section */}
+        <Route path="/GuestProfile" element={<GuestProfileLayout />}>
+          <Route index element={<GuestProfile />} />
+          <Route path="GuestLanguage" element={<GuestLanguage />} />
+        </Route>
         <Route element={<AdminProtectedRoute />}>
           {/* Admin */}
           <Route path="/AdminHome" element={<AdminHome />} />

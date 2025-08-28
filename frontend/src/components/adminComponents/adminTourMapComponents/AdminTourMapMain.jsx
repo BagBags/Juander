@@ -23,9 +23,10 @@ api.interceptors.request.use((config) => {
 
 export default function AdminTourMapMain() {
   const [viewState, setViewState] = useState({
-    latitude: 14.5896,
+    latitude: 40.5896,
     longitude: 120.9747,
-    zoom: 16,
+    zoom: 4,
+    bearing: 45,
   });
 
   const [pins, setPins] = useState([]);
@@ -169,10 +170,7 @@ export default function AdminTourMapMain() {
 
       // Accept POSTing either the Feature or just geometry—mirrors our controller example
       await api.post("/mask", {
-        // If your backend expects { geometry }, send only geometry
-        // geometry: featureToSave.geometry,
-        // If it accepts a full GeoJSON Feature:
-        ...featureToSave,
+        geometry: featureToSave.geometry, // ✅ only send geometry
       });
 
       notify("success", "Mask saved");
@@ -289,7 +287,7 @@ export default function AdminTourMapMain() {
 
   return (
     <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
-      <div className="relative w-full max-w-6xl h-[80vh] bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Loading/Notif */}
         {loading && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[10000] bg-white/90 border border-gray-200 px-3 py-1 rounded shadow">

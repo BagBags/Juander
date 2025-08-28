@@ -34,15 +34,25 @@ export const initialMaskFeature = {
   },
 };
 
-export const createInverseMask = (mask) => {
-  return polygon([
-    [
-      [120.969, 14.5833],
-      [120.9802, 14.5833],
-      [120.9802, 14.5966],
-      [120.969, 14.5966],
-      [120.969, 14.5833],
-    ],
-    mask.geometry.coordinates[0],
-  ]);
+export const createInverseMask = (maskFeature) => {
+  if (!maskFeature?.geometry?.coordinates) return null;
+
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        // Outer rectangle (world bounds)
+        [
+          [-180, -90],
+          [180, -90],
+          [180, 90],
+          [-180, 90],
+          [-180, -90],
+        ],
+        // Hole (Intramuros boundary from DB)
+        ...maskFeature.geometry.coordinates,
+      ],
+    },
+  };
 };

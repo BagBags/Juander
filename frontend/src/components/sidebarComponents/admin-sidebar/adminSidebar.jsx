@@ -198,14 +198,8 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                 {open && (
                   <div className="absolute right-0 bottom-full mb-2 w-40 bg-white rounded-lg shadow-lg py-2 z-50">
                     <button
-                      className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                      onClick={() => alert("Go to Profile")}
-                    >
-                      Profile
-                    </button>
-                    <button
                       className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-                      // onClick={onLogout}
+                      onClick={handleLogout}
                     >
                       Logout
                     </button>
