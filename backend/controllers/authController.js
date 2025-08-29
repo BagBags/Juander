@@ -31,6 +31,7 @@ exports.register = async (req, res) => {
       otp,
       otpExpires,
       isVerified: false, // Add this to your User model
+      authProvider: "local",
     });
 
     // Send OTP via email
@@ -157,6 +158,7 @@ exports.login = async (req, res) => {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        authProvider: user.authProvider,
       },
     });
   } catch (err) {
@@ -191,6 +193,7 @@ exports.googleLogin = async (req, res) => {
         email,
         password: await argon2.hash(googleId),
         role: isSuperAdmin ? "admin" : "tourist",
+        authProvider: "google",
       });
     } else if (isSuperAdmin && user.role !== "admin") {
       user.role = "admin";
@@ -217,6 +220,7 @@ exports.googleLogin = async (req, res) => {
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        authProvider: user.authProvider,
       },
     });
   } catch (err) {

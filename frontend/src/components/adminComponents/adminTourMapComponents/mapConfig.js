@@ -7,8 +7,8 @@ export const MAPBOX_TOKEN =
 export const directionsClient = mbxDirections({ accessToken: MAPBOX_TOKEN });
 
 export const INTRAMUROS_BOUNDS = [
-  [120.969, 14.5833],
-  [120.9802, 14.5966],
+  [120.968, 14.5833], // southwest (slightly left)
+  [120.982, 14.5985], // northeast (slightly higher & right)
 ];
 
 export const initialMaskFeature = {
@@ -34,15 +34,15 @@ export const initialMaskFeature = {
   },
 };
 
-export const createInverseMask = (mask) => {
-  return polygon([
-    [
-      [120.969, 14.5833],
-      [120.9802, 14.5833],
-      [120.9802, 14.5966],
-      [120.969, 14.5966],
-      [120.969, 14.5833],
-    ],
-    mask.geometry.coordinates[0],
-  ]);
-};
+// export const createInverseMask = (mask) => {
+//   return polygon([
+//     [
+//       [120.969, 14.5833],
+//       [120.9802, 14.5833],
+//       [120.9802, 14.5966],
+//       [120.969, 14.5966],
+//       [120.969, 14.5833],
+//     ],
+//     mask.geometry.coordinates[0],
+//   ]);
+// };

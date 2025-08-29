@@ -20,8 +20,8 @@ export default function AdminItinerary() {
       >
         {/* Page Header */}
         <div className="w-full bg-white shadow-md px-8 py-4">
-          <h1 className="text-2xl text-gray-800 font-medium pr-20 pl-20">
-            Admin Home
+          <h1 className="text-2xl  text-gray-800 font-medium pr-20 pl-20">
+            Admin Itinerary
           </h1>
         </div>
 

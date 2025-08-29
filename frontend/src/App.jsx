@@ -41,6 +41,8 @@ import GuestProfileLayout from "./components/userComponents/GuestProfileComponen
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TouristProtectedRoute from "./components/TouristProtectedRoute";
 import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
+import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
+import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
 
 // Helper wrapper to inject location for AnimatePresence
@@ -54,6 +56,11 @@ function AnimatedRoutes() {
         <Route path="/login" element={<LoginPage />} />
         {/* Public Pages */}\
         <Route path="/GuestHomepage" element={<GuestHomepage />} />
+        <Route path="/GuestItinerary" element={<GuestItinerary />} />
+        <Route
+          path="/GuestItineraryMap/:itineraryId"
+          element={<GuestItineraryMap />}
+        />
         <Route path="/TourMap" element={<TourMap />} />
         <Route path="/Chatbot" element={<Chatbot />} />
         <Route path="/Emergency" element={<EmergencyPage />} />

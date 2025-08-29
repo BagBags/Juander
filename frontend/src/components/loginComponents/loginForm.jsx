@@ -78,25 +78,27 @@ export default function LoginForm({ toggleForm }) {
   };
 
   // ---------- Login Handlers ----------
+
   const handleGoogleLoginSuccess = async (credentialResponse) => {
     setError("");
     setSuccess("");
     try {
       const res = await axios.post(
         "http://localhost:5000/api/auth/google-login",
-        {
-          token: credentialResponse.credential,
-        }
+        { token: credentialResponse.credential }
       );
 
       const { user, token } = res.data;
-      localStorage.removeItem("guest"); // clear guest
+      localStorage.removeItem("guest");
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
 
       navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
     } catch (err) {
-      setError("Google login failed. Please try again.");
+      console.error("Google login error:", err.response?.data || err.message);
+      setError(
+        err.response?.data?.message || "Google login failed. Please try again."
+      );
     }
   };
 
@@ -121,7 +123,10 @@ export default function LoginForm({ toggleForm }) {
 
       navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
     } catch (err) {
-      setError("Login failed. Please check your credentials.");
+      setError(
+        err.response?.data?.message ||
+          "Login failed. Please check your credentials."
+      );
     }
   };
 
@@ -137,7 +142,7 @@ export default function LoginForm({ toggleForm }) {
       await axios.post("http://localhost:5000/api/auth/send-otp", { email });
       setSuccess("OTP sent to your email.");
       setStep(2);
-      setTimeLeft(600); // start 10-minute timer
+      setTimeLeft(600);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP.");
     }
@@ -205,7 +210,7 @@ export default function LoginForm({ toggleForm }) {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          {/* Password field with reveal toggle */}
+          {/* Password with reveal toggle */}
           <div className="relative w-full">
             <input
               type={showPassword ? "text" : "password"}
@@ -231,7 +236,7 @@ export default function LoginForm({ toggleForm }) {
             Login
           </button>
 
-          {/* Forgot password link */}
+          {/* Forgot password */}
           <div className="text-center">
             <button
               className="text-sm text-[#f04e37] hover:underline"
@@ -254,13 +259,13 @@ export default function LoginForm({ toggleForm }) {
           {/* Google Login */}
           <div className="flex justify-center">
             <GoogleLogin
-              clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
               onSuccess={handleGoogleLoginSuccess}
               onError={() => setError("Google login failed.")}
+              useOneTap
             />
           </div>
 
-          {/* Continue as guest */}
+          {/* Guest Login */}
           <button
             type="button"
             onClick={() => {
@@ -286,68 +291,51 @@ export default function LoginForm({ toggleForm }) {
           </p>
         </>
       ) : (
-        // Forgot Password Steps (same structure, just re-styled consistently)
         <>
-          {/* Email */}
-          <input
-            type="email"
-            placeholder="Enter your email"
-            className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={step !== 1}
-          />
-
+          {/* Step 1: Request OTP */}
           {step === 1 && (
             <>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
               <button
                 onClick={handleForgotRequest}
-                className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg hover:bg-[#d9442f] active:scale-95 mt-2"
+                className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95"
               >
                 Send OTP
-              </button>
-              <button
-                onClick={() => {
-                  setShowForgot(false);
-                  setStep(1);
-                  setEmail("");
-                  setOtp("");
-                  setNewPassword("");
-                  setError("");
-                  setSuccess("");
-                }}
-                className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95 mt-2"
-              >
-                Back to Login
               </button>
             </>
           )}
 
+          {/* Step 2: Enter OTP + Reset password */}
           {step === 2 && (
             <>
-              {/* OTP */}
               <p className="text-sm text-gray-600">
-                OTP expires in: <strong>{formatTime(timeLeft)}</strong>
+                Enter the 6-digit OTP sent to your email.
               </p>
-              <div
-                className="flex justify-center space-x-2"
-                onPaste={handlePaste}
-              >
-                {Array.from({ length: otpLength }).map((_, index) => (
+              <div className="flex justify-center gap-2" onPaste={handlePaste}>
+                {Array.from({ length: otpLength }).map((_, i) => (
                   <input
-                    key={index}
+                    key={i}
                     type="text"
                     maxLength="1"
-                    className="w-10 h-12 text-center text-lg text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f04e37]"
-                    value={otp[index] || ""}
-                    onChange={(e) => handleOtpChange(e.target.value, index)}
-                    onKeyDown={(e) => handleKeyDown(e, index)}
-                    ref={(el) => (inputRefs.current[index] = el)}
+                    className="w-10 h-10 border rounded text-center text-lg"
+                    value={otp[i] || ""}
+                    onChange={(e) => handleOtpChange(e.target.value, i)}
+                    onKeyDown={(e) => handleKeyDown(e, i)}
+                    ref={(el) => (inputRefs.current[i] = el)}
                   />
                 ))}
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Expires in: {formatTime(timeLeft)}
+              </p>
 
-              {/* New Password */}
+              {/* New password */}
               <div className="relative w-full mt-4">
                 <input
                   type={showNewPassword ? "text" : "password"}
@@ -367,23 +355,9 @@ export default function LoginForm({ toggleForm }) {
 
               <button
                 onClick={handleResetPassword}
-                className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg hover:bg-[#d9442f] active:scale-95 mt-2"
+                className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 mt-3"
               >
                 Reset Password
-              </button>
-              <button
-                onClick={() => {
-                  setShowForgot(false);
-                  setStep(1);
-                  setEmail("");
-                  setOtp("");
-                  setNewPassword("");
-                  setError("");
-                  setSuccess("");
-                }}
-                className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95 mt-2"
-              >
-                Back to Login
               </button>
             </>
           )}

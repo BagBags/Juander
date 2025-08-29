@@ -1,21 +1,40 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Edit, Trash2, Plus, Check } from "lucide-react";
 
-export default function AddItinerary() {
+export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
   const [selectedSites, setSelectedSites] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [itineraries, setItineraries] = useState([]);
+  const [editingId, setEditingId] = useState(null);
 
-  // Fetch pins from backend
+  const ICON_SIZE = 20;
+  const SITE_IMAGE_SIZE = 80;
+  const COVER_IMAGE_HEIGHT = 192;
+
   useEffect(() => {
     axios
-      .get("http://localhost:5000/api/pins") // adjust if needed
+      .get("http://localhost:5000/api/pins")
       .then((res) => setPins(res.data))
-      .catch((err) => console.error("Error fetching pins:", err));
+      .catch((err) => console.error(err));
   }, []);
 
-  // Toggle site selection
+  useEffect(() => {
+    fetchItineraries();
+  }, []);
+
+  const fetchItineraries = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/itineraries");
+      setItineraries(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const toggleSite = (pin) => {
     setSelectedSites((prev) =>
       prev.find((s) => s._id === pin._id)
@@ -24,124 +43,243 @@ export default function AddItinerary() {
     );
   };
 
-  // Save itinerary
   const handleSave = async () => {
+    if (!name) return alert("Please enter a name");
+    const payload = {
+      name,
+      description,
+      imageUrl,
+      sites: selectedSites.map((s) => s._id),
+    };
     try {
-      await axios.post("http://localhost:5000/api/itineraries", {
-        name,
-        description,
-        sites: selectedSites.map((s) => s._id), // store only pin IDs
-      });
-      alert("Itinerary saved!");
+      if (editingId) {
+        await axios.put(
+          `http://localhost:5000/api/itineraries/${editingId}`,
+          payload
+        );
+        alert("Itinerary updated!");
+      } else {
+        await axios.post("http://localhost:5000/api/itineraries", payload);
+        alert("Itinerary saved!");
+      }
       setName("");
       setDescription("");
+      setImageUrl("");
       setSelectedSites([]);
+      setEditingId(null);
+      fetchItineraries();
     } catch (err) {
       console.error(err);
       alert("Failed to save itinerary");
     }
   };
 
-  // Delete itinerary placeholder
-  const handleDelete = async () => {
-    alert("Delete functionality not yet implemented");
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this itinerary?")) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/itineraries/${id}`);
+      setItineraries(itineraries.filter((i) => i._id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete itinerary");
+    }
+  };
+
+  const handleEdit = (itinerary) => {
+    setName(itinerary.name);
+    setDescription(itinerary.description);
+    setImageUrl(itinerary.imageUrl || "");
+    const selected = pins.filter((pin) =>
+      itinerary.sites.some((site) => site._id === pin._id)
+    );
+    setSelectedSites(selected);
+    setEditingId(itinerary._id);
   };
 
   return (
-    <div className="flex p-6 gap-6">
-      {/* Left Panel */}
-      <div className="w-1/2 bg-gray-100 rounded-xl shadow p-6">
-        <h2 className="text-2xl font-bold text-red-500 mb-4">Add Itinerary</h2>
+    <div className="flex gap-6 p-6">
+      {/* Form Panel */}
+      <div className="w-1/2 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
+        <h2 className="text-2xl font-bold text-gradient-red mb-4">
+          {editingId ? "Edit Itinerary" : "Add Itinerary"}
+        </h2>
 
-        {/* Cover image placeholder */}
-        <div className="w-full h-40 bg-gray-300 rounded mb-4 flex items-center justify-center">
-          <span className="text-gray-600">Image Preview</span>
+        {/* Cover Image */}
+        <div
+          className="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center"
+          style={{ height: COVER_IMAGE_HEIGHT }}
+        >
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Itinerary Preview"
+              className="w-full h-full object-cover rounded-xl"
+            />
+          ) : (
+            <span className="text-gray-400">Image Preview</span>
+          )}
         </div>
 
-        {/* Name */}
-        <label className="block mb-2 font-medium">Itinerary Name</label>
+        {/* Inputs */}
+        <input
+          type="text"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="Image URL"
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
+        />
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full border rounded p-2 mb-4"
-          placeholder="Enter itinerary name"
+          placeholder="Itinerary Name"
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
         />
-
-        {/* Description */}
-        <label className="block mb-2 font-medium">Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full border rounded p-2 mb-4"
-          placeholder="Enter description"
+          placeholder="Description"
+          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none resize-none"
         />
 
-        {/* Selected Sites Preview */}
-        <label className="block mb-2 font-medium">Selected Sites</label>
-        <div className="border rounded p-2 h-24 overflow-y-auto bg-white mb-4">
-          {selectedSites.length > 0 ? (
+        {/* Selected Sites */}
+        <div className="p-3 border rounded-lg bg-gray-50 h-28 overflow-y-auto">
+          {selectedSites.length ? (
             selectedSites.map((site) => (
-              <div key={site._id} className="text-sm text-gray-700">
+              <span key={site._id} className="block text-gray-700 text-sm">
                 • {site.siteName || site.title}
-              </div>
+              </span>
             ))
           ) : (
-            <p className="text-gray-400">No sites selected</p>
+            <span className="text-gray-400">No sites selected</span>
           )}
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-3 mt-2">
           <button
             onClick={handleSave}
-            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 rounded-lg hover:opacity-90 transition"
           >
-            Save
+            {editingId ? <Check size={ICON_SIZE} /> : <Plus size={ICON_SIZE} />}
+            {editingId ? "Update" : "Save"}
           </button>
           <button
-            onClick={handleDelete}
-            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+            onClick={() => {
+              setName("");
+              setDescription("");
+              setImageUrl("");
+              setSelectedSites([]);
+              setEditingId(null);
+            }}
+            className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition"
           >
-            Delete
+            Cancel
           </button>
         </div>
       </div>
 
-      {/* Right Panel */}
-      <div className="w-1/2 bg-white rounded-xl shadow p-6">
-        <h2 className="text-2xl font-bold text-red-500 mb-4">Sites</h2>
-        <div className="flex flex-col gap-4">
-          {pins.map((pin) => (
-            <div
-              key={pin._id}
-              className="flex items-center gap-4 border-2 border-yellow-400 bg-yellow-200 p-3 rounded-lg"
-            >
-              <img
-                src={
-                  pin.mediaUrl || pin.image || "https://via.placeholder.com/80"
-                }
-                alt={pin.siteName || pin.title}
-                className="w-20 h-20 object-cover rounded"
-              />
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-red-500">
-                  {pin.siteName || pin.title}
-                </h3>
-                <p className="text-sm text-gray-600">{pin.description}</p>
-              </div>
-              <button
-                onClick={() => toggleSite(pin)}
-                className={`px-3 py-1 rounded text-white ${
-                  selectedSites.find((s) => s._id === pin._id)
-                    ? "bg-green-600"
-                    : "bg-blue-500"
-                }`}
+      {/* Itineraries & Sites Panel */}
+      <div className="w-1/2 flex flex-col gap-6">
+        {/* Existing Itineraries */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 flex-1 flex flex-col">
+          <h2 className="text-2xl font-bold text-gradient-red mb-4">
+            Existing Itineraries
+          </h2>
+          <div className="flex flex-col gap-4 overflow-y-auto max-h-[50vh]">
+            {itineraries.length ? (
+              itineraries.map((itinerary) => (
+                <div
+                  key={itinerary._id}
+                  className="flex flex-col md:flex-row md:items-center justify-between gap-3 border rounded-xl p-4 hover:shadow-md transition"
+                >
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-red-500">
+                      {itinerary.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {itinerary.description}
+                    </p>
+                    {itinerary.imageUrl && (
+                      <img
+                        src={itinerary.imageUrl}
+                        alt={itinerary.name}
+                        className="w-full h-48 object-cover rounded-xl mt-2"
+                      />
+                    )}
+                    {itinerary.sites?.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Sites: {itinerary.sites.length}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-2 md:mt-0">
+                    <button
+                      onClick={() => handleEdit(itinerary)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition"
+                    >
+                      <Edit size={ICON_SIZE} /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(itinerary._id)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-semibold rounded-lg shadow hover:from-gray-500 hover:to-gray-600 transition"
+                    >
+                      <Trash2 size={ICON_SIZE} /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">No itineraries found</p>
+            )}
+          </div>
+
+          {/* Sites */}
+          <h2 className="text-2xl font-bold text-gradient-red mt-6 mb-4">
+            Sites
+          </h2>
+          <div className="flex flex-col gap-4 max-h-[35vh] overflow-y-auto">
+            {pins.map((pin) => (
+              <div
+                key={pin._id}
+                className="flex items-center gap-4 border rounded-xl p-3 hover:shadow-md transition bg-yellow-50"
               >
-                {selectedSites.find((s) => s._id === pin._id) ? "Added" : "Add"}
-              </button>
-            </div>
-          ))}
+                <img
+                  src={
+                    pin.mediaUrl ||
+                    pin.image ||
+                    "https://via.placeholder.com/80"
+                  }
+                  alt={pin.siteName || pin.title}
+                  className="object-cover rounded-xl"
+                  style={{ width: SITE_IMAGE_SIZE, height: SITE_IMAGE_SIZE }}
+                />
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-red-500">
+                    {pin.siteName || pin.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm">{pin.description}</p>
+                </div>
+                <button
+                  onClick={() => toggleSite(pin)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold shadow transition ${
+                    selectedSites.find((s) => s._id === pin._id)
+                      ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                      : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
+                  }`}
+                >
+                  {selectedSites.find((s) => s._id === pin._id) ? (
+                    <Check size={ICON_SIZE} />
+                  ) : (
+                    <Plus size={ICON_SIZE} />
+                  )}
+                  {selectedSites.find((s) => s._id === pin._id)
+                    ? "Added"
+                    : "Add"}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

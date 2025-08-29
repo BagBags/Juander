@@ -5,7 +5,12 @@ const userSchema = new mongoose.Schema(
     firstName: String,
     lastName: String,
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    password: {
+      type: String,
+      required: function () {
+        return this.authProvider === "local";
+      },
+    },
     role: {
       type: String,
       enum: ["guest", "tourist", "admin"],
@@ -30,7 +35,14 @@ const userSchema = new mongoose.Schema(
     },
     country: { type: String },
     language: { type: String },
+    authProvider: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
+    },
+    googleId: { type: String, unique: true, sparse: true }, // stores Google "sub"
   },
+
   { timestamps: true }
 );
 
