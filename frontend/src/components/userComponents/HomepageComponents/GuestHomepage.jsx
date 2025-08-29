@@ -110,7 +110,7 @@ export default function GuestHomepage() {
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200"
       >
-        Start Tour
+        Explore
       </button>
     </div>
   );
