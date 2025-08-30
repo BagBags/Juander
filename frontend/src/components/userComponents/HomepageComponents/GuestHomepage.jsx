@@ -98,8 +98,7 @@ export default function GuestHomepage() {
           );
         })}
       </div>
-
-      {/* Start Tour Button */}
+      {/* Explore Button (Mobile Only) */}
       <button
         onClick={() => navigate("/GuestItinerary")}
         className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
@@ -108,9 +107,25 @@ export default function GuestHomepage() {
         w-40 sm:w-40 lg:w-52 
         h-12 sm:h-12 lg:h-14 
         text-sm sm:text-base lg:text-lg 
-        hover:bg-yellow-500 focus:outline-none transition duration-200"
+        hover:bg-yellow-500 focus:outline-none transition duration-200
+        block md:hidden" // <-- Only mobile
       >
         Explore
+      </button>
+
+      {/* Sign Up to Explore Button (Desktop Only) */}
+      <button
+        onClick={() => navigate("/login")}
+        className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
+        left-1/2 -translate-x-1/2
+        bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
+        w-40 sm:w-40 lg:w-52 
+        h-12 sm:h-12 lg:h-14 
+        text-sm sm:text-base lg:text-lg 
+        hover:bg-yellow-500 focus:outline-none transition duration-200
+        hidden md:block" // <-- Only desktop
+      >
+        Sign up to Explore
       </button>
     </div>
   );
