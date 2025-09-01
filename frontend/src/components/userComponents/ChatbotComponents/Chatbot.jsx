@@ -14,19 +14,18 @@ export default function Chatbot() {
   const sessionId = useRef(uuidv4());
   const [botEntries, setBotEntries] = useState([]);
 
-  // Get auth header (adjust token key if needed)
-  const getAuthHeader = () => {
-    const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
+  // --- Auth Helper ---
+  // const getAuthHeader = () => {
+  //   const token = localStorage.getItem("token");
+  //   return token ? { Authorization: `Bearer ${token}` } : {};
+  // };
 
-  // Fetch bot entries with auth header
+  // --- Load Knowledge Base ---
   useEffect(() => {
     async function fetchEntries() {
       try {
-        const res = await axios.get("/api/admin/bot", {
-          headers: getAuthHeader(),
-        });
+        const res = await axios.get("/api/bot");
+
         setBotEntries(res.data);
       } catch (err) {
         console.error("Error fetching bot entries:", err);
@@ -35,7 +34,7 @@ export default function Chatbot() {
     fetchEntries();
   }, []);
 
-  // Simple language detector
+  // --- Language Detector ---
   function detectLanguage(text) {
     const filipinoWords = [
       "po",
@@ -66,17 +65,10 @@ export default function Chatbot() {
       "oo",
       "hindi",
       "sino",
-      "sino'ng",
-      "sino ang",
-      "sino si",
-      "sino sa",
-      "sino yung",
     ];
 
     const words = text.toLowerCase().split(/\W+/);
-
-    // Bonus: check if text starts with a Filipino question word
-    const startsWithFilipinoQuestion = [
+    const startsWithFilipino = [
       "sino",
       "ano",
       "paano",
@@ -89,30 +81,28 @@ export default function Chatbot() {
     let englishCount = 0;
 
     words.forEach((word) => {
-      if (filipinoWords.includes(word)) {
-        filipinoCount++;
-      } else if (word.match(/^[a-z]+$/)) {
-        englishCount++;
-      }
+      if (filipinoWords.includes(word)) filipinoCount++;
+      else if (word.match(/^[a-z]+$/)) englishCount++;
     });
 
-    // If starts with Filipino question, force Filipino
-    if (startsWithFilipinoQuestion) return "filipino";
-
+    if (startsWithFilipino) return "filipino";
     return filipinoCount >= englishCount ? "filipino" : "english";
   }
 
-  // Build knowledge text from entries
+  // --- Knowledge Builder ---
   function buildKnowledgeText(entries) {
     return entries
       .map(
         (e, i) =>
-          `${i + 1}.\nInfo (EN): ${e.info_en}\nInfo (FIL): ${
-            e.info_fil || "N/A"
-          }\nKeywords: ${e.keywords.join(", ")}`
+          `${i + 1}.
+EN: ${e.info_en}
+FIL: ${e.info_fil || "N/A"}
+Keywords: ${e.keywords.join(", ")}`
       )
       .join("\n\n");
   }
+
+  // --- Handle Send ---
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -124,39 +114,32 @@ export default function Chatbot() {
 
     const SYSTEM_PROMPT =
       lang === "filipino"
-        ? `You are a chatbot guide for Intramuros. 
-You must ONLY use the provided knowledge base to answer questions.
-If the knowledge base does not contain the answer, reply exactly:
+        ? `You are Juan, a Filipino tour guide chatbot for Intramuros.
+Answer ONLY from the knowledge base.
+If the answer is not there, reply exactly:
 "Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base." 
 Always answer in Filipino.`
-        : `You are a chatbot guide for Intramuros. 
-You must ONLY use the provided knowledge base to answer questions.
-If the knowledge base does not contain the answer, reply exactly:
-"Sorry, I don’t have information about that in my knowledge base." 
+        : `You are Juan, an English-speaking tour guide chatbot for Intramuros.
+Answer ONLY from the knowledge base.
+If the answer is not there, reply exactly:
+"Sorry, I don’t have information about that in my knowledge base."
 Always answer in English.`;
 
-    // Extract keywords from user query
+    // Keyword extraction
     const keywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
 
-    // Find relevant entries
-    const relevantEntries = botEntries.filter((entry) =>
-      entry.keywords.some((k) =>
-        keywords.some(
-          (kw) => kw.includes(k.toLowerCase()) || k.toLowerCase().includes(kw)
-        )
-      )
+    // Match entries
+    const relevantEntries = botEntries.filter(
+      (entry) =>
+        keywords.some((kw) =>
+          entry.keywords.some((k) => k.toLowerCase().includes(kw))
+        ) ||
+        entry.info_en.toLowerCase().includes(userMessage.toLowerCase()) ||
+        (entry.info_fil &&
+          entry.info_fil.toLowerCase().includes(userMessage.toLowerCase()))
     );
 
-    // const relevantEntries = botEntries.filter((entry) =>
-    //   keywords.some(
-    //     (kw) =>
-    //       entry.keywords.some((k) => k.toLowerCase().includes(kw)) ||
-    //       entry.info_en.toLowerCase().includes(kw) ||
-    //       (entry.info_fil && entry.info_fil.toLowerCase().includes(kw))
-    //   )
-    // );
-
-    // 🚨 Only use relevant entries. If none, force "I don’t know"
+    // No match case
     if (relevantEntries.length === 0) {
       setMessages((prev) => [
         ...prev,
@@ -174,12 +157,13 @@ Always answer in English.`;
     const knowledgeText = buildKnowledgeText(relevantEntries);
     const fullPrompt = `${SYSTEM_PROMPT}\n\nKnowledge Base:\n${knowledgeText}\n\nUser: ${userMessage}`;
 
+    // Guard for Puter not ready
     if (!window.puter) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Juan is not loaded yet. Please wait a moment.",
+          content: "Juan is still waking up. Please try again shortly.",
         },
       ]);
       return;
@@ -188,7 +172,7 @@ Always answer in English.`;
     try {
       const response = await window.puter.ai.chat(fullPrompt, {
         model: "gpt-4.1-nano",
-        temperature: 0.0, // 🚨 make it deterministic
+        temperature: 0,
         max_tokens: 500,
       });
 
@@ -204,97 +188,17 @@ Always answer in English.`;
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I couldn't get an answer. Please try again.",
+          content:
+            "Oops! Juan ran into a problem answering. Please try again later.",
         },
       ]);
     }
   };
 
-  //   const handleSend = async () => {
-  //     if (!input.trim()) return;
-
-  //     const userMessage = input.trim();
-
-  //     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
-  //     setInput("");
-
-  //     const lang = detectLanguage(userMessage);
-
-  //     const SYSTEM_PROMPT =
-  //       lang === "filipino"
-  //         ? `You are a bilingual tour guide chatbot for Intramuros, fluent in English and Filipino.
-  // Use ONLY the provided information to answer user questions.
-  // If you don't know the answer, politely say so.
-  // Answer in Filipino.`
-  //         : `You are a bilingual tour guide chatbot for Intramuros, fluent in English and Filipino.
-  // Use ONLY the provided information to answer user questions.
-  // If you don't know the answer, politely say so.
-  // Answer in English.`;
-
-  //     const keywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
-  //     const relevantEntries = botEntries.filter((entry) =>
-  //       keywords.some(
-  //         (kw) =>
-  //           entry.keywords.some((k) => k.toLowerCase().includes(kw)) ||
-  //           entry.info_en.toLowerCase().includes(kw) ||
-  //           (entry.info_fil && entry.info_fil.toLowerCase().includes(kw))
-  //       )
-  //     );
-
-  //     const entriesToUse = relevantEntries.length ? relevantEntries : botEntries;
-
-  //     const knowledgeText = buildKnowledgeText(entriesToUse);
-
-  //     const fullPrompt = `${SYSTEM_PROMPT}\nUse this information:\n${knowledgeText}\nUser: ${userMessage}`;
-
-  //     if (!window.puter) {
-  //       setMessages((prev) => [
-  //         ...prev,
-  //         {
-  //           role: "assistant",
-  //           content: "Juan is not loaded yet. Please wait a moment.",
-  //         },
-  //       ]);
-  //       return;
-  //     }
-
-  //     try {
-  //       const response = await window.puter.ai.chat(fullPrompt, {
-  //         model: "gpt-4.1-nano",
-  //         temperature: 0.3,
-  //         max_tokens: 500,
-  //       });
-
-  //       let reply = "";
-
-  //       if (typeof response === "string") {
-  //         reply = response;
-  //       } else if (response && typeof response === "object") {
-  //         if (response.message && typeof response.message.content === "string") {
-  //           reply = response.message.content;
-  //         } else {
-  //           reply = JSON.stringify(response);
-  //         }
-  //       } else {
-  //         reply = String(response);
-  //       }
-
-  //       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-  //     } catch (err) {
-  //       console.error("Puter.js API error:", err);
-  //       setMessages((prev) => [
-  //         ...prev,
-  //         {
-  //           role: "assistant",
-  //           content: "Sorry, I couldn't get an answer. Please try again.",
-  //         },
-  //       ]);
-  //     }
-  //   };
-
   return (
-    <div className="max-w-md mx-auto p-4 border rounded shadow bg-white">
-      <div className="h-80 overflow-y-auto mb-4 p-2 border rounded bg-gray-50">
+    <div className="flex flex-col w-full h-full p-3 sm:p-4 bg-white">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto mb-3 p-2 border rounded bg-gray-50">
         {messages
           .filter((m) => m.role !== "system")
           .map((msg, i) => (
@@ -312,19 +216,19 @@ Always answer in English.`;
                 }`}
                 style={{ whiteSpace: "pre-wrap" }}
               >
-                {typeof msg.content === "string"
-                  ? msg.content
-                  : JSON.stringify(msg.content, null, 2)}
+                {msg.content}
               </div>
             </div>
           ))}
       </div>
+
+      {/* Input */}
       <div className="flex space-x-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="flex-grow border rounded px-3 py-2"
+          className="flex-grow border rounded px-3 py-2 text-sm sm:text-base"
           placeholder="Type your question here..."
         />
         <button

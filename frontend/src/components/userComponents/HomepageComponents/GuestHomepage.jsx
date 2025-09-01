@@ -1,6 +1,7 @@
 import React from "react";
 import LogoHeader from "./logoHeader";
 import { Link, useNavigate } from "react-router-dom";
+import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 
 export default function GuestHomepage() {
   const navigate = useNavigate();
@@ -11,12 +12,6 @@ export default function GuestHomepage() {
       label: "Tour Map",
       to: "/TourMap",
       device: "All",
-    },
-    {
-      url: "icons/chatbot.svg",
-      label: "Chatbot",
-      to: "/Chatbot",
-      device: "Desktop",
     },
     {
       url: "icons/photobooth.svg",
@@ -66,7 +61,7 @@ export default function GuestHomepage() {
       </div>
 
       {/* Side Buttons */}
-      <div className="fixed right-2 md:right-2 lg:right-8 top-[50%] md:top-[60%] -translate-y-1/2 flex flex-col gap-4 z-50">
+      <div className="fixed right-2 md:right-2 lg:right-8 top-[50%] md:top-[60%] -translate-y-1/2 flex flex-col gap-4 z-40">
         {icons.map((icon, index) => {
           let visibilityClass = "";
           if (icon.device === "Mobile") {
@@ -98,6 +93,7 @@ export default function GuestHomepage() {
           );
         })}
       </div>
+
       {/* Explore Button (Mobile Only) */}
       <button
         onClick={() => navigate("/GuestItinerary")}
@@ -108,7 +104,7 @@ export default function GuestHomepage() {
         h-12 sm:h-12 lg:h-14 
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200
-        block md:hidden" // <-- Only mobile
+        block md:hidden"
       >
         Explore
       </button>
@@ -123,10 +119,13 @@ export default function GuestHomepage() {
         h-12 sm:h-12 lg:h-14 
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200
-        hidden md:block" // <-- Only desktop
+        hidden md:block"
       >
         Sign up to Explore
       </button>
+
+      {/* Floating Chatbot (Juan Mascot) */}
+      <FloatingChatbot />
     </div>
   );
 }
