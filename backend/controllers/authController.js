@@ -63,6 +63,141 @@ exports.register = async (req, res) => {
   }
 };
 
+// For logged-in users changing email
+exports.sendEmailVerificationOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check if the email is already used by another user
+    const existingUser = await User.findOne({ email });
+    if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+      return res.status(400).json({ message: "Email is already in use" });
+    }
+
+    exports.verifyEmailOtp = async (req, res) => {
+      try {
+        const { otp } = req.body;
+        const userId = req.user.id; // comes from verifyToken middleware
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        if (
+          user.otp !== otp ||
+          !user.otpExpires ||
+          user.otpExpires < new Date()
+        ) {
+          return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+
+        // If you also want to update the email at this point:
+        if (req.body.newEmail) user.email = req.body.newEmail;
+
+        user.isVerified = true;
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+
+        res.status(200).json({ message: "Email verified successfully" });
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .json({ message: "Verification failed", error: err.message });
+      }
+    };
+
+    exports.verifyEmailOtp = async (req, res) => {
+      try {
+        const { otp } = req.body;
+        const userId = req.user.id; // comes from verifyToken middleware
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        if (
+          user.otp !== otp ||
+          !user.otpExpires ||
+          user.otpExpires < new Date()
+        ) {
+          return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+
+        // If you also want to update the email at this point:
+        if (req.body.newEmail) user.email = req.body.newEmail;
+
+        user.isVerified = true;
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+
+        res.status(200).json({ message: "Email verified successfully" });
+      } catch (err) {
+        console.error(err);
+        res
+          .status(500)
+          .json({ message: "Verification failed", error: err.message });
+      }
+    };
+
+    // Send OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+    });
+
+    await transporter.sendMail({
+      from: `"Juander" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: "Verify your new email",
+      text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
+    });
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (err) {
+    console.error("Email verification OTP error:", err);
+    res.status(500).json({ message: "Failed to send OTP", error: err.message });
+  }
+};
+
+exports.verifyEmailOtp = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const userId = req.user.id; // comes from verifyToken middleware
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.otp !== otp || !user.otpExpires || user.otpExpires < new Date()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // If you also want to update the email at this point:
+    if (req.body.newEmail) user.email = req.body.newEmail;
+
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully" });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ message: "Verification failed", error: err.message });
+  }
+};
+
 exports.sendOtp = async (req, res) => {
   try {
     const { email } = req.body;

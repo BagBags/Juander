@@ -104,6 +104,29 @@ router.post(
   authController.verifyOtp
 );
 
+router.post(
+  "/send-email-verification-otp",
+  verifyToken, // user must be logged in
+  authController.sendEmailVerificationOtp
+);
+
+router.post(
+  "/verify-email-otp",
+  verifyToken,
+  [
+    check("otp")
+      .isLength({ min: 6, max: 6 })
+      .withMessage("OTP must be 6 digits"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty())
+      return res.status(400).json({ errors: errors.array() });
+    next();
+  },
+  authController.verifyEmailOtp // you need to implement this in authController
+);
+
 // GET currently logged-in user
 router.get("/me", verifyToken, async (req, res) => {
   try {

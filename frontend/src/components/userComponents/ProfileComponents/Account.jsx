@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
@@ -12,15 +12,25 @@ export default function Account() {
     confirmPassword: "",
     authProvider: "local",
   });
+  const [originalEmail, setOriginalEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpTimeLeft, setOtpTimeLeft] = useState(0);
+  const [otpMessage, setOtpMessage] = useState("");
+  const otpRefs = useRef([]);
+  const otpLength = 6;
 
   const [errors, setErrors] = useState({});
   const [changePassword, setChangePassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   const token = localStorage.getItem("token");
 
-  // fetch user on mount
+  // Fetch user data on mount
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) return;
@@ -29,15 +39,15 @@ export default function Account() {
         const res = await axios.get("http://localhost:5000/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setUser((u) => ({
-          ...u,
+        setUser({
           firstName: res.data.firstName || "",
           lastName: res.data.lastName || "",
           email: res.data.email || "",
           authProvider: res.data.authProvider || "local",
           password: "",
           confirmPassword: "",
-        }));
+        });
+        setOriginalEmail(res.data.email || "");
       } catch (err) {
         console.error("Error fetching user:", err);
       } finally {
@@ -47,11 +57,117 @@ export default function Account() {
     fetchUser();
   }, [token]);
 
-  // basic handlers
+  // OTP countdown timer
+  useEffect(() => {
+    if (otpStep && otpTimeLeft > 0) {
+      const timer = setInterval(() => setOtpTimeLeft((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [otpStep, otpTimeLeft]);
+
+  const formatTime = (secs) => {
+    const mins = Math.floor(secs / 60);
+    const seconds = secs % 60;
+    return `${mins}:${seconds < 10 ? "0" : ""}${seconds}`;
+  };
+
+  // Handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUser((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+    setSuccessMessage(""); // clear previous success message on input
+  };
+
+  const handleOtpChange = (value, index) => {
+    if (/^\d$/.test(value)) {
+      const newOtp = otp.split("");
+      newOtp[index] = value;
+      setOtp(newOtp.join(""));
+      if (index < otpLength - 1) otpRefs.current[index + 1]?.focus();
+    } else if (value === "") {
+      const newOtp = otp.split("");
+      newOtp[index] = "";
+      setOtp(newOtp.join(""));
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    const pasteData = e.clipboardData.getData("text").trim();
+    if (/^\d+$/.test(pasteData)) {
+      const digits = pasteData.split("").slice(0, otpLength);
+      setOtp(digits.join(""));
+      digits.forEach((d, i) => {
+        if (otpRefs.current[i]) otpRefs.current[i].value = d;
+      });
+      otpRefs.current[digits.length]?.focus();
+    }
+  };
+
+  const sendEmailOtp = async () => {
+    if (!user.email) {
+      setOtpMessage("Please enter a new email first");
+      return;
+    }
+    try {
+      await axios.post(
+        "http://localhost:5000/api/auth/send-email-verification-otp",
+        { email: user.email },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setOtpStep(true);
+      setOtpTimeLeft(600);
+      setOtpSent(true);
+      setOtpMessage("OTP sent to your new email");
+    } catch (err) {
+      console.error(err);
+      setOtpMessage(err.response?.data?.message || "Failed to send OTP");
+    }
+  };
+
+  const verifyEmailOtp = async () => {
+    if (!otp || otp.length < otpLength) {
+      setOtpMessage("Please enter the full OTP");
+      return;
+    }
+    try {
+      await axios.post(
+        "http://localhost:5000/api/auth/verify-email-otp",
+        { otp },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setOtpStep(false);
+      setOtp("");
+      setOtpTimeLeft(0);
+      setOtpSent(false);
+      setOtpMessage("Email verified successfully!");
+      await handleSubmitEmailChange();
+    } catch (err) {
+      console.error(err);
+      setOtpMessage(err.response?.data?.message || "OTP verification failed");
+    }
+  };
+
+  const handleSubmitEmailChange = async () => {
+    try {
+      const res = await axios.put(
+        "http://localhost:5000/api/auth/account",
+        { email: user.email },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedUser = res.data.user;
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setOriginalEmail(updatedUser.email);
+    } catch (err) {
+      console.error(err);
+      setOtpMessage(err.response?.data?.message || "Failed to update email");
+    }
   };
 
   const passwordRegex =
@@ -59,10 +175,8 @@ export default function Account() {
 
   const validate = () => {
     const newErrors = {};
-
     if (!user.firstName.trim()) newErrors.firstName = "First name is required";
     if (!user.lastName.trim()) newErrors.lastName = "Last name is required";
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!user.email) newErrors.email = "Email is required";
     else if (!emailRegex.test(user.email)) newErrors.email = "Invalid email";
@@ -72,26 +186,30 @@ export default function Account() {
       else if (!passwordRegex.test(user.password))
         newErrors.password =
           "At least 8 chars, 1 uppercase, 1 number, 1 special character";
-
       if (!user.confirmPassword)
         newErrors.confirmPassword = "Please confirm your password";
       else if (user.password !== user.confirmPassword)
         newErrors.confirmPassword = "Passwords do not match";
     }
-
     return newErrors;
   };
 
-  const isFormValidForSubmit = () => {
-    const v = validate();
-    return Object.keys(v).length === 0;
-  };
+  const isFormValidForSubmit = () => Object.keys(validate()).length === 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccessMessage("");
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      return;
+    }
+    if (user.email !== originalEmail && !otpStep && !otpSent) {
+      setOtpMessage("Please verify your new email before saving changes.");
+      return;
+    }
+    if (user.email !== originalEmail && otpStep) {
+      setOtpMessage("Please complete OTP verification before saving changes.");
       return;
     }
 
@@ -102,7 +220,6 @@ export default function Account() {
         lastName: user.lastName.trim(),
         email: user.email.trim(),
       };
-
       if (user.authProvider === "local" && changePassword && user.password) {
         payload.password = user.password;
       }
@@ -115,7 +232,6 @@ export default function Account() {
 
       const updatedUser = res.data.user || res.data;
       localStorage.setItem("user", JSON.stringify(updatedUser));
-
       setUser({
         firstName: updatedUser.firstName || "",
         lastName: updatedUser.lastName || "",
@@ -124,16 +240,16 @@ export default function Account() {
         confirmPassword: "",
         authProvider: updatedUser.authProvider || "local",
       });
-
+      setOriginalEmail(updatedUser.email || "");
       setChangePassword(false);
       setShowPassword(false);
       setShowConfirm(false);
       setErrors({});
-      alert("Profile updated!");
+      setSuccessMessage("Profile updated!");
+      setOtpMessage("");
     } catch (err) {
       console.error("Update error:", err);
-      const message = err.response?.data?.message || "Failed to update profile";
-      alert(message);
+      setOtpMessage(err.response?.data?.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -150,6 +266,11 @@ export default function Account() {
       <div className="w-full max-w-md">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {/* Success Message */}
+            {successMessage && (
+              <p className="text-green-600 text-sm mb-2">{successMessage}</p>
+            )}
+
             {/* First Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -194,7 +315,7 @@ export default function Account() {
               )}
             </div>
 
-            {/* Email */}
+            {/* Email Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -210,17 +331,78 @@ export default function Account() {
                     ? "border-red-400 focus:ring-red-500"
                     : "focus:ring-2 focus:ring-[#cf3325]"
                 }`}
-                disabled={loading || user.authProvider === "google"} // 👈 lock email if Google
+                disabled={loading || user.authProvider === "google"}
               />
               {errors.email && (
                 <p className="text-xs text-red-600 mt-1">{errors.email}</p>
               )}
+
+              {/* OTP Button / Info */}
+              {user.email !== originalEmail &&
+                !otpStep &&
+                (otpSent ? (
+                  <p className="text-green-600 text-sm mt-1">
+                    OTP sent to your new email
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-sm text-[#cf3325] hover:underline mt-2"
+                    onClick={sendEmailOtp}
+                  >
+                    Verify new email
+                  </button>
+                ))}
+
+              {/* OTP Input */}
+              {otpStep && (
+                <div className="mt-4">
+                  <div
+                    className="flex justify-center gap-3 flex-wrap"
+                    onPaste={handlePaste}
+                  >
+                    {Array.from({ length: otpLength }).map((_, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        maxLength="1"
+                        className="w-12 h-12 border rounded-lg text-center text-lg focus:ring-2 focus:ring-[#cf3325]"
+                        value={otp[i] || ""}
+                        onChange={(e) => handleOtpChange(e.target.value, i)}
+                        onKeyDown={(e) => handleKeyDown(e, i)}
+                        ref={(el) => (otpRefs.current[i] = el)}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Expires in: {formatTime(otpTimeLeft)}
+                  </p>
+                  <button
+                    type="button"
+                    className="w-full bg-[#cf3325] text-white py-2 rounded mt-3 hover:bg-[#b42c21] transition"
+                    onClick={verifyEmailOtp}
+                  >
+                    Verify OTP
+                  </button>
+                  {otpMessage && (
+                    <p
+                      className={`text-sm mt-2 ${
+                        otpMessage.includes("successfully") ||
+                        otpMessage.includes("sent")
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {otpMessage}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Password section */}
+            {/* Password Section */}
             {user.authProvider === "local" ? (
               <>
-                {/* Change password toggle */}
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     id="changePassword"
@@ -244,10 +426,9 @@ export default function Account() {
                     Change Password
                   </label>
                 </div>
-
-                {/* Password fields */}
                 {changePassword && (
                   <>
+                    {/* New Password */}
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         New Password
@@ -280,12 +461,11 @@ export default function Account() {
                           <Eye size={18} />
                         )}
                       </button>
-                      {errors.password && (
+                      {errors.password ? (
                         <p className="text-xs text-red-600 mt-1">
                           {errors.password}
                         </p>
-                      )}
-                      {!errors.password && changePassword && (
+                      ) : (
                         <p className="text-xs text-gray-500 mt-1">
                           At least 8 chars, 1 uppercase, 1 number, 1 special
                           char
@@ -293,6 +473,7 @@ export default function Account() {
                       )}
                     </div>
 
+                    {/* Confirm Password */}
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Confirm New Password
