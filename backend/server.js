@@ -5,7 +5,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-
+const mongoSanitize = require("express-mongo-sanitize");
 const authRoute = require("./routes/authRoute");
 const emergencyRoute = require("./routes/emergencyRoute");
 const filters = require("./routes/filterRoute");
@@ -34,7 +34,12 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
-
+// app.use(
+//   mongoSanitize({
+//     replaceWith: "_", // Replaces any special characters like $, ., etc. with an underscore
+//     sanitizeQuery: false, // Disable sanitizing of query parameters
+//   })
+// );
 // MongoDB connection
 const connectDB = async () => {
   try {
@@ -50,7 +55,6 @@ const connectDB = async () => {
 };
 
 connectDB();
-
 // API routes
 app.use("/api/auth", authRoute);
 app.use("/api/emergency", emergencyRoute);

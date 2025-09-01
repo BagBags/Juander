@@ -4,31 +4,31 @@ import { Link } from "react-router-dom";
 export default function SideButtons() {
   const icons = [
     {
-      url: "icons/tour-map.svg",
+      url: "icons/home.png",
       label: "Home",
       to: "/Homepage",
       Device: "All",
     },
     {
-      url: "icons/tour-map.svg",
+      url: "icons/tour-map.png",
       label: "Tour Map",
       to: "/TourMap",
       Device: "All",
     },
     {
-      url: "icons/photobooth.svg",
+      url: "icons/Photobooth.png",
       label: "Create Itinerary",
       to: "/CreateItinerary",
       Device: "All",
     }, // Adjust if you have a separate route later
     {
-      url: "icons/photobooth.svg",
+      url: "icons/Photobooth.png",
       label: "Photobooth",
       to: "/Photobooth",
       Device: "Mobile",
     },
     {
-      url: "icons/photobooth.svg",
+      url: "icons/Photobooth.png",
       label: "Hotlines",
       to: "/Emergency",
       Device: "Mobile",
@@ -69,7 +69,7 @@ export default function SideButtons() {
               <img
                 src={icon.url}
                 alt={`icon-${index}`}
-                className="w-7 h-7 object-contain"
+                className="w-14 h-14 object-contain"
               />
             </div>
             <span className="text-xs text-white mt-1 group-hover:underline">

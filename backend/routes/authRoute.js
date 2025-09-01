@@ -1,15 +1,108 @@
 const express = require("express");
+const { check, validationResult } = require("express-validator");
+const mongoSanitize = require("express-mongo-sanitize");
 const router = express.Router();
 const authController = require("../controllers/authController");
-const User = require("../models/userModel");
 const { verifyToken } = require("../middleware/authMiddleware");
+const User = require("../models/userModel");
+// Apply mongo-sanitize globally for this route file
+// router.use(mongoSanitize());
 
-router.post("/reset-password", authController.resetPassword);
-router.post("/register", authController.register);
-router.post("/verify-otp", authController.verifyOtp);
-router.post("/login", authController.login);
+// Register Route
+router.post(
+  "/register",
+  [
+    check("email").isEmail().withMessage("Please enter a valid email address"),
+    check("password")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters long"),
+    check("firstName").notEmpty().withMessage("First name is required"),
+    check("lastName").notEmpty().withMessage("Last name is required"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.register
+);
+
+// Send OTP Route (For Password Reset)
+router.post(
+  "/send-otp",
+  [check("email").isEmail().withMessage("Please enter a valid email address")],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.sendOtp
+);
+
+// Reset Password Route
+router.post(
+  "/reset-password",
+  [
+    check("email").isEmail().withMessage("Please enter a valid email address"),
+    check("otp")
+      .isLength({ min: 6, max: 6 })
+      .withMessage("OTP must be 6 digits"),
+    check("newPassword")
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters long"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.resetPassword
+);
+
+// Login Route
+router.post(
+  "/login",
+  [
+    check("email").isEmail().withMessage("Please enter a valid email address"),
+    check("password").notEmpty().withMessage("Password is required"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.login
+);
+
+// Google Login Route
 router.post("/google-login", authController.googleLogin);
-router.post("/send-otp", authController.sendOtp);
+
+// OTP Verification Route
+router.post(
+  "/verify-otp",
+  [
+    check("email").isEmail().withMessage("Please enter a valid email address"),
+    check("otp")
+      .isLength({ min: 6, max: 6 })
+      .withMessage("OTP must be 6 digits"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.verifyOtp
+);
 
 // GET currently logged-in user
 router.get("/me", verifyToken, async (req, res) => {
@@ -24,16 +117,166 @@ router.get("/me", verifyToken, async (req, res) => {
 });
 
 // Update account info (firstName, lastName, email, password)
-router.put("/account", verifyToken, authController.saveAccount);
+router.put(
+  "/account",
+  verifyToken,
+  [
+    check("email")
+      .optional()
+      .isEmail()
+      .withMessage("Please enter a valid email address"),
+    check("password")
+      .optional()
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters long"),
+    check("firstName")
+      .optional()
+      .notEmpty()
+      .withMessage("First name is required"),
+    check("lastName")
+      .optional()
+      .notEmpty()
+      .withMessage("Last name is required"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.saveAccount
+);
+
 // Update profile
-router.put("/update", verifyToken, authController.updateProfile);
-// Update birthday
-router.post("/birthday", verifyToken, authController.saveBirthday);
-// Update gender
-router.post("/gender", verifyToken, authController.saveGender);
-// Update country
-router.post("/country", verifyToken, authController.saveCountry);
-// Update language
-router.post("/language", verifyToken, authController.saveLanguage);
+// router.put("/update", verifyToken, authController.updateProfile);
+// Profile Update Route
+router.put(
+  "/update",
+  [
+    check("firstName")
+      .notEmpty()
+      .withMessage("First name is required")
+      .isLength({ min: 2 })
+      .withMessage("First name must be at least 2 characters long"),
+    check("lastName")
+      .notEmpty()
+      .withMessage("Last name is required")
+      .isLength({ min: 2 })
+      .withMessage("Last name must be at least 2 characters long"),
+    check("email")
+      .isEmail()
+      .withMessage("Please enter a valid email address")
+      .custom(async (email, { req }) => {
+        const existingUser = await User.findOne({ email });
+        if (existingUser && existingUser._id.toString() !== req.user.id) {
+          throw new Error("Email is already in use");
+        }
+        return true;
+      }),
+    check("password")
+      .optional()
+      .isLength({ min: 6 })
+      .withMessage("Password must be at least 6 characters long"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.updateProfile
+);
+
+// Save Birthday
+// router.post("/birthday", verifyToken, authController.saveBirthday);
+// Update Birthday Route
+router.post(
+  "/birthday",
+  [
+    check("month").notEmpty().withMessage("Month is required"),
+    check("date")
+      .isInt({ min: 1, max: 31 })
+      .withMessage("Please enter a valid date (1-31)"),
+    check("year")
+      .isInt({ min: 1900, max: new Date().getFullYear() })
+      .withMessage("Please enter a valid year"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.saveBirthday
+);
+
+// Save Gender
+// router.post("/gender", verifyToken, authController.saveGender);
+// Update Gender Route
+router.post(
+  "/gender",
+  [
+    check("gender")
+      .notEmpty()
+      .withMessage("Gender is required")
+      .isIn(["male", "female", "other"])
+      .withMessage("Invalid gender value"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.saveGender
+);
+
+// Save Country
+// router.post("/country", verifyToken, authController.saveCountry);
+// Update Country Route
+router.post(
+  "/country",
+  [
+    check("country")
+      .notEmpty()
+      .withMessage("Country is required")
+      .isAlpha()
+      .withMessage("Country must contain only letters"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.saveCountry
+);
+
+// Save Language
+// router.post("/language", verifyToken, authController.saveLanguage);
+// Update Language Route
+router.post(
+  "/language",
+  [
+    check("language")
+      .notEmpty()
+      .withMessage("Language is required")
+      .isAlpha()
+      .withMessage("Language must contain only letters"),
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  authController.saveLanguage
+);
 
 module.exports = router;
