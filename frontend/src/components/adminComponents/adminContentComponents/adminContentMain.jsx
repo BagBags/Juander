@@ -26,7 +26,7 @@ export default function AdminContentMain() {
       route: "/AdminManageChatbot",
     },
     {
-      title: "Iteneraries",
+      title: "Itineraries",
       iconPath: "/icons/tour-map.svg",
       route: "/AdminItinerary",
     },

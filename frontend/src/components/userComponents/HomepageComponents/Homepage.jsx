@@ -4,6 +4,7 @@ import SideButtons from "../sideButtons";
 import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 
 export default function Homepage() {
   const navigate = useNavigate();
@@ -32,12 +33,12 @@ export default function Homepage() {
     <div
       className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 relative"
       style={{
-        backgroundImage: "url('/JuanderBG.png')",
+        backgroundImage: "url('/login-background.svg')",
         backgroundColor: "#f04e37",
       }}
     >
       {/* Logo Header */}
-      <div className="absolute top-4 left-0 right-0 flex justify-end px-4">
+      <div className="center mt-5 top-4 left-0 right-0 flex justify-end px-4">
         <LogoHeader />
       </div>
 
@@ -50,7 +51,8 @@ export default function Homepage() {
 
       {/* Buttons */}
       <SideButtons user={currentUser} />
-      <Button user={currentUser} />
+      <Button navigate={navigate} />
+      <FloatingChatbot />
     </div>
   );
 }

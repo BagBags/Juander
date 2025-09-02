@@ -33,6 +33,8 @@ import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 import TourMap from "./components/userComponents/TourMap/TourMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
+import TouristItinerary from "./components/userComponents/HomepageComponents/TouristItinerary";
+import TouristItineraryMap from "./components/userComponents/HomepageComponents/TouristItinerariesMap";
 
 // Guest Side
 import GuestHomepage from "./components/userComponents/HomepageComponents/GuestHomepage";
@@ -86,6 +88,11 @@ function AnimatedRoutes() {
           <Route path="/Homepage" element={<Homepage />} />{" "}
           <Route path="/TripArchive" element={<TripArchives />} />
           <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
+          <Route path="/TouristItinerary" element={<TouristItinerary />} />
+          <Route
+            path="/TouristItineraryMap/:itineraryId"
+            element={<TouristItineraryMap />}
+          />
           {/* Profile Section with Persistent Header */}
           <Route path="/Profile" element={<ProfileLayout />}>
             <Route index element={<ProfilePage />} />

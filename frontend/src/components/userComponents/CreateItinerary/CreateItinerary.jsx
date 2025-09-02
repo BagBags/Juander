@@ -1,58 +1,103 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import SideButtons from "../sideButtons";
 import BackHeader from "../BackButton";
-import { FaCheck, FaPlus, FaChevronDown, FaChevronUp } from "react-icons/fa";
+import {
+  FaCheck,
+  FaPlus,
+  FaChevronDown,
+  FaChevronUp,
+  FaTrash,
+} from "react-icons/fa";
 
 export default function CreateItineraryPage() {
   const [selected, setSelected] = useState([]);
-  const [itineraries, setItineraries] = useState([]);
+  const [userItineraries, setUserItineraries] = useState([]);
   const [itineraryName, setItineraryName] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [sites, setSites] = useState([]);
 
-  const sites = [
-    {
-      name: "San Ignacio Church",
-      subtitle: "Museo de Intramuros",
-      description:
-        "A historic church housing the Museo de Intramuros with religious artifacts and art.",
-      image: "https://picsum.photos/seed/sanignacio/320/240",
-    },
-    {
-      name: "San Nicolas de Tolentino",
-      subtitle: "Home of the original image of the Black Nazarene",
-      description:
-        "Famous for its historical significance and as the home of the original Black Nazarene image.",
-      image: "https://picsum.photos/seed/sannicolas/320/240",
-    },
-    {
-      name: "San Agustin Church",
-      subtitle: "Shrine of Nuestra Señora de Consolacion y Correa",
-      description:
-        "A UNESCO World Heritage Site and one of the oldest stone churches in the Philippines.",
-      image: "https://picsum.photos/seed/sanagustin/320/240",
-    },
-  ];
+  const token = localStorage.getItem("token"); // Assuming you store user token here
+  const config = { headers: { Authorization: `Bearer ${token}` } };
 
-  const toggleSelection = (index) => {
-    if (selected.includes(index)) {
-      setSelected(selected.filter((i) => i !== index));
-    } else {
-      setSelected([...selected, index]);
+  useEffect(() => {
+    fetchSites();
+    fetchItineraries();
+  }, []);
+
+  // Fetch all sites
+  const fetchSites = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/pins");
+      setSites(res.data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load sites");
     }
   };
 
-  const handleSave = () => {
-    if (!itineraryName.trim() || selected.length === 0) return;
+  // Fetch itineraries and separate admin vs user
+  const fetchItineraries = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/itineraries",
+        config
+      );
+      const allItineraries = res.data;
+      setUserItineraries(allItineraries.filter((i) => !i.isAdminCreated));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load itineraries");
+    }
+  };
 
-    // Create a grouped itinerary object
-    const newItinerary = {
-      name: itineraryName.trim(),
-      sites: selected.map((index) => sites[index]),
-    };
+  // Toggle site selection
+  const toggleSelection = (siteId) => {
+    setSelected((prev) =>
+      prev.includes(siteId)
+        ? prev.filter((id) => id !== siteId)
+        : [...prev, siteId]
+    );
+  };
 
-    setItineraries((prev) => [...prev, newItinerary]);
-    setSelected([]);
-    setItineraryName("");
+  // Save a new user itinerary
+  const handleSave = async () => {
+    if (!itineraryName.trim() || selected.length === 0) {
+      return alert("Enter itinerary name and select at least one site");
+    }
+
+    try {
+      await axios.post(
+        "http://localhost:5000/api/itineraries",
+        {
+          name: itineraryName.trim(),
+          sites: selected,
+          isAdminCreated: false,
+        },
+        config
+      );
+
+      alert("Itinerary saved!");
+      setItineraryName("");
+      setSelected([]);
+      fetchItineraries(); // refresh user itineraries
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save itinerary");
+    }
+  };
+
+  // Delete a user itinerary
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this itinerary?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
+      setUserItineraries(userItineraries.filter((i) => i._id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete itinerary");
+    }
   };
 
   const toggleExpand = (idx) => {
@@ -61,6 +106,7 @@ export default function CreateItineraryPage() {
 
   return (
     <div className="min-h-screen bg-[#f04e37] flex flex-col items-center text-sm relative px-4 md:px-0 text-white">
+      <SideButtons />
       <div className="w-full max-w-xl relative">
         <div className="pt-4 z-10 sticky top-0 bg-[#f04e37]">
           <BackHeader title="Create Itinerary" />
@@ -69,7 +115,7 @@ export default function CreateItineraryPage() {
         <div className="mt-4 text-center">
           <h1 className="text-2xl font-bold mb-2">Create Your Own Itinerary</h1>
           <p className="text-sm opacity-90 mb-6">
-            Select from the options below. Once saved, they’ll appear in the
+            Select from the options below. Once saved, they’ll appear in your
             list of created itineraries.
           </p>
 
@@ -82,40 +128,45 @@ export default function CreateItineraryPage() {
           />
 
           <h2 className="text-3xl font-bold mb-6">Sites</h2>
-
           <div className="flex flex-col items-center gap-6">
-            {sites.map((site, index) => (
+            {sites.map((site) => (
               <div
-                key={index}
+                key={site._id}
                 className="bg-[#f4cc27] text-black rounded-2xl shadow-md p-4 flex flex-col justify-between w-full min-h-[200px]"
               >
                 <div className="flex gap-4 items-center">
                   <img
-                    src={site.image}
-                    alt={site.name}
+                    src={
+                      site.mediaUrl ||
+                      site.image ||
+                      "https://via.placeholder.com/100"
+                    }
+                    alt={site.siteName || site.title}
                     className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
                   />
                   <div className="text-left flex-1">
                     <h3 className="text-lg font-bold text-[#f04e37]">
-                      {site.name}
+                      {site.siteName || site.title}
                     </h3>
-                    <p className="text-sm text-gray-700">{site.subtitle}</p>
+                    <p className="text-sm text-gray-700">
+                      {site.subtitle || ""}
+                    </p>
                     <p className="text-xs mt-1 text-gray-600 line-clamp-2">
-                      {site.description}
+                      {site.description || ""}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-4 flex justify-center">
                   <button
-                    onClick={() => toggleSelection(index)}
+                    onClick={() => toggleSelection(site._id)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
-                      selected.includes(index)
+                      selected.includes(site._id)
                         ? "bg-green-500 text-white"
                         : "bg-white text-[#f04e37]"
                     }`}
                   >
-                    {selected.includes(index) ? (
+                    {selected.includes(site._id) ? (
                       <>
                         <FaCheck /> Added
                       </>
@@ -130,52 +181,22 @@ export default function CreateItineraryPage() {
             ))}
           </div>
 
-          {/* Created Itineraries */}
+          {/* User Itineraries */}
           <div className="mt-10 text-left w-full">
-            <h2 className="text-xl font-bold mb-3">Created Itineraries</h2>
-            {itineraries.length === 0 ? (
+            <h2 className="text-xl font-bold mb-3">My Itineraries</h2>
+            {userItineraries.length === 0 ? (
               <p className="text-white opacity-80">
                 No itineraries created yet.
               </p>
             ) : (
-              itineraries.map((itinerary, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white text-black rounded-xl shadow-lg p-4 mb-4 cursor-pointer"
-                  onClick={() => toggleExpand(idx)}
-                >
-                  <div className="flex justify-between items-center">
-                    <p className="font-bold text-lg">{itinerary.name}</p>
-                    {expandedIndex === idx ? (
-                      <FaChevronUp />
-                    ) : (
-                      <FaChevronDown />
-                    )}
-                  </div>
-
-                  {expandedIndex === idx && (
-                    <div className="mt-3 space-y-2">
-                      {itinerary.sites.map((item, siteIdx) => (
-                        <div
-                          key={siteIdx}
-                          className="flex items-center gap-3 bg-gray-100 p-3 rounded-lg"
-                        >
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-12 h-12 rounded object-cover"
-                          />
-                          <div>
-                            <p className="font-semibold">{item.name}</p>
-                            <p className="text-xs text-gray-600">
-                              {item.subtitle}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              userItineraries.map((itinerary, idx) => (
+                <ItineraryCard
+                  key={itinerary._id}
+                  itinerary={itinerary}
+                  expanded={expandedIndex === idx}
+                  toggleExpand={() => toggleExpand(idx)}
+                  handleDelete={handleDelete}
+                />
               ))
             )}
           </div>
@@ -184,7 +205,7 @@ export default function CreateItineraryPage() {
             onClick={handleSave}
             className="bg-white text-[#f04e37] font-bold py-3 px-8 rounded-full mt-8"
           >
-            Save
+            Save Itinerary
           </button>
         </div>
       </div>
@@ -192,6 +213,55 @@ export default function CreateItineraryPage() {
       <p className="mt-10 text-xs text-center text-white opacity-70">
         ©2025 Intramuros Administration
       </p>
+    </div>
+  );
+}
+
+// Component for displaying each itinerary
+function ItineraryCard({ itinerary, expanded, toggleExpand, handleDelete }) {
+  return (
+    <div className="bg-white text-black rounded-xl shadow-lg p-4 mb-4 cursor-pointer">
+      <div className="flex justify-between items-center">
+        <p className="font-bold text-lg">{itinerary.name}</p>
+        <div className="flex items-center gap-3">
+          {handleDelete && (
+            <button
+              onClick={() => handleDelete(itinerary._id)}
+              className="text-red-500"
+            >
+              <FaTrash />
+            </button>
+          )}
+          <button onClick={toggleExpand}>
+            {expanded ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+      </div>
+
+      {expanded && itinerary.sites?.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {itinerary.sites.map((site, siteIdx) => (
+            <div
+              key={siteIdx}
+              className="flex items-center gap-3 bg-gray-100 p-3 rounded-lg"
+            >
+              <img
+                src={
+                  site.mediaUrl ||
+                  site.image ||
+                  "https://via.placeholder.com/50"
+                }
+                alt={site.siteName || site.title}
+                className="w-12 h-12 rounded object-cover"
+              />
+              <div>
+                <p className="font-semibold">{site.siteName || site.title}</p>
+                <p className="text-xs text-gray-600">{site.subtitle || ""}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

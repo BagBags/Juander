@@ -28,7 +28,7 @@ export default function SideButtons() {
       Device: "Mobile",
     },
     {
-      url: "icons/Photobooth.png",
+      url: "icons/Hotlines.svg",
       label: "Hotlines",
       to: "/Emergency",
       Device: "Mobile",

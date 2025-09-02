@@ -11,7 +11,7 @@ import {
   createInverseMask,
 } from "../TourMap/mapConfig";
 
-export default function GuestItineraryMap() {
+export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
   const [pins, setPins] = useState([]);
   const [viewState, setViewState] = useState({
@@ -29,7 +29,10 @@ export default function GuestItineraryMap() {
   const [mask, setMask] = useState(null);
   const [inverseMask, setInverseMask] = useState(null);
 
-  // --- Fetch mask once ---
+  const token = localStorage.getItem("token");
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+
+  // --- Fetch mask ---
   useEffect(() => {
     const fetchMask = async () => {
       try {
@@ -55,7 +58,8 @@ export default function GuestItineraryMap() {
     const fetchItinerary = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/itineraries/guest/${itineraryId}`
+          `http://localhost:5000/api/itineraries/${itineraryId}`,
+          config
         );
 
         const sites = (res.data.sites || []).filter(
@@ -94,7 +98,7 @@ export default function GuestItineraryMap() {
     return () => navigator.geolocation.clearWatch(id);
   }, []);
 
-  // --- Fetch route from user to current stop ---
+  // --- Fetch route to current site ---
   useEffect(() => {
     const fetchRoute = async () => {
       if (!userLocation || !selectedPin) return;
@@ -218,7 +222,9 @@ export default function GuestItineraryMap() {
       {selectedPin && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white p-4 rounded-lg shadow-md">
           <h3 className="font-semibold">{selectedPin.siteName}</h3>
-          <p className="text-sm text-gray-600">{selectedPin.siteDescription}</p>
+          <p className="text-sm text-gray-600">
+            {selectedPin.description || selectedPin.siteDescription}
+          </p>
           {distance && (
             <p className="text-xs mt-2">🛣️ {(distance / 1000).toFixed(2)} km</p>
           )}

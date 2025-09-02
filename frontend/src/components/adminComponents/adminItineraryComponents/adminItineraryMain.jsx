@@ -15,23 +15,38 @@ export default function AdminItineraryMain() {
   const SITE_IMAGE_SIZE = 80;
   const COVER_IMAGE_HEIGHT = 192;
 
+  const token = localStorage.getItem("token"); // Get admin token
+  const config = {
+    headers: { Authorization: `Bearer ${token}` },
+  };
+
+  // Fetch pins
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/pins")
-      .then((res) => setPins(res.data))
-      .catch((err) => console.error(err));
+    const fetchPins = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/pins", config);
+        setPins(res.data);
+      } catch (err) {
+        console.error("Failed to fetch pins:", err);
+      }
+    };
+    fetchPins();
   }, []);
 
+  // Fetch itineraries
   useEffect(() => {
     fetchItineraries();
   }, []);
 
   const fetchItineraries = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/itineraries");
+      const res = await axios.get(
+        "http://localhost:5000/api/itineraries",
+        config
+      );
       setItineraries(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch itineraries:", err);
     }
   };
 
@@ -44,24 +59,33 @@ export default function AdminItineraryMain() {
   };
 
   const handleSave = async () => {
-    if (!name) return alert("Please enter a name");
+    if (!name.trim()) return alert("Please enter a name");
+
     const payload = {
       name,
       description,
       imageUrl,
       sites: selectedSites.map((s) => s._id),
+      isAdminCreated: true,
     };
+
     try {
       if (editingId) {
         await axios.put(
           `http://localhost:5000/api/itineraries/${editingId}`,
-          payload
+          payload,
+          config
         );
         alert("Itinerary updated!");
       } else {
-        await axios.post("http://localhost:5000/api/itineraries", payload);
+        await axios.post(
+          "http://localhost:5000/api/itineraries",
+          payload,
+          config
+        );
         alert("Itinerary saved!");
       }
+
       setName("");
       setDescription("");
       setImageUrl("");
@@ -69,18 +93,19 @@ export default function AdminItineraryMain() {
       setEditingId(null);
       fetchItineraries();
     } catch (err) {
-      console.error(err);
+      console.error("Failed to save itinerary:", err);
       alert("Failed to save itinerary");
     }
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this itinerary?")) return;
+
     try {
-      await axios.delete(`http://localhost:5000/api/itineraries/${id}`);
+      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
       setItineraries(itineraries.filter((i) => i._id !== id));
     } catch (err) {
-      console.error(err);
+      console.error("Failed to delete itinerary:", err);
       alert("Failed to delete itinerary");
     }
   };
@@ -90,7 +115,7 @@ export default function AdminItineraryMain() {
     setDescription(itinerary.description);
     setImageUrl(itinerary.imageUrl || "");
     const selected = pins.filter((pin) =>
-      itinerary.sites.some((site) => site._id === pin._id)
+      itinerary.sites?.some((site) => site._id === pin._id)
     );
     setSelectedSites(selected);
     setEditingId(itinerary._id);

@@ -26,12 +26,7 @@ export default function GuestHomepage() {
       to: "/Photobooth",
       device: "Mobile",
     },
-    {
-      url: "icons/photobooth.svg",
-      label: "Start Tour",
-      to: "/GuestItinerary",
-      device: "Mobile",
-    },
+
     {
       url: "icons/photobooth.svg",
       label: "Hotlines",

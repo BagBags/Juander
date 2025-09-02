@@ -5,15 +5,24 @@ const itinerarySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
-    imageUrl: { type: String }, // cover photo URL
+    imageUrl: { type: String },
     sites: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Pin", // reference to your existing Pin model
+        ref: "Pin",
       },
     ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true, // every itinerary must have a creator
+    },
+    isAdminCreated: {
+      type: Boolean,
+      default: false, // admin itineraries = true
+    },
   },
-  { timestamps: true } // automatically adds createdAt and updatedAt
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Itinerary", itinerarySchema);

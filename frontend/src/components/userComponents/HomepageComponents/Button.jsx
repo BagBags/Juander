@@ -1,8 +1,9 @@
 import React from "react";
 
-export default function Button() {
+export default function Button({ navigate }) {
   return (
     <button
+      onClick={() => navigate("/TouristItinerary")}
       className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
       left-1/2 -translate-x-1/2
       bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
