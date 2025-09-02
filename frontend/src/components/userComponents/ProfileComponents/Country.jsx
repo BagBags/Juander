@@ -8,8 +8,29 @@ export default function CountrySelector() {
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Fetch current user's country on mount
   useEffect(() => {
     document.body.style.overflow = "hidden";
+
+    const fetchUserCountry = async () => {
+      const token =
+        sessionStorage.getItem("token") || localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await axios.get("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.data?.country) {
+          setSelected(res.data.country);
+        }
+      } catch (err) {
+        console.error("Error fetching user:", err.response?.data || err);
+      }
+    };
+
+    fetchUserCountry();
+
     return () => {
       document.body.style.overflow = "";
     };

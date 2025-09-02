@@ -176,6 +176,7 @@ router.put(
 // Profile Update Route
 router.put(
   "/update",
+  verifyToken,
   [
     check("firstName")
       .notEmpty()
@@ -217,6 +218,7 @@ router.put(
 // Update Birthday Route
 router.post(
   "/birthday",
+  verifyToken,
   [
     check("month").notEmpty().withMessage("Month is required"),
     check("date")
@@ -241,6 +243,7 @@ router.post(
 // Update Gender Route
 router.post(
   "/gender",
+  verifyToken,
   [
     check("gender")
       .notEmpty()
@@ -263,12 +266,13 @@ router.post(
 // Update Country Route
 router.post(
   "/country",
+  verifyToken,
   [
     check("country")
       .notEmpty()
       .withMessage("Country is required")
-      .isAlpha()
-      .withMessage("Country must contain only letters"),
+      .matches(/^[a-zA-Z\s]+$/)
+      .withMessage("Country must contain only letters and spaces"),
   ],
   (req, res, next) => {
     const errors = validationResult(req);
@@ -285,6 +289,7 @@ router.post(
 // Update Language Route
 router.post(
   "/language",
+  verifyToken,
   [
     check("language")
       .notEmpty()

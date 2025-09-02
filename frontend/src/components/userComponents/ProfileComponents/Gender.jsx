@@ -21,7 +21,10 @@ export default function Gender() {
         });
 
         if (data?.gender) {
-          setSelected(data.gender);
+          // Capitalize first letter to match your options
+          setSelected(
+            data.gender.charAt(0).toUpperCase() + data.gender.slice(1)
+          );
         }
       } catch (err) {
         console.error("Error fetching gender:", err.response?.data || err);
@@ -43,7 +46,7 @@ export default function Gender() {
 
       const res = await axios.post(
         "http://localhost:5000/api/auth/gender",
-        { gender: selected },
+        { gender: selected.toLowerCase() }, // convert to lowercase
         {
           headers: {
             Authorization: `Bearer ${token}`,

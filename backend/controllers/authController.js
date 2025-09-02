@@ -503,11 +503,12 @@ exports.saveBirthday = async (req, res) => {
 exports.saveGender = async (req, res) => {
   try {
     const { gender } = req.body;
-    if (!gender) return res.status(400).json({ message: "Gender is required" });
+    // ensure lowercase
+    const normalizedGender = gender.toLowerCase();
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { gender },
+      { gender: normalizedGender },
       { new: true, select: "-password -otp -otpExpires" }
     );
 
@@ -515,7 +516,7 @@ exports.saveGender = async (req, res) => {
 
     res.json(user);
   } catch (err) {
-    console.error("Error updating gender:", err);
+    console.error("Error saving gender:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -523,13 +524,16 @@ exports.saveGender = async (req, res) => {
 // Save Country
 exports.saveCountry = async (req, res) => {
   try {
+    console.log("REQ.BODY:", req.body);
+    console.log("REQ.USER:", req.user);
+
     const { country } = req.body;
-    const userId = req.user.id; // comes from JWT middleware
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const userId = req.user.id;
 
     const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     user.country = country;
     await user.save();
@@ -539,8 +543,8 @@ exports.saveCountry = async (req, res) => {
       country: user.country,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("SAVE COUNTRY ERROR:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
