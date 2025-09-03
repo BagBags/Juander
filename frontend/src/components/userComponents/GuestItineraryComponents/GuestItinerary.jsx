@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import GuestItineraryMain from "./GuestItineraryMain";
+import BackHeader from "../BackButton";
 
 export default function GuestItinerary() {
   const navigate = useNavigate();
@@ -81,6 +82,12 @@ export default function GuestItinerary() {
             </Link>
           );
         })}
+      </div>
+      {/* Back Header */}
+      <div className="sticky top-0 z-10 bg-[#f04e37] p-4">
+        <BackHeader
+          title={<span className="text-white">Available Itineraries</span>}
+        />
       </div>
 
       {/* Main Content */}

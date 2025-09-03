@@ -1,6 +1,8 @@
 // components/userComponents/UserMap.jsx
 import React, { useState, useEffect } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
+import BackHeader from "../BackButton";
+
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
 import { point } from "@turf/helpers";
@@ -234,6 +236,10 @@ export default function UserMap() {
 
   return (
     <div className="relative w-full h-screen">
+      {/* Back Header */}
+      <div className="sticky top-0 z-10 bg-[#f04e37] p-4">
+        <BackHeader title={<span className="text-white">Tour Map</span>} />
+      </div>
       <Map
         initialViewState={{ ...viewState, minZoom: 15.5 }}
         maxBounds={INTRAMUROS_BOUNDS}
