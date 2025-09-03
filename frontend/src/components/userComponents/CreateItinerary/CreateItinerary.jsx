@@ -8,6 +8,7 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaTrash,
+  FaEdit,
 } from "react-icons/fa";
 
 export default function CreateItineraryPage() {
@@ -15,9 +16,11 @@ export default function CreateItineraryPage() {
   const [userItineraries, setUserItineraries] = useState([]);
   const [itineraryName, setItineraryName] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
+  const [editingItineraryId, setEditingItineraryId] = useState(null);
   const [sites, setSites] = useState([]);
+  const [descriptionToggles, setDescriptionToggles] = useState({});
 
-  const token = localStorage.getItem("token"); // Assuming you store user token here
+  const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
@@ -25,241 +28,323 @@ export default function CreateItineraryPage() {
     fetchItineraries();
   }, []);
 
-  // Fetch all sites
   const fetchSites = async () => {
     try {
       const res = await axios.get("http://localhost:5000/api/pins");
       setSites(res.data);
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Failed to load sites");
     }
   };
 
-  // Fetch itineraries and separate admin vs user
   const fetchItineraries = async () => {
     try {
       const res = await axios.get(
         "http://localhost:5000/api/itineraries",
         config
       );
-      const allItineraries = res.data;
-      setUserItineraries(allItineraries.filter((i) => !i.isAdminCreated));
-    } catch (err) {
-      console.error(err);
+      setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
+    } catch {
       alert("Failed to load itineraries");
     }
   };
 
-  // Toggle site selection
-  const toggleSelection = (siteId) => {
+  const toggleSelection = (siteId) =>
     setSelected((prev) =>
       prev.includes(siteId)
         ? prev.filter((id) => id !== siteId)
         : [...prev, siteId]
     );
-  };
 
-  // Save a new user itinerary
   const handleSave = async () => {
-    if (!itineraryName.trim() || selected.length === 0) {
-      return alert("Enter itinerary name and select at least one site");
-    }
+    if (!itineraryName.trim() || selected.length === 0)
+      return alert("Enter name & select sites");
+
+    const payload = {
+      name: itineraryName.trim(),
+      sites: selected,
+      isAdminCreated: false,
+    };
 
     try {
-      await axios.post(
-        "http://localhost:5000/api/itineraries",
-        {
-          name: itineraryName.trim(),
-          sites: selected,
-          isAdminCreated: false,
-        },
-        config
-      );
-
-      alert("Itinerary saved!");
-      setItineraryName("");
-      setSelected([]);
-      fetchItineraries(); // refresh user itineraries
-    } catch (err) {
-      console.error(err);
+      if (editingItineraryId) {
+        await axios.put(
+          `http://localhost:5000/api/itineraries/${editingItineraryId}`,
+          payload,
+          config
+        );
+      } else {
+        await axios.post(
+          "http://localhost:5000/api/itineraries",
+          payload,
+          config
+        );
+      }
+      resetForm();
+      fetchItineraries();
+    } catch {
       alert("Failed to save itinerary");
     }
   };
 
-  // Delete a user itinerary
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this itinerary?")) return;
-
+    if (!confirm("Delete this itinerary?")) return;
     try {
       await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Failed to delete itinerary");
     }
   };
 
-  const toggleExpand = (idx) => {
-    setExpandedIndex(expandedIndex === idx ? null : idx);
+  const handleEdit = (itinerary) => {
+    setEditingItineraryId(itinerary._id);
+    setItineraryName(itinerary.name);
+    setSelected(itinerary.sites.map((s) => s._id));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleCancelUpdate = () => resetForm();
+  const resetForm = () => {
+    setEditingItineraryId(null);
+    setItineraryName("");
+    setSelected([]);
+  };
+
+  const toggleExpand = (idx) =>
+    setExpandedIndex(expandedIndex === idx ? null : idx);
+  const toggleDescription = (id) =>
+    setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
+
   return (
-    <div className="min-h-screen bg-[#f04e37] flex flex-col items-center text-sm relative px-4 md:px-0 text-white">
-      <SideButtons />
-      <div className="w-full max-w-xl relative">
-        <div className="pt-4 z-10 sticky top-0 bg-[#f04e37]">
-          <BackHeader title="Create Itinerary" />
-        </div>
+    <div className="min-h-screen flex flex-col bg-[#f04e37] text-white">
+      <div className="flex flex-1 px-2 md:px-0">
+        <SideButtons />
+        <div
+          className="flex-1 max-w-6xl mx-auto flex flex-col md:flex-row gap-4 py-6 
+                pl-4 md:pl-0 pr-21 md:pr-0"
+        >
+          {/* Site Selection */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="sticky top-0 z-10 bg-[#f04e37]">
+              <BackHeader title="Create Itinerary" />
+            </div>
 
-        <div className="mt-4 text-center">
-          <h1 className="text-2xl font-bold mb-2">Create Your Own Itinerary</h1>
-          <p className="text-sm opacity-90 mb-6">
-            Select from the options below. Once saved, they’ll appear in your
-            list of created itineraries.
-          </p>
+            <div className="flex-1 overflow-y-auto px-0 md:px-2 pt-2">
+              <input
+                type="text"
+                value={itineraryName}
+                onChange={(e) => setItineraryName(e.target.value)}
+                placeholder="Enter itinerary name"
+                className="w-full p-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-500 shadow focus:border-[#f4cc27] focus:ring-2 focus:ring-[#f4cc27] mb-6"
+              />
 
-          <input
-            type="text"
-            value={itineraryName}
-            onChange={(e) => setItineraryName(e.target.value)}
-            placeholder="Enter itinerary name"
-            className="w-full p-3 rounded-xl border border-transparent bg-white/90 text-gray-900 placeholder-gray-500 shadow-sm focus:border-[#f4cc27] focus:ring-2 focus:ring-[#f4cc27] outline-none transition-all duration-300 mb-6"
-          />
-
-          <h2 className="text-3xl font-bold mb-6">Sites</h2>
-          <div className="flex flex-col items-center gap-6">
-            {sites.map((site) => (
-              <div
-                key={site._id}
-                className="bg-[#f4cc27] text-black rounded-2xl shadow-md p-4 flex flex-col justify-between w-full min-h-[200px]"
-              >
-                <div className="flex gap-4 items-center">
-                  <img
-                    src={
-                      site.mediaUrl ||
-                      site.image ||
-                      "https://via.placeholder.com/100"
-                    }
-                    alt={site.siteName || site.title}
-                    className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
-                  />
-                  <div className="text-left flex-1">
-                    <h3 className="text-lg font-bold text-[#f04e37]">
-                      {site.siteName || site.title}
-                    </h3>
-                    <p className="text-sm text-gray-700">
-                      {site.subtitle || ""}
-                    </p>
-                    <p className="text-xs mt-1 text-gray-600 line-clamp-2">
-                      {site.description || ""}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-center">
-                  <button
-                    onClick={() => toggleSelection(site._id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${
-                      selected.includes(site._id)
-                        ? "bg-green-500 text-white"
-                        : "bg-white text-[#f04e37]"
-                    }`}
-                  >
-                    {selected.includes(site._id) ? (
-                      <>
-                        <FaCheck /> Added
-                      </>
-                    ) : (
-                      <>
-                        <FaPlus /> Add
-                      </>
-                    )}
-                  </button>
-                </div>
+              <h2 className="text-2xl font-bold mb-4">Sites</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {sites.map((site) => {
+                  const isExpanded = descriptionToggles[site._id];
+                  return (
+                    <div
+                      key={site._id}
+                      className="bg-white text-black rounded-2xl shadow hover:shadow-xl transition p-4 flex flex-col justify-between"
+                    >
+                      <img
+                        src={site.mediaUrl || "https://via.placeholder.com/150"}
+                        alt={site.siteName}
+                        className="w-full h-40 object-cover rounded-lg mb-3"
+                      />
+                      <h3 className="font-bold text-[#f04e37]">
+                        {site.siteName}
+                      </h3>
+                      <p
+                        className={`text-gray-700 text-sm mb-2 ${
+                          !isExpanded ? "line-clamp-2" : ""
+                        }`}
+                      >
+                        {site.siteDescription || "No description available"}
+                      </p>
+                      {site.siteDescription &&
+                        site.siteDescription.length > 60 && (
+                          <button
+                            className="text-xs text-[#f04e37] font-semibold mb-2"
+                            onClick={() => toggleDescription(site._id)}
+                          >
+                            {isExpanded ? "Read less" : "Read more"}
+                          </button>
+                        )}
+                      <button
+                        onClick={() => toggleSelection(site._id)}
+                        className={`w-full py-2 rounded-full font-semibold transition-colors flex items-center justify-center gap-2 ${
+                          selected.includes(site._id)
+                            ? "bg-green-500 text-white hover:bg-green-600"
+                            : "bg-[#f04e37]/10 text-[#f04e37] hover:bg-[#f04e37]/20"
+                        }`}
+                      >
+                        {selected.includes(site._id) ? (
+                          <>
+                            <FaCheck className="w-4 h-4" /> Added
+                          </>
+                        ) : (
+                          <>
+                            <FaPlus className="w-4 h-4" /> Add
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* User Itineraries */}
-          <div className="mt-10 text-left w-full">
-            <h2 className="text-xl font-bold mb-3">My Itineraries</h2>
-            {userItineraries.length === 0 ? (
-              <p className="text-white opacity-80">
-                No itineraries created yet.
-              </p>
-            ) : (
-              userItineraries.map((itinerary, idx) => (
-                <ItineraryCard
-                  key={itinerary._id}
-                  itinerary={itinerary}
-                  expanded={expandedIndex === idx}
-                  toggleExpand={() => toggleExpand(idx)}
-                  handleDelete={handleDelete}
-                />
-              ))
-            )}
-          </div>
+          {/* Right Column */}
+          <div className="w-full md:w-80 flex flex-col gap-6 mt-6 md:mt-0">
+            <div className="bg-white text-black rounded-xl shadow p-4 sticky top-4">
+              <h2 className="font-bold text-lg mb-3">
+                Selected Sites ({selected.length})
+              </h2>
+              {selected.length === 0 ? (
+                <p className="text-gray-600 text-sm">No sites selected</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {selected.map((id) => {
+                    const site = sites.find((s) => s._id === id);
+                    if (!site) return null;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center gap-2 bg-gray-100 p-2 rounded-lg"
+                      >
+                        <img
+                          src={
+                            site.mediaUrl || "https://via.placeholder.com/50"
+                          }
+                          alt={site.siteName}
+                          className="w-10 h-10 rounded object-cover"
+                        />
+                        <p className="text-sm font-semibold">{site.siteName}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-          <button
-            onClick={handleSave}
-            className="bg-white text-[#f04e37] font-bold py-3 px-8 rounded-full mt-8"
-          >
-            Save Itinerary
-          </button>
+              <div className="mt-4 flex gap-2 flex-wrap">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 bg-[#f04e37] text-white font-bold py-2 rounded-lg"
+                >
+                  {editingItineraryId ? "Update" : "Save"}
+                </button>
+                {editingItineraryId && (
+                  <button
+                    onClick={handleCancelUpdate}
+                    className="flex-1 bg-gray-300 text-gray-800 font-bold py-2 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="overflow-y-auto max-h-[60vh]">
+              <h2 className="text-xl font-bold mb-3">My Itineraries</h2>
+              {userItineraries.length === 0 ? (
+                <p className="text-white opacity-80 text-sm">
+                  No itineraries created yet.
+                </p>
+              ) : (
+                userItineraries.map((itinerary, idx) => (
+                  <ItineraryCard
+                    key={itinerary._id}
+                    itinerary={itinerary}
+                    expanded={expandedIndex === idx}
+                    toggleExpand={() => toggleExpand(idx)}
+                    handleDelete={handleDelete}
+                    handleEdit={handleEdit}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <p className="mt-10 text-xs text-center text-white opacity-70">
+      <footer className="text-center text-xs text-white opacity-70 py-4">
         ©2025 Intramuros Administration
-      </p>
+      </footer>
     </div>
   );
 }
 
-// Component for displaying each itinerary
-function ItineraryCard({ itinerary, expanded, toggleExpand, handleDelete }) {
+function ItineraryCard({
+  itinerary,
+  expanded,
+  toggleExpand,
+  handleDelete,
+  handleEdit,
+}) {
+  const [descExpanded, setDescExpanded] = useState({});
+  const toggleSiteDescription = (idx) =>
+    setDescExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
+
   return (
-    <div className="bg-white text-black rounded-xl shadow-lg p-4 mb-4 cursor-pointer">
+    <div className="bg-white text-black rounded-xl shadow p-4 mb-4 hover:shadow-lg transition">
       <div className="flex justify-between items-center">
         <p className="font-bold text-lg">{itinerary.name}</p>
-        <div className="flex items-center gap-3">
-          {handleDelete && (
-            <button
-              onClick={() => handleDelete(itinerary._id)}
-              className="text-red-500"
-            >
-              <FaTrash />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleEdit(itinerary)}
+            className="text-blue-500"
+          >
+            <FaEdit />
+          </button>
+          <button
+            onClick={() => handleDelete(itinerary._id)}
+            className="text-red-500"
+          >
+            <FaTrash />
+          </button>
           <button onClick={toggleExpand}>
             {expanded ? <FaChevronUp /> : <FaChevronDown />}
           </button>
         </div>
       </div>
-
       {expanded && itinerary.sites?.length > 0 && (
         <div className="mt-3 space-y-2">
-          {itinerary.sites.map((site, siteIdx) => (
-            <div
-              key={siteIdx}
-              className="flex items-center gap-3 bg-gray-100 p-3 rounded-lg"
-            >
-              <img
-                src={
-                  site.mediaUrl ||
-                  site.image ||
-                  "https://via.placeholder.com/50"
-                }
-                alt={site.siteName || site.title}
-                className="w-12 h-12 rounded object-cover"
-              />
-              <div>
-                <p className="font-semibold">{site.siteName || site.title}</p>
-                <p className="text-xs text-gray-600">{site.subtitle || ""}</p>
+          {itinerary.sites.map((site, idx) => {
+            const expandedDesc = descExpanded[idx];
+            return (
+              <div
+                key={idx}
+                className="flex items-center gap-3 bg-gray-100 p-2 rounded-lg"
+              >
+                <img
+                  src={site.mediaUrl || "https://via.placeholder.com/50"}
+                  alt={site.siteName}
+                  className="w-10 h-10 rounded object-cover"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold">{site.siteName}</p>
+                  <p
+                    className={`text-xs text-gray-600 ${
+                      !expandedDesc ? "line-clamp-2" : ""
+                    }`}
+                  >
+                    {site.siteDescription || "No description available"}
+                  </p>
+                  {site.siteDescription && site.siteDescription.length > 60 && (
+                    <button
+                      className="text-xs text-[#f04e37] font-semibold"
+                      onClick={() => toggleSiteDescription(idx)}
+                    >
+                      {expandedDesc ? "Read less" : "Read more"}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

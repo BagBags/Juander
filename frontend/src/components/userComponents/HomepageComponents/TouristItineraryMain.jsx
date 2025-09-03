@@ -1,3 +1,4 @@
+// TouristItineraryMain.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -9,7 +10,6 @@ export default function TouristItineraryMain() {
   useEffect(() => {
     const fetchItineraries = async () => {
       try {
-        // Get token from localStorage (or wherever you store it)
         const token = localStorage.getItem("token");
         if (!token) return;
 
@@ -17,7 +17,6 @@ export default function TouristItineraryMain() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // Separate admin-made vs user-made
         const adminItineraries = res.data.filter((i) => i.isAdminCreated);
         const userItineraries = res.data.filter((i) => !i.isAdminCreated);
 
@@ -30,19 +29,20 @@ export default function TouristItineraryMain() {
     fetchItineraries();
   }, []);
 
-  return (
-    <div className="min-h-screen p-6 flex flex-col items-center justify-start pt-32 bg-opacity-30">
-      <h1 className="text-3xl font-bold text-center mb-8 text-white drop-shadow-lg">
-        Available Itineraries
-      </h1>
+  // Shared container classes for both sections
+  // Add right padding for mobile to avoid side button overlap
+  const sectionClasses =
+    "max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4 pr-16 md:pr-0 mb-8";
 
+  return (
+    <div className="flex flex-col items-center justify-start">
       {/* Admin-made itineraries */}
-      <div className="w-full max-w-6xl mb-10">
+      <div className={sectionClasses}>
         <h2 className="text-2xl font-bold text-white mb-4">
           Admin Itineraries
         </h2>
         {itineraries.admin.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-3">
             {itineraries.admin.map((itinerary) => (
               <ItineraryCard
                 key={itinerary._id}
@@ -59,10 +59,10 @@ export default function TouristItineraryMain() {
       </div>
 
       {/* User-made itineraries */}
-      <div className="w-full max-w-6xl">
+      <div className={`${sectionClasses} mb-12`}>
         <h2 className="text-2xl font-bold text-white mb-4">My Itineraries</h2>
         {itineraries.user.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-3">
             {itineraries.user.map((itinerary) => (
               <ItineraryCard
                 key={itinerary._id}
@@ -81,7 +81,6 @@ export default function TouristItineraryMain() {
   );
 }
 
-// Separate component for itinerary cards
 function ItineraryCard({ itinerary, navigate }) {
   return (
     <div

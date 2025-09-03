@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
 import TouristItineraryMain from "./TouristItineraryMain";
-import SideButtons from "../SideButtons";
+import SideButtons from "../sideButtons";
+import BackHeader from "../BackButton";
 import axios from "axios";
 
 export default function TouristItinerary() {
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Fetch logged-in tourist info
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
@@ -26,15 +26,23 @@ export default function TouristItinerary() {
   }, []);
 
   return (
-    <div
-      className="min-h-screen bg-cover bg-center relative"
-      style={{ backgroundColor: "#f04e37" }}
-    >
+    <div className="min-h-screen bg-[#f04e37] relative">
       {/* Side Buttons */}
       <SideButtons user={currentUser} />
 
+      {/* Back Header */}
+      <div className="sticky top-0 z-10 bg-[#f04e37] p-4">
+        <BackHeader
+          title={<span className="text-white">Available Itineraries</span>}
+        />
+      </div>
+
       {/* Main Content */}
-      <TouristItineraryMain />
+      <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
+        <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
+          <TouristItineraryMain />
+        </div>
+      </div>
     </div>
   );
 }
