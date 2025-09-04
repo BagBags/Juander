@@ -1,4 +1,4 @@
-import { useState, use } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 import Chatbot from "./Chatbot";
 
@@ -10,22 +10,22 @@ export default function FloatingChatbot() {
       {/* Juan Button */}
       <div
         className={`fixed left-4 z-50 transition-all duration-700 ease-in-out
-    ${
-      isOpen
-        ? "-translate-x-1/2 rotate-[45deg] scale-75"
-        : "translate-x-0 rotate-0 scale-100"
-    }
-    bottom-28 sm:bottom-4`} // 👈 this line handles spacing
+        ${
+          isOpen
+            ? "-translate-x-1/2 rotate-[45deg] scale-75"
+            : "translate-x-0 rotate-0 scale-100"
+        }
+        bottom-28 sm:bottom-4`}
       >
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => setIsOpen(!isOpen)}
           className="bg-transparent flex items-center justify-center
                      w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96"
         >
           <img
-            src="/icons/Juan.svg"
+            src={isOpen ? "/icons/juan_close.svg" : "/icons/juan_open.svg"}
             alt="Juan"
-            className="w-full h-full object-contain"
+            className="w-full h-full object-contain transition-all duration-500 ease-in-out"
           />
         </button>
       </div>

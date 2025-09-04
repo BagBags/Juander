@@ -21,7 +21,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
     { icon: House, label: "Home", to: "/AdminHome" },
     { icon: FolderClosed, label: "Contents", to: "/AdminManageContent" },
     { icon: UserRound, label: "Roles", to: "/AdminManageRole" },
-    { icon: Newspaper, label: "Reports", to: "/AdminReports" },
+
     { icon: History, label: "Logs", to: "/AdminLog" },
   ];
   const [open, setOpen] = useState(false);
@@ -202,6 +202,9 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                       onClick={handleLogout}
                     >
                       Logout
+                    </button>
+                    <button className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-blue-500">
+                      Profile
                     </button>
                   </div>
                 )}

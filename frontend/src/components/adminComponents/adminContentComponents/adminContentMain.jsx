@@ -7,27 +7,27 @@ export default function AdminContentMain() {
   const cardData = [
     {
       title: "Tour Map",
-      iconPath: "/icons/tour-map.svg",
+      iconPath: "/icons/Tourmap.svg",
       route: "/AdminTourMap",
     },
     {
       title: "Photobooth",
-      iconPath: "/icons/photobooth.svg",
+      iconPath: "/icons/Photobooth.svg",
       route: "/admin/photobooth",
     },
     {
       title: "Emergency Hotlines",
-      iconPath: "/icons/emergency-hotlines.svg",
+      iconPath: "/icons/Hotlines.svg",
       route: "/AdminManageEmergency",
     },
     {
       title: "Chatbot",
-      iconPath: "/icons/chatbot.svg",
+      iconPath: "/icons/Chatbot.svg",
       route: "/AdminManageChatbot",
     },
     {
       title: "Itineraries",
-      iconPath: "/icons/tour-map.svg",
+      iconPath: "/icons/Itineraries.svg",
       route: "/AdminItinerary",
     },
   ];

@@ -38,12 +38,12 @@ export default function Homepage() {
       }}
     >
       {/* Logo Header */}
-      <div className="center mt-5 top-4 left-0 right-0 flex justify-end px-4">
+      <div className="center mt-10 top-4 left-0 right-0 flex justify-end px-4">
         <LogoHeader />
       </div>
 
       {/* Title */}
-      <div className="mt-32 sm:mt-36 text-center relative z-10">
+      <div className="mt-22 sm:mt-26 text-center relative z-10">
         <h3 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-6xl font-extrabold text-white">
           Welcome To Intramuros!
         </h3>

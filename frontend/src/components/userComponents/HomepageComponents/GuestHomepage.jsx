@@ -8,27 +8,27 @@ export default function GuestHomepage() {
 
   const icons = [
     {
-      url: "icons/tour-map.svg",
+      url: "icons/Tourmap.svg",
       label: "Tour Map",
       to: "/TourMap",
       device: "All",
     },
     {
-      url: "icons/photobooth.svg",
+      url: "icons/Profile.svg",
       label: "Profile",
       to: "/GuestProfile",
       device: "All",
     },
     // Mobile-only
     {
-      url: "icons/photobooth.svg",
+      url: "icons/Photobooth.svg",
       label: "Photobooth",
       to: "/Photobooth",
       device: "Mobile",
     },
 
     {
-      url: "icons/photobooth.svg",
+      url: "icons/Hotlines.svg",
       label: "Hotlines",
       to: "/Emergency",
       device: "Mobile",
@@ -44,19 +44,19 @@ export default function GuestHomepage() {
       }}
     >
       {/* Logo Header */}
-      <div className="absolute top-4 left-0 right-0 flex justify-end px-4">
+      <div className="center mt-10 top-4 left-0 right-0 flex justify-end px-4">
         <LogoHeader />
       </div>
 
       {/* Title */}
-      <div className="mt-32 sm:mt-36 text-center relative z-10">
+      <div className="mt-22 sm:mt-26 text-center relative z-10">
         <h3 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white">
           Welcome To Intramuros!
         </h3>
       </div>
 
       {/* Side Buttons */}
-      <div className="fixed right-2 md:right-2 lg:right-8 top-[50%] md:top-[60%] -translate-y-1/2 flex flex-col gap-4 z-40">
+      <div className="fixed right-2 md:right-2 lg:right-8 top-[50%] md:top-[60%] -translate-y-1/2 flex flex-col gap-6 z-50">
         {icons.map((icon, index) => {
           let visibilityClass = "";
           if (icon.device === "Mobile") {
@@ -74,14 +74,16 @@ export default function GuestHomepage() {
               key={index}
               className={`${visibilityClass} flex flex-col items-center group`}
             >
-              <div className="w-14 h-14 rounded-full bg-yellow-400 flex items-center justify-center shadow-md hover:bg-yellow-500 transition">
+              {/* ✅ Bigger circles w/ responsive sizes */}
+              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-yellow-400 flex items-center justify-center shadow-md hover:bg-yellow-500 transition">
+                {/* ✅ Icons also scale with circle */}
                 <img
                   src={icon.url}
                   alt={icon.label}
-                  className="w-7 h-7 object-contain"
+                  className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
                 />
               </div>
-              <span className="text-xs text-white mt-1 group-hover:underline">
+              <span className="text-xs sm:text-sm lg:text-base text-white mt-1 group-hover:underline">
                 {icon.label}
               </span>
             </Link>

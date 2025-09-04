@@ -14,11 +14,7 @@ export default function LogoHeader() {
         alt="Bagong Pilipinas"
         className="h-12 sm:h-16 md:h-20"
       />
-      <img
-        src="/Juander Logo.svg"
-        alt="Juander"
-        className="h-12 sm:h-16 md:h-20"
-      />
+      <img src="/Logo.svg" alt="Juander" className="h-16 sm:h-22 md:h-26" />
     </div>
   );
 }

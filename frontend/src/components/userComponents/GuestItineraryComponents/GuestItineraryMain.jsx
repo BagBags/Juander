@@ -1,3 +1,4 @@
+// GuestItineraryMain.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -15,18 +16,42 @@ export default function GuestItineraryMain() {
         setAdminItineraries(res.data); // backend already returns only admin-created
       } catch (err) {
         console.error("Failed to fetch itineraries:", err);
-        setError("Failed to load itineraries. Please try again later.");
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchItineraries();
   }, []);
 
-  const renderItineraryCard = (itinerary) => (
+  return (
+    <div className="flex flex-col items-center justify-start">
+      {/* Admin itineraries */}
+      <div className="max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4 pr-16 md:pr-0 mb-8">
+        <h2 className="text-2xl font-bold text-white mb-4">
+          Admin Itineraries
+        </h2>
+        {adminItineraries.length ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-3">
+            {adminItineraries.map((itinerary) => (
+              <ItineraryCard
+                key={itinerary._id}
+                itinerary={itinerary}
+                navigate={navigate}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-white opacity-80">
+            No admin itineraries available
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ItineraryCard({ itinerary, navigate }) {
+  return (
     <div
-      key={itinerary._id}
       className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300"
       onClick={() =>
         navigate(`/GuestItineraryMap/${itinerary._id}`, {
@@ -64,30 +89,6 @@ export default function GuestItineraryMain() {
           </div>
         ) : (
           <p className="text-gray-500 text-sm">No sites available</p>
-        )}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen p-6 flex flex-col items-center justify-start pt-32 bg-opacity-30">
-      <h1 className="text-3xl font-bold text-center mb-8 text-white drop-shadow-lg">
-        Available Itineraries
-      </h1>
-
-      {/* Admin itineraries */}
-      <div className="w-full max-w-6xl mb-10">
-        <h2 className="text-2xl font-bold text-white mb-4">
-          Admin Itineraries
-        </h2>
-        {adminItineraries.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {adminItineraries.map(renderItineraryCard)}
-          </div>
-        ) : (
-          <p className="text-white opacity-80">
-            No admin itineraries available
-          </p>
         )}
       </div>
     </div>
