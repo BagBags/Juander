@@ -248,7 +248,7 @@ router.post(
     check("gender")
       .notEmpty()
       .withMessage("Gender is required")
-      .isIn(["male", "female", "other"])
+      .isIn(["Male", "Female", "Other"])
       .withMessage("Invalid gender value"),
   ],
   (req, res, next) => {
