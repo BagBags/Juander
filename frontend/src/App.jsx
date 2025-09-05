@@ -17,6 +17,13 @@ import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
 import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
 import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import AdminItinerary from "./components/adminComponents/adminItineraryComponents/adminItinerary";
+import AdminProfileLayout from "./components/adminComponents/adminProfileComponents/adminProfileLayout";
+import AdminProfile from "./components/adminComponents/adminProfileComponents/adminProfile";
+import AdminAccount from "./components/adminComponents/adminProfileComponents/adminAccount";
+import AdminBirthday from "./components/adminComponents/adminProfileComponents/adminBirthday";
+import AdminGender from "./components/adminComponents/adminProfileComponents/adminGender";
+import AdminCountry from "./components/adminComponents/adminProfileComponents/adminCountry";
+import AdminLanguage from "./components/adminComponents/adminProfileComponents/adminLanguage";
 // Tourist Side
 import Homepage from "./components/userComponents/HomepageComponents/Homepage";
 import EmergencyPage from "./components/userComponents/EmegencyComponents/EmergencyPage";
@@ -82,6 +89,14 @@ function AnimatedRoutes() {
           <Route path="/AdminTourMap" element={<AdminMap />} />
           <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
           <Route path="/AdminItinerary" element={<AdminItinerary />} />
+          <Route path="/AdminProfile" element={<AdminProfileLayout />}>
+            <Route index element={<AdminProfile />} />
+            <Route path="Account" element={<AdminAccount />} />
+            <Route path="Birthday" element={<AdminBirthday />} />
+            <Route path="Gender" element={<AdminGender />} />
+            <Route path="Country" element={<AdminCountry />} />
+            <Route path="Language" element={<AdminLanguage />} />
+          </Route>
         </Route>
         <Route element={<TouristProtectedRoute />}>
           {/* Tourist */}

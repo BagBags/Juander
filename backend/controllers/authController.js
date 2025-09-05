@@ -503,8 +503,8 @@ exports.saveBirthday = async (req, res) => {
 exports.saveGender = async (req, res) => {
   try {
     const { gender } = req.body;
-    // ensure lowercase
-    const normalizedGender = gender.toLowerCase();
+    const normalizedGender =
+      gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase();
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
