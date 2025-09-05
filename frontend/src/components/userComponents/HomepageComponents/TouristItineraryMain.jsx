@@ -32,7 +32,7 @@ export default function TouristItineraryMain() {
   // Shared container classes for both sections
   // Add right padding for mobile to avoid side button overlap
   const sectionClasses =
-    "max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4 pr-16 md:pr-0 mb-8";
+    "max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4  mb-8";
 
   return (
     <div className="flex flex-col items-center justify-start">
@@ -42,7 +42,7 @@ export default function TouristItineraryMain() {
           Admin Itineraries
         </h2>
         {itineraries.admin.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 ">
             {itineraries.admin.map((itinerary) => (
               <ItineraryCard
                 key={itinerary._id}
@@ -62,7 +62,7 @@ export default function TouristItineraryMain() {
       <div className={`${sectionClasses} mb-12`}>
         <h2 className="text-2xl font-bold text-white mb-4">My Itineraries</h2>
         {itineraries.user.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {itineraries.user.map((itinerary) => (
               <ItineraryCard
                 key={itinerary._id}

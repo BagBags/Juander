@@ -27,9 +27,6 @@ export default function TouristItinerary() {
 
   return (
     <div className="min-h-screen bg-[#f04e37] relative">
-      {/* Side Buttons */}
-      <SideButtons user={currentUser} />
-
       {/* Back Header */}
       <div className="sticky top-0 z-10 bg-[#f04e37] p-4">
         <BackHeader

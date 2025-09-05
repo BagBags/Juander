@@ -25,12 +25,12 @@ export default function GuestItineraryMain() {
   return (
     <div className="flex flex-col items-center justify-start">
       {/* Admin itineraries */}
-      <div className="max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4 pr-16 md:pr-0 mb-8">
+      <div className="max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8">
         <h2 className="text-2xl font-bold text-white mb-4">
           Admin Itineraries
         </h2>
         {adminItineraries.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pr-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {adminItineraries.map((itinerary) => (
               <ItineraryCard
                 key={itinerary._id}
