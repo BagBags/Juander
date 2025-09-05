@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
-// eslint-disable-next-line no-unused-vars
 import axios from "axios";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function Language() {
+  const { t, i18n } = useTranslation();
+
   const languages = [
-    { name: "English", code: "gb" },
-    { name: "Tagalog", code: "ph" },
+    { label: "English", code: "gb", lng: "en" },
+    { label: "Tagalog", code: "ph", lng: "tl" },
   ];
 
   const [selected, setSelected] = useState("");
 
-  // Fetch language on mount
+  // Fetch saved language from backend
   useEffect(() => {
     const fetchLanguage = async () => {
       try {
@@ -25,7 +27,9 @@ export default function Language() {
         });
 
         if (data?.language) {
-          setSelected(data.language);
+          setSelected(data.language); // directly store "en" or "tl"
+          i18n.changeLanguage(data.language);
+          localStorage.setItem("language", data.language); // sync to localStorage
         }
       } catch (err) {
         console.error("Error fetching language:", err.response?.data || err);
@@ -33,7 +37,7 @@ export default function Language() {
     };
 
     fetchLanguage();
-  }, []);
+  }, [i18n]);
 
   const handleSave = async () => {
     try {
@@ -45,11 +49,16 @@ export default function Language() {
         return;
       }
 
+      // Save to backend
       await axios.post(
         "http://localhost:5000/api/auth/language",
-        { language: selected },
+        { language: selected }, // 👈 save "en" or "tl"
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      // Change language immediately in frontend
+      i18n.changeLanguage(selected);
+      localStorage.setItem("language", selected);
 
       alert("Language saved!");
     } catch (err) {
@@ -68,25 +77,25 @@ export default function Language() {
       {/* Main content */}
       <div className="flex-1 px-6 py-8 overflow-y-auto">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-6">Choose Language</h2>
+          <h2 className="text-xl font-semibold mb-6">{t("chooseLanguage")}</h2>
 
           <div className="grid grid-cols-2 gap-6">
             {languages.map((lang) => (
               <button
-                key={lang.name}
-                onClick={() => setSelected(lang.name)}
+                key={lang.lng}
+                onClick={() => setSelected(lang.lng)}
                 className={`flex flex-col items-center border rounded-xl px-4 py-4 ${
-                  selected === lang.name
+                  selected === lang.lng
                     ? "border-blue-500 bg-blue-50"
                     : "border-gray-200"
                 }`}
               >
                 <img
                   src={`https://flagcdn.com/w80/${lang.code}.png`}
-                  alt={lang.name}
+                  alt={lang.label}
                   className="w-12 h-8 mb-2 rounded"
                 />
-                <span className="text-sm font-medium">{lang.name}</span>
+                <span className="text-sm font-medium">{lang.label}</span>
               </button>
             ))}
           </div>
@@ -102,7 +111,7 @@ export default function Language() {
             selected ? "bg-[#cf3325]" : "bg-[#b42c21]"
           }`}
         >
-          Continue
+          {t("continue")}
         </button>
       </div>
     </motion.div>

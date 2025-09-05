@@ -2,10 +2,23 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { FaMars, FaVenus, FaGenderless } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 
 export default function Gender() {
-  const [selected, setSelected] = useState("");
+  const { t } = useTranslation();
+
+  const [selected, setSelected] = useState(""); // store key: "male", "female", "other"
   const [message, setMessage] = useState("");
+
+  // Gender options with keys and icons
+  const options = [
+    { key: "male", icon: <FaMars className="text-blue-600 text-xl" /> },
+    { key: "female", icon: <FaVenus className="text-pink-500 text-xl" /> },
+    {
+      key: "other",
+      icon: <FaGenderless className="text-purple-500 text-xl" />,
+    },
+  ];
 
   // Fetch gender on mount
   useEffect(() => {
@@ -13,7 +26,6 @@ export default function Gender() {
       try {
         const token =
           sessionStorage.getItem("token") || localStorage.getItem("token");
-
         if (!token) return;
 
         const { data } = await axios.get("http://localhost:5000/api/auth/me", {
@@ -21,10 +33,8 @@ export default function Gender() {
         });
 
         if (data?.gender) {
-          // Capitalize first letter to match your options
-          setSelected(
-            data.gender.charAt(0).toUpperCase() + data.gender.slice(1)
-          );
+          // convert "Male" => "male", "Female" => "female", "Other" => "other"
+          setSelected(data.gender.toLowerCase());
         }
       } catch (err) {
         console.error("Error fetching gender:", err.response?.data || err);
@@ -38,15 +48,14 @@ export default function Gender() {
     try {
       const token =
         sessionStorage.getItem("token") || localStorage.getItem("token");
-
       if (!token) {
-        setMessage("You are not logged in. Please login first.");
+        setMessage(t("notLoggedIn"));
         return;
       }
 
       const res = await axios.post(
         "http://localhost:5000/api/auth/gender",
-        { gender: selected.toLowerCase() }, // convert to lowercase
+        { gender: selected },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -55,22 +64,13 @@ export default function Gender() {
         }
       );
 
-      setMessage("Gender saved successfully!");
+      setMessage(t("genderSavedSuccess"));
       console.log("Updated User:", res.data);
     } catch (err) {
       console.error("Error saving gender:", err.response?.data || err.message);
-      setMessage(err.response?.data?.message || "Error saving gender");
+      setMessage(err.response?.data?.message || t("genderSaveFailed"));
     }
   };
-
-  const options = [
-    { label: "Male", icon: <FaMars className="text-blue-600 text-xl" /> },
-    { label: "Female", icon: <FaVenus className="text-pink-500 text-xl" /> },
-    {
-      label: "Other",
-      icon: <FaGenderless className="text-purple-500 text-xl" />,
-    },
-  ];
 
   return (
     <motion.div
@@ -83,27 +83,23 @@ export default function Gender() {
     >
       <div className="w-full max-w-md mt-6 flex flex-col gap-6">
         <div className="text-center">
-          <h2 className="text-lg font-semibold">Choose Your Gender</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            Health-related insights and personalized recommendations are built
-            based on your gender.
-          </p>
+          <h2 className="text-lg font-semibold">{t("genderQuestion")}</h2>
         </div>
 
         <div className="flex flex-col gap-4">
           {options.map((opt) => (
             <button
-              key={opt.label}
-              onClick={() => setSelected(opt.label)}
+              key={opt.key}
+              onClick={() => setSelected(opt.key)}
               className={`flex justify-between items-center border px-4 py-3 rounded-xl shadow-sm transition
                 ${
-                  selected === opt.label
+                  selected === opt.key
                     ? "border-[#cf3325] bg-red-50"
                     : "border-gray-300"
                 }
               `}
             >
-              <span className="font-medium">{opt.label}</span>
+              <span className="font-medium">{t(opt.key)}</span>
               {opt.icon}
             </button>
           ))}
@@ -114,7 +110,7 @@ export default function Gender() {
           onClick={handleSave}
           disabled={!selected}
         >
-          Save
+          {t("save")}
         </button>
 
         {message && (

@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 
 export default function Birthday() {
+  const { t } = useTranslation();
+
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [year, setYear] = useState("");
@@ -28,7 +31,6 @@ export default function Birthday() {
       try {
         const token =
           sessionStorage.getItem("token") || localStorage.getItem("token");
-
         if (!token) return;
 
         const { data } = await axios.get("http://localhost:5000/api/auth/me", {
@@ -55,12 +57,12 @@ export default function Birthday() {
         sessionStorage.getItem("token") || localStorage.getItem("token");
 
       if (!token) {
-        alert("Not logged in!");
+        alert(t("notLoggedIn"));
         return;
       }
 
       if (!month || !date || !year) {
-        alert("Please complete all fields.");
+        alert(t("completeAllFields"));
         return;
       }
 
@@ -71,13 +73,13 @@ export default function Birthday() {
       );
 
       console.log("Birthday saved:", data);
-      alert("Birthday saved successfully!");
+      alert(t("birthdaySavedSuccess"));
     } catch (err) {
       console.error(
         "Error saving birthday:",
         err.response?.data || err.message
       );
-      alert(err.response?.data?.message || "Failed to save birthday.");
+      alert(err.response?.data?.message || t("birthdaySaveFailed"));
     }
   };
 
@@ -91,7 +93,7 @@ export default function Birthday() {
     >
       <div className="w-full max-w-md mt-6 flex flex-col gap-6">
         <h2 className="text-lg font-semibold text-center">
-          What's your date of birth?
+          {t("dobQuestion")}
         </h2>
 
         <div className="flex justify-center gap-2">
@@ -100,7 +102,7 @@ export default function Birthday() {
             onChange={(e) => setMonth(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
           >
-            <option value="">Month</option>
+            <option value="">{t("month")}</option>
             {months.map((m) => (
               <option key={m} value={m}>
                 {m}
@@ -110,7 +112,7 @@ export default function Birthday() {
 
           <input
             type="number"
-            placeholder="Date"
+            placeholder={t("date")}
             min="1"
             max="31"
             value={date}
@@ -120,7 +122,7 @@ export default function Birthday() {
 
           <input
             type="number"
-            placeholder="Year"
+            placeholder={t("year")}
             min="1900"
             max={new Date().getFullYear()}
             value={year}
@@ -133,7 +135,7 @@ export default function Birthday() {
           className="mt-4 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"
           onClick={handleSave}
         >
-          Save
+          {t("save")}
         </button>
       </div>
 

@@ -132,7 +132,14 @@ router.get("/me", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id, "-password -otp -otpExpires");
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+
+    // ensure only "en" or "tl"
+    const normalizedLang = user.language === "tl" ? "tl" : "en";
+
+    res.json({
+      ...user.toObject(),
+      language: normalizedLang,
+    });
   } catch (err) {
     console.error("Error fetching current user:", err);
     res.status(500).json({ message: "Server error" });

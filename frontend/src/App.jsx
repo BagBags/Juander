@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,6 +7,10 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+
+// i18n setup
+import { I18nextProvider } from "react-i18next";
+import i18n from "./i18n";
 
 // Admin Side
 import AdminHome from "./components/adminComponents/adminHomeComponents/adminHome";
@@ -126,9 +131,15 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const savedLang = localStorage.getItem("language") || "en";
+    i18n.changeLanguage(savedLang);
+  }, []);
   return (
-    <Router>
-      <AnimatedRoutes />
-    </Router>
+    <I18nextProvider i18n={i18n}>
+      <Router>
+        <AnimatedRoutes />
+      </Router>
+    </I18nextProvider>
   );
 }

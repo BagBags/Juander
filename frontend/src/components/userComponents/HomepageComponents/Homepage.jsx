@@ -5,8 +5,10 @@ import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
+import { useTranslation } from "react-i18next"; // 👈 import hook
 
 export default function Homepage() {
+  const { t } = useTranslation(); // 👈 initialize translations
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -45,7 +47,7 @@ export default function Homepage() {
       {/* Title */}
       <div className="mt-22 sm:mt-26 text-center relative z-10">
         <h3 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-6xl font-extrabold text-white">
-          Welcome To Intramuros!
+          {t("homepageTitle")} {/* 👈 translated text */}
         </h3>
       </div>
 

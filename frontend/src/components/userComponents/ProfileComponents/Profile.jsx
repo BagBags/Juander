@@ -5,11 +5,13 @@ import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import BackHeader from "./BackHeader"; // Adjust path if needed
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const loadUser = () => {
@@ -29,11 +31,15 @@ export default function ProfilePage() {
   }, []);
 
   const options = [
-    { icon: <FaUser />, label: "Account", to: "/Profile/Account" },
-    { icon: <FaBirthdayCake />, label: "Birthday", to: "/Profile/Birthday" },
-    { icon: <FaVenusMars />, label: "Gender", to: "/Profile/Gender" },
-    { icon: <GiEarthAsiaOceania />, label: "Country", to: "/Profile/Country" },
-    { icon: <MdLanguage />, label: "Language", to: "/Profile/Language" },
+    { icon: <FaUser />, label: t("account"), to: "/Profile/Account" },
+    { icon: <FaBirthdayCake />, label: t("birthday"), to: "/Profile/Birthday" },
+    { icon: <FaVenusMars />, label: t("gender"), to: "/Profile/Gender" },
+    {
+      icon: <GiEarthAsiaOceania />,
+      label: t("country"),
+      to: "/Profile/Country",
+    },
+    { icon: <MdLanguage />, label: t("language"), to: "/Profile/Language" },
   ];
 
   const handleLogout = () => {
@@ -61,11 +67,11 @@ export default function ProfilePage() {
             className="w-30 h-30 rounded-full border-4 border-white object-cover mr-6"
           />
           <div>
-            <p className="text-base">Mabuhay!</p>
+            <p className="text-base">{t("welcome")}</p>
             <h1 className="text-3xl font-bold leading-tight">
               {currentUser
                 ? `${currentUser.firstName} ${currentUser.lastName}`
-                : "Guest"}
+                : t("guest")}
             </h1>
           </div>
         </div>
@@ -101,12 +107,12 @@ export default function ProfilePage() {
           onClick={handleLogout}
           className="absolute bottom-30 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#f04e37] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#b42c21] transition-colors"
         >
-          Log out
+          {t("logout")}
         </button>
 
         {/* Footer */}
         <p className="mt-80 md:mt-30 text-xs text-center text-[#cf3325] opacity-70">
-          ©2025 Intramuros Administration
+          ©2025 {t("intramurosAdmin")}
         </p>
       </div>
     </motion.div>

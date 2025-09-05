@@ -294,6 +294,7 @@ exports.login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         authProvider: user.authProvider,
+        language: user.language || "en",
       },
     });
   } catch (err) {
@@ -356,6 +357,7 @@ exports.googleLogin = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         authProvider: user.authProvider,
+        language: user.language || "en",
       },
     });
   } catch (err) {
@@ -554,15 +556,25 @@ exports.saveLanguage = async (req, res) => {
     const { language } = req.body;
     const userId = req.user.id;
 
+    // Validate language input
+    if (!["en", "tl"].includes(language)) {
+      return res.status(400).json({ message: "Invalid language code" });
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
-      { language },
+      { language }, // store "en" or "tl"
       { new: true, select: "-password -otp -otpExpires" }
     );
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    res.json({ message: "Language updated successfully", user });
+    res.json({
+      message: "Language updated successfully",
+      language: user.language,
+    });
   } catch (err) {
     console.error("Error updating language:", err);
     res.status(500).json({ message: "Server error" });

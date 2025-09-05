@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import i18n from "/src/i18n.js"; // 👈 import i18n
 
 export default function LoginForm({ toggleForm }) {
   const navigate = useNavigate();
@@ -26,6 +27,12 @@ export default function LoginForm({ toggleForm }) {
 
   // OTP countdown timer (10 minutes = 600 seconds)
   const [timeLeft, setTimeLeft] = useState(0);
+
+  // 👇 Load saved language on component mount
+  useEffect(() => {
+    const savedLang = localStorage.getItem("lang") || "en";
+    i18n.changeLanguage(savedLang);
+  }, []);
 
   useEffect(() => {
     if (step === 2 && timeLeft > 0) {
@@ -93,6 +100,12 @@ export default function LoginForm({ toggleForm }) {
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
 
+      // 👇 Save & apply language
+      if (user.language) {
+        i18n.changeLanguage(user.language);
+        localStorage.setItem("language", user.language); // 👈 keep consistent
+      }
+
       navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
     } catch (err) {
       console.error("Google login error:", err.response?.data || err.message);
@@ -120,6 +133,12 @@ export default function LoginForm({ toggleForm }) {
       localStorage.removeItem("guest");
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("token", token);
+
+      // 👇 Save & apply language
+      if (user.language) {
+        localStorage.setItem("lang", user.language);
+        i18n.changeLanguage(user.language);
+      }
 
       navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
     } catch (err) {

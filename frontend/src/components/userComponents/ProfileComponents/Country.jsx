@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { countries } from "countries-list";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 
 export default function CountrySelector() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(""); // store country code
   const [loading, setLoading] = useState(false);
 
   // Fetch current user's country on mount
@@ -22,7 +24,11 @@ export default function CountrySelector() {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.data?.country) {
-          setSelected(res.data.country);
+          // store country code instead of name for consistency
+          const found = Object.entries(countries).find(
+            ([, info]) => info.name === res.data.country
+          );
+          if (found) setSelected(found[0]); // country code
         }
       } catch (err) {
         console.error("Error fetching user:", err.response?.data || err);
@@ -36,16 +42,16 @@ export default function CountrySelector() {
     };
   }, []);
 
+  // Filtered country list
   const countryArray = Object.entries(countries)
-    .map(([code, info]) => ({
-      name: info.name,
-      code: code,
-    }))
+    .map(([code, info]) => ({ code, name: info.name }))
     .filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const handleSave = async () => {
     if (!selected) {
-      alert("Please select a country before saving.");
+      alert(
+        t("selectCountryFirst") || "Please select a country before saving."
+      );
       return;
     }
 
@@ -53,7 +59,7 @@ export default function CountrySelector() {
       sessionStorage.getItem("token") || localStorage.getItem("token");
 
     if (!token) {
-      alert("You are not logged in.");
+      alert(t("notLoggedIn") || "You are not logged in.");
       return;
     }
 
@@ -61,15 +67,17 @@ export default function CountrySelector() {
       setLoading(true);
       await axios.post(
         "http://localhost:5000/api/auth/country",
-        { country: selected },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { country: countries[selected].name },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Country saved successfully!");
+      alert(t("countrySavedSuccess") || "Country saved successfully!");
     } catch (error) {
       console.error("Error saving country:", error.response?.data || error);
-      alert(error.response?.data?.message || "Failed to save country");
+      alert(
+        error.response?.data?.message ||
+          t("countrySaveFailed") ||
+          "Failed to save country"
+      );
     } finally {
       setLoading(false);
     }
@@ -86,11 +94,11 @@ export default function CountrySelector() {
       {/* Header and Search */}
       <div className="p-4 shrink-0">
         <h2 className="text-center text-lg font-semibold mb-4">
-          Change Country
+          {t("changeCountry") || "Change Country"}
         </h2>
         <input
           type="text"
-          placeholder="Search"
+          placeholder={t("search") || "Search"}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
@@ -102,9 +110,11 @@ export default function CountrySelector() {
         {countryArray.map((c) => (
           <button
             key={c.code}
-            onClick={() => setSelected(c.name)}
-            className={`w-full flex items-center justify-between py-3 border-b ${
-              selected === c.name ? "bg-red-50" : ""
+            onClick={() => setSelected(c.code)}
+            className={`w-full flex items-center justify-between py-3 border-b transition ${
+              selected === c.code
+                ? "bg-red-50 border-[#cf3325]"
+                : "border-gray-200"
             }`}
           >
             <span className="flex items-center gap-3">
@@ -115,7 +125,7 @@ export default function CountrySelector() {
               />
               <span>{c.name}</span>
             </span>
-            {selected === c.name && (
+            {selected === c.code && (
               <span className="text-[#cf3325] font-medium">✓</span>
             )}
           </button>
@@ -125,20 +135,20 @@ export default function CountrySelector() {
       {/* Sticky Footer */}
       <div className="pb-7 pt-3 text-center text-sm text-gray-500 border-t shrink-0 flex flex-col items-center gap-2">
         <div>
-          Selected Country:{" "}
+          {t("selectedCountry") || "Selected Country"}:{" "}
           {selected ? (
             <span className="inline-flex items-center gap-2 font-medium text-black">
               <img
-                src={`https://flagcdn.com/w40/${countryArray
-                  .find((c) => c.name === selected)
-                  ?.code.toLowerCase()}.png`}
-                alt={`${selected} flag`}
+                src={`https://flagcdn.com/w40/${selected.toLowerCase()}.png`}
+                alt={`${countries[selected].name} flag`}
                 className="w-6 h-4 object-cover rounded-sm"
               />
-              {selected}
+              {countries[selected].name}
             </span>
           ) : (
-            <span className="font-medium text-black">None</span>
+            <span className="font-medium text-black">
+              {t("none") || "None"}
+            </span>
           )}
         </div>
         <button
@@ -146,7 +156,7 @@ export default function CountrySelector() {
           disabled={loading}
           className="mt-2 px-6 py-2 rounded-lg bg-[#cf3325] text-white font-medium hover:bg-red-600 disabled:opacity-50"
         >
-          {loading ? "Saving..." : "Save"}
+          {loading ? t("saving") || "Saving..." : t("save") || "Save"}
         </button>
       </div>
     </motion.div>

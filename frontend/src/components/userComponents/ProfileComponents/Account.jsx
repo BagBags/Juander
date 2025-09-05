@@ -2,8 +2,11 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function Account() {
+  const { t } = useTranslation();
+
   const [user, setUser] = useState({
     firstName: "",
     lastName: "",
@@ -30,7 +33,7 @@ export default function Account() {
 
   const token = localStorage.getItem("token");
 
-  // Fetch user data on mount
+  // Fetch user data
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) return;
@@ -57,7 +60,7 @@ export default function Account() {
     fetchUser();
   }, [token]);
 
-  // OTP countdown timer
+  // OTP countdown
   useEffect(() => {
     if (otpStep && otpTimeLeft > 0) {
       const timer = setInterval(() => setOtpTimeLeft((prev) => prev - 1), 1000);
@@ -71,12 +74,12 @@ export default function Account() {
     return `${mins}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  // Handlers
+  // Input handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUser((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
-    setSuccessMessage(""); // clear previous success message on input
+    setSuccessMessage("");
   };
 
   const handleOtpChange = (value, index) => {
@@ -112,7 +115,7 @@ export default function Account() {
 
   const sendEmailOtp = async () => {
     if (!user.email) {
-      setOtpMessage("Please enter a new email first");
+      setOtpMessage(t("enterNewEmailFirst"));
       return;
     }
     try {
@@ -124,16 +127,16 @@ export default function Account() {
       setOtpStep(true);
       setOtpTimeLeft(600);
       setOtpSent(true);
-      setOtpMessage("OTP sent to your new email");
+      setOtpMessage(t("otpSentToNewEmail"));
     } catch (err) {
       console.error(err);
-      setOtpMessage(err.response?.data?.message || "Failed to send OTP");
+      setOtpMessage(err.response?.data?.message || t("otpSendFailed"));
     }
   };
 
   const verifyEmailOtp = async () => {
     if (!otp || otp.length < otpLength) {
-      setOtpMessage("Please enter the full OTP");
+      setOtpMessage(t("enterFullOtp"));
       return;
     }
     try {
@@ -146,11 +149,11 @@ export default function Account() {
       setOtp("");
       setOtpTimeLeft(0);
       setOtpSent(false);
-      setOtpMessage("Email verified successfully!");
+      setOtpMessage(t("emailVerified"));
       await handleSubmitEmailChange();
     } catch (err) {
       console.error(err);
-      setOtpMessage(err.response?.data?.message || "OTP verification failed");
+      setOtpMessage(err.response?.data?.message || t("otpVerificationFailed"));
     }
   };
 
@@ -166,7 +169,7 @@ export default function Account() {
       setOriginalEmail(updatedUser.email);
     } catch (err) {
       console.error(err);
-      setOtpMessage(err.response?.data?.message || "Failed to update email");
+      setOtpMessage(err.response?.data?.message || t("emailUpdateFailed"));
     }
   };
 
@@ -175,21 +178,20 @@ export default function Account() {
 
   const validate = () => {
     const newErrors = {};
-    if (!user.firstName.trim()) newErrors.firstName = "First name is required";
-    if (!user.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!user.firstName.trim()) newErrors.firstName = t("firstNameRequired");
+    if (!user.lastName.trim()) newErrors.lastName = t("lastNameRequired");
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!user.email) newErrors.email = "Email is required";
-    else if (!emailRegex.test(user.email)) newErrors.email = "Invalid email";
+    if (!user.email) newErrors.email = t("emailRequired");
+    else if (!emailRegex.test(user.email)) newErrors.email = t("invalidEmail");
 
     if (user.authProvider === "local" && changePassword) {
-      if (!user.password) newErrors.password = "Password is required";
+      if (!user.password) newErrors.password = t("passwordRequired");
       else if (!passwordRegex.test(user.password))
-        newErrors.password =
-          "At least 8 chars, 1 uppercase, 1 number, 1 special character";
+        newErrors.password = t("passwordFormat");
       if (!user.confirmPassword)
-        newErrors.confirmPassword = "Please confirm your password";
+        newErrors.confirmPassword = t("confirmPasswordRequired");
       else if (user.password !== user.confirmPassword)
-        newErrors.confirmPassword = "Passwords do not match";
+        newErrors.confirmPassword = t("passwordsDoNotMatch");
     }
     return newErrors;
   };
@@ -205,11 +207,11 @@ export default function Account() {
       return;
     }
     if (user.email !== originalEmail && !otpStep && !otpSent) {
-      setOtpMessage("Please verify your new email before saving changes.");
+      setOtpMessage(t("verifyEmailBeforeSaving"));
       return;
     }
     if (user.email !== originalEmail && otpStep) {
-      setOtpMessage("Please complete OTP verification before saving changes.");
+      setOtpMessage(t("completeOtpBeforeSaving"));
       return;
     }
 
@@ -245,11 +247,11 @@ export default function Account() {
       setShowPassword(false);
       setShowConfirm(false);
       setErrors({});
-      setSuccessMessage("Profile updated!");
+      setSuccessMessage(t("profileUpdated"));
       setOtpMessage("");
     } catch (err) {
       console.error("Update error:", err);
-      setOtpMessage(err.response?.data?.message || "Failed to update profile");
+      setOtpMessage(err.response?.data?.message || t("profileUpdateFailed"));
     } finally {
       setLoading(false);
     }
@@ -266,7 +268,6 @@ export default function Account() {
       <div className="w-full max-w-md">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* Success Message */}
             {successMessage && (
               <p className="text-green-600 text-sm mb-2">{successMessage}</p>
             )}
@@ -274,13 +275,13 @@ export default function Account() {
             {/* First Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name
+                {t("firstName")}
               </label>
               <input
                 name="firstName"
                 value={user.firstName}
                 onChange={handleChange}
-                placeholder="Juan"
+                placeholder={t("firstNamePlaceholder")}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.firstName
                     ? "border-red-400 focus:ring-red-500"
@@ -296,13 +297,13 @@ export default function Account() {
             {/* Last Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
+                {t("lastName")}
               </label>
               <input
                 name="lastName"
                 value={user.lastName}
                 onChange={handleChange}
-                placeholder="Dela Cruz"
+                placeholder={t("lastNamePlaceholder")}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.lastName
                     ? "border-red-400 focus:ring-red-500"
@@ -318,14 +319,14 @@ export default function Account() {
             {/* Email Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+                {t("email")}
               </label>
               <input
                 name="email"
                 type="email"
                 value={user.email}
                 onChange={handleChange}
-                placeholder="juan@example.com"
+                placeholder={t("emailPlaceholder")}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.email
                     ? "border-red-400 focus:ring-red-500"
@@ -337,24 +338,25 @@ export default function Account() {
                 <p className="text-xs text-red-600 mt-1">{errors.email}</p>
               )}
 
-              {/* OTP Button / Info */}
-              {user.email !== originalEmail &&
-                !otpStep &&
-                (otpSent ? (
-                  <p className="text-green-600 text-sm mt-1">
-                    OTP sent to your new email
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    className="text-sm text-[#cf3325] hover:underline mt-2"
-                    onClick={sendEmailOtp}
-                  >
-                    Verify new email
-                  </button>
-                ))}
+              {/* OTP Section */}
+              {user.email !== originalEmail && !otpStep && (
+                <>
+                  {otpSent ? (
+                    <p className="text-green-600 text-sm mt-1">
+                      {t("otpSentToNewEmail")}
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="text-sm text-[#cf3325] hover:underline mt-2"
+                      onClick={sendEmailOtp}
+                    >
+                      {t("verifyNewEmail")}
+                    </button>
+                  )}
+                </>
+              )}
 
-              {/* OTP Input */}
               {otpStep && (
                 <div className="mt-4">
                   <div
@@ -375,14 +377,14 @@ export default function Account() {
                     ))}
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    Expires in: {formatTime(otpTimeLeft)}
+                    {t("expiresIn")}: {formatTime(otpTimeLeft)}
                   </p>
                   <button
                     type="button"
                     className="w-full bg-[#cf3325] text-white py-2 rounded mt-3 hover:bg-[#b42c21] transition"
                     onClick={verifyEmailOtp}
                   >
-                    Verify OTP
+                    {t("verifyOtp")}
                   </button>
                   {otpMessage && (
                     <p
@@ -423,7 +425,7 @@ export default function Account() {
                     htmlFor="changePassword"
                     className="text-sm text-gray-700"
                   >
-                    Change Password
+                    {t("changePassword")}
                   </label>
                 </div>
                 {changePassword && (
@@ -431,14 +433,14 @@ export default function Account() {
                     {/* New Password */}
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        New Password
+                        {t("newPassword")}
                       </label>
                       <input
                         name="password"
                         type={showPassword ? "text" : "password"}
                         value={user.password}
                         onChange={handleChange}
-                        placeholder="New password"
+                        placeholder={t("newPasswordPlaceholder")}
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
                           errors.password
                             ? "border-red-400 focus:ring-red-500"
@@ -452,7 +454,7 @@ export default function Account() {
                         onClick={() => setShowPassword((s) => !s)}
                         tabIndex={-1}
                         aria-label={
-                          showPassword ? "Hide password" : "Show password"
+                          showPassword ? t("hidePassword") : t("showPassword")
                         }
                       >
                         {showPassword ? (
@@ -467,8 +469,7 @@ export default function Account() {
                         </p>
                       ) : (
                         <p className="text-xs text-gray-500 mt-1">
-                          At least 8 chars, 1 uppercase, 1 number, 1 special
-                          char
+                          {t("passwordHint")}
                         </p>
                       )}
                     </div>
@@ -476,14 +477,14 @@ export default function Account() {
                     {/* Confirm Password */}
                     <div className="relative">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Confirm New Password
+                        {t("confirmNewPassword")}
                       </label>
                       <input
                         name="confirmPassword"
                         type={showConfirm ? "text" : "password"}
                         value={user.confirmPassword}
                         onChange={handleChange}
-                        placeholder="Retype new password"
+                        placeholder={t("confirmNewPasswordPlaceholder")}
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
                           errors.confirmPassword
                             ? "border-red-400 focus:ring-red-500"
@@ -498,8 +499,8 @@ export default function Account() {
                         tabIndex={-1}
                         aria-label={
                           showConfirm
-                            ? "Hide confirm password"
-                            : "Show confirm password"
+                            ? t("hideConfirmPassword")
+                            : t("showConfirmPassword")
                         }
                       >
                         {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -515,8 +516,7 @@ export default function Account() {
               </>
             ) : (
               <p className="text-gray-500 text-sm mt-2">
-                This account uses Google login. Email and Password cannot be
-                changed here.
+                {t("googleAccountNotice")}
               </p>
             )}
 
@@ -529,7 +529,7 @@ export default function Account() {
                   : "bg-[#cf3325] hover:bg-[#b42c21]"
               }`}
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? t("saving") : t("saveChanges")}
             </button>
           </form>
         </div>
