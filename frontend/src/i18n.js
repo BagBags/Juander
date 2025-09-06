@@ -79,6 +79,19 @@ i18n.use(initReactI18next).init({
         selectCountryFirst: "Please select a country before saving.",
         countrySavedSuccess: "Country saved successfully!",
         countrySaveFailed: "Failed to save country",
+
+        //  Button.jsx
+        startTour: "Start Tour",
+        explore: "Explore Intramuros",
+
+        // SideButtons
+        home: "Home",
+        tourMap: "Tour Map",
+        createItinerary: "Create Itinerary",
+        photobooth: "Photobooth",
+        hotlines: "Hotlines",
+        profile: "Profile",
+        tripArchives: "Trip Archives",
       },
     },
     tl: {
@@ -157,6 +170,18 @@ i18n.use(initReactI18next).init({
         selectCountryFirst: "Pakipili muna ang bansa bago mag-save.",
         countrySavedSuccess: "Matagumpay na na-save ang bansa!",
         countrySaveFailed: "Nabigong i-save ang bansa",
+
+        //  Button.jsx
+        startTour: "Simulan ang Tour",
+        explore: "Tuklasin ang Intramuros",
+
+        home: "Tahanan",
+        tourMap: "Mapa ng Tour",
+        createItinerary: "Gumawa ng Itinerary",
+        photobooth: "Photobooth",
+        hotlines: "Mga Hotline",
+        profile: "Profile",
+        tripArchives: "Mga Tala ng Biyahe",
       },
     },
   },

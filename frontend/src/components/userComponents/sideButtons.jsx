@@ -1,42 +1,45 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function SideButtons() {
+  const { t } = useTranslation();
+
   const icons = [
-    { url: "icons/Home.svg", label: "Home", to: "/Homepage", Device: "All" },
+    { url: "icons/Home.svg", label: "home", to: "/Homepage", Device: "All" },
     {
       url: "icons/Tourmap.svg",
-      label: "Tour Map",
+      label: "tourMap",
       to: "/TourMap",
-      Device: "All",
+      Device: "Mobile",
     },
     {
       url: "icons/Itineraries.svg",
-      label: "Create Itinerary",
+      label: "createItinerary",
       to: "/CreateItinerary",
       Device: "All",
     },
     {
       url: "icons/Photobooth.svg",
-      label: "Photobooth",
+      label: "photobooth",
       to: "/Photobooth",
       Device: "Mobile",
     },
     {
       url: "icons/Hotlines.svg",
-      label: "Hotlines",
+      label: "hotlines",
       to: "/Emergency",
       Device: "Mobile",
     },
     {
       url: "icons/Profile.svg",
-      label: "Profile",
+      label: "profile",
       to: "/Profile",
       Device: "All",
     },
     {
       url: "icons/TripArchives.svg",
-      label: "Trip Archives",
+      label: "tripArchives",
       to: "/TripArchive",
       Device: "All",
     },
@@ -60,9 +63,7 @@ export default function SideButtons() {
             key={index}
             className={`${visibilityClass} flex flex-col items-center group`}
           >
-            {/* ✅ Bigger circles */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-yellow-400 flex items-center justify-center shadow-md hover:bg-yellow-500 transition">
-              {/* ✅ Icons scale with circle */}
               <img
                 src={icon.url}
                 alt={`icon-${index}`}
@@ -70,7 +71,7 @@ export default function SideButtons() {
               />
             </div>
             <span className="text-xs sm:text-sm lg:text-base text-white mt-1 group-hover:underline">
-              {icon.label}
+              {t(icon.label)}
             </span>
           </Link>
         );
