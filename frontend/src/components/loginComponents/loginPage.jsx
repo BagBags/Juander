@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import LogoHeader from "./logoHeader";
 import LoginForm from "./loginForm";
 import SignupForm from "./signupForm";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -9,37 +9,67 @@ export default function LoginPage() {
   const toggleForm = () => setIsLogin((prev) => !prev);
 
   return (
-    <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 relative"
-      style={{ backgroundImage: "url('/login-background.svg')" }}
-    >
-      {/* Logo Header */}
-      <div className="absolute top-4 left-0 right-0 flex justify-center px-4">
-        <LogoHeader />
-      </div>
+    <div className="h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative">
+      {/* Main Two-Column Container */}
+      <div className="w-full max-w-5xl h-[100vh] bg-white rounded-2xl shadow-xl grid grid-cols-1 md:grid-cols-2 border border-gray-100 overflow-hidden">
+        {/* Left Side (fixed area, does not move) */}
+        <div className="hidden md:flex items-center justify-center h-full p-6">
+          <img
+            src="/Logo2.png"
+            alt="Login Illustration"
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
 
-      {/* Title: Juander with salakot */}
-      <div className="mt-32 sm:mt-36 text-center relative z-10">
-        <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-8xl xl:text-9xl font-extrabold text-[#f04e37]">
-          Juander
-        </h1>
-        <img
-          src="/salakot.svg"
-          alt="Salakot"
-          className="absolute w-24 sm:w-28 md:w-32 lg:w-36 xl:w-44 
-             -top-6 sm:-top-7 md:-top-8 lg:-top-9 xl:-top-10
-                left-[78%]
-               rotate-[12deg] z-20"
-        />
-      </div>
+        {/* Right Side (scrolls internally if content is taller) */}
+        <div className="flex flex-col items-center px-4 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-8 md:py-10 h-full overflow-hidden">
+          {/* Mobile Logo (visible only on small screens) */}
+          <div className="block md:hidden mb-6">
+            <img
+              src="/Logo2.png"
+              alt="Mobile Logo"
+              className="w-32 sm:w-40 mx-auto"
+            />
+          </div>
 
-      {/* Form Container */}
-      <div className="mt-8 w-full max-w-[90%] sm:max-w-sm md:max-w-md z-10 transition-all duration-300">
-        {isLogin ? (
-          <LoginForm toggleForm={toggleForm} />
-        ) : (
-          <SignupForm toggleForm={toggleForm} />
-        )}
+          <div className="text-center relative mb-6">
+            <img
+              src="/salakot.svg"
+              alt="Salakot"
+              className="absolute w-12 sm:w-20 md:w-24 lg:w-28 
+                -top-5 sm:-top-7 md:-top-8 lg:-top-9
+                left-[60%] sm:left-[68%] md:left-[70%] lg:left-[72%]
+                rotate-[12deg] z-20"
+            />
+          </div>
+
+          {/* Form Container */}
+          <div className="w-full max-w-[90%] sm:max-w-sm md:max-w-md flex flex-col justify-center mt-[-40px] relative">
+            <AnimatePresence mode="wait">
+              {isLogin ? (
+                <motion.div
+                  key="login"
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -40 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <LoginForm toggleForm={toggleForm} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="signup"
+                  initial={{ opacity: 0, x: -40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 40 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <SignupForm toggleForm={toggleForm} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
   );

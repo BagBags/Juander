@@ -131,7 +131,7 @@ export default function SignupForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 border border-gray-200">
+    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl  space-y-6 ">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-800">Sign Up</h2>
         <p className="text-gray-500 text-sm mt-0">

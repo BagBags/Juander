@@ -197,7 +197,7 @@ export default function LoginForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 border border-gray-200">
+    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl  space-y-6 ">
       {/* Title */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
@@ -276,13 +276,14 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           {/* Google Login */}
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleLoginSuccess}
-              onError={() => setError("Google login failed.")}
-              useOneTap
-            />
-          </div>
+          <GoogleLogin
+            onSuccess={handleGoogleLoginSuccess}
+            onError={() => setError("Google login failed.")}
+            useOneTap
+            theme="outline" // or "filled_blue"
+            size="large" // "large" | "medium" | "small"
+            shape="rectangular" // or "pill"
+          />
 
           {/* Guest Login */}
           <button
