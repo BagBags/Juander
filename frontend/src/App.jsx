@@ -12,11 +12,13 @@ import { AnimatePresence } from "framer-motion";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n";
 
+import SignupForm from "./components/loginComponents/signupForm";
+import LoginPage from "./components/loginComponents/loginPage";
+
 // Admin Side
 import AdminHome from "./components/adminComponents/adminHomeComponents/adminHome";
 import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
 import ManageEmergency from "./components/adminComponents/manageEmergencyComponents/manageEmergency";
-import LoginPage from "./components/loginComponents/loginPage";
 import AdminRole from "./components/adminComponents/adminRoleComponents/adminRole";
 import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
 import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
@@ -68,6 +70,7 @@ function AnimatedRoutes() {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupForm />} />
         {/* Public Pages */}\
         <Route path="/GuestHomepage" element={<GuestHomepage />} />
         <Route path="/GuestItinerary" element={<GuestItinerary />} />

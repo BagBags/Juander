@@ -104,6 +104,13 @@ export default function RolesPage() {
       .join(" ");
   };
 
+  // ✅ Language formatter
+  const formatLanguage = (lang) => {
+    if (!lang) return "—";
+    const map = { en: "English", tl: "Filipino" };
+    return map[lang] || lang;
+  };
+
   const isSuperAdmin = currentUser?.email === "aaronbagain@gmail.com";
 
   return (
@@ -205,7 +212,7 @@ export default function RolesPage() {
                     {user.country || "—"}
                   </td>
                   <td className="px-6 py-3 text-gray-500">
-                    {user.language || "—"}
+                    {formatLanguage(user.language)}
                   </td>
                   <td className="px-6 py-3 text-gray-600">
                     {user.gender || "—"}

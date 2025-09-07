@@ -55,7 +55,7 @@ export default function Gender() {
 
       const res = await axios.post(
         "http://localhost:5000/api/auth/gender",
-        { gender: selected },
+        { gender: selected.charAt(0).toUpperCase() + selected.slice(1) },
         {
           headers: {
             Authorization: `Bearer ${token}`,

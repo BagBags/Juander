@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 
 export default function Language() {
   const languages = [
-    { name: "English", code: "gb" },
-    { name: "Tagalog", code: "ph" },
+    { name: "English", code: "en" },
+    { name: "Tagalog", code: "tl" },
   ];
 
   const [selected, setSelected] = useState("");
@@ -25,7 +25,7 @@ export default function Language() {
         });
 
         if (data?.language) {
-          setSelected(data.language);
+          setSelected(data.language); // this is "en" or "tl"
         }
       } catch (err) {
         console.error("Error fetching language:", err.response?.data || err);
@@ -47,7 +47,7 @@ export default function Language() {
 
       await axios.post(
         "http://localhost:5000/api/auth/language",
-        { language: selected },
+        { language: selected }, // now "en" or "tl"
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -73,16 +73,18 @@ export default function Language() {
           <div className="grid grid-cols-2 gap-6">
             {languages.map((lang) => (
               <button
-                key={lang.name}
-                onClick={() => setSelected(lang.name)}
+                key={lang.code}
+                onClick={() => setSelected(lang.code)}
                 className={`flex flex-col items-center border rounded-xl px-4 py-4 ${
-                  selected === lang.name
+                  selected === lang.code
                     ? "border-blue-500 bg-blue-50"
                     : "border-gray-200"
                 }`}
               >
                 <img
-                  src={`https://flagcdn.com/w80/${lang.code}.png`}
+                  src={`https://flagcdn.com/w80/${
+                    lang.code === "en" ? "gb" : "ph"
+                  }.png`}
                   alt={lang.name}
                   className="w-12 h-8 mb-2 rounded"
                 />

@@ -111,11 +111,19 @@ export default function GuestProfilePage() {
         </div>
 
         {/* Logout Button */}
-        <button
+        {/* <button
           onClick={handleLogout}
           className="absolute bottom-30 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#f04e37] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#b42c21] transition-colors"
         >
           Log out
+        </button> */}
+
+        {/* Create an Account Button */}
+        <button
+          onClick={() => navigate("/")}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#f04e37] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#b42c21] transition-colors"
+        >
+          Create an Account
         </button>
 
         {/* Footer */}
