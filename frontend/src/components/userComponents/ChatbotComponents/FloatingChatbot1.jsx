@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import Chatbot from "./Chatbot";
+import Chatbot from "./Chatbot2";
 
 export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);

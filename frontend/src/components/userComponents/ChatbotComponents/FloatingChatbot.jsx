@@ -92,15 +92,21 @@ export default function FloatingChatbot() {
             transform: "translate(-50%, -50%)",
             position: "fixed",
           }}
-          className="bg-white shadow-2xl rounded-xl flex flex-col
+          className="bg-white shadow-2xl rounded-2xl flex flex-col
                      w-[70vw] h-[60vh] sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem] z-[60]"
         >
-          <div className="bg-yellow-400 flex justify-between items-center p-4 rounded-t-xl">
-            <h2 className="font-bold text-lg text-black">AskJuan</h2>
-            <button onClick={handleToggle}>
-              <X className="w-7 h-7 text-black" />
+          <div className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20">
+            <h2 className="font-bold text-lg text-white tracking-wide drop-shadow-sm">
+              AskJuan
+            </h2>
+            <button
+              onClick={handleToggle}
+              className="p-2 rounded-full hover:bg-white/20 transition transform hover:scale-110 active:scale-95"
+            >
+              <X className="w-6 h-6 text-white" />
             </button>
           </div>
+
           <div className="flex-1 overflow-hidden">
             <Chatbot />
           </div>

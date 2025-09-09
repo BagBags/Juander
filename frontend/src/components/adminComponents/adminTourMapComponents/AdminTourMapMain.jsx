@@ -10,6 +10,16 @@ import {
   INTRAMUROS_BOUNDS,
   initialMaskFeature,
 } from "./mapConfig";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faCropSimple,
+  faPlus,
+  faInfo,
+  faXmark,
+  faFloppyDisk,
+  faCheck,
+  faTrash
+} from "@fortawesome/free-solid-svg-icons";
 
 // ---------- Axios instance ----------
 const api = axios.create({
@@ -342,33 +352,48 @@ export default function AdminTourMapMain() {
 
         {/* Card Panel for Pin */}
         {selectedPin !== null && pins[selectedPin] && (
-          <div className="absolute top-6 left-6 w-[360px] max-h-[85vh] bg-white rounded-xl shadow-xl flex flex-col z-40">
+          <div className="absolute top-6 left-6 w-[380px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
             {/* Header */}
-            <div className="flex justify-between items-center p-3 border-b rounded-t-xl bg-gray-50">
-              <h2 className="text-base font-semibold">Pin Details</h2>
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 rounded-t-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Pin Details
+              </h2>
               <button
                 onClick={() => setSelectedPin(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
               >
-                ✕
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </button>
             </div>
 
             {/* Scrollable form */}
             <form
               onSubmit={(e) => handleFormSubmit(e, selectedPin)}
-              className="flex-1 overflow-y-auto p-4 space-y-4"
+              className="flex-1 overflow-y-auto p-5 space-y-5"
             >
               {/* Site Name */}
               <div>
-                <label className="block text-sm font-medium">Site Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Site Name
+                </label>
                 <input
                   type="text"
                   value={pins[selectedPin].siteName || ""}
                   onChange={(e) =>
                     updatePinField(selectedPin, "siteName", e.target.value)
                   }
-                  className="w-full border rounded-lg p-2 mt-1 text-sm"
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Enter site name"
                   required
                 />
@@ -376,7 +401,7 @@ export default function AdminTourMapMain() {
 
               {/* Site Description */}
               <div>
-                <label className="block text-sm font-medium">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Site Description
                 </label>
                 <textarea
@@ -388,7 +413,7 @@ export default function AdminTourMapMain() {
                       e.target.value
                     )
                   }
-                  className="w-full border rounded-lg p-2 mt-1 text-sm"
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   rows="3"
                   placeholder="Enter site description"
                 />
@@ -396,20 +421,22 @@ export default function AdminTourMapMain() {
 
               {/* Media */}
               <div>
-                <label className="block text-sm font-medium">Media</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Media URL
+                </label>
                 <input
                   type="text"
                   value={pins[selectedPin].mediaUrl || ""}
                   onChange={(e) =>
                     updatePinField(selectedPin, "mediaUrl", e.target.value)
                   }
-                  className="w-full border rounded-lg p-2 mt-1 text-sm"
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="https://example.com/media.jpg"
                 />
-                <div className="mt-2 flex items-center space-x-2">
-                  <label className="text-sm">Type:</label>
+                <div className="mt-3 flex items-center space-x-2">
+                  <label className="text-sm text-gray-600">Media Type:</label>
                   <select
-                    className="border rounded p-1 text-sm"
+                    className="border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     value={pins[selectedPin].mediaType || "image"}
                     onChange={(e) =>
                       updatePinField(
@@ -427,18 +454,18 @@ export default function AdminTourMapMain() {
 
               {/* Media Preview */}
               {pins[selectedPin].mediaUrl && (
-                <div className="mt-3">
+                <div className="mt-4 rounded-xl overflow-hidden border border-gray-200">
                   {pins[selectedPin].mediaType === "video" ? (
                     <video
                       src={pins[selectedPin].mediaUrl}
                       controls
-                      className="w-full h-40 rounded-lg"
+                      className="w-full h-48 object-cover"
                     />
                   ) : (
                     <img
                       src={pins[selectedPin].mediaUrl}
                       alt="Preview"
-                      className="w-full h-40 object-cover rounded-lg"
+                      className="w-full h-48 object-cover"
                     />
                   )}
                 </div>
@@ -446,21 +473,27 @@ export default function AdminTourMapMain() {
 
               {/* AR Link */}
               <div>
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-medium">AR Link</label>
-                  <label className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={pins[selectedPin].arEnabled || false}
-                      onChange={(e) =>
-                        updatePinField(
-                          selectedPin,
-                          "arEnabled",
-                          e.target.checked
-                        )
-                      }
-                    />
-                    <span className="text-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    AR Experience
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <div className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={pins[selectedPin].arEnabled || false}
+                        onChange={(e) =>
+                          updatePinField(
+                            selectedPin,
+                            "arEnabled",
+                            e.target.checked
+                          )
+                        }
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </div>
+                    <span className="text-sm text-gray-600">
                       {pins[selectedPin].arEnabled ? "Enabled" : "Disabled"}
                     </span>
                   </label>
@@ -472,56 +505,60 @@ export default function AdminTourMapMain() {
                   onChange={(e) =>
                     updatePinField(selectedPin, "arLink", e.target.value)
                   }
-                  className="w-full border rounded-lg p-2 mt-1 text-sm"
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="https://example.com/ar-link"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 mt-2">
                   This link will only be visible to tourists if enabled.
                 </p>
               </div>
 
               {/* Site Status */}
               <div>
-                <label className="block text-sm font-medium">Site Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Site Status
+                </label>
                 <select
                   value={pins[selectedPin].status || "active"}
                   onChange={(e) =>
                     updatePinField(selectedPin, "status", e.target.value)
                   }
-                  className="w-full border rounded-lg p-2 mt-1 text-sm"
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
+
               {/* Footer buttons */}
-              <div className="p-3 flex justify-between bg-gray-50 rounded-b-xl">
+              <div className="pt-4 flex justify-between">
                 {/* Delete Button */}
                 <button
                   type="button"
                   onClick={() => handleDeletePin(pins[selectedPin]._id)}
-                  className="px-10 py-3 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                  className="px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors duration-200 flex items-center shadow-sm hover:shadow-md"
                 >
+                  <FontAwesomeIcon icon={faTrash} />
                   Delete
                 </button>
-                <div className="flex gap-2">
-                  {/* Save Button */}
-                  <button
-                    type="submit"
-                    className="px-10 py-3 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                  >
-                    Save
-                  </button>
-                </div>
+
+                {/* Save Button */}
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
+                >
+                  <FontAwesomeIcon icon={faCheck} />
+                  Save Changes
+                </button>
               </div>
             </form>
           </div>
         )}
-
         {/* Floating Toolbar */}
-        <div className="absolute top-6 right-6 z-[9999] flex items-start space-x-3">
+        <div className="absolute top-6 right-6 z-[9999] flex items-start">
+          {/* Map Legend panel: appears only if showLegend is true */}
           {showLegend && (
-            <div className="bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn">
+            <div className="bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn absolute -left-56 top-0">
               <h4 className="font-semibold mb-3 text-lg border-b pb-1">
                 Map Legend
               </h4>
@@ -533,69 +570,72 @@ export default function AdminTourMapMain() {
             </div>
           )}
 
-          <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999]">
-            <button
-              onClick={() => setShowLegend((prev) => !prev)}
-              className={`p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl ${
-                showLegend ? "bg-blue-50 text-blue-600" : "text-gray-700"
-              }`}
-              title="Map Legend"
-            >
-              ℹ️
-            </button>
-
-            {!isAddingPin ? (
+          <div className="flex flex-col items-end space-y-2">
+            {/* Toolbar */}
+            <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999]">
+              {/* Legend Button */}
               <button
-                onClick={() => setIsAddingPin(true)}
-                className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl text-gray-700"
-                title="Add Pin"
+                onClick={() => setShowLegend((prev) => !prev)}
+                className={`p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl ${
+                  showLegend ? "bg-blue-50 text-blue-600" : "text-gray-700"
+                }`}
+                title="Map Legend"
               >
-                ➕
+                <FontAwesomeIcon icon={faInfo} />
               </button>
-            ) : (
-              <>
+
+              {/* Pin Mode Toggle */}
+              {!isAddingPin ? (
+                <button
+                  onClick={() => setIsAddingPin(true)}
+                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl text-gray-700"
+                  title="Add Pin"
+                >
+                  <FontAwesomeIcon icon={faPlus} />
+                </button>
+              ) : (
                 <button
                   onClick={() => setIsAddingPin(false)}
                   className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-red-50 text-red-600"
                   title="Exit Pin Mode"
                 >
-                  ❌
+                  <FontAwesomeIcon icon={faXmark} />
                 </button>
-                <button
-                  onClick={savePins}
-                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-green-50 text-green-700"
-                  title="Save Pins"
-                >
-                  💾
-                </button>
-              </>
-            )}
+              )}
 
-            {!isMaskingMode ? (
-              <button
-                onClick={enableMaskEditing}
-                className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl text-gray-700"
-                title="Enable Mask Editing"
-              >
-                🧲
-              </button>
-            ) : (
-              <>
+              {/* Mask Mode Toggle */}
+              {!isMaskingMode ? (
+                <button
+                  onClick={enableMaskEditing}
+                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl text-gray-700"
+                  title="Enable Mask Editing"
+                >
+                  <FontAwesomeIcon icon={faCropSimple} />
+                </button>
+              ) : (
                 <button
                   onClick={exitMaskEditing}
                   className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-red-50 text-red-600"
                   title="Exit Mask Editing"
                 >
-                  ❌
+                  <FontAwesomeIcon icon={faXmark} />
                 </button>
-                <button
-                  onClick={saveMask}
-                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-green-50 text-green-700"
-                  title="Save Mask"
-                >
-                  💾
-                </button>
-              </>
+              )}
+            </div>
+
+            {/* Save Buttons Div: only appears if pin mode or mask mode is active */}
+            {isMaskingMode && (
+              <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999] w-full">
+                {isMaskingMode && (
+                  <button
+                    onClick={saveMask}
+                    className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-green-50 text-green-700"
+                    title="Save Mask"
+                  >
+                    <FontAwesomeIcon icon={faFloppyDisk} />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

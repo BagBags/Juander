@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { Filter } from "bad-words"; // Named import
+import { SendHorizontal } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+// import { byPrefixAndName } from "@awesome.me/kit-KIT_CODE/icons";
+import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+
 const filter = new Filter();
 
 filter.addWords(
@@ -34,6 +39,8 @@ filter.addWords(
 );
 
 export default function Chatbot() {
+  const messagesEndRef = useRef(null);
+
   const [messages, setMessages] = useState([
     {
       role: "system",
@@ -41,6 +48,10 @@ export default function Chatbot() {
         "Welcome! Ask me anything about Intramuros in English or Filipino.",
     },
   ]);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const [input, setInput] = useState("");
   const sessionId = useRef(uuidv4());
   const [botEntries, setBotEntries] = useState([]);
@@ -230,46 +241,60 @@ Always answer in English.`;
   };
 
   return (
-    <div className="flex flex-col w-full h-full p-3 sm:p-4 bg-white">
+    <div className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto mb-3 p-2 border rounded bg-gray-50">
+      <div className="flex-1 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm space-y-4">
         {messages
           .filter((m) => m.role !== "system")
           .map((msg, i) => (
             <div
               key={i}
-              className={`mb-2 ${
-                msg.role === "user" ? "text-right" : "text-left"
+              className={`flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
               <div
-                className={`inline-block px-3 py-2 rounded ${
+                className={`px-4 py-2 rounded-2xl shadow-md max-w-[75%] transition-all duration-300 animate-fadeIn ${
                   msg.role === "user"
-                    ? "bg-[#f04e37] text-white"
-                    : "bg-gray-200 text-gray-900"
+                    ? "bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none"
+                    : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none"
                 }`}
                 style={{ whiteSpace: "pre-wrap" }}
               >
-                {msg.content}
+                {msg.content === "__loading__" ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-150" />
+                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-300" />
+                  </div>
+                ) : (
+                  msg.content
+                )}
               </div>
             </div>
           ))}
+
+        {/* 👇 This makes the chat scroll down automatically */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="flex space-x-2">
+      <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="flex-grow border rounded px-3 py-2 text-sm sm:text-base"
-          placeholder="Type your question here..."
+          className="flex-grow bg-transparent outline-none px-2 py-1 text-sm sm:text-base"
+          placeholder="Type your message..."
         />
-        <button
-          onClick={handleSend}
-          className="bg-[#f04e37] text-white px-4 py-2 rounded hover:bg-[#d03b27]"
-        >
-          Send
+        <button onClick={handleSend} className="bg-transparent ">
+          <div className="transform rotate-45">
+            <FontAwesomeIcon
+              icon={faPaperPlane}
+              className="w-5 h-5"
+              style={{ color: "#f04e37" }}
+            />
+          </div>
         </button>
       </div>
     </div>

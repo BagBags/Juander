@@ -10,6 +10,11 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+// import { byPrefixAndName } from "@awesome.me/kit-KIT_CODE/icons";
+import { faHome, faFolder, faUser, faHistory } from "@fortawesome/free-solid-svg-icons";
+
 import axios from "axios";
 
 export default function AdminSidebar({ isExpanded, toggleSidebar }) {
@@ -18,11 +23,11 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
   const [currentAdmin, setCurrentAdmin] = useState(null);
 
   const sidebarLinks = [
-    { icon: House, label: "Home", to: "/AdminHome" },
-    { icon: FolderClosed, label: "Contents", to: "/AdminManageContent" },
-    { icon: UserRound, label: "Roles", to: "/AdminManageRole" },
+    { icon: faHome, label: "Home", to: "/AdminHome" },
+    { icon: faFolder, label: "Contents", to: "/AdminManageContent" },
+    { icon: faUser, label: "Roles", to: "/AdminManageRole" },
 
-    { icon: History, label: "Logs", to: "/AdminLog" },
+    { icon: faHistory, label: "Logs", to: "/AdminLog" },
   ];
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -123,14 +128,16 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                     isExpanded ? "justify-start space-x-3" : "justify-center"
                   }`}
                 >
-                  <Icon
-                    size={24}
+                  <FontAwesomeIcon
+                    icon={Icon} // faHouse, faFolderClosed, etc.
                     className={`transition-colors duration-200 ${
                       isActive
                         ? "text-[#f04e37]"
                         : "text-white group-hover:text-[#f04e37]"
                     }`}
+                    style={{ fontSize: 24 }} // match Lucide size
                   />
+
                   {isExpanded && (
                     <span
                       className={`text-base transition-colors duration-200 ${
