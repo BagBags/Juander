@@ -46,7 +46,7 @@ export default function SideButtons() {
   ];
 
   return (
-    <div className="fixed right-1 md:right-1 lg:right-8 top-[50%] md:top-[60%] -translate-y-1/2 flex flex-col gap-6 z-50">
+    <div className="fixed right-2 md:right-4 lg:right-8 top-1/2 -translate-y-1/2 flex flex-col gap-6 z-50">
       {icons.map((icon, index) => {
         let visibilityClass = "";
 
@@ -63,14 +63,23 @@ export default function SideButtons() {
             key={index}
             className={`${visibilityClass} flex flex-col items-center group`}
           >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-yellow-400 flex items-center justify-center shadow-md hover:bg-yellow-500 transition">
+            <div
+              className="w-16 h-16 sm:w-20 sm:h-20 lg:w-16 lg:h-16
+                         rounded-full bg-yellow-400 flex items-center justify-center
+                         shadow-lg hover:shadow-yellow-300/50 hover:scale-110
+                         transition-transform duration-300 ease-out"
+            >
               <img
                 src={icon.url}
                 alt={`icon-${index}`}
-                className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
+                className="w-8 h-8 sm:w-10 sm:h-10 lg:w-8 lg:h-8 object-contain"
               />
             </div>
-            <span className="text-xs sm:text-sm lg:text-base text-white mt-1 group-hover:underline">
+
+            <span
+              className="text-xs sm:text-sm lg:text-base text-white mt-2 
+                         opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+            >
               {t(icon.label)}
             </span>
           </Link>
