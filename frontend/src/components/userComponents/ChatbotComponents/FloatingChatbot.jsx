@@ -2,42 +2,73 @@ import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import Chatbot from "./Chatbot";
 import Draggable from "react-draggable";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
 export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 20, y: 50 }); // default pos
-  const nodeRef = useRef(null);
+  const [position, setPosition] = useState({ x: 0, y: 550 }); // initial
+  const [draggedPosition, setDraggedPosition] = useState({ x: 0, y: 550 });
 
-  const handleStop = (_, data) => {
-    // Save final drag position
+  const nodeRef = useRef(null);
+  const wasDragged = useRef(false);
+
+  // ✅ now updates live
+  const handleDrag = (_, data) => {
+    wasDragged.current = true;
     setPosition({ x: data.x, y: data.y });
   };
 
+  const handleStop = (_, data) => {
+    const newPos = { x: data.x, y: data.y };
+    setPosition(newPos);
+    setDraggedPosition(newPos);
+    setTimeout(() => {
+      wasDragged.current = false;
+    }, 50);
+  };
+
   const handleToggle = () => {
-    setIsOpen((prev) => !prev);
+    if (wasDragged.current) return;
+
+    if (!isOpen) {
+      setPosition({ x: -40, y: draggedPosition.y }); // half outside screen
+      setIsOpen(true);
+    } else {
+      setPosition(draggedPosition);
+      setIsOpen(false);
+    }
   };
 
   return (
     <>
-      {/* Fullscreen container for bounds */}
       <div className="fixed inset-0 z-50 pointer-events-none">
         <Draggable
           nodeRef={nodeRef}
           bounds="parent"
           handle=".drag-handle"
           position={position}
+          onDrag={handleDrag}
           onStop={handleStop}
         >
-          <div
+          <motion.div
             ref={nodeRef}
-            className={`absolute pointer-events-auto transition-transform duration-500 ease-in-out
-              ${isOpen ? "rotate-[45deg] scale-75" : "rotate-0 scale-100"}`}
+            className={`absolute ${
+              isOpen ? "pointer-events-none" : "pointer-events-auto"
+            }`}
+            animate={{ x: position.x, y: position.y }}
+            transition={
+              wasDragged.current
+                ? { duration: 0 } // instant while dragging
+                : { duration: 0.5, ease: "easeInOut" } // smooth when opening/closing
+            }
           >
-            {/* Drag handle */}
             <div
-              className="drag-handle flex items-center justify-center cursor-grab active:cursor-grabbing
-                         w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32"
-              onClick={handleToggle}
+              className={`drag-handle flex items-center justify-center cursor-grab active:cursor-grabbing
+                w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32
+                transition-transform duration-300 ease-in-out
+                ${isOpen ? "rotate-[45deg] scale-75" : "rotate-0 scale-100"}`}
+              onClick={() => !isOpen && handleToggle()}
             >
               <img
                 src={isOpen ? "/icons/juan_close.svg" : "/icons/juan_open.svg"}
@@ -45,15 +76,17 @@ export default function FloatingChatbot() {
                 className="w-full h-full object-contain pointer-events-none"
               />
             </div>
-          </div>
+          </motion.div>
         </Draggable>
       </div>
 
-      {/* Chatbox */}
       {isOpen && (
-        <div
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
           style={{
-            // Center the chatbox regardless of Juan's position
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
@@ -62,19 +95,16 @@ export default function FloatingChatbot() {
           className="bg-white shadow-2xl rounded-xl flex flex-col
                      w-[70vw] h-[60vh] sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem] z-[60]"
         >
-          {/* Header */}
           <div className="bg-yellow-400 flex justify-between items-center p-4 rounded-t-xl">
             <h2 className="font-bold text-lg text-black">AskJuan</h2>
-            <button onClick={() => setIsOpen(false)}>
+            <button onClick={handleToggle}>
               <X className="w-7 h-7 text-black" />
             </button>
           </div>
-
-          {/* Chatbot */}
           <div className="flex-1 overflow-hidden">
             <Chatbot />
           </div>
-        </div>
+        </motion.div>
       )}
     </>
   );

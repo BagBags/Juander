@@ -33,9 +33,14 @@ export default function Homepage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 relative"
+      className="
+    min-h-screen bg-cover bg-no-repeat bg-center 
+    flex flex-col items-center justify-start 
+    px-4 sm:px-6 md:px-8 lg:px-10 relative
+    bg-[url('/JuanderBGPhone.png')] 
+    sm:bg-[url('/JuanderBGWeb1.svg')]
+  "
       style={{
-        backgroundImage: "url('/JuanderBG2.png')",
         backgroundColor: "#d9d9d9",
       }}
     >
@@ -45,7 +50,7 @@ export default function Homepage() {
       </div>
 
       {/* Title */}
-      <div className="mt-72 sm:mt-26 text-center relative z-10">
+      <div className="mt-72 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10">
         <h5
           className="text-[42px] sm:text-[60px] md:text-[72px] 
              font-poppins font-extrabold tracking-tight leading-[1.1] 
