@@ -1,6 +1,37 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
+import { Filter } from "bad-words"; // Named import
+const filter = new Filter();
+
+filter.addWords(
+  "putangina",
+  "putang ina",
+  "tanginamo",
+  "anak ng puta",
+  "pakyu",
+  "pekpek",
+  "puke",
+  "burat",
+  "pwets",
+  "ulol",
+  "gago",
+  "gaga",
+  "tanga",
+  "bobo",
+  "tarantado",
+  "hayop",
+  "loko",
+  "lokohan",
+  "pucha",
+  "puchang ina",
+  "pakshet",
+  "gago ka",
+  "tangina mo",
+  "putangi mo",
+  "ulol ka",
+  "tanga ka"
+);
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([
@@ -14,18 +45,11 @@ export default function Chatbot() {
   const sessionId = useRef(uuidv4());
   const [botEntries, setBotEntries] = useState([]);
 
-  // --- Auth Helper ---
-  // const getAuthHeader = () => {
-  //   const token = localStorage.getItem("token");
-  //   return token ? { Authorization: `Bearer ${token}` } : {};
-  // };
-
   // --- Load Knowledge Base ---
   useEffect(() => {
     async function fetchEntries() {
       try {
         const res = await axios.get("/api/bot");
-
         setBotEntries(res.data);
       } catch (err) {
         console.error("Error fetching bot entries:", err);
@@ -77,8 +101,8 @@ export default function Chatbot() {
       "kailan",
     ].some((q) => text.toLowerCase().startsWith(q));
 
-    let filipinoCount = 0;
-    let englishCount = 0;
+    let filipinoCount = 0,
+      englishCount = 0;
 
     words.forEach((word) => {
       if (filipinoWords.includes(word)) filipinoCount++;
@@ -94,10 +118,9 @@ export default function Chatbot() {
     return entries
       .map(
         (e, i) =>
-          `${i + 1}.
-EN: ${e.info_en}
-FIL: ${e.info_fil || "N/A"}
-Keywords: ${e.keywords.join(", ")}`
+          `${i + 1}.\nEN: ${e.info_en}\nFIL: ${
+            e.info_fil || "N/A"
+          }\nKeywords: ${e.keywords.join(", ")}`
       )
       .join("\n\n");
   }
@@ -107,6 +130,21 @@ Keywords: ${e.keywords.join(", ")}`
     if (!input.trim()) return;
 
     const userMessage = input.trim();
+
+    // --- Profanity Check ---
+    if (filter.isProfane(userMessage)) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: userMessage },
+        {
+          role: "assistant",
+          content: "⚠️ Please avoid using inappropriate language.",
+        },
+      ]);
+      setInput("");
+      return; // Stop processing further
+    }
+
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setInput("");
 
@@ -117,7 +155,7 @@ Keywords: ${e.keywords.join(", ")}`
         ? `You are Juan, a Filipino tour guide chatbot for Intramuros.
 Answer ONLY from the knowledge base.
 If the answer is not there, reply exactly:
-"Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base." 
+"Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base."
 Always answer in Filipino.`
         : `You are Juan, an English-speaking tour guide chatbot for Intramuros.
 Answer ONLY from the knowledge base.
@@ -125,10 +163,8 @@ If the answer is not there, reply exactly:
 "Sorry, I don’t have information about that in my knowledge base."
 Always answer in English.`;
 
-    // Keyword extraction
     const keywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
 
-    // Match entries
     const relevantEntries = botEntries.filter(
       (entry) =>
         keywords.some((kw) =>
@@ -139,7 +175,6 @@ Always answer in English.`;
           entry.info_fil.toLowerCase().includes(userMessage.toLowerCase()))
     );
 
-    // No match case
     if (relevantEntries.length === 0) {
       setMessages((prev) => [
         ...prev,
@@ -157,7 +192,6 @@ Always answer in English.`;
     const knowledgeText = buildKnowledgeText(relevantEntries);
     const fullPrompt = `${SYSTEM_PROMPT}\n\nKnowledge Base:\n${knowledgeText}\n\nUser: ${userMessage}`;
 
-    // Guard for Puter not ready
     if (!window.puter) {
       setMessages((prev) => [
         ...prev,
