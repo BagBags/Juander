@@ -7,12 +7,14 @@ import React, {
 } from "react";
 import Webcam from "react-webcam";
 import "@tensorflow/tfjs-backend-webgl";
+import axios from "axios";
+
 import PhotoboothSlider from "./photoboothSlider";
 import { baseFilters } from "./basefilter";
 import { loadFaceModel } from "./model";
 import { setupFaceDetection } from "./facedetect";
 import Overlays from "./overlay";
-import BackHeader from "../BackButton"; // ✅ Import your back header
+import BackHeader from "../BackButton";
 import "../../../Photobooth.css";
 
 const videoDims = {
@@ -28,29 +30,55 @@ export default function Photobooth() {
   const [selectedFilterId, setSelectedFilterId] = useState(null);
   const [webcamReady, setWebcamReady] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [filters, setFilters] = useState([]);
 
-  const filterData = useMemo(() => [...baseFilters], []);
+  // ✅ Load filters from backend (fallback to baseFilters)
+useEffect(() => {
+  const fetchFilters = async () => {
+    try {
+      const res = await axios.get("/api/photobooth/filters");
+      if (res.data && res.data.length > 0) {
+        const normalized = res.data.map(f => ({
+          ...f,
+          label: f.label || f.name, // ensure label exists
+          value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
+        }));
+        setFilters([...baseFilters, ...normalized]);
+      } else {
+        setFilters(baseFilters);
+      }
+    } catch (err) {
+      console.error("Failed to fetch filters, using baseFilters:", err);
+      setFilters(baseFilters);
+    }
+  };
+  fetchFilters();
+}, []);
+
 
   const repeatedFilters = useMemo(
-    () =>
-      Array(5)
-        .fill(filterData)
-        .flat()
-        .map((f, i) => ({ ...f, id: `${f.id || f.value}-${i}` })),
-    [filterData]
-  );
+  () =>
+    filters.map((f, i) => ({
+      ...f,
+      id: f._id || f.id || f.value || `filter-${i}`,
+    })),
+  [filters]
+);
+
 
   const selectedMeta = repeatedFilters.find((f) => f.id === selectedFilterId);
   const selectedValue = selectedMeta?.value || null;
 
+  // ✅ Load face model
   useEffect(() => {
     loadFaceModel()
       .then((loadedModel) => {
         setModel(loadedModel);
       })
-      .catch(() => {});
+      .catch((err) => console.error("Failed to load face model:", err));
   }, []);
 
+  // ✅ Face detection loop
   useEffect(() => {
     if (model && webcamReady && webcamRef.current) {
       const cleanup = setupFaceDetection(
@@ -82,18 +110,16 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
-        {/* ✅ Back button header - matches Profile spacing */}
-       <div className="absolute top-0 left-0 w-full z-20 p-4 flex items-center justify-between">
-  <BackHeader />
-  
-  <button
-    className="refresh-btn"
-    onClick={() => window.location.reload()}
-  >
-    ↻
-  </button>
-</div>
-
+        {/* ✅ Back button + refresh */}
+        <div className="absolute top-0 left-0 w-full z-20 p-4 flex items-center justify-between">
+          <BackHeader />
+          <button
+            className="refresh-btn"
+            onClick={() => window.location.reload()}
+          >
+            ↻
+          </button>
+        </div>
 
         <div className="camera-view">
           <Webcam
@@ -114,6 +140,7 @@ export default function Photobooth() {
             mirrored={true}
           />
 
+          {/* ✅ Show overlays if filter selected */}
           {selectedMeta && (
             <Overlays
               faces={faces}
@@ -123,6 +150,7 @@ export default function Photobooth() {
             />
           )}
 
+          {/* ✅ Loading states */}
           {!model && (
             <div className="loading-overlay">
               <div className="spinner" />
@@ -131,7 +159,6 @@ export default function Photobooth() {
               </div>
             </div>
           )}
-
           {!webcamReady && (
             <div className="loading-overlay">
               <div className="loading-text">Initializing camera...</div>
@@ -139,6 +166,7 @@ export default function Photobooth() {
           )}
         </div>
 
+        {/* ✅ Bottom slider */}
         <div className="bottom-controls">
           <PhotoboothSlider
             ref={sliderRef}

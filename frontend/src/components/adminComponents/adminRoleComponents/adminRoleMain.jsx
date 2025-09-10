@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search } from "lucide-react";
+import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
 
 export default function RolesPage() {
@@ -8,6 +8,7 @@ export default function RolesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   useEffect(() => {
     fetchUsers();
@@ -79,6 +80,7 @@ export default function RolesPage() {
     }
   };
 
+  // ✅ Search filter
   const filteredUsers = users.filter((user) => {
     const searchTerm = search.toLowerCase();
     return Object.values(user).some((value) =>
@@ -86,6 +88,30 @@ export default function RolesPage() {
     );
   });
 
+  // ✅ Sorting logic
+  const requestSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+
+    let valA = a[sortConfig.key] ?? "";
+    let valB = b[sortConfig.key] ?? "";
+
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+
+    if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+    if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // ✅ Formatters
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -104,7 +130,6 @@ export default function RolesPage() {
       .join(" ");
   };
 
-  // ✅ Language formatter
   const formatLanguage = (lang) => {
     if (!lang) return "—";
     const map = { en: "English", tl: "Filipino" };
@@ -112,6 +137,41 @@ export default function RolesPage() {
   };
 
   const isSuperAdmin = currentUser?.email === "aaronbagain@gmail.com";
+
+  // ✅ Helper for header with sort arrows
+const renderSortableHeader = (label, key) => {
+  const isActive = sortConfig.key === key;
+
+  return (
+    <th
+      onClick={() => requestSort(key)}
+      className="px-6 py-3 cursor-pointer select-none"
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        <span className="flex flex-col leading-none">
+          <ChevronUp
+            size={12}
+            className={`${
+              isActive && sortConfig.direction === "asc"
+                ? "text-white"
+                : "text-gray-300"
+            }`}
+          />
+          <ChevronDown
+            size={12}
+            className={`-mt-1 ${
+              isActive && sortConfig.direction === "desc"
+                ? "text-white"
+                : "text-gray-300"
+            }`}
+          />
+        </span>
+      </div>
+    </th>
+  );
+};
+
 
   return (
     <section>
@@ -123,6 +183,7 @@ export default function RolesPage() {
         <span className="font-semibold">{filteredUsers.length}</span>
       </p>
 
+      {/* ✅ Search bar */}
       <div className="relative mb-6 w-full sm:w-1/3">
         <Search className="absolute left-3 top-3 text-gray-400" size={18} />
         <input
@@ -142,21 +203,21 @@ export default function RolesPage() {
             <thead className="bg-[#f04e37] text-white">
               <tr>
                 <th className="px-6 py-3">#</th>
-                <th className="px-6 py-3">First Name</th>
-                <th className="px-6 py-3">Last Name</th>
-                <th className="px-6 py-3">Email</th>
-                <th className="px-6 py-3">Role</th>
+                {renderSortableHeader("First Name", "firstName")}
+                {renderSortableHeader("Last Name", "lastName")}
+                {renderSortableHeader("Email", "email")}
+                {renderSortableHeader("Role", "role")}
                 <th className="px-6 py-3">Action</th>
-                <th className="px-6 py-3">Country</th>
-                <th className="px-6 py-3">Language</th>
-                <th className="px-6 py-3">Gender</th>
-                <th className="px-6 py-3">Birthday</th>
-                <th className="px-6 py-3">Date Created</th>
-                <th className="px-6 py-3">Last Updated</th>
+                {renderSortableHeader("Country", "country")}
+                {renderSortableHeader("Language", "language")}
+                {renderSortableHeader("Gender", "gender")}
+                {renderSortableHeader("Birthday", "birthday")}
+                {renderSortableHeader("Date Created", "createdAt")}
+                {renderSortableHeader("Last Updated", "updatedAt")}
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user, idx) => (
+              {sortedUsers.map((user, idx) => (
                 <tr
                   key={user._id}
                   className={`${
@@ -228,7 +289,7 @@ export default function RolesPage() {
                   </td>
                 </tr>
               ))}
-              {filteredUsers.length === 0 && (
+              {sortedUsers.length === 0 && (
                 <tr>
                   <td
                     colSpan="12"

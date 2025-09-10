@@ -15,6 +15,7 @@ const publicBotRoute = require("./routes/publicBotRoute");
 const pinRoute = require("./routes/pinRoute");
 const maskRoute = require("./routes/maskRoute");
 const itineraryRoute = require("./routes/itineraryRoute");
+const photoboothFilterRoute = require("./routes/photoboothFilterRoute");
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
 // Needed for resolving __dirname in CommonJS
@@ -66,6 +67,9 @@ app.use("/api/admin/bot", verifyAdmin, adminBotRoute);
 app.use("/api/pins", pinRoute);
 app.use("/api/mask", maskRoute);
 app.use("/api/itineraries", itineraryRoute);
+app.use("/api/photobooth/filters", photoboothFilterRoute);
+app.use("/uploads", express.static("uploads"));
+
 
 // // Serve frontend in production +++
 // if (process.env.NODE_ENV === "production") {

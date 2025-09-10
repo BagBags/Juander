@@ -39,7 +39,7 @@ export default function GuestHomepage() {
     <div
       className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 relative"
       style={{
-        backgroundImage: "url('/login-background.svg')",
+        backgroundImage: "url('/JuanderBGWeb.svg')",
         backgroundColor: "#f04e37",
       }}
     >

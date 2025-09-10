@@ -13,7 +13,7 @@ export default function AdminContentMain() {
     {
       title: "Photobooth",
       iconPath: "/icons/Photobooth.svg",
-      route: "/admin/photobooth",
+      route: "/AdminPhotobooth",
     },
     {
       title: "Emergency Hotlines",
