@@ -18,7 +18,7 @@ import {
   faXmark,
   faFloppyDisk,
   faCheck,
-  faTrash
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 
 // ---------- Axios instance ----------
@@ -46,6 +46,8 @@ export default function AdminTourMapMain() {
   const [isMaskingMode, setIsMaskingMode] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
+  // For manual pin input
+  const [manualCoords, setManualCoords] = useState({ lat: "", lng: "" });
 
   const [loading, setLoading] = useState(false);
   const [notif, setNotif] = useState(null); // {type: "success"|"error"|"info", message: string}
@@ -216,6 +218,32 @@ export default function AdminTourMapMain() {
     };
     setPins((prev) => [...prev, newPin]);
     setSelectedPin(pins.length);
+  };
+
+  const addPinFromCoords = () => {
+    const lat = parseFloat(manualCoords.lat);
+    const lng = parseFloat(manualCoords.lng);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      notify("error", "Invalid latitude or longitude");
+      return;
+    }
+
+    const newPin = {
+      latitude: lat,
+      longitude: lng,
+      siteName: "",
+      siteDescription: "",
+      mediaUrl: "",
+      mediaType: "image",
+      arEnabled: false,
+      arLink: "",
+      status: "active",
+    };
+
+    setPins((prev) => [...prev, newPin]);
+    setSelectedPin(pins.length); // open form immediately
+    setManualCoords({ lat: "", lng: "" }); // reset
   };
 
   const updatePinField = (index, field, value) => {
@@ -555,10 +583,10 @@ export default function AdminTourMapMain() {
           </div>
         )}
         {/* Floating Toolbar */}
-        <div className="absolute top-6 right-6 z-[9999] flex items-start">
-          {/* Map Legend panel: appears only if showLegend is true */}
+        <div className="absolute top-6 right-6 z-[9999] flex items-end space-x-3">
+          {/* Map Legend Panel */}
           {showLegend && (
-            <div className="bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn absolute -left-56 top-0">
+            <div className="absolute right-full mr-3 top-0 bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn">
               <h4 className="font-semibold mb-3 text-lg border-b pb-1">
                 Map Legend
               </h4>
@@ -570,71 +598,91 @@ export default function AdminTourMapMain() {
             </div>
           )}
 
+          {/* Manual Pin Input */}
+          <div className="bg-white rounded-lg shadow-md p-3 w-60 space-y-2">
+            <h4 className="text-sm font-semibold text-gray-700">
+              Add Pin by Coordinates
+            </h4>
+            <input
+              type="number"
+              step="any"
+              placeholder="Latitude"
+              value={manualCoords.lat}
+              onChange={(e) =>
+                setManualCoords((prev) => ({ ...prev, lat: e.target.value }))
+              }
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+            />
+            <input
+              type="number"
+              step="any"
+              placeholder="Longitude"
+              value={manualCoords.lng}
+              onChange={(e) =>
+                setManualCoords((prev) => ({ ...prev, lng: e.target.value }))
+              }
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+            />
+            <button
+              onClick={addPinFromCoords}
+              className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add Pin
+            </button>
+          </div>
+
+          {/* Toolbar + Save Mask */}
           <div className="flex flex-col items-end space-y-2">
-            {/* Toolbar */}
+            {/* Toolbar Core */}
             <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999]">
-              {/* Legend Button */}
+              {/* Legend Toggle */}
               <button
                 onClick={() => setShowLegend((prev) => !prev)}
-                className={`p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl ${
+                title="Map Legend"
+                className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
                   showLegend ? "bg-blue-50 text-blue-600" : "text-gray-700"
                 }`}
-                title="Map Legend"
               >
                 <FontAwesomeIcon icon={faInfo} />
               </button>
 
               {/* Pin Mode Toggle */}
-              {!isAddingPin ? (
-                <button
-                  onClick={() => setIsAddingPin(true)}
-                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl text-gray-700"
-                  title="Add Pin"
-                >
-                  <FontAwesomeIcon icon={faPlus} />
-                </button>
-              ) : (
-                <button
-                  onClick={() => setIsAddingPin(false)}
-                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-red-50 text-red-600"
-                  title="Exit Pin Mode"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-              )}
+              <button
+                onClick={() => setIsAddingPin(!isAddingPin)}
+                title={isAddingPin ? "Exit Pin Mode" : "Add Pin"}
+                className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
+                  isAddingPin ? "bg-red-50 text-red-600" : "text-gray-700"
+                }`}
+              >
+                <FontAwesomeIcon icon={isAddingPin ? faXmark : faPlus} />
+              </button>
 
               {/* Mask Mode Toggle */}
-              {!isMaskingMode ? (
-                <button
-                  onClick={enableMaskEditing}
-                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl text-gray-700"
-                  title="Enable Mask Editing"
-                >
-                  <FontAwesomeIcon icon={faCropSimple} />
-                </button>
-              ) : (
-                <button
-                  onClick={exitMaskEditing}
-                  className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-red-50 text-red-600"
-                  title="Exit Mask Editing"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-              )}
+              <button
+                onClick={isMaskingMode ? exitMaskEditing : enableMaskEditing}
+                title={
+                  isMaskingMode ? "Exit Mask Editing" : "Enable Mask Editing"
+                }
+                className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
+                  isMaskingMode ? "bg-red-50 text-red-600" : "text-gray-700"
+                }`}
+              >
+                <FontAwesomeIcon
+                  icon={isMaskingMode ? faXmark : faCropSimple}
+                />
+              </button>
             </div>
 
-            {/* Save Buttons Div: only appears if pin mode or mask mode is active */}
+            {/* Save Mask Button */}
             {isMaskingMode && (
-              <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999] w-full">
-                {isMaskingMode && (
-                  <button
-                    onClick={saveMask}
-                    className="p-3 transition-colors duration-200 hover:bg-gray-100 w-full text-xl bg-green-50 text-green-700"
-                    title="Save Mask"
-                  >
-                    <FontAwesomeIcon icon={faFloppyDisk} />
-                  </button>
-                )}
+              <div className="bg-white rounded-lg shadow-md overflow-hidden relative z-[9999] w-full">
+                <button
+                  onClick={saveMask}
+                  title="Save Mask"
+                  className="p-3 w-full text-xl transition-colors hover:bg-gray-100 bg-green-50 text-green-700"
+                >
+                  <FontAwesomeIcon icon={faFloppyDisk} />
+                </button>
               </div>
             )}
           </div>
