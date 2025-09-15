@@ -68,8 +68,11 @@ app.use("/api/pins", pinRoute);
 app.use("/api/mask", maskRoute);
 app.use("/api/itineraries", itineraryRoute);
 app.use("/api/photobooth/filters", photoboothFilterRoute);
-app.use("/uploads", express.static("uploads"));
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(
+  "/uploads/profile",
+  express.static(path.join(__dirname, "uploads/profile"))
+);
 
 // // Serve frontend in production +++
 // if (process.env.NODE_ENV === "production") {

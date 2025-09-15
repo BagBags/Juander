@@ -4,6 +4,7 @@ const mongoSanitize = require("express-mongo-sanitize");
 const router = express.Router();
 const authController = require("../controllers/authController");
 const { verifyToken } = require("../middleware/authMiddleware");
+const upload = require("../middleware/upload");
 const User = require("../models/userModel");
 // Apply mongo-sanitize globally for this route file
 // router.use(mongoSanitize());
@@ -145,6 +146,14 @@ router.get("/me", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Upload Profile Picture Route
+router.post(
+  "/upload-profile-picture",
+  verifyToken,
+  upload.single("profilePicture"),
+  authController.uploadProfilePicture
+);
 
 // Update account info (firstName, lastName, email, password)
 router.put(

@@ -1,33 +1,29 @@
 import React, { useEffect, useState } from "react";
-import { FaUser, FaBirthdayCake, FaVenusMars } from "react-icons/fa";
+import { FaUser, FaBirthdayCake, FaVenusMars, FaCamera } from "react-icons/fa";
 import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import BackHeader from "./BackHeader"; // Adjust path if needed
+import axios from "axios";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  // Load user from localStorage
   useEffect(() => {
     const loadUser = () => {
       const storedUser = localStorage.getItem("user");
       if (storedUser) setCurrentUser(JSON.parse(storedUser));
     };
 
-    // Initial load
     loadUser();
-
-    // Listen for changes from Account.jsx
     window.addEventListener("storage", loadUser);
-
-    return () => {
-      window.removeEventListener("storage", loadUser);
-    };
+    return () => window.removeEventListener("storage", loadUser);
   }, []);
 
   const options = [
@@ -42,10 +38,57 @@ export default function ProfilePage() {
     { icon: <MdLanguage />, label: t("language"), to: "/Profile/Language" },
   ];
 
+  // Handle profile picture upload
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => setPreviewImage(reader.result);
+    reader.readAsDataURL(file);
+
+    try {
+      const formData = new FormData();
+      formData.append("profilePicture", file);
+
+      // get token from either sessionStorage or localStorage (like Birthday.jsx)
+      const token =
+        sessionStorage.getItem("token") || localStorage.getItem("token");
+      if (!token) {
+        alert("Not logged in");
+        return;
+      }
+
+      // ✅ Use proxy-friendly relative path (/api)
+      const res = await axios.post(
+        "/api/auth/upload-profile-picture",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Update local user + storage
+      const updatedUser = {
+        ...currentUser,
+        profilePicture: res.data.profilePicture,
+      };
+      setCurrentUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch (err) {
+      console.error("Upload failed:", err.response?.data || err.message);
+      alert("Failed to upload profile picture.");
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/"); // Redirect to login/homepage
+    navigate("/");
   };
 
   return (
@@ -58,14 +101,44 @@ export default function ProfilePage() {
     >
       <div className="w-full max-w-md">
         {/* Profile Card */}
-        <div className="mt-4 w-full bg-[#f04e37] rounded-2xl p-6 flex items-center text-white">
-          <img
-            src={
-              currentUser?.profilePicture || "https://i.pravatar.cc/100?img=68"
-            }
-            alt="Profile"
-            className="w-30 h-30 rounded-full border-4 border-white object-cover mr-6"
-          />
+        <div className="mt-4 w-full bg-[#f04e37] rounded-2xl p-6 flex items-center text-white gap-6">
+          <div className="relative flex-shrink-0 w-24 h-24 md:w-28 md:h-28">
+            <img
+              src={
+                previewImage
+                  ? previewImage
+                  : currentUser?.authProvider === "google"
+                  ? currentUser?.profilePicture
+                  : currentUser?.profilePicture
+                  ? currentUser.profilePicture.startsWith("http")
+                    ? currentUser.profilePicture
+                    : `http://localhost:5000${currentUser.profilePicture}`
+                  : "https://i.pravatar.cc/100?img=68"
+              }
+              alt="Profile"
+              className="w-full h-full rounded-full border-4 border-white object-cover"
+            />
+
+            {/* Upload button */}
+            {currentUser?.authProvider === "local" && (
+              <>
+                <label
+                  htmlFor="profileUpload"
+                  className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-white text-[#f04e37] p-2 rounded-full shadow cursor-pointer hover:bg-gray-100 transition"
+                >
+                  <FaCamera className="w-3 h-3 md:w-4 md:h-4" />
+                </label>
+                <input
+                  id="profileUpload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </>
+            )}
+          </div>
+
           <div>
             <p className="text-base">{t("welcome")}</p>
             <h1 className="text-3xl font-bold leading-tight">
@@ -93,7 +166,7 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Intramuros Illustration */}
+        {/* Illustration */}
         <div className="w-full mt-6 relative">
           <img
             src="your-intramuros-image.png"

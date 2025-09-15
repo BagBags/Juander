@@ -4,6 +4,9 @@ const userSchema = new mongoose.Schema(
   {
     firstName: String,
     lastName: String,
+    profilePicture: {
+      type: String, // URL to the uploaded image
+    },
     email: { type: String, required: true, unique: true },
     password: {
       type: String,

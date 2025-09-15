@@ -294,6 +294,7 @@ exports.login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         authProvider: user.authProvider,
+        profilePicture: user.profilePicture || null, // ✅ include profilePicture
         language: user.language || "en",
       },
     });
@@ -313,7 +314,7 @@ exports.googleLogin = async (req, res) => {
     });
 
     const payload = ticket.getPayload();
-    const { email, name, sub: googleId } = payload;
+    const { email, name, picture, sub: googleId } = payload;
 
     const [firstName, ...lastNameParts] = name.split(" ");
     const lastName = lastNameParts.join(" ");
@@ -327,12 +328,19 @@ exports.googleLogin = async (req, res) => {
         firstName: firstName || "",
         lastName: lastName || "",
         email,
-        password: await argon2.hash(googleId),
+        password: await argon2.hash(googleId), // store hashed sub
         role: isSuperAdmin ? "admin" : "tourist",
         authProvider: "google",
+        profilePicture: picture, // ✅ save google picture
       });
-    } else if (isSuperAdmin && user.role !== "admin") {
-      user.role = "admin";
+    } else {
+      // always keep Google picture in sync
+      if (user.authProvider === "google") {
+        user.profilePicture = picture;
+      }
+      if (isSuperAdmin && user.role !== "admin") {
+        user.role = "admin";
+      }
       await user.save();
     }
 
@@ -357,6 +365,7 @@ exports.googleLogin = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         authProvider: user.authProvider,
+        profilePicture: user.profilePicture, // ✅ return it
         language: user.language || "en",
       },
     });
@@ -394,6 +403,36 @@ exports.verifyOtp = async (req, res) => {
     res
       .status(500)
       .json({ message: "Verification failed", error: err.message });
+  }
+};
+
+// Upload profile picture
+exports.uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.authProvider === "google") {
+      return res.status(403).json({
+        message: "Google users cannot change their profile picture here",
+      });
+    }
+
+    // ✅ Always save full relative path in DB
+    user.profilePicture = `/uploads/profile/${req.file.filename}`;
+    await user.save();
+
+    res.json({
+      message: "Profile picture updated successfully",
+      profilePicture: user.profilePicture, // already has correct path
+    });
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
