@@ -31,10 +31,10 @@ export default function EmergencyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f04e37] flex flex-col items-center text-sm relative px-4 md:px-0 text-white">
+    <div className="min-h-screen  flex flex-col items-center text-sm relative px-4 md:px-0 text-white ">
       <div className="w-full max-w-xl">
         {/* Sticky Back Header */}
-        <div className="pt-4 sticky top-0 bg-[#f04e37] z-20">
+        <div className="pt-4 sticky top-0 text-black z-20 w-full">
           <BackHeader title="Emergency Hotlines" />
         </div>
 

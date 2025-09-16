@@ -19,6 +19,8 @@ import {
   faFloppyDisk,
   faCheck,
   faTrash,
+  faMapPin,
+  faKeyboard,
 } from "@fortawesome/free-solid-svg-icons";
 
 // ---------- Axios instance ----------
@@ -54,7 +56,8 @@ export default function AdminTourMapMain() {
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
-
+  const [showAddPinModal, setShowAddPinModal] = useState(false);
+  const [showManualAdd, setShowManualAdd] = useState(false);
   // ---------- Helpers ----------
   const notify = (type, message) => {
     setNotif({ type, message });
@@ -346,6 +349,36 @@ export default function AdminTourMapMain() {
           </div>
         )}
 
+        {/* Pin Mode Indicator - Always visible when active, not inside modal */}
+        {isAddingPin && (
+          <>
+            {/* Top card: Pin mode active */}
+            <div className="absolute top-3 left-3 z-[10000] bg-blue-100 border border-blue-300 px-3 py-2 rounded-lg shadow-md">
+              <div className="flex items-center">
+                <FontAwesomeIcon
+                  icon={faMapPin}
+                  className="text-blue-600 mr-2"
+                />
+                <span className="text-blue-700 font-medium">
+                  Pin mode active
+                </span>
+                <button
+                  onClick={() => setIsAddingPin(false)}
+                  className="ml-3 text-blue-700 hover:text-blue-900"
+                  title="Exit Pin Mode"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom card: hint */}
+            <div className="absolute top-16 left-3 z-[10000] bg-white border border-gray-200 px-3 py-2 rounded-lg shadow-md">
+              <p className="text-sm text-gray-700">Tap the map to add a pin</p>
+            </div>
+          </>
+        )}
+
         {/* Map */}
         <Map
           ref={adminMapRef}
@@ -582,6 +615,199 @@ export default function AdminTourMapMain() {
             </form>
           </div>
         )}
+
+        {/* Add Pin Modal */}
+        {showAddPinModal && (
+          <div className="absolute top-6 left-160 w-[380px] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 rounded-t-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-lg font-semibold text-gray-800">Add Pin</h2>
+              <button
+                onClick={() => setShowAddPinModal(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Add Pin Options */}
+            <div className="p-5 space-y-4">
+              <button
+                onClick={() => setIsAddingPin(true)}
+                className={`w-full p-4 border-2 rounded-xl text-left transition-all duration-200 ${
+                  isAddingPin
+                    ? "border-blue-400 bg-blue-50 shadow-md"
+                    : "border-gray-200 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 hover:from-blue-50 hover:to-indigo-50"
+                }`}
+              >
+                <div className="flex items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                      isAddingPin ? "bg-blue-100" : "bg-blue-50"
+                    }`}
+                  >
+                    <FontAwesomeIcon
+                      icon={faMapPin}
+                      className={
+                        isAddingPin ? "text-blue-600" : "text-blue-500"
+                      }
+                    />
+                  </div>
+                  <div>
+                    <h3
+                      className={`font-medium ${
+                        isAddingPin ? "text-blue-700" : "text-gray-800"
+                      }`}
+                    >
+                      Tap to place
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Activate pin adding when tapping on the map
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setShowManualAdd(true)}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl text-left bg-gradient-to-r from-green-50/50 to-teal-50/50 hover:from-green-50 hover:to-teal-50 transition-all duration-200"
+              >
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-3">
+                    <FontAwesomeIcon
+                      icon={faKeyboard}
+                      className="text-green-500"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-800">Manual Add</h3>
+                    <p className="text-sm text-gray-500">
+                      Add pin by entering coordinates manually
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Manual Add Modal */}
+        {showManualAdd && (
+          <div className="absolute top-6 left-6 w-[380px] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 rounded-t-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+              <button
+                onClick={() => {
+                  setShowManualAdd(false);
+                  setShowAddPinModal(true);
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+                title="Back to Add Pin"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Add Pin by Coordinates
+              </h2>
+              <button
+                onClick={() => {
+                  setShowManualAdd(false);
+                  setShowAddPinModal(false);
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Manual Input Form */}
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="Latitude"
+                  value={manualCoords.lat}
+                  onChange={(e) =>
+                    setManualCoords((prev) => ({
+                      ...prev,
+                      lat: e.target.value,
+                    }))
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="Longitude"
+                  value={manualCoords.lng}
+                  onChange={(e) =>
+                    setManualCoords((prev) => ({
+                      ...prev,
+                      lng: e.target.value,
+                    }))
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  addPinFromCoords();
+                  setShowManualAdd(false);
+                  setShowAddPinModal(false);
+                }}
+                className="w-full px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
+              >
+                <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                Add Pin
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Floating Toolbar */}
         <div className="absolute top-6 right-6 z-[9999] flex items-end space-x-3">
           {/* Map Legend Panel */}
@@ -598,39 +824,6 @@ export default function AdminTourMapMain() {
             </div>
           )}
 
-          {/* Manual Pin Input */}
-          <div className="bg-white rounded-lg shadow-md p-3 w-60 space-y-2">
-            <h4 className="text-sm font-semibold text-gray-700">
-              Add Pin by Coordinates
-            </h4>
-            <input
-              type="number"
-              step="any"
-              placeholder="Latitude"
-              value={manualCoords.lat}
-              onChange={(e) =>
-                setManualCoords((prev) => ({ ...prev, lat: e.target.value }))
-              }
-              className="w-full border border-gray-200 rounded-lg p-2 text-sm"
-            />
-            <input
-              type="number"
-              step="any"
-              placeholder="Longitude"
-              value={manualCoords.lng}
-              onChange={(e) =>
-                setManualCoords((prev) => ({ ...prev, lng: e.target.value }))
-              }
-              className="w-full border border-gray-200 rounded-lg p-2 text-sm"
-            />
-            <button
-              onClick={addPinFromCoords}
-              className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Add Pin
-            </button>
-          </div>
-
           {/* Toolbar + Save Mask */}
           <div className="flex flex-col items-end space-y-2">
             {/* Toolbar Core */}
@@ -646,15 +839,15 @@ export default function AdminTourMapMain() {
                 <FontAwesomeIcon icon={faInfo} />
               </button>
 
-              {/* Pin Mode Toggle */}
+              {/* Pin Mode Toggle - Now opens modal */}
               <button
-                onClick={() => setIsAddingPin(!isAddingPin)}
-                title={isAddingPin ? "Exit Pin Mode" : "Add Pin"}
+                onClick={() => setShowAddPinModal(true)}
+                title="Add Pin"
                 className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
-                  isAddingPin ? "bg-red-50 text-red-600" : "text-gray-700"
+                  isAddingPin ? "bg-blue-50 text-blue-600" : "text-gray-700"
                 }`}
               >
-                <FontAwesomeIcon icon={isAddingPin ? faXmark : faPlus} />
+                <FontAwesomeIcon icon={isAddingPin ? faMapPin : faPlus} />
               </button>
 
               {/* Mask Mode Toggle */}
