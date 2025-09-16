@@ -4,35 +4,37 @@ const router = express.Router();
 const Log = require("../models/logModel");
 const BotEntry = require("../models/botEntryModel");
 
-// Helper: split multi-word keywords into single words, lowercase and trim
+// Helper: get admin name
 function getAdminName(req) {
   return req.user
     ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
     : "Unknown Admin";
 }
 
+// Helper: normalize keywords
 function processKeywords(keywords) {
   if (!keywords || !Array.isArray(keywords)) return [];
   return keywords
-    .flatMap((k) => k.split(/\s+/)) // split multi-word keywords
+    .flatMap((k) => k.split(/\s+/))
     .map((k) => k.trim().toLowerCase())
     .filter((k) => k.length > 0);
 }
 
-// GET all entries
+// GET all entries (with tags populated)
 router.get("/", async (req, res) => {
   try {
-    const entries = await BotEntry.find().sort({ createdAt: -1 });
-
+    const entries = await BotEntry.find()
+      .populate("tags", "name")
+      .sort({ createdAt: -1 });
     res.json(entries);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// POST create new info entry
+// POST create new entry
 router.post("/", async (req, res) => {
-  const { info_en, info_fil, keywords } = req.body;
+  const { info_en, info_fil, keywords, tags } = req.body;
 
   if (!info_en) {
     return res
@@ -44,17 +46,15 @@ router.post("/", async (req, res) => {
     const newEntry = new BotEntry({
       info_en: info_en.trim(),
       info_fil: info_fil ? info_fil.trim() : "",
-      keywords: Array.isArray(keywords) ? keywords.map((k) => k.trim()) : [],
+      keywords: processKeywords(keywords),
+      tags: Array.isArray(tags) ? tags : [], // expecting array of tag IDs
     });
 
     await newEntry.save();
 
-    // Log action
     await Log.create({
       adminName: getAdminName(req),
-      action: `Created chatbot entry with keywords: ${newEntry.keywords.join(
-        ", "
-      )}`,
+      action: `Created chatbot entry with tags: ${newEntry.tags.join(", ")}`,
     });
 
     res.status(201).json(newEntry);
@@ -65,7 +65,7 @@ router.post("/", async (req, res) => {
 
 // PUT update entry
 router.put("/:id", async (req, res) => {
-  const { info_en, info_fil, keywords } = req.body;
+  const { info_en, info_fil, keywords, tags } = req.body;
   try {
     const entry = await BotEntry.findById(req.params.id);
     if (!entry) return res.status(404).json({ message: "Entry not found" });
@@ -73,10 +73,10 @@ router.put("/:id", async (req, res) => {
     if (info_en) entry.info_en = info_en.trim();
     if (info_fil) entry.info_fil = info_fil.trim();
     if (keywords) entry.keywords = processKeywords(keywords);
+    if (tags) entry.tags = Array.isArray(tags) ? tags : [];
 
     await entry.save();
 
-    // Log action
     await Log.create({
       adminName: getAdminName(req),
       action: `Updated chatbot entry (ID: ${entry._id})`,
@@ -101,7 +101,6 @@ router.delete("/:id", async (req, res) => {
 
     await BotEntry.deleteOne({ _id: id });
 
-    // Log action
     await Log.create({
       adminName: getAdminName(req),
       action: `Deleted chatbot entry with keywords: ${entry.keywords.join(

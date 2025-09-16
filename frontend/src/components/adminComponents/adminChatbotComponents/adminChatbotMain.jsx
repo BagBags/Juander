@@ -2,59 +2,85 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function AdminChatbot() {
+  // --- States ---
   const [entries, setEntries] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [filterTags, setFilterTags] = useState([]);
   const [form, setForm] = useState({
     info_en: "",
     info_fil: "",
     keywords: "",
+    tags: [],
   });
+  const [tagName, setTagName] = useState("");
   const [editId, setEditId] = useState(null);
-  const API_BASE = "/api/admin/bot";
+  const [editTagId, setEditTagId] = useState(null);
 
-  // Helper to get auth header
+  // --- API ---
+  const API_BASE = "/api/admin/bot";
+  const TAG_API_BASE = "/api/admin/tags";
+
   const getAuthHeader = () => {
-    const token = localStorage.getItem("token"); // Adjust if your token key is different
+    const token = localStorage.getItem("token");
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  // --- Init Fetch ---
   useEffect(() => {
     fetchEntries();
+    fetchTags();
   }, []);
 
   const fetchEntries = async () => {
     try {
-      const res = await axios.get(API_BASE, {
-        headers: getAuthHeader(),
-      });
+      const res = await axios.get(API_BASE, { headers: getAuthHeader() });
       setEntries(res.data);
-    } catch (err) {
-      alert(
-        err.response?.data?.message ||
-          "Error fetching entries. Are you logged in as admin?"
-      );
+    } catch {
+      alert("Error fetching entries.");
     }
   };
 
-  const handleChange = (e) => {
+  const fetchTags = async () => {
+    try {
+      const res = await axios.get(TAG_API_BASE, { headers: getAuthHeader() });
+      setTags(res.data);
+    } catch {
+      alert("Error fetching tags.");
+    }
+  };
+
+  // --- Form Handlers ---
+  const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleTagCheckbox = (id) => {
+    setForm((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(id)
+        ? prev.tags.filter((t) => t !== id)
+        : [...prev.tags, id],
+    }));
+  };
+
+  const handleFilterCheckbox = (id) => {
+    setFilterTags((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const payload = {
       info_en: form.info_en.trim(),
       info_fil: form.info_fil.trim(),
       keywords: form.keywords
         .split(",")
         .map((k) => k.trim())
-        .filter((k) => k),
+        .filter(Boolean),
+      tags: form.tags,
     };
 
-    if (!payload.info_en) {
-      alert("English information is required");
-      return;
-    }
+    if (!payload.info_en) return alert("English information is required");
 
     try {
       if (editId) {
@@ -63,21 +89,12 @@ export default function AdminChatbot() {
         });
         setEditId(null);
       } else {
-        await axios.post(API_BASE, payload, {
-          headers: getAuthHeader(),
-        });
+        await axios.post(API_BASE, payload, { headers: getAuthHeader() });
       }
-      setForm({
-        info_en: "",
-        info_fil: "",
-        keywords: "",
-      });
+      setForm({ info_en: "", info_fil: "", keywords: "", tags: [] });
       fetchEntries();
-    } catch (err) {
-      alert(
-        err.response?.data?.message ||
-          "Error saving entry. Are you logged in as admin?"
-      );
+    } catch {
+      alert("Error saving entry.");
     }
   };
 
@@ -87,131 +104,322 @@ export default function AdminChatbot() {
       info_en: entry.info_en || "",
       info_fil: entry.info_fil || "",
       keywords: entry.keywords.join(", "),
+      tags: entry.tags
+        ? entry.tags.map((t) => (typeof t === "string" ? t : t._id))
+        : [],
     });
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this entry?")) return;
-
     try {
-      await axios.delete(`${API_BASE}/${id}`, {
-        headers: getAuthHeader(),
-      });
+      await axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeader() });
       fetchEntries();
-    } catch (err) {
-      console.error("Error deleting entry:", err);
-      if (err.response) {
-        console.error("Response status:", err.response.status);
-        console.error("Response data:", err.response.data);
-        alert(
-          err.response.data.message ||
-            "Error deleting entry. Are you logged in as admin?"
-        );
-      } else {
-        alert("Network or server error deleting entry.");
-      }
+    } catch {
+      alert("Error deleting entry.");
     }
   };
 
-  return (
-    <section>
-      <h2 className="text-4xl font-bold mb-4 text-[#f04e37]">
-        Manage Chatbot Knowledge Base
-      </h2>
-      <div className="p-4 max-w-3xl mx-auto">
-        <form
-          onSubmit={handleSubmit}
-          className="mb-6 space-y-4 bg-white p-4 rounded shadow"
-        >
-          <div>
-            <label>Information (English) *</label>
-            <textarea
-              name="info_en"
-              value={form.info_en}
-              onChange={handleChange}
-              required
-              rows={6}
-              className="w-full border p-2 rounded"
-            />
-          </div>
-          <div>
-            <label>Information (Filipino)</label>
-            <textarea
-              name="info_fil"
-              value={form.info_fil}
-              onChange={handleChange}
-              rows={6}
-              className="w-full border p-2 rounded"
-            />
-          </div>
-          <div>
-            <label>Keywords (comma separated)</label>
-            <input
-              name="keywords"
-              value={form.keywords}
-              onChange={handleChange}
-              className="w-full border p-2 rounded"
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-[#f04e37] text-white px-4 py-2 rounded hover:bg-[#d03b27]"
-          >
-            {editId ? "Update Entry" : "Add Entry"}
-          </button>
-          {editId && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditId(null);
-                setForm({
-                  info_en: "",
-                  info_fil: "",
-                  keywords: "",
-                });
-              }}
-              className="ml-4 px-4 py-2 border rounded"
-            >
-              Cancel
-            </button>
-          )}
-        </form>
+  // --- Tag CRUD ---
+  const handleTagSubmit = async (e) => {
+    e.preventDefault();
+    if (!tagName.trim()) return alert("Tag name required");
 
-        <div className="space-y-4">
-          {entries.map((entry) => (
-            <div key={entry._id} className="bg-white p-4 rounded shadow">
-              <p>
-                <strong>Information (EN):</strong>
+    try {
+      if (editTagId) {
+        await axios.put(
+          `${TAG_API_BASE}/${editTagId}`,
+          { name: tagName.trim() },
+          { headers: getAuthHeader() }
+        );
+        setEditTagId(null);
+      } else {
+        await axios.post(
+          TAG_API_BASE,
+          { name: tagName.trim() },
+          { headers: getAuthHeader() }
+        );
+      }
+      setTagName("");
+      fetchTags();
+    } catch {
+      alert("Error saving tag.");
+    }
+  };
+
+  const handleTagEdit = (tag) => {
+    setEditTagId(tag._id);
+    setTagName(tag.name);
+  };
+
+  const handleTagDelete = async (id) => {
+    if (!window.confirm("Delete this tag?")) return;
+    try {
+      await axios.delete(`${TAG_API_BASE}/${id}`, { headers: getAuthHeader() });
+      fetchTags();
+    } catch {
+      alert("Error deleting tag.");
+    }
+  };
+
+  // --- Filtered Entries ---
+  const filteredEntries =
+    filterTags.length === 0
+      ? entries
+      : entries.filter((entry) =>
+          entry.tags?.some((t) =>
+            filterTags.includes(typeof t === "string" ? t : t._id)
+          )
+        );
+
+  // --- Render ---
+  return (
+    <section className="p-6 bg-gray-50 min-h-screen">
+      <h2 className="text-3xl font-bold mb-8 text-gray-800">Admin Panel</h2>
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Left: Knowledge Base Entries */}
+        <div className="flex-1 space-y-6">
+          <h3 className="text-xl font-semibold text-gray-700">
+            Chatbot Knowledge Base
+          </h3>
+
+          {/* Tag Filter */}
+          <div className="bg-white p-4 rounded-xl shadow-sm">
+            <h4 className="font-medium mb-2 text-gray-600">Filter by Tags</h4>
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <label
+                  key={tag._id}
+                  className="flex items-center gap-1 text-sm text-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={filterTags.includes(tag._id)}
+                    onChange={() => handleFilterCheckbox(tag._id)}
+                  />
+                  {tag.name}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Entries List */}
+          {filteredEntries.map((entry) => (
+            <div
+              key={entry._id}
+              className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
+            >
+              <p className="font-semibold text-gray-800">Information (EN):</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {entry.info_en}
               </p>
-              <p className="whitespace-pre-wrap">{entry.info_en}</p>
 
               {entry.info_fil && (
                 <>
-                  <p className="mt-2">
-                    <strong>Information (FIL):</strong>
+                  <p className="mt-3 font-semibold text-gray-800">
+                    Information (FIL):
                   </p>
-                  <p className="whitespace-pre-wrap">{entry.info_fil}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap">
+                    {entry.info_fil}
+                  </p>
                 </>
               )}
-              <p className="mt-2">
-                <strong>Keywords:</strong> {entry.keywords.join(", ")}
-              </p>
-              <div className="mt-2 space-x-2">
+
+              <div className="mt-3">
+                <span className="font-semibold text-gray-800">Keywords:</span>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {entry.keywords.map((kw, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <span className="font-semibold text-gray-800">Tags:</span>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {entry.tags && entry.tags.length > 0 ? (
+                    entry.tags.map((t) => (
+                      <span
+                        key={typeof t === "string" ? t : t._id}
+                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs"
+                      >
+                        {t.name ? t.name : t}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 text-sm">None</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => handleEdit(entry)}
-                  className="bg-blue-600 text-white px-3 py-1 rounded"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(entry._id)}
-                  className="bg-red-600 text-white px-3 py-1 rounded"
+                  className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm"
                 >
                   Delete
                 </button>
               </div>
             </div>
           ))}
+
+          {filteredEntries.length === 0 && (
+            <p className="text-gray-500">No entries found.</p>
+          )}
+        </div>
+
+        {/* Right: Entry Form + Tag Management */}
+        <div className="w-full lg:w-96 space-y-8 lg:sticky lg:top-6 self-start">
+          {/* Entry Form */}
+          <div className="bg-white p-5 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">
+              {editId ? "Edit Entry" : "Add Entry"}
+            </h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <textarea
+                name="info_en"
+                value={form.info_en}
+                onChange={handleChange}
+                placeholder="Information (English)*"
+                rows={4}
+                required
+                className="w-full border rounded-lg p-2 text-sm"
+              />
+              <textarea
+                name="info_fil"
+                value={form.info_fil}
+                onChange={handleChange}
+                placeholder="Information (Filipino)"
+                rows={4}
+                className="w-full border rounded-lg p-2 text-sm"
+              />
+              <input
+                name="keywords"
+                value={form.keywords}
+                onChange={handleChange}
+                placeholder="Keywords (comma separated)"
+                className="w-full border rounded-lg p-2 text-sm"
+              />
+
+              {/* Tags selection */}
+              <div>
+                <p className="font-medium text-gray-700 text-sm mb-2">Tags</p>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <label
+                      key={tag._id}
+                      className="flex items-center gap-1 text-sm text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.tags.includes(tag._id)}
+                        onChange={() => handleTagCheckbox(tag._id)}
+                      />
+                      {tag.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#f04e37] hover:bg-[#d03b27] text-white py-2 rounded-lg text-sm"
+                >
+                  {editId ? "Update" : "Add"}
+                </button>
+                {editId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditId(null);
+                      setForm({
+                        info_en: "",
+                        info_fil: "",
+                        keywords: "",
+                        tags: [],
+                      });
+                    }}
+                    className="flex-1 border py-2 rounded-lg text-sm"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Tag Management */}
+          <div className="bg-white p-5 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">
+              Manage Tags
+            </h3>
+            <form onSubmit={handleTagSubmit} className="flex gap-2 mb-4">
+              <input
+                value={tagName}
+                onChange={(e) => setTagName(e.target.value)}
+                placeholder="Tag name"
+                className="border p-2 rounded-lg flex-1 text-sm"
+              />
+              <button
+                type="submit"
+                className="bg-[#f04e37] hover:bg-[#d03b27] text-white px-4 rounded-lg text-sm"
+              >
+                {editTagId ? "Update" : "Add"}
+              </button>
+              {editTagId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditTagId(null);
+                    setTagName("");
+                  }}
+                  className="px-3 border rounded-lg text-sm"
+                >
+                  Cancel
+                </button>
+              )}
+            </form>
+
+            {/* Scrollable tag list */}
+            <ul className="space-y-2 max-h-60 overflow-y-auto pr-2">
+              {tags.map((tag) => (
+                <li
+                  key={tag._id}
+                  className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg"
+                >
+                  <span className="text-sm text-gray-700">{tag.name}</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleTagEdit(tag)}
+                      className="text-blue-600 text-sm hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleTagDelete(tag._id)}
+                      className="text-red-600 text-sm hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>
