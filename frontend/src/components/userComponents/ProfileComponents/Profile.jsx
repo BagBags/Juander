@@ -40,6 +40,8 @@ export default function ProfilePage() {
 
   // Handle profile picture upload
   const handleFileChange = async (e) => {
+    if (currentUser?.authProvider !== "local") return;
+
     const file = e.target.files[0];
     if (!file) return;
 
@@ -72,11 +74,14 @@ export default function ProfilePage() {
         }
       );
 
-      // Update local user + storage
+      // ✅ Append timestamp to force browser to fetch new image
+      const newProfilePic = `${res.data.profilePicture}?t=${Date.now()}`;
+
       const updatedUser = {
         ...currentUser,
-        profilePicture: res.data.profilePicture,
+        profilePicture: newProfilePic,
       };
+
       setCurrentUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
     } catch (err) {

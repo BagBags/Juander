@@ -31,26 +31,39 @@
 
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
-// Storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (req.baseUrl.includes("auth")) {
-      // ✅ Profile pictures folder
-      cb(null, "uploads/profile");
+      cb(null, "uploads/profile"); // Profile pics folder
     } else {
-      // ✅ Photobooth folder (unchanged)
-      cb(null, "uploads/photobooth");
+      cb(null, "uploads/photobooth"); // Photobooth folder
     }
   },
   filename: (req, file, cb) => {
     if (req.baseUrl.includes("auth")) {
-      // ✅ Profile pics → avoid overwriting, keep extension
+      const uploadDir = "uploads/profile";
+
+      // Delete any previous profile picture(s) for this user
+      fs.readdir(uploadDir, (err, files) => {
+        if (!err) {
+          const userFiles = files.filter((f) => f.startsWith(req.user.id));
+          userFiles.forEach((f) => {
+            try {
+              fs.unlinkSync(path.join(uploadDir, f));
+            } catch (unlinkErr) {
+              console.error("Failed to delete old profile pic:", unlinkErr);
+            }
+          });
+        }
+      });
+
+      // Save new file as <userId>.<extension>
       const ext = path.extname(file.originalname);
-      const name = path.basename(file.originalname, ext);
-      cb(null, `${name}-${Date.now()}${ext}`);
+      cb(null, `${req.user.id}${ext}`);
     } else {
-      // ✅ Photobooth → keep original filename
+      // Photobooth: keep original filename
       cb(null, file.originalname);
     }
   },
@@ -59,7 +72,6 @@ const storage = multer.diskStorage({
 // File filter logic
 const fileFilter = (req, file, cb) => {
   if (req.baseUrl.includes("auth")) {
-    // ✅ Profile pictures: allow any image type
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
@@ -69,7 +81,6 @@ const fileFilter = (req, file, cb) => {
       );
     }
   } else {
-    // ✅ Photobooth unchanged: only PNG
     if (file.mimetype === "image/png") {
       cb(null, true);
     } else {

@@ -15,6 +15,9 @@ import i18n from "./i18n";
 import SignupForm from "./components/loginComponents/signupForm";
 import LoginPage from "./components/loginComponents/loginPage";
 
+// Contexts
+import { UserProvider } from "./contexts/UserContext";
+
 // Admin Side
 import AdminHome from "./components/adminComponents/adminHomeComponents/adminHome";
 import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
@@ -142,9 +145,11 @@ export default function App() {
   }, []);
   return (
     <I18nextProvider i18n={i18n}>
-      <Router>
-        <AnimatedRoutes />
-      </Router>
+      <UserProvider>
+        <Router>
+          <AnimatedRoutes />
+        </Router>
+      </UserProvider>
     </I18nextProvider>
   );
 }
