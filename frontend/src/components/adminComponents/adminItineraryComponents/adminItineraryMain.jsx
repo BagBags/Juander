@@ -151,24 +151,34 @@ export default function AdminItineraryMain() {
           value={imageUrl}
           onChange={(e) => setImageUrl(e.target.value)}
           placeholder="Image URL"
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm outline-none"
         />
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Itinerary Name"
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm outline-none"
         />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description"
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none resize-none"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm outline-none resize-none"
         />
 
         {/* Selected Sites */}
-        <div className="p-3 border rounded-lg bg-gray-50 h-28 overflow-y-auto">
+        <div
+          className="p-3 border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm h-28 overflow-y-auto"
+        >
           {selectedSites.length ? (
             selectedSites.map((site) => (
               <span key={site._id} className="block text-gray-700 text-sm">
@@ -211,45 +221,57 @@ export default function AdminItineraryMain() {
           <h2 className="text-2xl font-bold text-gradient-red mb-4">
             Existing Itineraries
           </h2>
-          <div className="flex flex-col gap-4 overflow-y-auto max-h-[50vh]">
+
+          <div className="flex flex-col gap-4 max-h-[50vh] overflow-y-visible">
             {itineraries.length ? (
               itineraries.map((itinerary) => (
                 <div
                   key={itinerary._id}
-                  className="flex flex-col md:flex-row md:items-center justify-between gap-3 border rounded-xl p-4 hover:shadow-md transition"
+                  className="border border-gray-200 rounded-xl p-5 bg-white 
+             shadow-sm hover:shadow-lg transition"
                 >
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-red-500">
-                      {itinerary.name}
-                    </h3>
-                    <p className="text-gray-600 text-sm">
-                      {itinerary.description}
+                  {/* Title + Subtitle */}
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {itinerary.name}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {itinerary.description}
+                  </p>
+
+                  {/* Image */}
+                  {itinerary.imageUrl && (
+                    <img
+                      src={itinerary.imageUrl}
+                      alt={itinerary.name}
+                      className="w-full h-48 object-cover rounded-xl mt-3"
+                    />
+                  )}
+
+                  {/* Sites */}
+                  {itinerary.sites?.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Sites: {itinerary.sites.length}
                     </p>
-                    {itinerary.imageUrl && (
-                      <img
-                        src={itinerary.imageUrl}
-                        alt={itinerary.name}
-                        className="w-full h-48 object-cover rounded-xl mt-2"
-                      />
-                    )}
-                    {itinerary.sites?.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Sites: {itinerary.sites.length}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mt-2 md:mt-0">
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3 mt-4">
                     <button
                       onClick={() => handleEdit(itinerary)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-lg shadow hover:from-red-600 hover:to-red-700 transition"
+                      className="flex items-center justify-center gap-2 px-4 py-2 
+              bg-blue-500 hover:bg-blue-600 
+              text-white text-sm font-medium rounded-lg shadow-sm transition"
                     >
-                      <Edit size={ICON_SIZE} /> Edit
+                      <Edit size={16} /> Edit
                     </button>
+
                     <button
                       onClick={() => handleDelete(itinerary._id)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-semibold rounded-lg shadow hover:from-gray-500 hover:to-gray-600 transition"
+                      className="flex items-center justify-center gap-2 px-4 py-2 
+              bg-red-500 hover:bg-red-600 
+              text-white text-sm font-medium rounded-lg shadow-sm transition"
                     >
-                      <Trash2 size={ICON_SIZE} /> Delete
+                      <Trash2 size={16} /> Delete
                     </button>
                   </div>
                 </div>
@@ -263,47 +285,59 @@ export default function AdminItineraryMain() {
           <h2 className="text-2xl font-bold text-gradient-red mt-6 mb-4">
             Sites
           </h2>
-          <div className="flex flex-col gap-4 max-h-[35vh] overflow-y-auto">
-            {pins.map((pin) => (
-              <div
-                key={pin._id}
-                className="flex items-center gap-4 border rounded-xl p-3 hover:shadow-md transition bg-yellow-50"
-              >
-                <img
-                  src={
-                    pin.mediaUrl ||
-                    pin.image ||
-                    "https://via.placeholder.com/80"
-                  }
-                  alt={pin.siteName || pin.title}
-                  className="object-cover rounded-xl"
-                  style={{ width: SITE_IMAGE_SIZE, height: SITE_IMAGE_SIZE }}
-                />
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-red-500">
-                    {pin.siteName || pin.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm">{pin.description}</p>
-                </div>
-                <button
-                  onClick={() => toggleSite(pin)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold shadow transition ${
-                    selectedSites.find((s) => s._id === pin._id)
-                      ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                      : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700"
-                  }`}
+
+          <div className="flex flex-col gap-4 max-h-[35vh] overflow-y-auto pr-2">
+            {pins.map((pin) => {
+              const isSelected = selectedSites.some((s) => s._id === pin._id);
+
+              return (
+                <div
+                  key={pin._id}
+                  className="flex items-center gap-4 rounded-2xl p-4 border border-gray-200 
+                   bg-white shadow-sm hover:shadow-md transition"
                 >
-                  {selectedSites.find((s) => s._id === pin._id) ? (
-                    <Check size={ICON_SIZE} />
-                  ) : (
-                    <Plus size={ICON_SIZE} />
-                  )}
-                  {selectedSites.find((s) => s._id === pin._id)
-                    ? "Added"
-                    : "Add"}
-                </button>
-              </div>
-            ))}
+                  {/* Thumbnail */}
+                  <img
+                    src={
+                      pin.mediaUrl ||
+                      pin.image ||
+                      "https://via.placeholder.com/80"
+                    }
+                    alt={pin.siteName || pin.title}
+                    className="object-cover rounded-xl flex-shrink-0"
+                    style={{ width: SITE_IMAGE_SIZE, height: SITE_IMAGE_SIZE }}
+                  />
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-gray-800 truncate">
+                      {pin.siteName || pin.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm line-clamp-2">
+                      {pin.description}
+                    </p>
+                  </div>
+
+                  {/* Action button */}
+                  <button
+                    onClick={() => toggleSite(pin)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition 
+            ${
+              isSelected
+                ? "bg-green-500 hover:bg-green-600"
+                : "bg-red-500 hover:bg-red-600"
+            }`}
+                  >
+                    {isSelected ? (
+                      <Check size={ICON_SIZE} />
+                    ) : (
+                      <Plus size={ICON_SIZE} />
+                    )}
+                    {isSelected ? "Added" : "Add"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

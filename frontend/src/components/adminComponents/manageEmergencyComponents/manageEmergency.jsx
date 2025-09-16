@@ -186,26 +186,46 @@ export default function ManageEmergency() {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className="bg-[#f04e37] text-white rounded-lg p-4 flex justify-between items-start mb-3"
+                            className="relative flex justify-between items-start mb-3 rounded-xl shadow-md hover:shadow-lg transition cursor-grab bg-[#f04e37] p-4"
                           >
-                            <div>
-                              <p className="font-bold text-lg">{agency.name}</p>
-                              {agency.contactChannels?.map((channel, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center gap-2 ml-1 text-sm"
-                                >
-                                  {channel.number.startsWith("http") ? (
-                                    <Link2 className="w-4 h-4 text-white" />
-                                  ) : (
-                                    <Phone className="w-4 h-4 text-white" />
-                                  )}
-                                  <span>
-                                    {channel.label}: {channel.number}
-                                  </span>
+                            <div className="flex gap-3">
+                              {/* ✅ Agency Icon */}
+                              {agency.icon ? (
+                                <img
+                                  src={agency.icon}
+                                  alt={agency.name}
+                                  className="w-12 h-12 rounded-full object-cover border border-white shadow-sm"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-[#f04e37] text-sm border shadow-sm">
+                                  🏢
                                 </div>
-                              ))}
+                              )}
+
+                              {/* ✅ Agency Info */}
+                              <div>
+                                <p className="font-semibold text-white text-lg">
+                                  {agency.name}
+                                </p>
+                                {agency.contactChannels?.map((channel, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center gap-2 ml-1 text-sm text-white/90"
+                                  >
+                                    {channel.number.startsWith("http") ? (
+                                      <Link2 className="w-4 h-4 text-white" />
+                                    ) : (
+                                      <Phone className="w-4 h-4 text-white" />
+                                    )}
+                                    <span>
+                                      {channel.label}: {channel.number}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
+
+                            {/* ✅ Edit/Delete */}
                             <UpdateEmergency
                               onEdit={() => handleEdit(agency)}
                               onDelete={() => handleDelete(agency._id)}

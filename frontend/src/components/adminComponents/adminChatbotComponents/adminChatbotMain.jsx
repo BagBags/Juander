@@ -281,10 +281,10 @@ export default function AdminChatbot() {
         </div>
 
         {/* Right: Entry Form + Tag Management */}
-        <div className="w-full lg:w-96 space-y-8 lg:sticky lg:top-6 self-start">
+        <div className="w-full lg:w-96 space-y-8 lg:sticky lg:top-6 self-start ">
           {/* Entry Form */}
-          <div className="bg-white p-5 rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold mb-4 text-gray-700">
+          <div className="bg-white p-5 rounded-xl shadow-sm ">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700 ">
               {editId ? "Edit Entry" : "Add Entry"}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -295,7 +295,9 @@ export default function AdminChatbot() {
                 placeholder="Information (English)*"
                 rows={4}
                 required
-                className="w-full border rounded-lg p-2 text-sm"
+                className="w-full border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm"
               />
               <textarea
                 name="info_fil"
@@ -303,14 +305,18 @@ export default function AdminChatbot() {
                 onChange={handleChange}
                 placeholder="Information (Filipino)"
                 rows={4}
-                className="w-full border rounded-lg p-2 text-sm"
+                className="w-full border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm"
               />
               <input
                 name="keywords"
                 value={form.keywords}
                 onChange={handleChange}
                 placeholder="Keywords (comma separated)"
-                className="w-full border rounded-lg p-2 text-sm"
+                className="w-full border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white p-2 text-sm"
               />
 
               {/* Tags selection */}
@@ -353,7 +359,10 @@ export default function AdminChatbot() {
                         tags: [],
                       });
                     }}
-                    className="flex-1 border py-2 rounded-lg text-sm"
+                    className="flex-1 py-2 rounded-lg text-sm font-medium 
+             border border-gray-300 text-gray-600 bg-white 
+             hover:bg-gray-100 hover:text-gray-700 
+             transition shadow-sm"
                   >
                     Cancel
                   </button>
@@ -372,7 +381,9 @@ export default function AdminChatbot() {
                 value={tagName}
                 onChange={(e) => setTagName(e.target.value)}
                 placeholder="Tag name"
-                className="border p-2 rounded-lg flex-1 text-sm"
+                className=" p-2 border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white flex-1 text-sm"
               />
               <button
                 type="submit"

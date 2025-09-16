@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Edit, Trash2, Plus, Check, X } from "lucide-react";
-
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 export default function ManagePhotobooth() {
   const [filters, setFilters] = useState([]);
   const [form, setForm] = useState({
@@ -138,17 +139,25 @@ export default function ManagePhotobooth() {
           value={form.name}
           onChange={handleChange}
           placeholder="Filter Name"
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
           required
         />
 
-        <input
-          type="file"
-          accept="image/png"
-          onChange={handleFileChange}
-          className="w-full p-3 border rounded-lg"
-          disabled={!!form.imageUrl}
-        />
+        <div className="w-full">
+          {!form.imageUrl ? (
+            <label className="flex flex-col items-center justify-center w-full h-13 px-4 border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+              <span className="text-gray-500 text-sm">Click to upload</span>
+
+              <input
+                type="file"
+                accept="image/png"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+          ) : (
+            <p className="text-sm text-green-600">Image uploaded ✓</p>
+          )}
+        </div>
 
         <input
           type="text"
@@ -156,22 +165,32 @@ export default function ManagePhotobooth() {
           value={form.imageUrl}
           onChange={handleChange}
           placeholder="Or paste image URL"
-          className="w-full p-3 border rounded-lg"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg 
+             focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none transition"
           disabled={!!form.imageFile}
         />
 
-        <select
-          name="category"
-          value={form.category}
-          onChange={handleChange}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-400 outline-none"
-        >
-          <option value="general">General</option>
-          <option value="head">Head</option>
-          <option value="eyes">Eyes</option>
-          <option value="frame">Frame</option>
-        </select>
+        <div className="relative w-full">
+          <select
+            name="category"
+            value={form.category}
+            onChange={handleChange}
+            className="w-full appearance-none p-3 border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white pr-10"
+          >
+            <option value="general">General</option>
+            <option value="head">Head</option>
+            <option value="eyes">Eyes</option>
+            <option value="frame">Frame</option>
+          </select>
 
+          {/* FontAwesome dropdown icon */}
+          <FontAwesomeIcon
+            icon={faChevronDown}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+          />
+        </div>
         <div className="flex gap-3 mt-2">
           <button
             type="submit"
@@ -227,7 +246,9 @@ export default function ManagePhotobooth() {
                     <img
                       src={filter.image}
                       alt={filter.name}
-                      className="h-14 w-14 object-contain rounded-lg border bg-gray-50"
+                      className="h-14 w-14 object-contain border-2 border-gray-300 rounded-lg 
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+               outline-none transition text-gray-700 bg-white"
                     />
                   </td>
                   <td className="p-3 font-medium text-gray-700">
