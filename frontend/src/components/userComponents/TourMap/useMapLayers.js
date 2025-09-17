@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import mapboxgl from "mapbox-gl";
 
-export default function useMapLayers(mapRef, pins, selectedPin, onPinClick) {
+export default function useMapLayers(mapRef, pins, selectedPin) {
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
     if (!map || !pins?.length) return;
@@ -39,14 +39,24 @@ export default function useMapLayers(mapRef, pins, selectedPin, onPinClick) {
 
         const merc = mapboxgl.MercatorCoordinate.fromLngLat(
           [pin.longitude, pin.latitude],
-          0
+          0 // altitude in meters
         );
 
+        // Convert to real-world meter scale
         const meterScale = merc.meterInMercatorCoordinateUnits();
-        const scale = meterScale * 30;
+        const scale = meterScale * 30; // adjust (30m tall)
         modelScene.scale.set(scale, scale, scale);
-        modelScene.position.set(merc.x, merc.y, merc.z);
-        modelScene.rotation.set(Math.PI / 2, 0, 0);
+
+        // Position model
+    // Position model
+modelScene.position.set(merc.x, merc.y, merc.z);
+
+// Reset rotation and properly orient for Mapbox (Z-up)
+modelScene.rotation.set(0, 0, 0);
+modelScene.rotation.x = Math.PI / 2; // Rotate -90° around X-axis
+
+// If your model is facing the wrong direction, you might also need:
+// modelScene.rotation.z = Math.PI; // 180° around Z-axis if facing wrong way
 
         const customLayer = {
           id: layerId,
@@ -56,16 +66,19 @@ export default function useMapLayers(mapRef, pins, selectedPin, onPinClick) {
             this.camera = new THREE.Camera();
             this.scene = new THREE.Scene();
 
-            this.scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+            // Lights
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(0, 70, 100).normalize();
+            this.scene.add(dirLight);
+            this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
             this.scene.add(modelScene);
 
             this.renderer = new THREE.WebGLRenderer({
               canvas: map.getCanvas(),
               context: gl,
               antialias: true,
-              alpha: true,
             });
-
             this.renderer.autoClear = false;
           },
           render: function (gl, matrix) {
@@ -80,7 +93,7 @@ export default function useMapLayers(mapRef, pins, selectedPin, onPinClick) {
         map.addLayer(customLayer);
       }
 
-      // 🔹 Invisible click layer
+      // 🔹 Add invisible click layer (GeoJSON with all pin points)
       const geojson = {
         type: "FeatureCollection",
         features: pins.map((pin) => ({
@@ -93,36 +106,20 @@ export default function useMapLayers(mapRef, pins, selectedPin, onPinClick) {
         })),
       };
 
-      if (!map.getSource("pins-click")) {
+      if (map.getSource("pins-click")) {
+        map.getSource("pins-click").setData(geojson);
+      } else {
         map.addSource("pins-click", { type: "geojson", data: geojson });
 
         map.addLayer({
           id: "pins-click-layer",
           type: "circle",
           source: "pins-click",
-          paint: { "circle-radius": 20, "circle-opacity": 0 },
+          paint: {
+            "circle-radius": 20, // bigger hitbox
+            "circle-opacity": 0, // invisible
+          },
         });
-      } else {
-        map.getSource("pins-click").setData(geojson);
-      }
-
-      // 🔹 Click handler
-      if (!map.__pinClickHandlerAdded) {
-        map.on("click", "pins-click-layer", (e) => {
-          if (!e.features?.length) return;
-          const clickedId = e.features[0].properties.id;
-          const clickedPin = pins.find((p) => p._id === clickedId);
-          if (clickedPin && onPinClick) onPinClick(clickedPin);
-        });
-
-        map.on("mouseenter", "pins-click-layer", () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", "pins-click-layer", () => {
-          map.getCanvas().style.cursor = "";
-        });
-
-        map.__pinClickHandlerAdded = true;
       }
     };
 
@@ -140,5 +137,5 @@ export default function useMapLayers(mapRef, pins, selectedPin, onPinClick) {
       if (map.getLayer("pins-click-layer")) map.removeLayer("pins-click-layer");
       if (map.getSource("pins-click")) map.removeSource("pins-click");
     };
-  }, [mapRef, pins, selectedPin, onPinClick]);
+  }, [mapRef, pins, selectedPin]);
 }
