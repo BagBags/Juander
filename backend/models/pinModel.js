@@ -10,6 +10,7 @@ const pinSchema = new mongoose.Schema(
     mediaType: { type: String, enum: ["image", "video"], default: "image" },
     arEnabled: { type: Boolean, default: false },
     arLink: { type: String },
+    glbUrl: { type: String },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
   { timestamps: true }

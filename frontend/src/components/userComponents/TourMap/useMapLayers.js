@@ -39,24 +39,15 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
 
         const merc = mapboxgl.MercatorCoordinate.fromLngLat(
           [pin.longitude, pin.latitude],
-          0 // altitude in meters
+          0
         );
 
-        // Convert to real-world meter scale
         const meterScale = merc.meterInMercatorCoordinateUnits();
-        const scale = meterScale * 30; // adjust (30m tall)
+        const scale = meterScale * 30; // 30m tall
         modelScene.scale.set(scale, scale, scale);
 
-        // Position model
-    // Position model
-modelScene.position.set(merc.x, merc.y, merc.z);
-
-// Reset rotation and properly orient for Mapbox (Z-up)
-modelScene.rotation.set(0, 0, 0);
-modelScene.rotation.x = Math.PI / 2; // Rotate -90° around X-axis
-
-// If your model is facing the wrong direction, you might also need:
-// modelScene.rotation.z = Math.PI; // 180° around Z-axis if facing wrong way
+        modelScene.position.set(merc.x, merc.y, merc.z);
+        modelScene.rotation.set(Math.PI / 2, 0, 0);
 
         const customLayer = {
           id: layerId,
@@ -71,17 +62,23 @@ modelScene.rotation.x = Math.PI / 2; // Rotate -90° around X-axis
             dirLight.position.set(0, 70, 100).normalize();
             this.scene.add(dirLight);
             this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
             this.scene.add(modelScene);
 
+            // ✅ Always prefer WebGL2 if available
+            const canvas = map.getCanvas();
+            const webgl2Context = canvas.getContext("webgl2");
+
             this.renderer = new THREE.WebGLRenderer({
-              canvas: map.getCanvas(),
-              context: gl,
+              canvas,
+              context: webgl2Context || gl, // fallback to Mapbox-provided GL
               antialias: true,
             });
+
             this.renderer.autoClear = false;
           },
+
           render: function (gl, matrix) {
+            if (!this.renderer) return;
             const m = new THREE.Matrix4().fromArray(matrix);
             this.camera.projectionMatrix = m;
             this.renderer.resetState();
@@ -93,7 +90,7 @@ modelScene.rotation.x = Math.PI / 2; // Rotate -90° around X-axis
         map.addLayer(customLayer);
       }
 
-      // 🔹 Add invisible click layer (GeoJSON with all pin points)
+      // 🔹 Invisible click layer
       const geojson = {
         type: "FeatureCollection",
         features: pins.map((pin) => ({
@@ -110,15 +107,11 @@ modelScene.rotation.x = Math.PI / 2; // Rotate -90° around X-axis
         map.getSource("pins-click").setData(geojson);
       } else {
         map.addSource("pins-click", { type: "geojson", data: geojson });
-
         map.addLayer({
           id: "pins-click-layer",
           type: "circle",
           source: "pins-click",
-          paint: {
-            "circle-radius": 20, // bigger hitbox
-            "circle-opacity": 0, // invisible
-          },
+          paint: { "circle-radius": 20, "circle-opacity": 0 },
         });
       }
     };

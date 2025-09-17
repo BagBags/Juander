@@ -1,34 +1,3 @@
-// const multer = require("multer");
-// const path = require("path");
-
-// // Storage config
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     // if uploading profile pictures
-//     if (req.baseUrl.includes("auth")) {
-//       cb(null, "uploads/profile"); // 👈 new folder for profile pics
-//     } else {
-//       cb(null, "uploads/photobooth"); // existing folder
-//     }
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, file.originalname); // keep original filename
-//   },
-// });
-
-// // Only allow PNGs
-// const fileFilter = (req, file, cb) => {
-//   if (file.mimetype === "image/png") {
-//     cb(null, true);
-//   } else {
-//     cb(new Error("Only .png files allowed!"), false);
-//   }
-// };
-
-// const upload = multer({ storage, fileFilter });
-
-// module.exports = upload;
-
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -37,6 +6,8 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (req.baseUrl.includes("auth")) {
       cb(null, "uploads/profile"); // Profile pics folder
+    } else if (req.baseUrl.includes("pins")) {
+      cb(null, "uploads/arModels"); // New folder for AR .glb models
     } else {
       cb(null, "uploads/photobooth"); // Photobooth folder
     }
@@ -63,7 +34,7 @@ const storage = multer.diskStorage({
       const ext = path.extname(file.originalname);
       cb(null, `${req.user.id}${ext}`);
     } else {
-      // Photobooth: keep original filename
+      // For photobooth and AR models: keep original filename
       cb(null, file.originalname);
     }
   },
@@ -72,6 +43,7 @@ const storage = multer.diskStorage({
 // File filter logic
 const fileFilter = (req, file, cb) => {
   if (req.baseUrl.includes("auth")) {
+    // Profile pics: only images
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
@@ -80,7 +52,18 @@ const fileFilter = (req, file, cb) => {
         false
       );
     }
+  } else if (req.baseUrl.includes("pins")) {
+    // AR models: only .glb files
+    if (
+      file.mimetype === "model/gltf-binary" ||
+      file.originalname.endsWith(".glb")
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only .glb files are allowed for AR models!"), false);
+    }
   } else {
+    // Photobooth: only PNG
     if (file.mimetype === "image/png") {
       cb(null, true);
     } else {

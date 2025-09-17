@@ -21,8 +21,6 @@ import {
   faTrash,
   faMapPin,
   faKeyboard,
-  faUpload,
-  faRotate,
 } from "@fortawesome/free-solid-svg-icons";
 
 // ---------- Axios instance ----------
@@ -34,88 +32,6 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
-
-// 3D Model Preview Component
-const ModelPreview = ({ glbUrl, onClose }) => {
-  const [rotation, setRotation] = useState(0);
-  const containerRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setStartX(e.clientX);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - startX;
-    setRotation((prev) => (prev + deltaX * 0.5) % 360);
-    setStartX(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (isDragging) setIsDragging(false);
-    };
-
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
-  }, [isDragging]);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-4 w-full max-w-2xl">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">3D Model Preview</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <FontAwesomeIcon icon={faXmark} size="lg" />
-          </button>
-        </div>
-
-        <div
-          ref={containerRef}
-          className="w-full h-96 bg-gray-100 rounded-lg relative flex items-center justify-center"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          style={{ cursor: isDragging ? "grabbing" : "grab" }}
-        >
-          <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-            <FontAwesomeIcon icon={faRotate} className="mr-2" />
-            Drag to rotate
-          </div>
-
-          <div className="text-center">
-            <div className="text-5xl mb-2">🧊</div>
-            <p className="text-gray-600">GLB Model Preview</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Rotation: {Math.round(rotation)}°
-            </p>
-            <p className="text-sm text-gray-500 mt-1 break-all">{glbUrl}</p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function AdminTourMapMain() {
   const [viewState, setViewState] = useState({
@@ -137,8 +53,6 @@ export default function AdminTourMapMain() {
 
   const [loading, setLoading] = useState(false);
   const [notif, setNotif] = useState(null); // {type: "success"|"error"|"info", message: string}
-  const [showGlbPreview, setShowGlbPreview] = useState(false);
-  const [currentGlbUrl, setCurrentGlbUrl] = useState("");
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
@@ -388,41 +302,6 @@ export default function AdminTourMapMain() {
     }
   };
 
-  // Handle GLB file upload
-  const handleGlbUpload = async (e, index) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("arModel", file);
-
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/pins/upload-ar",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      const uploadedUrl = res.data.url;
-
-      // Update the pin in state
-      setPins((prev) =>
-        prev.map((p, i) => (i === index ? { ...p, glbUrl: uploadedUrl } : p))
-      );
-
-      notify("success", "3D model uploaded successfully");
-    } catch (err) {
-      console.error("Upload error:", err.response?.data || err);
-      notify("error", err.response?.data?.message || "Upload failed");
-    }
-  };
-
-  // Preview 3D model
-  const previewGlb = (glbUrl) => {
-    setCurrentGlbUrl(glbUrl);
-    setShowGlbPreview(true);
-  };
-
   // Optional: bulk-save any unsaved pins (if you keep the toolbar Save Pins)
   const savePins = async () => {
     try {
@@ -468,14 +347,6 @@ export default function AdminTourMapMain() {
           >
             {notif.message}
           </div>
-        )}
-
-        {/* 3D Model Preview Modal */}
-        {showGlbPreview && (
-          <GlbPreview
-            glbUrl={currentGlbUrl}
-            onClose={() => setShowGlbPreview(false)}
-          />
         )}
 
         {/* Pin Mode Indicator - Always visible when active, not inside modal */}
@@ -660,75 +531,6 @@ export default function AdminTourMapMain() {
                   )}
                 </div>
               )}
-
-              {/* 3D Model Upload Section */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  3D Model (.glb)
-                </label>
-
-                <div className="flex flex-col space-y-3">
-                  {/* File Upload */}
-                  <div className="relative">
-                    <input
-                      type="file"
-                      id="model-upload"
-                      accept=".glb"
-                      onChange={(e) => handleGlbUpload(e, selectedPin)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
-                      <FontAwesomeIcon
-                        icon={faUpload}
-                        className="text-gray-400 text-lg mb-2"
-                      />
-                      <p className="text-sm text-gray-600">
-                        {pins[selectedPin].glbUrl
-                          ? "Replace 3D Model"
-                          : "Upload GLB File"}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Click to browse or drag and drop
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Model Preview */}
-                  {pins[selectedPin].glbUrl && (
-                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-sm font-medium text-gray-700">
-                          3D Model
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => previewGlb(pins[selectedPin].glbUrl)}
-                          className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors"
-                        >
-                          Preview
-                        </button>
-                      </div>
-
-                      <div className="bg-gray-100 rounded-lg h-32 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-3xl mb-1">🧊</div>
-                          <p className="text-xs text-gray-600">GLB Model</p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updatePinField(selectedPin, "glbUrl", "")
-                        }
-                        className="mt-3 text-xs text-red-600 hover:text-red-800"
-                      >
-                        Remove Model
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
 
               {/* AR Link */}
               <div>

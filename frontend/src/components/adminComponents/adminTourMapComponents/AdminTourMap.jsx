@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import AdminSidebar from "../../sidebarComponents/admin-sidebar/adminSidebar";
 import AdminTourMap from "./AdminTourMapMain";
 
-export default function AdminHome() {
+export default function AdminMap() {
   const [isExpanded, setIsExpanded] = useState(true);
 
   const toggleSidebar = () => setIsExpanded((prev) => !prev);

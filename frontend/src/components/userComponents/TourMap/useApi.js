@@ -6,6 +6,7 @@ export const useApi = (api) => {
   const [mask, setMask] = useState(null);
   const [inverseMask, setInverseMask] = useState(null);
   const [pins, setPins] = useState([]);
+  const BACKEND_URL = "http://localhost:5000";
 
   // ------------------ Fetch mask ------------------
   useEffect(() => {
@@ -41,10 +42,14 @@ export const useApi = (api) => {
           description: p.siteDescription || "",
           mediaType: p.mediaType || "image",
           mediaUrl: p.mediaUrl || "",
+          glbUrl: p.glbUrl
+            ? `${BACKEND_URL}${p.glbUrl.startsWith("/") ? "" : "/"}${p.glbUrl}`
+            : null,
           arEnabled: p.arEnabled === true,
           arLink: p.arLink || "",
           status: p.status || "active",
         }));
+
         setPins(normalized);
       } catch (err) {
         console.error("❌ Error fetching pins:", err);

@@ -9,7 +9,7 @@ import { MAPBOX_TOKEN, INTRAMUROS_BOUNDS } from "./mapConfig";
 import SiteCard from "./SiteCard";
 import { useApi } from "./useApi";
 import { useUserLocation } from "./useUserLocation";
-import useMapLayers from "./useMapLayers";
+// import useMapLayers from "./useMapLayers";
 
 import "../../../App.css";
 
@@ -24,11 +24,10 @@ api.interceptors.request.use((config) => {
 
 export default function UserMap() {
   const [viewState, setViewState] = useState({
-    latitude: 14.5896,
+    latitude: 40.5896,
     longitude: 120.9747,
-    zoom: 16,
-    pitch: 45,
-    bearing: -17,
+    zoom: 4,
+    bearing: 45,
   });
 
   const [selectedPin, setSelectedPin] = useState(null);
@@ -38,14 +37,13 @@ export default function UserMap() {
   const mapRef = useRef(null);
 
   // Custom hooks
-  const { mask, inverseMask } = useApi(api);
-  const { pins } = useApi(api);
+  const { mask, inverseMask, pins } = useApi(api);
   const userLocation = useUserLocation(setViewState);
 
-  // ✅ Add 3D pins (Pin1.glb default, Pin2.glb if selected)
-  useMapLayers(mapRef, pins, selectedPin);
+  // ✅ Add 3D pins (layered pins)
+  // useMapLayers(mapRef, pins, selectedPin);
 
-  // ✅ Handle map click to select pins
+  // ✅ Handle pin clicks safely
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
@@ -53,17 +51,18 @@ export default function UserMap() {
     const handleMapClick = (e) => {
       if (!pins?.length) return;
 
+      // Only query if the click layer exists
+      if (!map.getLayer("pins-click-layer")) return;
+
       const features = map.queryRenderedFeatures(e.point, {
-        layers: ["pins-click-layer"], // ✅ use the layer from useMapLayers
+        layers: ["pins-click-layer"],
       });
 
       if (features.length > 0) {
         const feature = features[0];
-        const pinId = feature.properties.id; // ✅ read id from properties
+        const pinId = feature.properties.id;
         const pin = pins.find((p) => p._id === pinId);
-        if (pin) {
-          openPin(pin);
-        }
+        if (pin) openPin(pin);
       }
     };
 
@@ -118,7 +117,7 @@ export default function UserMap() {
 
   return (
     <div className="relative w-full h-screen">
-      {/* Map at the back (interactive) */}
+      {/* Map at the back */}
       <Map
         ref={mapRef}
         {...viewState}
@@ -140,13 +139,30 @@ export default function UserMap() {
           </Marker>
         )}
 
+        {/* ✅ Render tour pins */}
+        {pins &&
+          pins.map((pin) => (
+            <Marker
+              key={pin._id}
+              longitude={pin.longitude}
+              latitude={pin.latitude}
+              anchor="bottom"
+            >
+              <div
+                onClick={() => openPin(pin)}
+                className="cursor-pointer w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md"
+                title={pin.name}
+              ></div>
+            </Marker>
+          ))}
+
         {/* Mask layers */}
         {mask && (
           <Source type="geojson" data={mask}>
             <Layer
               id="mask-fill"
               type="fill"
-              paint={{ "fill-color": "#000", "fill-opacity": 0.4 }}
+              paint={{ "fill-color": "#000", "fill-opacity": 0 }}
             />
           </Source>
         )}
@@ -178,7 +194,7 @@ export default function UserMap() {
         )}
       </Map>
 
-      {/* UI overlays (interactive) */}
+      {/* UI overlays */}
       <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-auto">
         <BackHeader title={<span className="text-black">Tour Map</span>} />
       </div>

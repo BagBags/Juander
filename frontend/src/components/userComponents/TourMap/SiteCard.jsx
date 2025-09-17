@@ -1,5 +1,12 @@
 // components/userComponents/SiteCard.jsx
-import React from "react";
+import React, { Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center } from "@react-three/drei";
+
+const ModelPreview = ({ url }) => {
+  const { scene } = useGLTF(url, true);
+  return <primitive object={scene} scale={0.5} />;
+};
 
 const SiteCard = ({ pin, onClose, distance }) => (
   <div className="absolute top-1/2 left-1/2 z-50 w-[320px] -translate-x-1/2 -translate-y-1/2">
@@ -10,10 +17,29 @@ const SiteCard = ({ pin, onClose, distance }) => (
       >
         ✕
       </button>
+
+      {/* 3D model preview */}
+      {pin.glbUrl && (
+        <div className="mb-3 w-full h-64 border border-gray-200 rounded-lg">
+          <Canvas>
+            <Suspense fallback={null}>
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[5, 5, 5]} />
+              <Center>
+                <ModelPreview url={pin.glbUrl} />
+              </Center>
+              <OrbitControls enableZoom={true} />
+            </Suspense>
+          </Canvas>
+        </div>
+      )}
+
       <h3 className="text-lg font-semibold mb-2">{pin.title}</h3>
       <p className="text-sm leading-snug text-gray-700 mb-3">
         {pin.description}
       </p>
+
+      {/* Existing image/video preview */}
       {pin.mediaUrl && (
         <div className="mb-3">
           {pin.mediaType === "video" ? (
@@ -32,6 +58,7 @@ const SiteCard = ({ pin, onClose, distance }) => (
           )}
         </div>
       )}
+
       {pin.arEnabled && pin.arLink && (
         <a
           href={pin.arLink}
@@ -42,6 +69,7 @@ const SiteCard = ({ pin, onClose, distance }) => (
           View in AR Mode
         </a>
       )}
+
       <div className="text-xs font-medium px-3 py-2 rounded-md shadow-sm border border-gray-200 bg-gray-50">
         Status:{" "}
         <span
@@ -52,6 +80,7 @@ const SiteCard = ({ pin, onClose, distance }) => (
           {pin.status === "active" ? "Active" : "Inactive"}
         </span>
       </div>
+
       {distance !== null && (
         <div className="bg-gray-50 text-xs px-3 py-2 mt-3 rounded-md shadow-sm border border-gray-200">
           🛣️ Distance: {(distance / 1000).toFixed(2)} km
