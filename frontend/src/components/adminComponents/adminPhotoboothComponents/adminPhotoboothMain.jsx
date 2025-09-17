@@ -3,6 +3,7 @@ import axios from "axios";
 import { Edit, Trash2, Plus, Check, X } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+
 export default function ManagePhotobooth() {
   const [filters, setFilters] = useState([]);
   const [form, setForm] = useState({
@@ -14,10 +15,27 @@ export default function ManagePhotobooth() {
   });
   const [editingId, setEditingId] = useState(null);
 
+  // Get token from localStorage
+  const token = localStorage.getItem("token"); // <-- make sure your token is stored here
+
+  // Axios config with auth header
+  const axiosConfig = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  const axiosMultipartConfig = {
+    headers: {
+      "Content-Type": "multipart/form-data",
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
   // Fetch filters
   const fetchFilters = async () => {
     try {
-      const res = await axios.get("/api/photobooth/filters");
+      const res = await axios.get("/api/photobooth/filters", axiosConfig);
       setFilters(res.data);
     } catch (err) {
       console.error(err);
@@ -31,14 +49,8 @@ export default function ManagePhotobooth() {
   // Handle inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === "imageUrl") {
-      setForm({
-        ...form,
-        imageFile: null,
-        [name]: value,
-        preview: value,
-      });
+      setForm({ ...form, imageFile: null, [name]: value, preview: value });
     } else {
       setForm({ ...form, [name]: value });
     }
@@ -68,13 +80,17 @@ export default function ManagePhotobooth() {
       else if (form.imageUrl) formData.append("image", form.imageUrl);
 
       if (editingId) {
-        await axios.put(`/api/photobooth/filters/${editingId}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await axios.put(
+          `/api/photobooth/filters/${editingId}`,
+          formData,
+          axiosMultipartConfig
+        );
       } else {
-        await axios.post("/api/photobooth/filters", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await axios.post(
+          "/api/photobooth/filters",
+          formData,
+          axiosMultipartConfig
+        );
       }
 
       setForm({
@@ -105,7 +121,7 @@ export default function ManagePhotobooth() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this filter?")) return;
     try {
-      await axios.delete(`/api/photobooth/filters/${id}`);
+      await axios.delete(`/api/photobooth/filters/${id}`, axiosConfig);
       fetchFilters();
     } catch (err) {
       console.error(err);
@@ -146,7 +162,6 @@ export default function ManagePhotobooth() {
           {!form.imageUrl ? (
             <label className="flex flex-col items-center justify-center w-full h-13 px-4 border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
               <span className="text-gray-500 text-sm">Click to upload</span>
-
               <input
                 type="file"
                 accept="image/png"
@@ -185,12 +200,12 @@ export default function ManagePhotobooth() {
             <option value="frame">Frame</option>
           </select>
 
-          {/* FontAwesome dropdown icon */}
           <FontAwesomeIcon
             icon={faChevronDown}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
           />
         </div>
+
         <div className="flex gap-3 mt-2">
           <button
             type="submit"
@@ -246,9 +261,7 @@ export default function ManagePhotobooth() {
                     <img
                       src={filter.image}
                       alt={filter.name}
-                      className="h-14 w-14 object-contain border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white"
+                      className="h-14 w-14 object-contain border-2 border-gray-300 rounded-lg"
                     />
                   </td>
                   <td className="p-3 font-medium text-gray-700">
