@@ -281,7 +281,10 @@ export default function AdminChatbot() {
         </div>
 
         {/* Right: Entry Form + Tag Management */}
-        <div className="w-full lg:w-96 space-y-8 lg:sticky lg:top-6 self-start ">
+        <div
+          className="w-full lg:w-96 space-y-8 lg:sticky lg:top-6 self-start 
+                max-h-[calc(100vh-3rem)] overflow-y-auto pr-2"
+        >
           {/* Entry Form */}
           <div className="bg-white p-5 rounded-xl shadow-sm ">
             <h3 className="text-lg font-semibold mb-4 text-gray-700 ">
@@ -322,7 +325,7 @@ export default function AdminChatbot() {
               {/* Tags selection */}
               <div>
                 <p className="font-medium text-gray-700 text-sm mb-2">Tags</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
                   {tags.map((tag) => (
                     <label
                       key={tag._id}
