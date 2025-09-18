@@ -1,7 +1,7 @@
 // components/userComponents/SiteCard.jsx
 import React, { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Center } from "@react-three/drei";
+import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
 
 const ModelPreview = ({ url }) => {
   const { scene } = useGLTF(url, true);
@@ -25,9 +25,11 @@ const SiteCard = ({ pin, onClose, distance }) => (
             <Suspense fallback={null}>
               <ambientLight intensity={0.8} />
               <directionalLight position={[5, 5, 5]} />
-              <Center>
-                <ModelPreview url={pin.glbUrl} />
-              </Center>
+              <Bounds fit clip observe margin={1.2}>
+                <Center>
+                  <ModelPreview url={pin.glbUrl} />
+                </Center>
+              </Bounds>
               <OrbitControls enableZoom={true} />
             </Suspense>
           </Canvas>
