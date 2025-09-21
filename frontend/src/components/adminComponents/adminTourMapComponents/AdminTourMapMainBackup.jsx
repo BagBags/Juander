@@ -17,12 +17,9 @@ import {
   faInfo,
   faXmark,
   faFloppyDisk,
-  faMapPin,
-  faRotate,
+  faCheck,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
-import AdminPinCard from "../adminTourMapComponents/AdminPinCard";
-import AddPinModal from "../adminTourMapComponents/AddPinModal";
-import ManualAddModal from "../adminTourMapComponents/ManualAddModal";
 
 // ---------- Axios instance ----------
 const api = axios.create({
@@ -33,88 +30,6 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
-
-// 3D Model Preview Component
-const ModelPreview = ({ glbUrl, onClose }) => {
-  const [rotation, setRotation] = useState(0);
-  const containerRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setStartX(e.clientX);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - startX;
-    setRotation((prev) => (prev + deltaX * 0.5) % 360);
-    setStartX(e.clientX);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (isDragging) setIsDragging(false);
-    };
-
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
-  }, [isDragging]);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-4 w-full max-w-2xl">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">3D Model Preview</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <FontAwesomeIcon icon={faXmark} size="lg" />
-          </button>
-        </div>
-
-        <div
-          ref={containerRef}
-          className="w-full h-96 bg-gray-100 rounded-lg relative flex items-center justify-center"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          style={{ cursor: isDragging ? "grabbing" : "grab" }}
-        >
-          <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-            <FontAwesomeIcon icon={faRotate} className="mr-2" />
-            Drag to rotate
-          </div>
-
-          <div className="text-center">
-            <div className="text-5xl mb-2">🧊</div>
-            <p className="text-gray-600">GLB Model Preview</p>
-            <p className="text-sm text-gray-500 mt-2">
-              Rotation: {Math.round(rotation)}°
-            </p>
-            <p className="text-sm text-gray-500 mt-1 break-all">{glbUrl}</p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default function AdminTourMapMain() {
   const [viewState, setViewState] = useState({
@@ -136,13 +51,10 @@ export default function AdminTourMapMain() {
 
   const [loading, setLoading] = useState(false);
   const [notif, setNotif] = useState(null); // {type: "success"|"error"|"info", message: string}
-  const [showGlbPreview, setShowGlbPreview] = useState(false);
-  const [currentGlbUrl, setCurrentGlbUrl] = useState("");
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
-  const [showAddPinModal, setShowAddPinModal] = useState(false);
-  const [showManualAdd, setShowManualAdd] = useState(false);
+
   // ---------- Helpers ----------
   const notify = (type, message) => {
     setNotif({ type, message });
@@ -387,91 +299,6 @@ export default function AdminTourMapMain() {
     }
   };
 
-  // Handle GLB file upload
-  const handleGlbUpload = async (e, index) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("arModel", file);
-
-    try {
-      const res = await axios.post(
-        "http://localhost:5000/api/pins/upload-ar",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      const uploadedUrl = res.data.url;
-
-      // Update the pin in state
-      setPins((prev) =>
-        prev.map((p, i) => (i === index ? { ...p, glbUrl: uploadedUrl } : p))
-      );
-
-      notify("success", "3D model uploaded successfully");
-    } catch (err) {
-      console.error("Upload error:", err.response?.data || err);
-      notify("error", err.response?.data?.message || "Upload failed");
-    }
-  };
-
-  // Preview 3D model
-  const previewGlb = (glbUrl) => {
-    setCurrentGlbUrl(glbUrl);
-    setShowGlbPreview(true);
-  };
-
-  // Facade image upload
-  const handleFacadeUpload = async (e, pinIndex) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("facade", file);
-
-    try {
-      const pinId = pins[pinIndex]._id;
-      const res = await api.post(`/pins/${pinId}/upload-facade`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      const updatedPins = [...pins];
-      updatedPins[pinIndex].facadeUrl = res.data.facadeUrl;
-      setPins(updatedPins);
-    } catch (err) {
-      console.error("❌ Facade upload failed:", err);
-    }
-  };
-
-  // Facade remove
-  const handleRemoveFacade = async (index) => {
-    const pin = pins[index];
-    if (!pin?._id) {
-      // just clear locally for unsaved pins
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], facadeUrl: "" };
-        return updated;
-      });
-      return;
-    }
-
-    try {
-      const res = await api.delete(`/pins/${pin._id}/remove-facade`);
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], facadeUrl: "" };
-        return updated;
-      });
-
-      notify("success", "Facade removed successfully");
-    } catch (err) {
-      console.error("❌ Error removing facade:", err);
-      notify("error", "Failed to remove facade");
-    }
-  };
-
   // Optional: bulk-save any unsaved pins (if you keep the toolbar Save Pins)
   const savePins = async () => {
     try {
@@ -519,44 +346,6 @@ export default function AdminTourMapMain() {
           </div>
         )}
 
-        {/* 3D Model Preview Modal */}
-        {showGlbPreview && (
-          <ModelPreview
-            glbUrl={currentGlbUrl}
-            onClose={() => setShowGlbPreview(false)}
-          />
-        )}
-
-        {/* Pin Mode Indicator - Always visible when active, not inside modal */}
-        {isAddingPin && (
-          <>
-            {/* Top card: Pin mode active */}
-            <div className="absolute top-3 left-3 z-[10000] bg-blue-100 border border-blue-300 px-3 py-2 rounded-lg shadow-md">
-              <div className="flex items-center">
-                <FontAwesomeIcon
-                  icon={faMapPin}
-                  className="text-blue-600 mr-2"
-                />
-                <span className="text-blue-700 font-medium">
-                  Pin mode active
-                </span>
-                <button
-                  onClick={() => setIsAddingPin(false)}
-                  className="ml-3 text-blue-700 hover:text-blue-900"
-                  title="Exit Pin Mode"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
-              </div>
-            </div>
-
-            {/* Bottom card: hint */}
-            <div className="absolute top-16 left-3 z-[10000] bg-white border border-gray-200 px-3 py-2 rounded-lg shadow-md">
-              <p className="text-sm text-gray-700">Tap the map to add a pin</p>
-            </div>
-          </>
-        )}
-
         {/* Map */}
         <Map
           ref={adminMapRef}
@@ -589,40 +378,210 @@ export default function AdminTourMapMain() {
           ))}
         </Map>
 
+        {/* Card Panel for Pin */}
         {selectedPin !== null && pins[selectedPin] && (
-          <AdminPinCard
-            pin={pins[selectedPin]}
-            selectedPinIndex={selectedPin}
-            updatePinField={updatePinField}
-            handleFormSubmit={handleFormSubmit}
-            handleDeletePin={handleDeletePin}
-            handleGlbUpload={handleGlbUpload}
-            previewGlb={previewGlb}
-            handleFacadeUpload={handleFacadeUpload}
-            handleRemoveFacade={handleRemoveFacade}
-            onClose={() => setSelectedPin(null)}
-          />
-        )}
+          <div className="absolute top-6 left-6 w-[380px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
+            {/* Header */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 rounded-t-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Pin Details
+              </h2>
+              <button
+                onClick={() => setSelectedPin(null)}
+                className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
 
-        {showAddPinModal && (
-          <AddPinModal
-            isAddingPin={isAddingPin}
-            setIsAddingPin={setIsAddingPin}
-            setShowManualAdd={setShowManualAdd}
-            setShowAddPinModal={setShowAddPinModal}
-          />
-        )}
+            {/* Scrollable form */}
+            <form
+              onSubmit={(e) => handleFormSubmit(e, selectedPin)}
+              className="flex-1 overflow-y-auto p-5 space-y-5"
+            >
+              {/* Site Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Site Name
+                </label>
+                <input
+                  type="text"
+                  value={pins[selectedPin].siteName || ""}
+                  onChange={(e) =>
+                    updatePinField(selectedPin, "siteName", e.target.value)
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Enter site name"
+                  required
+                />
+              </div>
 
-        {showManualAdd && (
-          <ManualAddModal
-            manualCoords={manualCoords}
-            setManualCoords={setManualCoords}
-            addPinFromCoords={addPinFromCoords}
-            setShowManualAdd={setShowManualAdd}
-            setShowAddPinModal={setShowAddPinModal}
-          />
-        )}
+              {/* Site Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Site Description
+                </label>
+                <textarea
+                  value={pins[selectedPin].siteDescription || ""}
+                  onChange={(e) =>
+                    updatePinField(
+                      selectedPin,
+                      "siteDescription",
+                      e.target.value
+                    )
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  rows="3"
+                  placeholder="Enter site description"
+                />
+              </div>
 
+              {/* Media */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Media URL
+                </label>
+                <input
+                  type="text"
+                  value={pins[selectedPin].mediaUrl || ""}
+                  onChange={(e) =>
+                    updatePinField(selectedPin, "mediaUrl", e.target.value)
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="https://example.com/media.jpg"
+                />
+                <div className="mt-3 flex items-center space-x-2">
+                  <label className="text-sm text-gray-600">Media Type:</label>
+                  <select
+                    className="border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    value={pins[selectedPin].mediaType || "image"}
+                    onChange={(e) =>
+                      updatePinField(
+                        selectedPin,
+                        "mediaType",
+                        e.target.value || "image"
+                      )
+                    }
+                  >
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Media Preview */}
+              {pins[selectedPin].mediaUrl && (
+                <div className="mt-4 rounded-xl overflow-hidden border border-gray-200">
+                  {pins[selectedPin].mediaType === "video" ? (
+                    <video
+                      src={pins[selectedPin].mediaUrl}
+                      controls
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={pins[selectedPin].mediaUrl}
+                      alt="Preview"
+                      className="w-full h-48 object-cover"
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* AR Link */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    AR Experience
+                  </label>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <div className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={pins[selectedPin].arEnabled || false}
+                        onChange={(e) =>
+                          updatePinField(
+                            selectedPin,
+                            "arEnabled",
+                            e.target.checked
+                          )
+                        }
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      {pins[selectedPin].arEnabled ? "Enabled" : "Disabled"}
+                    </span>
+                  </label>
+                </div>
+
+                <input
+                  type="text"
+                  value={pins[selectedPin].arLink || ""}
+                  onChange={(e) =>
+                    updatePinField(selectedPin, "arLink", e.target.value)
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="https://example.com/ar-link"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This link will only be visible to tourists if enabled.
+                </p>
+              </div>
+
+              {/* Site Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Site Status
+                </label>
+                <select
+                  value={pins[selectedPin].status || "active"}
+                  onChange={(e) =>
+                    updatePinField(selectedPin, "status", e.target.value)
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              {/* Footer buttons */}
+              <div className="pt-4 flex justify-between">
+                {/* Delete Button */}
+                <button
+                  type="button"
+                  onClick={() => handleDeletePin(pins[selectedPin]._id)}
+                  className="px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors duration-200 flex items-center shadow-sm hover:shadow-md"
+                >
+                  <FontAwesomeIcon icon={faTrash} />
+                  Delete
+                </button>
+
+                {/* Save Button */}
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
+                >
+                  <FontAwesomeIcon icon={faCheck} />
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
         {/* Floating Toolbar */}
         <div className="absolute top-6 right-6 z-[9999] flex items-end space-x-3">
           {/* Map Legend Panel */}
@@ -639,6 +598,39 @@ export default function AdminTourMapMain() {
             </div>
           )}
 
+          {/* Manual Pin Input */}
+          <div className="bg-white rounded-lg shadow-md p-3 w-60 space-y-2">
+            <h4 className="text-sm font-semibold text-gray-700">
+              Add Pin by Coordinates
+            </h4>
+            <input
+              type="number"
+              step="any"
+              placeholder="Latitude"
+              value={manualCoords.lat}
+              onChange={(e) =>
+                setManualCoords((prev) => ({ ...prev, lat: e.target.value }))
+              }
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+            />
+            <input
+              type="number"
+              step="any"
+              placeholder="Longitude"
+              value={manualCoords.lng}
+              onChange={(e) =>
+                setManualCoords((prev) => ({ ...prev, lng: e.target.value }))
+              }
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+            />
+            <button
+              onClick={addPinFromCoords}
+              className="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add Pin
+            </button>
+          </div>
+
           {/* Toolbar + Save Mask */}
           <div className="flex flex-col items-end space-y-2">
             {/* Toolbar Core */}
@@ -654,15 +646,15 @@ export default function AdminTourMapMain() {
                 <FontAwesomeIcon icon={faInfo} />
               </button>
 
-              {/* Pin Mode Toggle - Now opens modal */}
+              {/* Pin Mode Toggle */}
               <button
-                onClick={() => setShowAddPinModal(true)}
-                title="Add Pin"
+                onClick={() => setIsAddingPin(!isAddingPin)}
+                title={isAddingPin ? "Exit Pin Mode" : "Add Pin"}
                 className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
-                  isAddingPin ? "bg-blue-50 text-blue-600" : "text-gray-700"
+                  isAddingPin ? "bg-red-50 text-red-600" : "text-gray-700"
                 }`}
               >
-                <FontAwesomeIcon icon={isAddingPin ? faMapPin : faPlus} />
+                <FontAwesomeIcon icon={isAddingPin ? faXmark : faPlus} />
               </button>
 
               {/* Mask Mode Toggle */}

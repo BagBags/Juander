@@ -7,10 +7,32 @@ import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 
 const filter = new Filter();
 filter.addWords(
-  "putangina","putang ina","tanginamo","anak ng puta","pakyu",
-  "pekpek","puke","burat","pwets","ulol","gago","gaga","tanga",
-  "bobo","tarantado","hayop","loko","lokohan","pucha","puchang ina",
-  "pakshet","gago ka","tangina mo","putangi mo","ulol ka","tanga ka"
+  "putangina",
+  "putang ina",
+  "tanginamo",
+  "anak ng puta",
+  "pakyu",
+  "pekpek",
+  "puke",
+  "burat",
+  "pwets",
+  "ulol",
+  "gago",
+  "gaga",
+  "tanga",
+  "bobo",
+  "tarantado",
+  "hayop",
+  "loko",
+  "lokohan",
+  "pucha",
+  "puchang ina",
+  "pakshet",
+  "gago ka",
+  "tangina mo",
+  "putangi mo",
+  "ulol ka",
+  "tanga ka"
 );
 
 export default function Chatbot() {
@@ -18,34 +40,45 @@ export default function Chatbot() {
   const sessionId = useRef(uuidv4());
 
   const [messages, setMessages] = useState([
-    { role: "system", content: "Welcome! Ask me anything about Intramuros in English or Filipino." }
+    {
+      role: "system",
+      content:
+        "Welcome! Ask me anything about Intramuros in English or Filipino.",
+    },
   ]);
   const [input, setInput] = useState("");
   const [botEntries, setBotEntries] = useState([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [puterReady, setPuterReady] = useState(false);
 
-  // --- Auto-scroll ---
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // --- Load knowledge base ---
+  // Load knowledge base
   useEffect(() => {
-    axios.get("/api/bot")
-      .then(res => setBotEntries(res.data))
-      .catch(err => console.error("Error fetching bot entries:", err));
+    axios
+      .get("/api/bot")
+      .then((res) => setBotEntries(res.data))
+      .catch((err) => console.error("Error fetching bot entries:", err));
   }, []);
 
-  // --- Initialize Puter.js silently ---
+  // Initialize Puter.js and wait until AI is ready
   useEffect(() => {
     const initPuter = () => {
-      if (window.puter) {
+      if (window.puter && window.puter.ai) {
         setPuterReady(true);
       } else {
         const script = document.createElement("script");
         script.src = "https://js.puter.com/v2/";
-        script.onload = () => setPuterReady(true);
+        script.onload = () => {
+          const waitForAI = () => {
+            if (window.puter.ai) setPuterReady(true);
+            else setTimeout(waitForAI, 100);
+          };
+          waitForAI();
+        };
         document.body.appendChild(script);
       }
     };
@@ -53,68 +86,171 @@ export default function Chatbot() {
   }, []);
 
   const detectLanguage = (text) => {
-    const filipinoWords = ["po","opo","kayo","ako","ka","na","ng","siya","kami","sila","ba","pa","mga","wala","ito","iyan","iyon","paano","saan","ano","gusto","salamat","magandang","araw","gabi","oo","hindi","sino"];
+    const filipinoWords = [
+      "po",
+      "opo",
+      "kayo",
+      "ako",
+      "ka",
+      "na",
+      "ng",
+      "siya",
+      "kami",
+      "sila",
+      "ba",
+      "pa",
+      "mga",
+      "wala",
+      "ito",
+      "iyan",
+      "iyon",
+      "paano",
+      "saan",
+      "ano",
+      "gusto",
+      "salamat",
+      "magandang",
+      "araw",
+      "gabi",
+      "oo",
+      "hindi",
+      "sino",
+    ];
     const words = text.toLowerCase().split(/\W+/);
-    const startsWithFilipino = ["sino","ano","paano","saan","bakit","kailan"].some(q => text.toLowerCase().startsWith(q));
-    let filipinoCount = 0, englishCount = 0;
-    words.forEach(word => {
-      if (filipinoWords.includes(word)) filipinoCount++;
-      else if (word.match(/^[a-z]+$/)) englishCount++;
+    const startsWithFilipino = [
+      "sino",
+      "ano",
+      "paano",
+      "saan",
+      "bakit",
+      "kailan",
+    ].some((q) => text.toLowerCase().startsWith(q));
+    let filipinoCount = 0,
+      englishCount = 0;
+    words.forEach((w) => {
+      if (filipinoWords.includes(w)) filipinoCount++;
+      else if (w.match(/^[a-z]+$/)) englishCount++;
     });
-    return startsWithFilipino ? "filipino" : (filipinoCount >= englishCount ? "filipino" : "english");
+    return startsWithFilipino
+      ? "filipino"
+      : filipinoCount >= englishCount
+      ? "filipino"
+      : "english";
   };
 
   const buildKnowledgeText = (entries) =>
-    entries.map((e,i) => `${i+1}.\nEN: ${e.info_en}\nFIL: ${e.info_fil || "N/A"}\nKeywords: ${e.keywords.join(", ")}`).join("\n\n");
+    entries
+      .map(
+        (e, i) =>
+          `${i + 1}.\nEN: ${e.info_en}\nFIL: ${
+            e.info_fil || "N/A"
+          }\nKeywords: ${e.keywords.join(", ")}`
+      )
+      .join("\n\n");
 
   const handleSend = async () => {
     if (!input.trim() || isBotTyping || !puterReady) return;
 
     const userMessage = input.trim();
     if (filter.isProfane(userMessage)) {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         { role: "user", content: userMessage },
-        { role: "assistant", content: "⚠️ Please avoid using inappropriate language." }
+        {
+          role: "assistant",
+          content: "⚠️ Please avoid using inappropriate language.",
+        },
       ]);
       setInput("");
       return;
     }
 
-    setMessages(prev => [...prev, { role: "user", content: userMessage }, { role: "assistant", content: "__loading__" }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: userMessage },
+      { role: "assistant", content: "__loading__" },
+    ]);
     setInput("");
     setIsBotTyping(true);
 
     const lang = detectLanguage(userMessage);
-    const SYSTEM_PROMPT = lang === "filipino"
-      ? `You are Juan, a Filipino tour guide chatbot for Intramuros. Answer ONLY from the knowledge base. If not found, reply: "Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base." Always answer in Filipino.`
-      : `You are Juan, an English-speaking tour guide chatbot for Intramuros. Answer ONLY from the knowledge base. If not found, reply: "Sorry, I don’t have information about that in my knowledge base." Always answer in English.`;
+    const SYSTEM_PROMPT =
+      lang === "filipino"
+        ? `You are Juan, a Filipino tour guide chatbot for Intramuros. Answer ONLY from the knowledge base. If not found, reply: "Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base." Always answer in Filipino.`
+        : `You are Juan, an English-speaking tour guide chatbot for Intramuros. Answer ONLY from the knowledge base. If not found, reply: "Sorry, I don’t have information about that in my knowledge base." Always answer in English.`;
 
-    const keywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
-    const relevantEntries = botEntries.filter(entry =>
-      keywords.some(kw => entry.keywords.some(k => k.toLowerCase().includes(kw))) ||
-      entry.info_en.toLowerCase().includes(userMessage.toLowerCase()) ||
-      (entry.info_fil && entry.info_fil.toLowerCase().includes(userMessage.toLowerCase()))
-    );
+    const userKeywords = userMessage.toLowerCase().split(/\W+/).filter(Boolean);
 
-    if (relevantEntries.length === 0) {
-      setMessages(prev => prev.map((msg,i) =>
-        i === prev.length-1 ? { role: "assistant", content: lang==="filipino" ? "Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base." : "Sorry, I don’t have information about that in my knowledge base." } : msg
-      ));
+    // Relevance scoring: count how many keywords match per entry
+    const scoredEntries = botEntries
+      .map((entry) => {
+        const entryKeywords = entry.keywords.map((k) => k.toLowerCase());
+        const matchCount = userKeywords.reduce(
+          (count, kw) => (entryKeywords.includes(kw) ? count + 1 : count),
+          0
+        );
+        return { entry, matchCount };
+      })
+      .filter((e) => e.matchCount > 0)
+      .sort((a, b) => b.matchCount - a.matchCount) // highest relevance first
+      .slice(0, 5) // take top 5 entries
+      .map((e) => e.entry);
+
+    if (scoredEntries.length === 0) {
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === prev.length - 1
+            ? {
+                role: "assistant",
+                content:
+                  lang === "filipino"
+                    ? "Pasensya na, wala akong impormasyon tungkol diyan sa aking knowledge base."
+                    : "Sorry, I don’t have information about that in my knowledge base.",
+              }
+            : msg
+        )
+      );
       setIsBotTyping(false);
       return;
     }
 
-    const knowledgeText = buildKnowledgeText(relevantEntries);
+    const knowledgeText = buildKnowledgeText(scoredEntries);
     const fullPrompt = `${SYSTEM_PROMPT}\n\nKnowledge Base:\n${knowledgeText}\n\nUser: ${userMessage}`;
 
     try {
-      const response = await window.puter.ai.chat(fullPrompt, { model: "gpt-5-nano", temperature: 0, max_tokens: 500 });
-      const reply = typeof response==="string" ? response : response?.message?.content || JSON.stringify(response);
-      setMessages(prev => prev.map((msg,i) => i===prev.length-1 ? { role: "assistant", content: reply } : msg));
-    } catch(err) {
+      console.log("Puter AI object:", window.puter.ai);
+      const response = await window.puter.ai.chat(fullPrompt, {
+        model: "gpt-5",
+        temperature: 0,
+        max_tokens: 500,
+      });
+      console.log("Puter.js response:", response);
+
+      const reply =
+        typeof response === "string"
+          ? response
+          : response?.message?.content || JSON.stringify(response);
+
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === prev.length - 1 ? { role: "assistant", content: reply } : msg
+        )
+      );
+    } catch (err) {
       console.error("Puter.js API error:", err);
-      setMessages(prev => prev.map((msg,i) => i===prev.length-1 ? { role: "assistant", content: "Oops! Juan ran into a problem answering. Please try again later." } : msg));
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === prev.length - 1
+            ? {
+                role: "assistant",
+                content:
+                  lang === "filipino"
+                    ? "Pasensya na, nagkaproblema si Juan. Pakisubukang muli."
+                    : "Sorry, Juan ran into a problem. Please try again.",
+              }
+            : msg
+        )
+      );
     } finally {
       setIsBotTyping(false);
     }
@@ -122,37 +258,64 @@ export default function Chatbot() {
 
   return (
     <div className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl">
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm space-y-4">
-        {messages.filter(m => m.role!=="system").map((msg,i)=>(
-          <div key={i} className={`flex ${msg.role==="user"?"justify-end":"justify-start"}`}>
-            <div className={`px-4 py-2 rounded-2xl shadow-md max-w-[75%] transition-all duration-300 animate-fadeIn ${msg.role==="user"?"bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none":"bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none"}`} style={{whiteSpace:"pre-wrap"}}>
-              {msg.content==="__loading__" ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-150" />
-                  <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-300" />
-                </div>
-              ) : msg.content}
+        {messages
+          .filter((m) => m.role !== "system")
+          .map((msg, i) => (
+            <div
+              key={i}
+              className={`flex ${
+                msg.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`px-4 py-2 rounded-2xl shadow-md max-w-[75%] transition-all duration-300 animate-fadeIn ${
+                  msg.role === "user"
+                    ? "bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none"
+                    : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none"
+                }`}
+                style={{ whiteSpace: "pre-wrap" }}
+              >
+                {msg.content === "__loading__" ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-150" />
+                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-300" />
+                  </div>
+                ) : (
+                  msg.content
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Input */}
       <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md">
         <input
           value={input}
-          onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter" && handleSend()}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
           disabled={isBotTyping || !puterReady}
           className="flex-grow bg-transparent outline-none px-2 py-1 text-sm sm:text-base"
-          placeholder={!puterReady ? "Initializing Juan…" : isBotTyping ? "Juan is typing..." : "Type your message..."}
+          placeholder={
+            !puterReady
+              ? "Initializing Juan…"
+              : isBotTyping
+              ? "Juan is typing..."
+              : "Type your message..."
+          }
         />
-        <button onClick={handleSend} disabled={isBotTyping || !puterReady} className="bg-transparent">
+        <button
+          onClick={handleSend}
+          disabled={isBotTyping || !puterReady}
+          className="bg-transparent"
+        >
           <div className="transform rotate-45">
-            <FontAwesomeIcon icon={faPaperPlane} className="w-5 h-5" style={{color:"#f04e37"}} />
+            <FontAwesomeIcon
+              icon={faPaperPlane}
+              className="w-5 h-5"
+              style={{ color: "#f04e37" }}
+            />
           </div>
         </button>
       </div>

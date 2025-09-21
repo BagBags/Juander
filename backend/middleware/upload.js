@@ -7,7 +7,11 @@ const storage = multer.diskStorage({
     if (req.baseUrl.includes("auth")) {
       cb(null, "uploads/profile"); // Profile pics folder
     } else if (req.baseUrl.includes("pins")) {
-      cb(null, "uploads/arModels"); // New folder for AR .glb models
+      if (file.mimetype.startsWith("image/")) {
+        cb(null, "uploads/facades"); // ✅ New folder for facade images
+      } else {
+        cb(null, "uploads/arModels"); // AR .glb models
+      }
     } else {
       cb(null, "uploads/photobooth"); // Photobooth folder
     }
@@ -34,7 +38,7 @@ const storage = multer.diskStorage({
       const ext = path.extname(file.originalname);
       cb(null, `${req.user.id}${ext}`);
     } else {
-      // For photobooth and AR models: keep original filename
+      // For facades, photobooth, and AR models: keep original filename
       cb(null, file.originalname);
     }
   },
@@ -53,14 +57,17 @@ const fileFilter = (req, file, cb) => {
       );
     }
   } else if (req.baseUrl.includes("pins")) {
-    // AR models: only .glb files
-    if (
+    if (file.mimetype.startsWith("image/")) {
+      // ✅ Facades: allow all images
+      cb(null, true);
+    } else if (
       file.mimetype === "model/gltf-binary" ||
       file.originalname.endsWith(".glb")
     ) {
+      // AR models: only .glb files
       cb(null, true);
     } else {
-      cb(new Error("Only .glb files are allowed for AR models!"), false);
+      cb(new Error("Only image or .glb files are allowed for pins!"), false);
     }
   } else {
     // Photobooth: only PNG

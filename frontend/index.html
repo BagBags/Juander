@@ -7,7 +7,7 @@
     <!-- App Title -->
     <title>Juander</title>
 
-    <!-- Favicon (kept your original SVG) -->
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/TabIcon.svg" />
 
     <!-- Manifest for PWA -->
@@ -36,18 +36,29 @@
     <!-- Theme colors for Android PWA UI -->
     <meta name="theme-color" content="#f04e37" />
     <meta name="background-color" content="#ffffff" />
+
+    <!-- Preconnect & Preload Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+      as="style"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Preload Puter.js -->
+    <link rel="preload" href="https://js.puter.com/v2/" as="script" />
   </head>
 
   <body>
     <div id="root"></div>
 
-    <!-- Your scripts -->
-     <script src="https://js.puter.com/v2/"></script>
+    <!-- Scripts -->
+    <script src="https://js.puter.com/v2/"></script>
     <script type="module" src="/src/main.jsx"></script>
-    <!-- Poppins Font Script -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
   </body>
 </html>

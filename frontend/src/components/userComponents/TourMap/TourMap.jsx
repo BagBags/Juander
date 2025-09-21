@@ -9,10 +9,10 @@ import { MAPBOX_TOKEN, INTRAMUROS_BOUNDS } from "./mapConfig";
 import SiteCard from "./SiteCard";
 import { useApi } from "./useApi";
 import { useUserLocation } from "./useUserLocation";
-// import useMapLayers from "./useMapLayers";
 
 import "../../../App.css";
 
+// ✅ Axios instance with token
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || "/api",
 });
@@ -40,10 +40,7 @@ export default function UserMap() {
   const { mask, inverseMask, pins } = useApi(api);
   const userLocation = useUserLocation(setViewState);
 
-  // ✅ Add 3D pins (layered pins)
-  // useMapLayers(mapRef, pins, selectedPin);
-
-  // ✅ Handle pin clicks safely
+  // ------------------ Handle map clicks ------------------
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
@@ -51,7 +48,6 @@ export default function UserMap() {
     const handleMapClick = (e) => {
       if (!pins?.length) return;
 
-      // Only query if the click layer exists
       if (!map.getLayer("pins-click-layer")) return;
 
       const features = map.queryRenderedFeatures(e.point, {
@@ -67,12 +63,10 @@ export default function UserMap() {
     };
 
     map.on("click", handleMapClick);
-    return () => {
-      map.off("click", handleMapClick);
-    };
+    return () => map.off("click", handleMapClick);
   }, [pins]);
 
-  // ------------------ Open pin ------------------
+  // ------------------ Open pin + fetch route ------------------
   const openPin = useCallback(
     async (pinData) => {
       setSelectedPin(pinData);
@@ -100,7 +94,7 @@ export default function UserMap() {
             properties: {},
           });
         } else {
-          console.warn("No routes found:", data);
+          console.warn("⚠️ No routes found:", data);
         }
       } catch (err) {
         console.error("❌ Directions fetch error:", err);
@@ -109,6 +103,7 @@ export default function UserMap() {
     [userLocation]
   );
 
+  // ------------------ Close card ------------------
   const handleCloseCard = () => {
     setSelectedPin(null);
     setDistance(null);
@@ -117,7 +112,7 @@ export default function UserMap() {
 
   return (
     <div className="relative w-full h-screen">
-      {/* Map at the back */}
+      {/* Map */}
       <Map
         ref={mapRef}
         {...viewState}
@@ -139,7 +134,7 @@ export default function UserMap() {
           </Marker>
         )}
 
-        {/* ✅ Render tour pins */}
+        {/* Tour pins with facade image */}
         {pins &&
           pins.map((pin) => (
             <Marker
@@ -148,15 +143,27 @@ export default function UserMap() {
               latitude={pin.latitude}
               anchor="bottom"
             >
-              <div
-                onClick={() => openPin(pin)}
-                className="cursor-pointer w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md"
-                title={pin.name}
-              ></div>
+              <div className="flex flex-col items-center cursor-pointer">
+                {/* Pin marker */}
+                <div
+                  onClick={() => openPin(pin)}
+                  className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md"
+                  title={pin.siteName}
+                ></div>
+
+                {/* Facade image (shown below the pin) */}
+                {pin.facadeUrl && (
+                  <img
+                    src={pin.facadeUrl}
+                    alt={pin.siteName}
+                    className="mt-1 w-16 h-16 object-contain"
+                  />
+                )}
+              </div>
             </Marker>
           ))}
 
-        {/* Mask layers */}
+        {/* Mask */}
         {mask && (
           <Source type="geojson" data={mask}>
             <Layer
@@ -166,7 +173,6 @@ export default function UserMap() {
             />
           </Source>
         )}
-
         {inverseMask && (
           <Source type="geojson" data={inverseMask}>
             <Layer
@@ -177,7 +183,7 @@ export default function UserMap() {
           </Source>
         )}
 
-        {/* Route layer */}
+        {/* Route */}
         {route && (
           <Source type="geojson" data={route}>
             <Layer
@@ -199,10 +205,15 @@ export default function UserMap() {
         <BackHeader title={<span className="text-black">Tour Map</span>} />
       </div>
 
-      {/* Site card */}
+      {/* Site card (still appears when pin is selected) */}
       {selectedPin && (
         <SiteCard
-          pin={selectedPin}
+          pin={{
+            ...selectedPin,
+            imageUrl: `${import.meta.env.VITE_API_BASE}/uploads/${
+              selectedPin.image
+            }`,
+          }}
           distance={distance}
           onClose={handleCloseCard}
         />

@@ -11,6 +11,7 @@ const pinSchema = new mongoose.Schema(
     arEnabled: { type: Boolean, default: false },
     arLink: { type: String },
     glbUrl: { type: String },
+    facadeUrl: { type: String, default: "" },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
   { timestamps: true }

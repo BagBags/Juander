@@ -19,6 +19,8 @@ const AdminPinCard = ({
   handleFormSubmit,
   handleDeletePin,
   handleGlbUpload,
+  handleFacadeUpload,
+  handleRemoveFacade,
   previewGlb,
   onClose,
 }) => {
@@ -77,6 +79,53 @@ const AdminPinCard = ({
             rows="3"
             placeholder="Enter site description"
           />
+        </div>
+
+        {/* 2D Facade Landmark */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            2D Facade Image
+          </label>
+          <div className="flex flex-col space-y-3">
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFacadeUpload(e, selectedPinIndex)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+                <FontAwesomeIcon
+                  icon={faUpload}
+                  className="text-gray-400 text-lg mb-2"
+                />
+                <p className="text-sm text-gray-600">
+                  {pin.facadeUrl
+                    ? "Replace Facade Image"
+                    : "Upload Facade Image"}
+                </p>
+              </div>
+            </div>
+
+            {pin.facadeUrl && (
+              <div className="relative w-full h-40 rounded-lg overflow-hidden border border-gray-200">
+                <img
+                  src={`${BACKEND_URL}${pin.facadeUrl}`}
+                  alt="Facade preview"
+                  className="w-full h-full object-contain bg-white"
+                />
+                {/* Tiny floating remove button */}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFacade(selectedPinIndex)}
+                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white text-[10px] px-2 py-1 rounded-full shadow-md"
+                  title="Remove facade"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Media */}
