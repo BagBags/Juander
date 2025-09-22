@@ -61,6 +61,13 @@ export default function AdminItineraryMain() {
   const handleSave = async () => {
     if (!name.trim()) return alert("Please enter a name");
 
+    // New validation: prevent saving if no sites are selected
+    if (selectedSites.length === 0) {
+      return alert(
+        "Please select at least one site before saving an itinerary"
+      );
+    }
+
     const payload = {
       name,
       description,
@@ -222,7 +229,8 @@ export default function AdminItineraryMain() {
             Existing Itineraries
           </h2>
 
-          <div className="flex flex-col gap-4 max-h-[50vh] overflow-y-visible">
+          {/* Scrollable itineraries list */}
+          <div className="flex flex-col gap-4 overflow-y-auto max-h-[50vh] pr-2">
             {itineraries.length ? (
               itineraries.map((itinerary) => (
                 <div
@@ -281,7 +289,7 @@ export default function AdminItineraryMain() {
             )}
           </div>
 
-          {/* Sites */}
+          {/* Sites below */}
           <h2 className="text-2xl font-bold text-gradient-red mt-6 mb-4">
             Sites
           </h2>
@@ -289,12 +297,11 @@ export default function AdminItineraryMain() {
           <div className="flex flex-col gap-4 max-h-[35vh] overflow-y-auto pr-2">
             {pins.map((pin) => {
               const isSelected = selectedSites.some((s) => s._id === pin._id);
-
               return (
                 <div
                   key={pin._id}
                   className="flex items-center gap-4 rounded-2xl p-4 border border-gray-200 
-                   bg-white shadow-sm hover:shadow-md transition"
+          bg-white shadow-sm hover:shadow-md transition"
                 >
                   {/* Thumbnail */}
                   <img
@@ -305,7 +312,7 @@ export default function AdminItineraryMain() {
                     }
                     alt={pin.siteName || pin.title}
                     className="object-cover rounded-xl flex-shrink-0"
-                    style={{ width: SITE_IMAGE_SIZE, height: SITE_IMAGE_SIZE }}
+                    style={{ width: 80, height: 80 }}
                   />
 
                   {/* Content */}
@@ -328,11 +335,7 @@ export default function AdminItineraryMain() {
                 : "bg-red-500 hover:bg-red-600"
             }`}
                   >
-                    {isSelected ? (
-                      <Check size={ICON_SIZE} />
-                    ) : (
-                      <Plus size={ICON_SIZE} />
-                    )}
+                    {isSelected ? <Check size={20} /> : <Plus size={20} />}
                     {isSelected ? "Added" : "Add"}
                   </button>
                 </div>

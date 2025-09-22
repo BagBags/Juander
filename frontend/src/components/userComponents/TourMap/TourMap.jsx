@@ -156,7 +156,7 @@ export default function UserMap() {
                   <img
                     src={pin.facadeUrl}
                     alt={pin.siteName}
-                    className="mt-1 w-16 h-16 object-contain"
+                    className="mt-1 w-24 h-24 object-contain"
                   />
                 )}
               </div>

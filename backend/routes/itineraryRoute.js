@@ -1,7 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const Itinerary = require("../models/itineraryModel");
+const Log = require("../models/logModel"); // import Log model
 const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
+
+// Helper to get admin/user name
+const getUserName = (user) =>
+  user ? `${user.firstName} ${user.lastName || ""}`.trim() : "Unknown User";
 
 // CREATE a new itinerary (user or admin)
 router.post("/", verifyToken, async (req, res) => {
@@ -14,10 +19,17 @@ router.post("/", verifyToken, async (req, res) => {
       imageUrl,
       sites,
       createdBy: req.user._id,
-      isAdminCreated: isAdminCreated || false, // admin sets true, user = false
+      isAdminCreated: isAdminCreated || false,
     });
 
     await itinerary.save();
+
+    // Log action
+    await Log.create({
+      adminName: getUserName(req.user),
+      action: `Created itinerary: "${itinerary.name}"`,
+    });
+
     res.status(201).json(itinerary);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -27,7 +39,6 @@ router.post("/", verifyToken, async (req, res) => {
 // GET itineraries for a user (include admin ones)
 router.get("/", verifyToken, async (req, res) => {
   try {
-    // Admin itineraries (everyone can see) + user's own itineraries
     const itineraries = await Itinerary.find({
       $or: [{ isAdminCreated: true }, { createdBy: req.user._id }],
     }).populate("sites");
@@ -76,7 +87,6 @@ router.get("/:id", verifyToken, async (req, res) => {
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
-    // Only allow user to access if admin-created or their own
     if (
       !itinerary.isAdminCreated &&
       itinerary.createdBy.toString() !== req.user._id.toString()
@@ -98,7 +108,6 @@ router.put("/:id", verifyToken, async (req, res) => {
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
-    // Only allow update if admin or owner
     if (
       !req.user.isAdmin &&
       itinerary.createdBy.toString() !== req.user._id.toString()
@@ -113,6 +122,13 @@ router.put("/:id", verifyToken, async (req, res) => {
     itinerary.sites = sites || itinerary.sites;
 
     await itinerary.save();
+
+    // Log action
+    await Log.create({
+      adminName: getUserName(req.user),
+      action: `Updated itinerary: "${itinerary.name}"`,
+    });
+
     res.json(await itinerary.populate("sites"));
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -126,7 +142,6 @@ router.delete("/:id", verifyToken, async (req, res) => {
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
-    // Only allow delete if admin or owner
     if (
       !req.user.isAdmin &&
       itinerary.createdBy.toString() !== req.user._id.toString()
@@ -135,6 +150,13 @@ router.delete("/:id", verifyToken, async (req, res) => {
     }
 
     await itinerary.deleteOne();
+
+    // Log action
+    await Log.create({
+      adminName: getUserName(req.user),
+      action: `Deleted itinerary: "${itinerary.name}"`,
+    });
+
     res.json({ message: "Itinerary deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });

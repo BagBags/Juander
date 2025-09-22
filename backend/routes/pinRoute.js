@@ -8,15 +8,16 @@ const {
 } = require("../controllers/pinController.js");
 const Pin = require("../models/pinModel");
 const upload = require("../middleware/upload");
+const { verifyAdmin } = require("../middleware/authMiddleware");
 const path = require("path");
 const fs = require("fs");
 
 const router = express.Router();
 
-router.get("/", getPins);
-router.post("/", createPin);
-router.put("/:id", updatePin);
-router.delete("/:id", deletePin);
+router.get("/", verifyAdmin, getPins);
+router.post("/", verifyAdmin, createPin);
+router.put("/:id", verifyAdmin, updatePin);
+router.delete("/:id", verifyAdmin, deletePin);
 
 // 👇 New route for uploading AR models (.glb)
 router.post("/upload-ar", upload.single("arModel"), (req, res) => {

@@ -377,13 +377,15 @@ export default function AdminTourMapMain() {
     if (!confirmDelete) return;
 
     try {
-      await axios.delete(`/api/pins/${id}`);
-      setPins((prev) => prev.filter((pin) => pin._id !== id)); // update local state
-      setSelectedPin(null); // close panel after delete
+      await api.delete(`/pins/${id}`); // ✅ use `api` instance
+      setPins((prev) => prev.filter((pin) => pin._id !== id));
+      setSelectedPin(null);
       alert("Pin deleted successfully");
     } catch (error) {
       console.error("Error deleting pin:", error);
-      alert("Failed to delete pin");
+      alert(
+        error.response?.data?.message || "Failed to delete pin. Unauthorized?"
+      );
     }
   };
 
