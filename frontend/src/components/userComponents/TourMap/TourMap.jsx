@@ -40,23 +40,37 @@ export default function UserMap() {
   const { mask, inverseMask, pins } = useApi(api);
   const userLocation = useUserLocation(setViewState);
 
+  // ------------------ Fly to pin helper ------------------
+  const flyToPin = (pinData, callback) => {
+    const map = mapRef.current?.getMap?.();
+    if (!map) return;
+    map.flyTo({
+      center: [pinData.longitude, pinData.latitude],
+      zoom: 20.2, // 🔥 closer zoom
+      bearing: 30,
+      pitch: 75, // heavy tilt for street-view-like effect
+      speed: 1.2,
+      curve: 1.5,
+      essential: true,
+    });
+
+    map.once("moveend", () => callback?.());
+  };
+
   // ------------------ Handle map clicks ------------------
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
 
     const handleMapClick = (e) => {
-      if (!pins?.length) return;
-
-      if (!map.getLayer("pins-click-layer")) return;
+      if (!pins?.length || !map.getLayer("pins-click-layer")) return;
 
       const features = map.queryRenderedFeatures(e.point, {
         layers: ["pins-click-layer"],
       });
 
       if (features.length > 0) {
-        const feature = features[0];
-        const pinId = feature.properties.id;
+        const pinId = features[0].properties.id;
         const pin = pins.find((p) => p._id === pinId);
         if (pin) openPin(pin);
       }
@@ -68,37 +82,39 @@ export default function UserMap() {
 
   // ------------------ Open pin + fetch route ------------------
   const openPin = useCallback(
-    async (pinData) => {
-      setSelectedPin(pinData);
-      setDistance(null);
-      setRoute(null);
+    (pinData) => {
+      if (!pinData) return;
 
-      if (!userLocation || !pinData) return;
+      flyToPin(pinData, async () => {
+        setSelectedPin(pinData);
+        setDistance(null);
+        setRoute(null);
 
-      try {
-        const url =
-          `https://api.mapbox.com/directions/v5/mapbox/walking/` +
-          `${userLocation.longitude},${userLocation.latitude};` +
-          `${pinData.longitude},${pinData.latitude}` +
-          `?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+        if (!userLocation) return;
 
-        const resp = await fetch(url);
-        const data = await resp.json();
+        try {
+          const url =
+            `https://api.mapbox.com/directions/v5/mapbox/walking/` +
+            `${userLocation.longitude},${userLocation.latitude};` +
+            `${pinData.longitude},${pinData.latitude}` +
+            `?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
 
-        if (data.routes?.length) {
-          const routeData = data.routes[0];
-          setDistance(routeData.distance);
-          setRoute({
-            type: "Feature",
-            geometry: routeData.geometry,
-            properties: {},
-          });
-        } else {
-          console.warn("⚠️ No routes found:", data);
+          const resp = await fetch(url);
+          const data = await resp.json();
+
+          if (data.routes?.length) {
+            const routeData = data.routes[0];
+            setDistance(routeData.distance);
+            setRoute({
+              type: "Feature",
+              geometry: routeData.geometry,
+              properties: {},
+            });
+          }
+        } catch (err) {
+          console.error("❌ Directions fetch error:", err);
         }
-      } catch (err) {
-        console.error("❌ Directions fetch error:", err);
-      }
+      });
     },
     [userLocation]
   );
@@ -136,32 +152,43 @@ export default function UserMap() {
 
         {/* Tour pins with facade image */}
         {pins &&
-          pins.map((pin) => (
-            <Marker
-              key={pin._id}
-              longitude={pin.longitude}
-              latitude={pin.latitude}
-              anchor="bottom"
-            >
-              <div className="flex flex-col items-center cursor-pointer">
-                {/* Pin marker */}
-                <div
-                  onClick={() => openPin(pin)}
-                  className="w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md"
-                  title={pin.siteName}
-                ></div>
+          pins.map((pin) => {
+            const isSelected = selectedPin?._id === pin._id;
 
-                {/* Facade image (shown below the pin) */}
-                {pin.facadeUrl && (
-                  <img
-                    src={pin.facadeUrl}
-                    alt={pin.siteName}
-                    className="mt-1 w-24 h-24 object-contain"
-                  />
-                )}
-              </div>
-            </Marker>
-          ))}
+            return (
+              <Marker
+                key={pin._id}
+                longitude={pin.longitude}
+                latitude={pin.latitude}
+                anchor="bottom"
+              >
+                <div
+                  className="relative flex items-center justify-center cursor-pointer"
+                  onClick={() => openPin(pin)}
+                >
+                  {/* Facade image */}
+                  {pin.facadeUrl && (
+                    <img
+                      src={pin.facadeUrl}
+                      alt={pin.siteName}
+                      className={`object-contain transition-transform duration-700 ease-out ${
+                        isSelected
+                          ? "w-64 h-64 scale-150"
+                          : "w-24 h-24 scale-100"
+                      }`}
+                    />
+                  )}
+
+                  {/* Pin centered on the facade */}
+                  <div
+                    className="absolute top-1/2 left-1/2 w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md"
+                    style={{ transform: "translate(-50%, -50%)" }}
+                    title={pin.siteName}
+                  ></div>
+                </div>
+              </Marker>
+            );
+          })}
 
         {/* Mask */}
         {mask && (
@@ -205,7 +232,7 @@ export default function UserMap() {
         <BackHeader title={<span className="text-black">Tour Map</span>} />
       </div>
 
-      {/* Site card (still appears when pin is selected) */}
+      {/* Site card */}
       {selectedPin && (
         <SiteCard
           pin={{

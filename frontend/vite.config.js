@@ -58,7 +58,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://juander.onrender.com || http://localhost:5000",
+        target: "http://localhost:5000",
         changeOrigin: true,
         secure: false,
       },
