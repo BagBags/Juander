@@ -19,12 +19,9 @@ export default function Homepage() {
       if (!token) return;
 
       try {
-        const res = await axios.get(
-          "https://juander.onrender.com/api/auth/me",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         setCurrentUser(res.data);
       } catch (err) {
         console.error("Error fetching user:", err);

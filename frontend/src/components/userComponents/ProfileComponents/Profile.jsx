@@ -117,7 +117,7 @@ export default function ProfilePage() {
                   : currentUser?.profilePicture
                   ? currentUser.profilePicture.startsWith("http")
                     ? currentUser.profilePicture
-                    : `https://juander.onrender.com${currentUser.profilePicture}`
+                    : `http://localhost:5000${currentUser.profilePicture}`
                   : "https://i.pravatar.cc/100?img=68"
               }
               alt="Profile"

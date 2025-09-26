@@ -24,10 +24,7 @@ export default function AdminItineraryMain() {
   useEffect(() => {
     const fetchPins = async () => {
       try {
-        const res = await axios.get(
-          "https://juander.onrender.com/api/pins",
-          config
-        );
+        const res = await axios.get("http://localhost:5000/api/pins", config);
         setPins(res.data);
       } catch (err) {
         console.error("Failed to fetch pins:", err);
@@ -44,7 +41,7 @@ export default function AdminItineraryMain() {
   const fetchItineraries = async () => {
     try {
       const res = await axios.get(
-        "https://juander.onrender.com/api/itineraries",
+        "http://localhost:5000/api/itineraries",
         config
       );
       setItineraries(res.data);

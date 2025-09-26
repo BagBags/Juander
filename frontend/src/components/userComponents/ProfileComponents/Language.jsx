@@ -22,12 +22,9 @@ export default function Language() {
 
         if (!token) return;
 
-        const { data } = await axios.get(
-          "https://juander.onrender.com/api/auth/me",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (data?.language) {
           setSelected(data.language); // directly store "en" or "tl"
@@ -54,7 +51,7 @@ export default function Language() {
 
       // Save to backend
       await axios.post(
-        "https://juander.onrender.com/api/auth/language",
+        "http://localhost:5000/api/auth/language",
         { language: selected }, // 👈 save "en" or "tl"
         { headers: { Authorization: `Bearer ${token}` } }
       );

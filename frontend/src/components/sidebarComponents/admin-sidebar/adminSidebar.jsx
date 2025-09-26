@@ -166,7 +166,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                   src={
                     currentAdmin.profilePicture.startsWith("http")
                       ? currentAdmin.profilePicture + `?t=${Date.now()}`
-                      : `https://juander.onrender.com${
+                      : `http://localhost:5000${
                           currentAdmin.profilePicture
                         }?t=${Date.now()}`
                   }

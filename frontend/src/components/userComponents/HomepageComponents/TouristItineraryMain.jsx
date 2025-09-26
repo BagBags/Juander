@@ -14,12 +14,9 @@ export default function TouristItineraryMain() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const res = await axios.get(
-          "https://juander.onrender.com/api/itineraries",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await axios.get("http://localhost:5000/api/itineraries", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         const adminItineraries = res.data.filter((i) => i.isAdminCreated);
         const userItineraries = res.data.filter((i) => !i.isAdminCreated);

@@ -30,7 +30,7 @@ export default function CreateItineraryPage() {
 
   const fetchSites = async () => {
     try {
-      const res = await axios.get("https://juander.onrender.com/api/pins");
+      const res = await axios.get("http://localhost:5000/api/pins");
       setSites(res.data);
     } catch {
       alert("Failed to load sites");
@@ -40,7 +40,7 @@ export default function CreateItineraryPage() {
   const fetchItineraries = async () => {
     try {
       const res = await axios.get(
-        "https://juander.onrender.com/api/itineraries",
+        "http://localhost:5000/api/itineraries",
         config
       );
       setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
@@ -69,13 +69,13 @@ export default function CreateItineraryPage() {
     try {
       if (editingItineraryId) {
         await axios.put(
-          `https://juander.onrender.com/api/itineraries/${editingItineraryId}`,
+          `http://localhost:5000/api/itineraries/${editingItineraryId}`,
           payload,
           config
         );
       } else {
         await axios.post(
-          "https://juander.onrender.com/api/itineraries",
+          "http://localhost:5000/api/itineraries",
           payload,
           config
         );
@@ -90,10 +90,7 @@ export default function CreateItineraryPage() {
   const handleDelete = async (id) => {
     if (!confirm("Delete this itinerary?")) return;
     try {
-      await axios.delete(
-        `https://juander.onrender.com/api/itineraries/${id}`,
-        config
-      );
+      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
     } catch {
       alert("Failed to delete itinerary");

@@ -23,17 +23,17 @@ const { verifyAdmin } = require("./middleware/authMiddleware");
 // Needed for resolving __dirname in CommonJS
 const app = express();
 
-app.use(
-  cors({
-    origin: [
-      // "http://localhost:5173",
-      // "http://localhost:5000",
-      "https://juander-dbd5.onrender.com",
-      "https://juander.onrender.com",
-    ],
-    credentials: true,
-  })
-);
+// app.use(
+//   cors({
+//     origin: [
+//       // "http://localhost:5173",
+//       // "http://localhost:5000",
+//       "https://juander-dbd5.onrender.com",
+//       "https://juander.onrender.com",
+//     ],
+//     credentials: true,
+//   })
+// );
 
 app.use(cors());
 

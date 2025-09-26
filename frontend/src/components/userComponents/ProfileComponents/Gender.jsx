@@ -28,12 +28,9 @@ export default function Gender() {
           sessionStorage.getItem("token") || localStorage.getItem("token");
         if (!token) return;
 
-        const { data } = await axios.get(
-          "https://juander.onrender.com/api/auth/me",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (data?.gender) {
           // convert "Male" => "male", "Female" => "female", "Other" => "other"
@@ -57,7 +54,7 @@ export default function Gender() {
       }
 
       const res = await axios.post(
-        "https://juander.onrender.com/api/auth/gender",
+        "http://localhost:5000/api/auth/gender",
         { gender: selected.charAt(0).toUpperCase() + selected.slice(1) },
         {
           headers: {

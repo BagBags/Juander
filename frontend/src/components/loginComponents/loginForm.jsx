@@ -91,7 +91,7 @@ export default function LoginForm({ toggleForm }) {
     setSuccess("");
     try {
       const res = await axios.post(
-        "https://juander.onrender.com/api/auth/google-login",
+        "http://localhost:5000/api/auth/google-login",
         { token: credentialResponse.credential }
       );
 
@@ -124,13 +124,10 @@ export default function LoginForm({ toggleForm }) {
     }
 
     try {
-      const res = await axios.post(
-        "https://juander.onrender.com/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
+      });
 
       const { user, token } = res.data;
       localStorage.removeItem("guest");
@@ -161,7 +158,7 @@ export default function LoginForm({ toggleForm }) {
     }
 
     try {
-      await axios.post("https://juander.onrender.com/api/auth/send-otp", {
+      await axios.post("http://localhost:5000/api/auth/send-otp", {
         email,
       });
       setSuccess("OTP sent to your email.");
@@ -185,7 +182,7 @@ export default function LoginForm({ toggleForm }) {
     }
 
     try {
-      await axios.post("https://juander.onrender.com/api/auth/reset-password", {
+      await axios.post("http://localhost:5000/api/auth/reset-password", {
         email,
         otp,
         newPassword,

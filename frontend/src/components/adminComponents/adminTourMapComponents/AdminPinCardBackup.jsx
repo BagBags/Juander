@@ -399,7 +399,7 @@ export default function AdminTourMapMain() {
 
     try {
       const res = await axios.post(
-        "https://juander.onrender.com/api/pins/upload-ar",
+        "http://localhost:5000/api/pins/upload-ar",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
