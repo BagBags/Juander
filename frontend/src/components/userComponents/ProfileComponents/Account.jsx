@@ -39,9 +39,12 @@ export default function Account() {
       if (!token) return;
       try {
         setLoading(true);
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "https://juander.onrender.com/api/auth/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setUser({
           firstName: res.data.firstName || "",
           lastName: res.data.lastName || "",
@@ -120,7 +123,7 @@ export default function Account() {
     }
     try {
       await axios.post(
-        "http://localhost:5000/api/auth/send-email-verification-otp",
+        "https://juander.onrender.com/api/auth/send-email-verification-otp",
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -141,7 +144,7 @@ export default function Account() {
     }
     try {
       await axios.post(
-        "http://localhost:5000/api/auth/verify-email-otp",
+        "https://juander.onrender.com/api/auth/verify-email-otp",
         { otp },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -160,7 +163,7 @@ export default function Account() {
   const handleSubmitEmailChange = async () => {
     try {
       const res = await axios.put(
-        "http://localhost:5000/api/auth/account",
+        "https://juander.onrender.com/api/auth/account",
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -227,7 +230,7 @@ export default function Account() {
       }
 
       const res = await axios.put(
-        "http://localhost:5000/api/auth/account",
+        "https://juander.onrender.com/api/auth/account",
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );

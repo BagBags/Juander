@@ -19,9 +19,12 @@ export default function Homepage() {
       if (!token) return;
 
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "https://juander.onrender.com/api/auth/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setCurrentUser(res.data);
       } catch (err) {
         console.error("Error fetching user:", err);
@@ -45,7 +48,7 @@ export default function Homepage() {
       }}
     >
       {/* Logo Header */}
-      <div className="center mt-10 top-4 left-0 right-0 flex justify-end px-4">
+      <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
       </div>
 

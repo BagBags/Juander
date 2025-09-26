@@ -139,39 +139,38 @@ export default function RolesPage() {
   const isSuperAdmin = currentUser?.email === "aaronbagain@gmail.com";
 
   // ✅ Helper for header with sort arrows
-const renderSortableHeader = (label, key) => {
-  const isActive = sortConfig.key === key;
+  const renderSortableHeader = (label, key) => {
+    const isActive = sortConfig.key === key;
 
-  return (
-    <th
-      onClick={() => requestSort(key)}
-      className="px-6 py-3 cursor-pointer select-none"
-    >
-      <div className="flex items-center gap-1">
-        {label}
-        <span className="flex flex-col leading-none">
-          <ChevronUp
-            size={12}
-            className={`${
-              isActive && sortConfig.direction === "asc"
-                ? "text-white"
-                : "text-gray-300"
-            }`}
-          />
-          <ChevronDown
-            size={12}
-            className={`-mt-1 ${
-              isActive && sortConfig.direction === "desc"
-                ? "text-white"
-                : "text-gray-300"
-            }`}
-          />
-        </span>
-      </div>
-    </th>
-  );
-};
-
+    return (
+      <th
+        onClick={() => requestSort(key)}
+        className="px-6 py-3 cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-1">
+          {label}
+          <span className="flex flex-col leading-none">
+            <ChevronUp
+              size={12}
+              className={`${
+                isActive && sortConfig.direction === "asc"
+                  ? "text-white"
+                  : "text-gray-300"
+              }`}
+            />
+            <ChevronDown
+              size={12}
+              className={`-mt-1 ${
+                isActive && sortConfig.direction === "desc"
+                  ? "text-white"
+                  : "text-gray-300"
+              }`}
+            />
+          </span>
+        </div>
+      </th>
+    );
+  };
 
   return (
     <section>

@@ -16,9 +16,12 @@ export default function Gender() {
 
         if (!token) return;
 
-        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await axios.get(
+          "https://juander.onrender.com/api/auth/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (data?.gender) {
           // Capitalize first letter to match your options
@@ -45,7 +48,7 @@ export default function Gender() {
       }
 
       const res = await axios.post(
-        "http://localhost:5000/api/auth/gender",
+        "https://juander.onrender.com/api/auth/gender",
         {
           gender:
             selected.charAt(0).toUpperCase() + selected.slice(1).toLowerCase(),

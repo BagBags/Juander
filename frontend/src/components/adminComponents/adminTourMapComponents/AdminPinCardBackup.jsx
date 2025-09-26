@@ -1,7 +1,9 @@
 // AdminTourMapMain.jsx
-import React, { useState, useRef, useEffect, Suspense } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Map, { Marker } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import axios from "axios";
 import {
   MAPBOX_TOKEN,
@@ -18,20 +20,9 @@ import {
   faMapPin,
   faRotate,
 } from "@fortawesome/free-solid-svg-icons";
-
-// ---------- Lazy-loaded components ----------
-const AdminPinCard = React.lazy(() =>
-  import("../adminTourMapComponents/AdminPinCard")
-);
-const AddPinModal = React.lazy(() =>
-  import("../adminTourMapComponents/AddPinModal")
-);
-const ManualAddModal = React.lazy(() =>
-  import("../adminTourMapComponents/ManualAddModal")
-);
-const ThreeDModelPreview = React.lazy(() =>
-  import("../adminTourMapComponents/ThreeDModelPreview")
-);
+import AdminPinCard from "../adminTourMapComponents/AdminPinCard";
+import AddPinModal from "../adminTourMapComponents/AddPinModal";
+import ManualAddModal from "../adminTourMapComponents/ManualAddModal";
 
 // ---------- Axios instance ----------
 const api = axios.create({
@@ -42,6 +33,88 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// 3D Model Preview Component
+const ModelPreview = ({ glbUrl, onClose }) => {
+  const [rotation, setRotation] = useState(0);
+  const containerRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setStartX(e.clientX);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startX;
+    setRotation((prev) => (prev + deltaX * 0.5) % 360);
+    setStartX(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) setIsDragging(false);
+    };
+
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
+  }, [isDragging]);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-4 w-full max-w-2xl">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">3D Model Preview</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <FontAwesomeIcon icon={faXmark} size="lg" />
+          </button>
+        </div>
+
+        <div
+          ref={containerRef}
+          className="w-full h-96 bg-gray-100 rounded-lg relative flex items-center justify-center"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        >
+          <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+            <FontAwesomeIcon icon={faRotate} className="mr-2" />
+            Drag to rotate
+          </div>
+
+          <div className="text-center">
+            <div className="text-5xl mb-2">🧊</div>
+            <p className="text-gray-600">GLB Model Preview</p>
+            <p className="text-sm text-gray-500 mt-2">
+              Rotation: {Math.round(rotation)}°
+            </p>
+            <p className="text-sm text-gray-500 mt-1 break-all">{glbUrl}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function AdminTourMapMain() {
   const [viewState, setViewState] = useState({
@@ -58,11 +131,11 @@ export default function AdminTourMapMain() {
   const [isMaskingMode, setIsMaskingMode] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
+  // For manual pin input
   const [manualCoords, setManualCoords] = useState({ lat: "", lng: "" });
 
   const [loading, setLoading] = useState(false);
-  const [notif, setNotif] = useState(null);
-
+  const [notif, setNotif] = useState(null); // {type: "success"|"error"|"info", message: string}
   const [showGlbPreview, setShowGlbPreview] = useState(false);
   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
 
@@ -70,7 +143,6 @@ export default function AdminTourMapMain() {
   const drawRef = useRef(null);
   const [showAddPinModal, setShowAddPinModal] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
-
   // ---------- Helpers ----------
   const notify = (type, message) => {
     setNotif({ type, message });
@@ -84,9 +156,10 @@ export default function AdminTourMapMain() {
       try {
         const [pinsRes, maskRes] = await Promise.all([
           api.get("/pins"),
-          api.get("/mask").catch(() => ({ data: null })),
+          api.get("/mask").catch(() => ({ data: null })), // allow no mask yet
         ]);
 
+        // Expecting pins as array of documents
         setPins(
           Array.isArray(pinsRes.data)
             ? pinsRes.data
@@ -95,17 +168,19 @@ export default function AdminTourMapMain() {
             : []
         );
 
+        // Accept either a Feature or something like { geometry: {...} }
         const maskData = maskRes?.data;
         if (maskData) {
-          if (maskData.type === "Feature") setMaskGeoJson(maskData);
-          else if (maskData.geometry)
+          if (maskData.type === "Feature") {
+            setMaskGeoJson(maskData);
+          } else if (maskData.geometry) {
             setMaskGeoJson({
               type: "Feature",
               properties: {},
               geometry: maskData.geometry,
             });
+          }
         }
-
         notify("success", "Map data loaded");
       } catch (err) {
         console.error(err);
@@ -117,48 +192,50 @@ export default function AdminTourMapMain() {
     fetchData();
   }, []);
 
-  // ---------- Mask Editing ----------
-  const enableMaskEditing = async () => {
+  /** ----------------- MASK EDITING ------------------ */
+  const enableMaskEditing = () => {
     const map = adminMapRef.current?.getMap?.();
     if (!map) return;
 
-    if (!drawRef.current) {
-      const { default: MapboxDraw } = await import("@mapbox/mapbox-gl-draw");
-      const draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: { polygon: false, trash: false },
-        styles: [
-          {
-            id: "gl-draw-polygon-fill",
-            type: "fill",
-            paint: { "fill-color": "#ff6600", "fill-opacity": 0.5 },
-          },
-          {
-            id: "gl-draw-polygon-stroke",
-            type: "line",
-            paint: { "line-color": "#ff0000", "line-width": 3 },
-          },
-          {
-            id: "gl-draw-polygon-and-line-vertex-halo-active",
-            type: "circle",
-            paint: { "circle-radius": 7, "circle-color": "#fff" },
-          },
-          {
-            id: "gl-draw-polygon-and-line-vertex-active",
-            type: "circle",
-            paint: { "circle-radius": 5, "circle-color": "#ff0000" },
-          },
-        ],
-      });
+    if (drawRef.current) map.removeControl(drawRef.current);
 
-      drawRef.current = draw;
-      map.addControl(draw, "top-left");
+    const draw = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: { polygon: false, trash: false },
+      styles: [
+        {
+          id: "gl-draw-polygon-fill",
+          type: "fill",
+          paint: { "fill-color": "#ff6600", "fill-opacity": 0.5 },
+        },
+        {
+          id: "gl-draw-polygon-stroke",
+          type: "line",
+          paint: { "line-color": "#ff0000", "line-width": 3 },
+        },
+        {
+          id: "gl-draw-polygon-and-line-vertex-halo-active",
+          type: "circle",
+          paint: { "circle-radius": 7, "circle-color": "#fff" },
+        },
+        {
+          id: "gl-draw-polygon-and-line-vertex-active",
+          type: "circle",
+          paint: { "circle-radius": 5, "circle-color": "#ff0000" },
+        },
+      ],
+    });
 
-      if (maskGeoJson?.geometry) {
-        const added = draw.add(maskGeoJson);
-        const featureId =
-          maskGeoJson.id || (Array.isArray(added) ? added[0] : added);
-        if (featureId) draw.changeMode("direct_select", { featureId });
+    drawRef.current = draw;
+    map.addControl(draw, "top-left");
+
+    // Add current mask if exists
+    if (maskGeoJson?.geometry) {
+      const added = draw.add(maskGeoJson);
+      const featureId =
+        maskGeoJson.id || (Array.isArray(added) ? added[0] : added);
+      if (featureId) {
+        draw.changeMode("direct_select", { featureId });
       }
     }
 
@@ -178,6 +255,7 @@ export default function AdminTourMapMain() {
     const map = adminMapRef.current?.getMap?.();
     try {
       let featureToSave = maskGeoJson;
+
       if (drawRef.current && map) {
         const data = drawRef.current.getAll();
         if (data.features.length > 0) {
@@ -190,17 +268,27 @@ export default function AdminTourMapMain() {
         }
       }
 
-      await api.post("/mask", { geometry: featureToSave.geometry });
+      // Accept POSTing either the Feature or just geometry—mirrors our controller example
+      await api.post("/mask", {
+        geometry: featureToSave.geometry, // ✅ only send geometry
+      });
+
       notify("success", "Mask saved");
     } catch (err) {
       console.error(err);
       notify("error", "Failed to save mask");
     } finally {
-      exitMaskEditing();
+      setIsMaskingMode(false);
+      // Clean up draw control
+      const map2 = adminMapRef.current?.getMap?.();
+      if (drawRef.current && map2) {
+        map2.removeControl(drawRef.current);
+        drawRef.current = null;
+      }
     }
   };
 
-  // ---------- Pin handling ----------
+  /** ----------------- PINS ------------------ */
   const handleMapClick = (event) => {
     if (!isAddingPin) return;
     const { lng, lat } = event.lngLat;
@@ -214,6 +302,7 @@ export default function AdminTourMapMain() {
       arEnabled: false,
       arLink: "",
       status: "active",
+      // _id is absent => new pin
     };
     setPins((prev) => [...prev, newPin]);
     setSelectedPin(pins.length);
@@ -222,8 +311,12 @@ export default function AdminTourMapMain() {
   const addPinFromCoords = () => {
     const lat = parseFloat(manualCoords.lat);
     const lng = parseFloat(manualCoords.lng);
-    if (isNaN(lat) || isNaN(lng))
-      return notify("error", "Invalid latitude or longitude");
+
+    if (isNaN(lat) || isNaN(lng)) {
+      notify("error", "Invalid latitude or longitude");
+      return;
+    }
+
     const newPin = {
       latitude: lat,
       longitude: lng,
@@ -235,15 +328,17 @@ export default function AdminTourMapMain() {
       arLink: "",
       status: "active",
     };
+
     setPins((prev) => [...prev, newPin]);
-    setSelectedPin(pins.length);
-    setManualCoords({ lat: "", lng: "" });
+    setSelectedPin(pins.length); // open form immediately
+    setManualCoords({ lat: "", lng: "" }); // reset
   };
 
-  const updatePinField = (index, field, value) =>
+  const updatePinField = (index, field, value) => {
     setPins((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
     );
+  };
 
   const handleFormSubmit = async (e, index) => {
     e.preventDefault();
@@ -251,14 +346,19 @@ export default function AdminTourMapMain() {
     try {
       let saved;
       if (pin._id) {
+        // Update existing
         const { _id, ...payload } = pin;
         const res = await api.put(`/pins/${_id}`, payload);
         saved = res.data;
       } else {
+        // Create new
         const res = await api.post("/pins", pin);
         saved = res.data;
       }
+
+      // Replace pin at index with the saved version (ensures we get _id)
       setPins((prev) => prev.map((p, i) => (i === index ? saved : p)));
+
       notify("success", `Pin #${index + 1} saved`);
       setSelectedPin(null);
       setIsAddingPin(false);
@@ -270,21 +370,30 @@ export default function AdminTourMapMain() {
 
   const handleDeletePin = async (id) => {
     if (!id) return;
-    if (!window.confirm("Are you sure you want to delete this pin?")) return;
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this pin?"
+    );
+    if (!confirmDelete) return;
+
     try {
-      await api.delete(`/pins/${id}`);
+      await api.delete(`/pins/${id}`); // ✅ use `api` instance
       setPins((prev) => prev.filter((pin) => pin._id !== id));
       setSelectedPin(null);
-      notify("success", "Pin deleted successfully");
-    } catch (err) {
-      console.error(err);
-      notify("error", "Failed to delete pin");
+      alert("Pin deleted successfully");
+    } catch (error) {
+      console.error("Error deleting pin:", error);
+      alert(
+        error.response?.data?.message || "Failed to delete pin. Unauthorized?"
+      );
     }
   };
 
+  // Handle GLB file upload
   const handleGlbUpload = async (e, index) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const formData = new FormData();
     formData.append("arModel", file);
 
@@ -294,25 +403,32 @@ export default function AdminTourMapMain() {
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
+
       const uploadedUrl = res.data.url;
+
+      // Update the pin in state
       setPins((prev) =>
         prev.map((p, i) => (i === index ? { ...p, glbUrl: uploadedUrl } : p))
       );
+
       notify("success", "3D model uploaded successfully");
     } catch (err) {
-      console.error(err);
+      console.error("Upload error:", err.response?.data || err);
       notify("error", err.response?.data?.message || "Upload failed");
     }
   };
 
+  // Preview 3D model
   const previewGlb = (glbUrl) => {
     setCurrentGlbUrl(glbUrl);
     setShowGlbPreview(true);
   };
 
+  // Facade image upload
   const handleFacadeUpload = async (e, pinIndex) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const formData = new FormData();
     formData.append("facade", file);
 
@@ -321,18 +437,20 @@ export default function AdminTourMapMain() {
       const res = await api.post(`/pins/${pinId}/upload-facade`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       const updatedPins = [...pins];
       updatedPins[pinIndex].facadeUrl = res.data.facadeUrl;
       setPins(updatedPins);
     } catch (err) {
-      console.error(err);
-      notify("error", "Facade upload failed");
+      console.error("❌ Facade upload failed:", err);
     }
   };
 
+  // Facade remove
   const handleRemoveFacade = async (index) => {
     const pin = pins[index];
     if (!pin?._id) {
+      // just clear locally for unsaved pins
       setPins((prev) => {
         const updated = [...prev];
         updated[index] = { ...updated[index], facadeUrl: "" };
@@ -340,23 +458,50 @@ export default function AdminTourMapMain() {
       });
       return;
     }
+
     try {
-      await api.delete(`/pins/${pin._id}/remove-facade`);
+      const res = await api.delete(`/pins/${pin._id}/remove-facade`);
       setPins((prev) => {
         const updated = [...prev];
         updated[index] = { ...updated[index], facadeUrl: "" };
         return updated;
       });
+
       notify("success", "Facade removed successfully");
     } catch (err) {
-      console.error(err);
+      console.error("❌ Error removing facade:", err);
       notify("error", "Failed to remove facade");
+    }
+  };
+
+  // Optional: bulk-save any unsaved pins (if you keep the toolbar Save Pins)
+  const savePins = async () => {
+    try {
+      // Save only those without _id (new)
+      const newOnes = pins
+        .map((p, i) => ({ ...p, __idx: i }))
+        .filter((p) => !p._id);
+
+      const savedCopies = [...pins];
+      for (const p of newOnes) {
+        const { __idx, ...payload } = p;
+        const res = await api.post("/pins", payload);
+        savedCopies[__idx] = res.data;
+      }
+      setPins(savedCopies);
+
+      notify("success", `Saved ${newOnes.length} new pin(s)`);
+      setIsAddingPin(false);
+    } catch (err) {
+      console.error(err);
+      notify("error", "Failed to save pins");
     }
   };
 
   return (
     <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
       <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
+        {/* Loading/Notif */}
         {loading && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[10000] bg-white/90 border border-gray-200 px-3 py-1 rounded shadow">
             Loading…
@@ -375,17 +520,43 @@ export default function AdminTourMapMain() {
             {notif.message}
           </div>
         )}
-        {/* 3D Model Preview */}
+
+        {/* 3D Model Preview Modal */}
         {showGlbPreview && (
-          <Suspense
-            fallback={
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
-                Loading 3D preview…
+          <ModelPreview
+            glbUrl={currentGlbUrl}
+            onClose={() => setShowGlbPreview(false)}
+          />
+        )}
+
+        {/* Pin Mode Indicator - Always visible when active, not inside modal */}
+        {isAddingPin && (
+          <>
+            {/* Top card: Pin mode active */}
+            <div className="absolute top-3 left-3 z-[10000] bg-blue-100 border border-blue-300 px-3 py-2 rounded-lg shadow-md">
+              <div className="flex items-center">
+                <FontAwesomeIcon
+                  icon={faMapPin}
+                  className="text-blue-600 mr-2"
+                />
+                <span className="text-blue-700 font-medium">
+                  Pin mode active
+                </span>
+                <button
+                  onClick={() => setIsAddingPin(false)}
+                  className="ml-3 text-blue-700 hover:text-blue-900"
+                  title="Exit Pin Mode"
+                >
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
               </div>
-            }
-          >
-            <ThreeDModelPreview url={currentGlbUrl} />
-          </Suspense>
+            </div>
+
+            {/* Bottom card: hint */}
+            <div className="absolute top-16 left-3 z-[10000] bg-white border border-gray-200 px-3 py-2 rounded-lg shadow-md">
+              <p className="text-sm text-gray-700">Tap the map to add a pin</p>
+            </div>
+          </>
         )}
 
         {/* Map */}
@@ -420,69 +591,43 @@ export default function AdminTourMapMain() {
           ))}
         </Map>
 
-        {/* Pin Card */}
         {selectedPin !== null && pins[selectedPin] && (
-          <Suspense
-            fallback={
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                Loading pin card…
-              </div>
-            }
-          >
-            <AdminPinCard
-              pin={pins[selectedPin]}
-              selectedPinIndex={selectedPin}
-              updatePinField={updatePinField}
-              handleFormSubmit={handleFormSubmit}
-              handleDeletePin={handleDeletePin}
-              handleGlbUpload={handleGlbUpload}
-              previewGlb={previewGlb}
-              handleFacadeUpload={handleFacadeUpload}
-              handleRemoveFacade={handleRemoveFacade}
-              onClose={() => setSelectedPin(null)}
-            />
-          </Suspense>
+          <AdminPinCard
+            pin={pins[selectedPin]}
+            selectedPinIndex={selectedPin}
+            updatePinField={updatePinField}
+            handleFormSubmit={handleFormSubmit}
+            handleDeletePin={handleDeletePin}
+            handleGlbUpload={handleGlbUpload}
+            previewGlb={previewGlb}
+            handleFacadeUpload={handleFacadeUpload}
+            handleRemoveFacade={handleRemoveFacade}
+            onClose={() => setSelectedPin(null)}
+          />
         )}
 
-        {/* Add Pin Modal */}
         {showAddPinModal && (
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 flex items-center justify-center z-50">
-                Loading…
-              </div>
-            }
-          >
-            <AddPinModal
-              isAddingPin={isAddingPin}
-              setIsAddingPin={setIsAddingPin}
-              setShowManualAdd={setShowManualAdd}
-              setShowAddPinModal={setShowAddPinModal}
-            />
-          </Suspense>
+          <AddPinModal
+            isAddingPin={isAddingPin}
+            setIsAddingPin={setIsAddingPin}
+            setShowManualAdd={setShowManualAdd}
+            setShowAddPinModal={setShowAddPinModal}
+          />
         )}
 
-        {/* Manual Add Modal */}
         {showManualAdd && (
-          <Suspense
-            fallback={
-              <div className="fixed inset-0 flex items-center justify-center z-50">
-                Loading…
-              </div>
-            }
-          >
-            <ManualAddModal
-              manualCoords={manualCoords}
-              setManualCoords={setManualCoords}
-              addPinFromCoords={addPinFromCoords}
-              setShowManualAdd={setShowManualAdd}
-              setShowAddPinModal={setShowAddPinModal}
-            />
-          </Suspense>
+          <ManualAddModal
+            manualCoords={manualCoords}
+            setManualCoords={setManualCoords}
+            addPinFromCoords={addPinFromCoords}
+            setShowManualAdd={setShowManualAdd}
+            setShowAddPinModal={setShowAddPinModal}
+          />
         )}
 
-        {/* Toolbar */}
+        {/* Floating Toolbar */}
         <div className="absolute top-6 right-6 z-[9999] flex items-end space-x-3">
+          {/* Map Legend Panel */}
           {showLegend && (
             <div className="absolute right-full mr-3 top-0 bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn">
               <h4 className="font-semibold mb-3 text-lg border-b pb-1">
@@ -490,15 +635,17 @@ export default function AdminTourMapMain() {
               </h4>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center space-x-2">
-                  <span>📍</span>
-                  <span>Pin</span>
+                  <span>📍</span> <span>Pin</span>
                 </li>
               </ul>
             </div>
           )}
 
+          {/* Toolbar + Save Mask */}
           <div className="flex flex-col items-end space-y-2">
+            {/* Toolbar Core */}
             <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999]">
+              {/* Legend Toggle */}
               <button
                 onClick={() => setShowLegend((prev) => !prev)}
                 title="Map Legend"
@@ -508,6 +655,8 @@ export default function AdminTourMapMain() {
               >
                 <FontAwesomeIcon icon={faInfo} />
               </button>
+
+              {/* Pin Mode Toggle - Now opens modal */}
               <button
                 onClick={() => setShowAddPinModal(true)}
                 title="Add Pin"
@@ -517,6 +666,8 @@ export default function AdminTourMapMain() {
               >
                 <FontAwesomeIcon icon={isAddingPin ? faMapPin : faPlus} />
               </button>
+
+              {/* Mask Mode Toggle */}
               <button
                 onClick={isMaskingMode ? exitMaskEditing : enableMaskEditing}
                 title={
@@ -532,6 +683,7 @@ export default function AdminTourMapMain() {
               </button>
             </div>
 
+            {/* Save Mask Button */}
             {isMaskingMode && (
               <div className="bg-white rounded-lg shadow-md overflow-hidden relative z-[9999] w-full">
                 <button

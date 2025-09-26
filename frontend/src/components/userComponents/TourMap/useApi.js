@@ -6,7 +6,7 @@ export const useApi = (api) => {
   const [mask, setMask] = useState(null);
   const [inverseMask, setInverseMask] = useState(null);
   const [pins, setPins] = useState([]);
-  const BACKEND_URL = "http://localhost:5000";
+  const BACKEND_URL = "https://juander.onrender.com";
 
   // ✅ Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {

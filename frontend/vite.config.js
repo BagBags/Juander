@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
   plugins: [
@@ -33,22 +34,31 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
       },
     }),
+    visualizer({
+      filename: "dist/stats.html",
+      template: "treemap", // "sunburst" or "network" also work
+    }),
   ],
   build: {
-    target: "esnext", // Use modern JS
-    minify: "esbuild", // esbuild is fastest
-    cssCodeSplit: true, // Split CSS
-    sourcemap: false, // Disable maps in prod
+    target: "esnext",
+    minify: "esbuild",
+    cssCodeSplit: true,
+    sourcemap: false,
     chunkSizeWarningLimit: 2000,
-  },
-  optimizeDeps: {
-    include: ["three", "@react-three/fiber", "@react-three/drei"],
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          three: ["three", "@react-three/fiber", "@react-three/drei"],
+          mapbox: ["mapbox-gl", "react-map-gl"],
+        },
+      },
+    },
   },
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
-        // target: "https://juander.onrender.com",
+        target: "https://juander.onrender.com || http://localhost:5000",
         changeOrigin: true,
         secure: false,
       },

@@ -11,7 +11,7 @@ export default function GuestItineraryMain() {
     const fetchItineraries = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:5000/api/itineraries/guest"
+          "https://juander.onrender.com/api/itineraries/guest"
         );
         setAdminItineraries(res.data); // backend already returns only admin-created
       } catch (err) {

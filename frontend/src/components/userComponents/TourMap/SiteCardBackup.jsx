@@ -1,7 +1,12 @@
 // components/userComponents/SiteCard.jsx
-import React, { Suspense, lazy } from "react";
+import React, { Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
 
-const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
+const ModelPreview = ({ url }) => {
+  const { scene } = useGLTF(url, true);
+  return <primitive object={scene} scale={0.5} />;
+};
 
 const SiteCard = ({ pin, onClose, distance }) => (
   <div
@@ -19,14 +24,25 @@ const SiteCard = ({ pin, onClose, distance }) => (
         ✕
       </button>
 
-      {/* ✅ Lazy load 3D model preview only when needed */}
+      {/* 3D model preview */}
       {pin.glbUrl && (
         <div className="mb-3 w-full h-64 md:h-80 border border-gray-200 rounded-lg">
-          <Suspense
-            fallback={<p className="text-center mt-6">Loading 3D model...</p>}
-          >
-            <ModelPreview url={pin.glbUrl} />
-          </Suspense>
+          <Canvas>
+            <Suspense fallback={null}>
+              <ambientLight intensity={0.8} />
+              <directionalLight position={[5, 5, 5]} />
+              <Bounds fit clip observe margin={1.2}>
+                <Center>
+                  <ModelPreview url={pin.glbUrl} />
+                </Center>
+              </Bounds>
+              <OrbitControls
+                enableZoom={true}
+                minPolarAngle={Math.PI / 3}
+                maxPolarAngle={Math.PI / 2}
+              />
+            </Suspense>
+          </Canvas>
         </div>
       )}
 

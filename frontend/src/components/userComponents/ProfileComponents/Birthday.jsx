@@ -33,9 +33,12 @@ export default function Birthday() {
           sessionStorage.getItem("token") || localStorage.getItem("token");
         if (!token) return;
 
-        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await axios.get(
+          "https://juander.onrender.com/api/auth/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (data?.birthday) {
           const d = new Date(data.birthday);
@@ -67,7 +70,7 @@ export default function Birthday() {
       }
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/auth/birthday",
+        "https://juander.onrender.com/api/auth/birthday",
         { month, date, year },
         { headers: { Authorization: `Bearer ${token}` } }
       );

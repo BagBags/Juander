@@ -111,7 +111,7 @@ export default function AdminProfile() {
                   : currentAdmin?.profilePicture
                   ? currentAdmin.profilePicture.startsWith("http")
                     ? currentAdmin.profilePicture
-                    : `http://localhost:5000${currentAdmin.profilePicture}`
+                    : `https://juander.onrender.com${currentAdmin.profilePicture}`
                   : "https://i.pravatar.cc/100?img=68"
               }
               alt="Profile"

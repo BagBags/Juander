@@ -14,7 +14,7 @@ const fs = require("fs");
 
 const router = express.Router();
 
-router.get("/", verifyAdmin, getPins);
+router.get("/", getPins);
 router.post("/", verifyAdmin, createPin);
 router.put("/:id", verifyAdmin, updatePin);
 router.delete("/:id", verifyAdmin, deletePin);

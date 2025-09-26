@@ -44,7 +44,7 @@ export default function GuestHomepage() {
       }}
     >
       {/* Logo Header */}
-      <div className="center mt-10 top-4 left-0 right-0 flex justify-end px-4">
+      <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
       </div>
 

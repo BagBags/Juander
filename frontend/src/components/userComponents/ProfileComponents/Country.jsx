@@ -20,9 +20,12 @@ export default function CountrySelector() {
       if (!token) return;
 
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          "https://juander.onrender.com/api/auth/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         if (res.data?.country) {
           // store country code instead of name for consistency
           const found = Object.entries(countries).find(
@@ -66,7 +69,7 @@ export default function CountrySelector() {
     try {
       setLoading(true);
       await axios.post(
-        "http://localhost:5000/api/auth/country",
+        "https://juander.onrender.com/api/auth/country",
         { country: countries[selected].name },
         { headers: { Authorization: `Bearer ${token}` } }
       );

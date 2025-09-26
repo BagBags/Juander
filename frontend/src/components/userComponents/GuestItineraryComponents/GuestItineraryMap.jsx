@@ -33,7 +33,9 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     const fetchMask = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/mask");
+        const { data } = await axios.get(
+          "https://juander.onrender.com/api/mask"
+        );
         if (!data?.geometry) return;
 
         const feature = {
@@ -55,7 +57,7 @@ export default function GuestItineraryMap() {
     const fetchItinerary = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/itineraries/guest/${itineraryId}`
+          `https://juander.onrender.com/api/itineraries/guest/${itineraryId}`
         );
 
         const sites = (res.data.sites || []).filter(
