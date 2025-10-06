@@ -5,22 +5,37 @@ const fs = require("fs");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (req.baseUrl.includes("auth")) {
-      cb(null, "uploads/profile"); // Profile pics folder
+      cb(null, "uploads/profile");
     } else if (req.baseUrl.includes("pins")) {
       if (file.mimetype.startsWith("image/")) {
-        cb(null, "uploads/facades"); // ✅ New folder for facade images
+        cb(null, "uploads/facades");
       } else {
-        cb(null, "uploads/arModels"); // AR .glb models
+        cb(null, "uploads/arModels");
       }
+    } else if (req.baseUrl.includes("itineraries")) {
+      const uploadDir = "uploads/itineraries";
+      if (!fs.existsSync(uploadDir))
+        fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } else if (req.baseUrl.includes("userItineraries")) {
+      const uploadDir = "uploads/userItineraries";
+      if (!fs.existsSync(uploadDir))
+        fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } else if (req.baseUrl.includes("emergency")) {
+      const uploadDir = "uploads/emergency";
+      if (!fs.existsSync(uploadDir))
+        fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
     } else {
-      cb(null, "uploads/photobooth"); // Photobooth folder
+      cb(null, "uploads/photobooth");
     }
   },
   filename: (req, file, cb) => {
     if (req.baseUrl.includes("auth")) {
       const uploadDir = "uploads/profile";
 
-      // Delete any previous profile picture(s) for this user
+      // Delete previous profile pictures
       fs.readdir(uploadDir, (err, files) => {
         if (!err) {
           const userFiles = files.filter((f) => f.startsWith(req.user.id));
@@ -34,11 +49,10 @@ const storage = multer.diskStorage({
         }
       });
 
-      // Save new file as <userId>.<extension>
       const ext = path.extname(file.originalname);
       cb(null, `${req.user.id}${ext}`);
     } else {
-      // For facades, photobooth, and AR models: keep original filename
+      // For everything else: keep original filename
       cb(null, file.originalname);
     }
   },
@@ -47,7 +61,6 @@ const storage = multer.diskStorage({
 // File filter logic
 const fileFilter = (req, file, cb) => {
   if (req.baseUrl.includes("auth")) {
-    // Profile pics: only images
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
@@ -58,19 +71,27 @@ const fileFilter = (req, file, cb) => {
     }
   } else if (req.baseUrl.includes("pins")) {
     if (file.mimetype.startsWith("image/")) {
-      // ✅ Facades: allow all images
       cb(null, true);
     } else if (
       file.mimetype === "model/gltf-binary" ||
       file.originalname.endsWith(".glb")
     ) {
-      // AR models: only .glb files
       cb(null, true);
     } else {
       cb(new Error("Only image or .glb files are allowed for pins!"), false);
     }
+  } else if (
+    req.baseUrl.includes("itineraries") ||
+    req.baseUrl.includes("userItineraries")
+  ) {
+    cb(null, true); // Allow any file type
+  } else if (req.baseUrl.includes("emergency")) {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed for emergency icons!"), false);
+    }
   } else {
-    // Photobooth: only PNG
     if (file.mimetype === "image/png") {
       cb(null, true);
     } else {

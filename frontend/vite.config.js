@@ -51,6 +51,12 @@ export default defineConfig({
           react: ["react", "react-dom"],
           three: ["three", "@react-three/fiber", "@react-three/drei"],
           mapbox: ["mapbox-gl", "react-map-gl"],
+          admin: [
+            "./src/components/adminComponents/AdminPinCard.jsx",
+            "./src/components/adminComponents/AddPinModal.jsx",
+            "./src/components/adminComponents/ManualAddModal.jsx",
+          ],
+          userMap: ["./src/components/userComponents/TourMap/TourMap.jsx"],
         },
       },
     },

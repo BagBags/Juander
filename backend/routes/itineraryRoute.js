@@ -3,10 +3,49 @@ const router = express.Router();
 const Itinerary = require("../models/itineraryModel");
 const Log = require("../models/logModel"); // import Log model
 const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
+const upload = require("../middleware/upload"); // your Multer setup
+
+// Upload itinerary image for user
+router.post(
+  "/upload",
+  verifyToken,
+  upload.single("image"), // multer handles 'image' field
+  (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+      const imageUrl = `/uploads/userItineraries/${req.file.filename}`;
+      res.status(200).json({ imageUrl });
+    } catch (err) {
+      console.error("Upload failed:", err);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  }
+);
 
 // Helper to get admin/user name
 const getUserName = (user) =>
   user ? `${user.firstName} ${user.lastName || ""}`.trim() : "Unknown User";
+
+router.post(
+  "/upload",
+  verifyToken,
+  upload.single("image"), // the "image" field matches FormData key from frontend
+  (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      // Return the file path as URL
+      const imageUrl = `/uploads/itineraries/${req.file.filename}`;
+      res.status(200).json({ imageUrl });
+    } catch (err) {
+      console.error("Upload failed:", err);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  }
+);
 
 // CREATE a new itinerary (user or admin)
 router.post("/", verifyToken, async (req, res) => {

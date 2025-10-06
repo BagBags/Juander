@@ -49,7 +49,7 @@ import Country from "./components/userComponents/ProfileComponents/Country";
 import Language from "./components/userComponents/ProfileComponents/Language";
 import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
-import TourMap from "./components/userComponents/TourMap/TourMap";
+import TourMap from "./components/userComponents/TourMap/LazyUserMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 import TouristItinerary from "./components/userComponents/HomepageComponents/TouristItinerary";
 import TouristItineraryMap from "./components/userComponents/HomepageComponents/TouristItinerariesMap";

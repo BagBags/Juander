@@ -33,38 +33,36 @@ export default function Photobooth() {
   const [filters, setFilters] = useState([]);
 
   // ✅ Load filters from backend (fallback to baseFilters)
-useEffect(() => {
-  const fetchFilters = async () => {
-    try {
-      const res = await axios.get("/api/photobooth/filters");
-      if (res.data && res.data.length > 0) {
-        const normalized = res.data.map(f => ({
-          ...f,
-          label: f.label || f.name, // ensure label exists
-          value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
-        }));
-        setFilters([...baseFilters, ...normalized]);
-      } else {
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const res = await axios.get("/api/photobooth/filters");
+        if (res.data && res.data.length > 0) {
+          const normalized = res.data.map((f) => ({
+            ...f,
+            label: f.label || f.name, // ensure label exists
+            value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
+          }));
+          setFilters([...baseFilters, ...normalized]);
+        } else {
+          setFilters(baseFilters);
+        }
+      } catch (err) {
+        console.error("Failed to fetch filters, using baseFilters:", err);
         setFilters(baseFilters);
       }
-    } catch (err) {
-      console.error("Failed to fetch filters, using baseFilters:", err);
-      setFilters(baseFilters);
-    }
-  };
-  fetchFilters();
-}, []);
-
+    };
+    fetchFilters();
+  }, []);
 
   const repeatedFilters = useMemo(
-  () =>
-    filters.map((f, i) => ({
-      ...f,
-      id: f._id || f.id || f.value || `filter-${i}`,
-    })),
-  [filters]
-);
-
+    () =>
+      filters.map((f, i) => ({
+        ...f,
+        id: f._id || f.id || f.value || `filter-${i}`,
+      })),
+    [filters]
+  );
 
   const selectedMeta = repeatedFilters.find((f) => f.id === selectedFilterId);
   const selectedValue = selectedMeta?.value || null;

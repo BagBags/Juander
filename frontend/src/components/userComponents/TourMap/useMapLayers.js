@@ -1,5 +1,12 @@
 import { useEffect } from "react";
-import * as THREE from "three";
+import {
+  Camera,
+  Scene,
+  DirectionalLight,
+  AmbientLight,
+  WebGLRenderer,
+  Matrix4,
+} from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import mapboxgl from "mapbox-gl";
 
@@ -54,21 +61,21 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
           type: "custom",
           renderingMode: "3d",
           onAdd: function (map, gl) {
-            this.camera = new THREE.Camera();
-            this.scene = new THREE.Scene();
+            this.camera = new Camera();
+            this.scene = new Scene();
 
             // Lights
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const dirLight = new DirectionalLight(0xffffff, 0.8);
             dirLight.position.set(0, 70, 100).normalize();
             this.scene.add(dirLight);
-            this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            this.scene.add(new AmbientLight(0xffffff, 0.6));
             this.scene.add(modelScene);
 
-            // ✅ Always prefer WebGL2 if available
+            // Prefer WebGL2 if available
             const canvas = map.getCanvas();
             const webgl2Context = canvas.getContext("webgl2");
 
-            this.renderer = new THREE.WebGLRenderer({
+            this.renderer = new WebGLRenderer({
               canvas,
               context: webgl2Context || gl, // fallback to Mapbox-provided GL
               antialias: true,
@@ -79,7 +86,7 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
 
           render: function (gl, matrix) {
             if (!this.renderer) return;
-            const m = new THREE.Matrix4().fromArray(matrix);
+            const m = new Matrix4().fromArray(matrix);
             this.camera.projectionMatrix = m;
             this.renderer.resetState();
             this.renderer.render(this.scene, this.camera);
@@ -90,7 +97,7 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
         map.addLayer(customLayer);
       }
 
-      // 🔹 Invisible click layer
+      // Invisible click layer
       const geojson = {
         type: "FeatureCollection",
         features: pins.map((pin) => ({

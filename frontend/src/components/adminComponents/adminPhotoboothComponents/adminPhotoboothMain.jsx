@@ -129,7 +129,7 @@ export default function ManagePhotobooth() {
   };
 
   return (
-    <div className="flex gap-8 p-8 bg-gray-50 min-h-screen">
+    <div className="flex gap-8 ">
       {/* Form Panel */}
       <div className="w-1/2 bg-white rounded-2xl shadow-md p-6 flex flex-col gap-5">
         <h2 className="text-xl font-semibold text-gray-800">
@@ -148,16 +148,6 @@ export default function ManagePhotobooth() {
             <span className="text-gray-400">No Preview Available</span>
           )}
         </div>
-
-        <input
-          type="text"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          placeholder="Filter Name"
-          required
-        />
-
         <div className="w-full">
           {!form.imageUrl ? (
             <label className="flex flex-col items-center justify-center w-full h-13 px-4 border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
@@ -176,11 +166,22 @@ export default function ManagePhotobooth() {
 
         <input
           type="text"
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Filter Name"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg
+             focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none transition"
+          required
+        />
+
+        <input
+          type="text"
           name="imageUrl"
           value={form.imageUrl}
           onChange={handleChange}
           placeholder="Or paste image URL"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg 
+          className="w-full p-3 border-2 border-gray-300 rounded-lg
              focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none transition"
           disabled={!!form.imageFile}
         />
@@ -190,8 +191,8 @@ export default function ManagePhotobooth() {
             name="category"
             value={form.category}
             onChange={handleChange}
-            className="w-full appearance-none p-3 border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+            className="w-full appearance-none p-3 border-2 border-gray-300 rounded-lg
+               focus:border-gray-400 focus:ring-2 focus:ring-gray-200
                outline-none transition text-gray-700 bg-white pr-10"
           >
             <option value="general">General</option>

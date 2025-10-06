@@ -7,31 +7,36 @@ const User = require("../models/userModel");
 const argon2 = require("argon2");
 const jwt = require("jsonwebtoken");
 
+const PendingUser = require("../models/pendingUserModel"); // make sure you have this
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password } = req.body;
 
+    // Check if already exists in main User collection
     const existingUser = await User.findOne({ email });
     if (existingUser)
       return res.status(409).json({ message: "Email already exists" });
 
+    // Also check PendingUser
+    const pending = await PendingUser.findOne({ email });
+    if (pending) await PendingUser.deleteOne({ email }); // clean old pending
+
     const hashedPassword = await argon2.hash(password);
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins from now
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    const newUser = await User.create({
+    // Save in PendingUser collection instead of User
+    const newPendingUser = await PendingUser.create({
       firstName,
       lastName,
       email,
       password: hashedPassword,
-      role: "tourist",
       otp,
       otpExpires,
-      isVerified: false, // Add this to your User model
-      authProvider: "local",
     });
 
     // Send OTP via email
@@ -53,7 +58,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       message:
         "OTP sent to your email. Please verify to complete registration.",
-      userId: newUser._id,
+      pendingUserId: newPendingUser._id,
     });
   } catch (err) {
     console.error("Register error:", err);
@@ -382,22 +387,36 @@ exports.verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    // Look in PendingUser collection
+    const pendingUser = await PendingUser.findOne({ email });
+    if (!pendingUser)
+      return res.status(404).json({ message: "Pending user not found" });
 
-    if (user.isVerified)
-      return res.status(400).json({ message: "Email already verified" });
-
-    if (user.otp !== otp || !user.otpExpires || user.otpExpires < new Date()) {
+    if (
+      pendingUser.otp !== otp ||
+      !pendingUser.otpExpires ||
+      pendingUser.otpExpires < new Date()
+    ) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    user.isVerified = true;
-    user.otp = undefined;
-    user.otpExpires = undefined;
-    await user.save();
+    // Move user to main User collection
+    const newUser = await User.create({
+      firstName: pendingUser.firstName,
+      lastName: pendingUser.lastName,
+      email: pendingUser.email,
+      password: pendingUser.password,
+      role: "tourist",
+      isVerified: true,
+      authProvider: "local",
+    });
 
-    res.status(200).json({ message: "Email verified successfully" });
+    // Delete pending user
+    await PendingUser.deleteOne({ _id: pendingUser._id });
+
+    res
+      .status(200)
+      .json({ message: "Email verified successfully", userId: newUser._id });
   } catch (err) {
     console.error("OTP verification error:", err);
     res

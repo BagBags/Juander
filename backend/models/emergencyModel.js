@@ -10,6 +10,7 @@ const emergencyContactSchema = new mongoose.Schema(
     name: { type: String, required: true },
     contactChannels: [contactChannelSchema],
     position: { type: Number, default: 0 },
+    icon: { type: String, default: null }, // <-- add this
   },
   { timestamps: true }
 );

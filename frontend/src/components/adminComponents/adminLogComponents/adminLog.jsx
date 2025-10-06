@@ -14,17 +14,21 @@ export default function AdminHome() {
 
       {/* Main Content */}
       <div
-        className={`flex-1 transition-all duration-300 ${
-          isExpanded ? "ml-80" : "ml-20"
+        className={`transition-all duration-300 ${
+          isExpanded
+            ? "ml-80 w-[calc(100%-20rem)]"
+            : "ml-20 w-[calc(100%-5rem)]"
         }`}
       >
         {/* Page Header */}
         <div className="w-full bg-white shadow-md px-8 py-4">
-          <h1 className="text-2xl  text-gray-800 font-medium pr-20 pl-20">Admin Logs</h1>
+          <h1 className="text-2xl  text-gray-800 font-medium pr-20 pl-20">
+            Admin Logs
+          </h1>
         </div>
 
         {/* Logs Table (inside its own card) */}
-        <main className="p-6 pl-20 pr-20">
+        <main className="p-6 ">
           <AdminLogMain />
         </main>
       </div>

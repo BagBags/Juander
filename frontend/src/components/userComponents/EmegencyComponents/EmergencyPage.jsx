@@ -14,11 +14,17 @@ export default function EmergencyPage() {
         const res = await axios.get(`/api/emergency`);
         const transformed = res.data.map((agency) => ({
           title: agency.name,
+          icon: agency.icon
+            ? agency.icon.startsWith("http")
+              ? agency.icon
+              : `http://localhost:5000${agency.icon}`
+            : null,
           contacts: agency.contactChannels.map((channel) => ({
             label: channel.label,
             value: channel.number,
           })),
         }));
+
         setHotlines(transformed);
       } catch (error) {
         console.error("Failed to fetch emergency contacts:", error);
@@ -34,7 +40,7 @@ export default function EmergencyPage() {
     <div className="min-h-screen  flex flex-col items-center text-sm relative px-4 md:px-0 text-white ">
       <div className="w-full max-w-xl">
         {/* Sticky Back Header */}
-        <div className="pt-4 sticky top-0 text-black z-20 w-full">
+        <div className="pt-4 sticky top-0 text-black bg-white z-20 w-full">
           <BackHeader title="Emergency Hotlines" />
         </div>
 
@@ -45,7 +51,12 @@ export default function EmergencyPage() {
           ) : hotlines.length > 0 ? (
             <div className="flex flex-col items-center gap-6">
               {hotlines.map((item, index) => (
-                <Card key={index} title={item.title} contacts={item.contacts} />
+                <Card
+                  key={index}
+                  title={item.title}
+                  contacts={item.contacts}
+                  icon={item.icon}
+                />
               ))}
             </div>
           ) : (

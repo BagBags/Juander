@@ -8,22 +8,36 @@ exports.createContact = async (req, res) => {
 
     const contact = await EmergencyContact.create({
       name: req.body.name,
-      contactChannels: req.body.contactChannels,
+      contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
       position: req.body.position ?? count,
-    });
-
-    // Log action
-    const adminName = req.user
-      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
-      : "Unknown Admin";
-    await Log.create({
-      adminName,
-      action: `Created emergency contact agency: "${contact.name}"`,
+      icon: req.file ? `/uploads/emergency/${req.file.filename}` : null,
     });
 
     res.status(201).json(contact);
   } catch (error) {
     console.error("❌ Error creating contact:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// UPDATE
+exports.updateContact = async (req, res) => {
+  try {
+    const updatedData = {
+      name: req.body.name,
+      contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
+    };
+    if (req.file) updatedData.icon = `/uploads/emergency/${req.file.filename}`;
+
+    const updated = await EmergencyContact.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true }
+    );
+
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("❌ Error updating contact:", error.message);
     res.status(500).json({ error: error.message });
   }
 };
@@ -37,30 +51,6 @@ exports.getContacts = async (req, res) => {
   } catch (error) {
     console.error("Error fetching contacts:", error);
     res.status(500).json({ message: "Server error" });
-  }
-};
-
-// UPDATE
-exports.updateContact = async (req, res) => {
-  try {
-    const updated = await EmergencyContact.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-
-    // Log action
-    const adminName = req.user
-      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
-      : "Unknown Admin";
-    await Log.create({
-      adminName,
-      action: `Updated emergency contact agency: "${updated.name}"`,
-    });
-
-    res.status(200).json(updated);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 };
 

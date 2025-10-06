@@ -18,8 +18,23 @@ const getFilters = async (req, res) => {
   try {
     const filters = await PhotoboothFilter.find().sort({ position: 1 });
     res.json(filters);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching filters", error });
+  } catch (err) {
+    console.error("❌ Error fetching filters:", err);
+    res.status(500).json({ message: "Error fetching filters", error: err });
+  }
+};
+
+// --- GET filter image by ID ---
+const getFilterImage = async (req, res) => {
+  try {
+    const filter = await PhotoboothFilter.findById(req.params.id);
+    if (!filter) return res.status(404).json({ message: "Filter not found" });
+    res.json({ image: filter.image });
+  } catch (err) {
+    console.error("❌ Error fetching filter image:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching filter image", error: err });
   }
 };
 
@@ -44,13 +59,12 @@ const createFilter = async (req, res) => {
 
     await newFilter.save();
 
-    // Log action
     await logAction(req, `Created photobooth filter: "${newFilter.name}"`);
 
     res.status(201).json(newFilter);
   } catch (err) {
     console.error("❌ Error creating filter:", err);
-    res.status(500).json({ error: "Failed to create filter" });
+    res.status(500).json({ message: "Failed to create filter", error: err });
   }
 };
 
@@ -71,12 +85,12 @@ const updateFilter = async (req, res) => {
     });
     if (!updated) return res.status(404).json({ message: "Filter not found" });
 
-    // Log action
     await logAction(req, `Updated photobooth filter: "${updated.name}"`);
 
     res.json(updated);
-  } catch (error) {
-    res.status(400).json({ message: "Error updating filter", error });
+  } catch (err) {
+    console.error("❌ Error updating filter:", err);
+    res.status(400).json({ message: "Error updating filter", error: err });
   }
 };
 
@@ -87,12 +101,12 @@ const deleteFilter = async (req, res) => {
     const deleted = await PhotoboothFilter.findByIdAndDelete(id);
     if (!deleted) return res.status(404).json({ message: "Filter not found" });
 
-    // Log action
     await logAction(req, `Deleted photobooth filter: "${deleted.name}"`);
 
     res.json({ message: "Filter deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error deleting filter", error });
+  } catch (err) {
+    console.error("❌ Error deleting filter:", err);
+    res.status(500).json({ message: "Error deleting filter", error: err });
   }
 };
 
@@ -100,25 +114,24 @@ const deleteFilter = async (req, res) => {
 const reorderFilters = async (req, res) => {
   try {
     const { filters } = req.body; // [{ _id, position }]
-    const bulkOps = filters.map((filter) => ({
-      updateOne: {
-        filter: { _id: filter._id },
-        update: { position: filter.position },
-      },
+    const bulkOps = filters.map((f) => ({
+      updateOne: { filter: { _id: f._id }, update: { position: f.position } },
     }));
+
     await PhotoboothFilter.bulkWrite(bulkOps);
 
-    // Log action
     await logAction(req, "Reordered photobooth filters");
 
     res.json({ message: "Filters reordered successfully" });
-  } catch (error) {
-    res.status(400).json({ message: "Error reordering filters", error });
+  } catch (err) {
+    console.error("❌ Error reordering filters:", err);
+    res.status(400).json({ message: "Error reordering filters", error: err });
   }
 };
 
 module.exports = {
   getFilters,
+  getFilterImage,
   createFilter,
   updateFilter,
   deleteFilter,

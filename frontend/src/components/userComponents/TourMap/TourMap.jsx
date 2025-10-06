@@ -1,18 +1,18 @@
 // components/userComponents/TourMap.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import Map, { Marker, Source, Layer } from "react-map-gl";
-import BackHeader from "../BackButton";
+import Map from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
-
 import { MAPBOX_TOKEN, INTRAMUROS_BOUNDS } from "./mapConfig";
-import SiteCard from "./SiteCard";
 import { useApi } from "./useApi";
 import { useUserLocation } from "./useUserLocation";
-
+import MapLegend from "./MapLegend";
+import MapMarkers from "./MapMarkers";
+import MapOverlays from "./MapOverlays";
+import MapLayers from "./MapLayers";
 import "../../../App.css";
 
-// ✅ Axios instance with token
+// ✅ Axios instance with auth token
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || "/api",
 });
@@ -22,17 +22,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function UserMap() {
-  const [viewState, setViewState] = useState({
-    latitude: 40.5896,
-    longitude: 120.9747,
-    zoom: 4,
-    bearing: 45,
-  });
+// ✅ Centralized initial view state
+const INITIAL_VIEW = {
+  latitude: 14.591, // Intramuros center
+  longitude: 120.9747,
+  zoom: 16,
+  bearing: 45,
+  pitch: 0,
+};
 
+export default function UserMap() {
+  const [viewState, setViewState] = useState(INITIAL_VIEW);
   const [selectedPin, setSelectedPin] = useState(null);
   const [distance, setDistance] = useState(null);
   const [route, setRoute] = useState(null);
+  const [showLegend, setShowLegend] = useState(false);
 
   const mapRef = useRef(null);
 
@@ -40,15 +44,16 @@ export default function UserMap() {
   const { mask, inverseMask, pins } = useApi(api);
   const userLocation = useUserLocation(setViewState);
 
-  // ------------------ Fly to pin helper ------------------
+  // ------------------ Fly to pin ------------------
   const flyToPin = (pinData, callback) => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
+
     map.flyTo({
       center: [pinData.longitude, pinData.latitude],
-      zoom: 20.2, // 🔥 closer zoom
+      zoom: 20.2,
       bearing: 30,
-      pitch: 75, // heavy tilt for street-view-like effect
+      pitch: 75,
       speed: 1.2,
       curve: 1.5,
       essential: true,
@@ -119,146 +124,64 @@ export default function UserMap() {
     [userLocation]
   );
 
-  // ------------------ Close card ------------------
+  // ------------------ Close card (reset view) ------------------
   const handleCloseCard = () => {
     setSelectedPin(null);
     setDistance(null);
     setRoute(null);
+
+    const map = mapRef.current?.getMap?.();
+    if (map) {
+      map.flyTo({
+        center: [INITIAL_VIEW.longitude, INITIAL_VIEW.latitude],
+        zoom: INITIAL_VIEW.zoom,
+        bearing: INITIAL_VIEW.bearing,
+        pitch: INITIAL_VIEW.pitch,
+        speed: 1.2,
+        curve: 1.5,
+        essential: true,
+      });
+    }
   };
 
   return (
     <div className="relative w-full h-screen">
+      {/* Legend */}
+      <MapLegend showLegend={showLegend} setShowLegend={setShowLegend} />
+
       {/* Map */}
       <Map
         ref={mapRef}
-        {...viewState}
-        onMove={(evt) => setViewState(evt.viewState)}
-        minZoom={15.5}
+        initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5 }}
         maxBounds={INTRAMUROS_BOUNDS}
         mapboxAccessToken={MAPBOX_TOKEN}
         attributionControl={false}
+        onMove={(evt) => setViewState(evt.viewState)}
         mapStyle="mapbox://styles/mapbox/streets-v11"
         className="w-full h-full"
       >
         {/* User location marker */}
         {userLocation && (
-          <Marker
-            longitude={userLocation.longitude}
-            latitude={userLocation.latitude}
-          >
-            <div className="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
-          </Marker>
+          <MapMarkers.UserLocationMarker userLocation={userLocation} />
         )}
 
-        {/* Tour pins with facade image */}
-        {pins &&
-          pins.map((pin) => {
-            const isSelected = selectedPin?._id === pin._id;
+        {/* Tour pins */}
+        <MapMarkers.PinMarkers
+          pins={pins}
+          selectedPin={selectedPin}
+          onPinClick={openPin}
+        />
 
-            return (
-              <Marker
-                key={pin._id}
-                longitude={pin.longitude}
-                latitude={pin.latitude}
-                anchor="bottom"
-              >
-                <div
-                  className="relative flex items-center justify-center cursor-pointer"
-                  onClick={() => openPin(pin)}
-                >
-                  {/* Facade image */}
-                  {pin.facadeUrl && (
-                    <img
-                      src={pin.facadeUrl}
-                      alt={pin.siteName}
-                      className={`object-contain transition-transform duration-700 ease-out ${
-                        isSelected
-                          ? "w-64 h-64 scale-150"
-                          : "w-24 h-24 scale-100"
-                      }`}
-                    />
-                  )}
-
-                  {/* Pin centered on the facade */}
-                  <div
-                    className="absolute top-1/2 left-1/2 w-5 h-5 bg-red-600 rounded-full border-2 border-white shadow-md"
-                    style={{ transform: "translate(-50%, -50%)" }}
-                    title={pin.siteName}
-                  ></div>
-                </div>
-              </Marker>
-            );
-          })}
-
-        {/* Mask */}
-        {mask && (
-          <Source type="geojson" data={mask}>
-            <Layer
-              id="mask-fill"
-              type="fill"
-              paint={{ "fill-color": "#000", "fill-opacity": 0 }}
-            />
-          </Source>
-        )}
-        {inverseMask && (
-          <Source type="geojson" data={inverseMask}>
-            <Layer
-              id="inverse-mask-fill"
-              type="fill"
-              paint={{ "fill-color": "#000", "fill-opacity": 0.7 }}
-            />
-          </Source>
-        )}
-
-        {/* Route */}
-        {route && (
-          <Source type="geojson" data={route}>
-            <Layer
-              id="route-line"
-              type="line"
-              layout={{ "line-join": "round", "line-cap": "round" }}
-              paint={{
-                "line-color": "#3b9ddd",
-                "line-width": 4,
-                "line-opacity": 0.8,
-              }}
-            />
-          </Source>
-        )}
+        {/* Map Layers */}
+        <MapLayers mask={mask} inverseMask={inverseMask} route={route} />
       </Map>
 
-      {/* UI overlays */}
-      <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-auto">
-        <BackHeader title={<span className="text-black">Tour Map</span>} />
-      </div>
-
-      {/* Site card */}
-      {selectedPin && (
-        <SiteCard
-          pin={{
-            ...selectedPin,
-            imageUrl: `${import.meta.env.VITE_API_BASE}/uploads/${
-              selectedPin.image
-            }`,
-          }}
-          distance={distance}
-          onClose={handleCloseCard}
-        />
-      )}
-
-      {/* Next site button */}
-      {selectedPin && (
-        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-30 pointer-events-auto">
-          <button className="bg-blue-700 text-white px-5 py-2 rounded-md cursor-pointer shadow-lg">
-            Go to next site
-          </button>
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-30 pointer-events-auto">
-        Tour Map
-      </div>
+      {/* UI Overlays */}
+      <MapOverlays
+        selectedPin={selectedPin}
+        distance={distance}
+        onCloseCard={handleCloseCard}
+      />
     </div>
   );
 }

@@ -1,30 +1,31 @@
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import BackHeader from "../BackHeader";
+import { useTranslation } from "react-i18next";
 
 export default function ProfileLayout() {
   const location = useLocation();
+  const { t } = useTranslation();
 
-  // Determine dynamic title based on current path
   const getTitle = () => {
-    if (location.pathname.endsWith("/Account")) return "Account";
-    if (location.pathname.endsWith("/Birthday")) return "Birthday";
-    if (location.pathname.endsWith("/Gender")) return "Gender";
-    if (location.pathname.endsWith("/Country")) return "Country";
-    if (location.pathname.endsWith("/Language")) return "Language";
-    return "Profile";
+    if (location.pathname.endsWith("/Account")) return t("account");
+    if (location.pathname.endsWith("/Birthday")) return t("birthday");
+    if (location.pathname.endsWith("/Gender")) return t("gender");
+    if (location.pathname.endsWith("/Country")) return t("country");
+    if (location.pathname.endsWith("/Language")) return t("language");
+    return t("profile");
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0">
-      <div className="w-full max-w-md">
-        {/* Sticky back header (optional: add sticky effect) */}
-        <div className="pt-4 z-10 bg-white sticky top-0">
-          <BackHeader title={getTitle()} />
-        </div>
+    <div className="min-h-screen bg-white flex flex-col text-sm relative">
+      {/* BackHeader pinned to the left */}
+      <div className="sticky top-0 z-20 bg-white px-4 py-3 flex items-center">
+        <BackHeader title={getTitle()} />
+      </div>
 
-        {/* Page content */}
-        <div className="mt-4">
+      {/* Centered page content */}
+      <div className="flex-1 flex justify-center px-4 md:px-0">
+        <div className="w-full max-w-md mt-4">
           <Outlet />
         </div>
       </div>

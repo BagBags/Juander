@@ -154,7 +154,7 @@ export default function RolesPage() {
               size={12}
               className={`${
                 isActive && sortConfig.direction === "asc"
-                  ? "text-white"
+                  ? "text-gray-800"
                   : "text-gray-300"
               }`}
             />
@@ -162,7 +162,7 @@ export default function RolesPage() {
               size={12}
               className={`-mt-1 ${
                 isActive && sortConfig.direction === "desc"
-                  ? "text-white"
+                  ? "text-gray-800"
                   : "text-gray-300"
               }`}
             />
@@ -173,17 +173,14 @@ export default function RolesPage() {
   };
 
   return (
-    <section>
-      <h1 className="text-4xl font-bold text-[#f04e37] mb-2">
-        Manage User Roles
-      </h1>
-      <p className="text-gray-600 mb-6">
-        Total Users:{" "}
-        <span className="font-semibold">{filteredUsers.length}</span>
+    <div className="bg-white rounded-2xl shadow-md p-6">
+      <h2 className="text-2xl font-bold mb-1">User Roles</h2>
+      <p className="font-medium text-gray-500 mb-4">
+        Manage and assign roles to registered users
       </p>
 
       {/* ✅ Search bar */}
-      <div className="relative mb-6 w-full sm:w-1/3">
+      <div className="relative mb-4 w-full sm:w-1/3">
         <Search className="absolute left-3 top-3 text-gray-400" size={18} />
         <input
           type="text"
@@ -196,10 +193,12 @@ export default function RolesPage() {
 
       {loading ? (
         <p className="text-gray-500">Loading users...</p>
+      ) : sortedUsers.length === 0 ? (
+        <p className="text-gray-500 italic">No users found.</p>
       ) : (
-        <div className="bg-white rounded-xl shadow overflow-hidden">
+        <div className="overflow-auto max-h-[60vh] rounded-xl border border-gray-200">
           <table className="min-w-full text-sm text-left">
-            <thead className="bg-[#f04e37] text-white">
+            <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
               <tr>
                 <th className="px-6 py-3">#</th>
                 {renderSortableHeader("First Name", "firstName")}
@@ -215,22 +214,17 @@ export default function RolesPage() {
                 {renderSortableHeader("Last Updated", "updatedAt")}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {sortedUsers.map((user, idx) => (
-                <tr
-                  key={user._id}
-                  className={`${
-                    idx % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  } hover:bg-orange-50 transition`}
-                >
-                  <td className="px-6 py-3 text-gray-800">{idx + 1}</td>
+                <tr key={user._id} className="bg-white hover:bg-gray-50">
+                  <td className="px-6 py-3">{idx + 1}</td>
                   <td className="px-6 py-3 font-medium text-gray-800">
                     {formatName(user.firstName)}
                   </td>
                   <td className="px-6 py-3 font-medium text-gray-800">
                     {formatName(user.lastName)}
                   </td>
-                  <td className="px-5 py-3 text-gray-600">{user.email}</td>
+                  <td className="px-6 py-3 text-gray-600">{user.email}</td>
                   <td className="px-6 py-3">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold mr-2 ${
@@ -288,20 +282,10 @@ export default function RolesPage() {
                   </td>
                 </tr>
               ))}
-              {sortedUsers.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="12"
-                    className="text-center py-6 text-gray-500 italic"
-                  >
-                    No users found
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       )}
-    </section>
+    </div>
   );
 }

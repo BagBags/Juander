@@ -1,12 +1,23 @@
+// components/userComponents/TourMap/LazyTourMap.jsx
 import React, { Suspense } from "react";
 
-// Lazy-load the full map
-const UserMap = React.lazy(() => import("./TourMap"));
+// Lazy-load the main TourMap component
+const TourMap = React.lazy(() => import("./TourMap"));
 
-export default function LazyUserMap() {
+// Loading component for the map
+const MapLoadingFallback = () => (
+  <div className="w-full h-screen flex items-center justify-center bg-gray-100">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading map...</p>
+    </div>
+  </div>
+);
+
+export default function LazyTourMap() {
   return (
-    <Suspense fallback={<div className="text-center mt-20">Loading map…</div>}>
-      <UserMap />
+    <Suspense fallback={<MapLoadingFallback />}>
+      <TourMap />
     </Suspense>
   );
 }

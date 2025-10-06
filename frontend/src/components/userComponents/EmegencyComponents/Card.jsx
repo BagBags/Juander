@@ -1,30 +1,28 @@
-export default function Card({ title, contacts, logo, icon }) {
+export default function Card({ title, contacts, icon }) {
   return (
     <div
       className="bg-[#f04e37] text-white rounded-2xl p-6 w-full max-w-md 
-                    border-2 border-[#d94b36] shadow-md hover:shadow-lg 
-                    transition-all duration-300"
+                 border-2 border-[#d94b36] shadow-md hover:shadow-lg 
+                 transition-all duration-300"
     >
-      {/* Title with Logo and Card Icon */}
+      {/* Title with Icon */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center gap-2 mb-4">
+        {icon ? (
           <img
-            src="https://intramuros.gov.ph/wp-content/uploads/2015/09/cropped-iaLogo.png"
-            alt="logo"
-            className="w-8 h-8 object-contain"
+            src={icon}
+            alt={title}
+            className="w-10 h-10 rounded-full object-cover border border-white shadow"
+            onError={(e) => {
+              e.currentTarget.src = "/placeholder.png";
+            }}
           />
-          <h3 className="font-semibold text-lg">{title}</h3>
-        </div>
-
-        {icon && (
-          <div className="w-9 h-9 flex items-center justify-center bg-white rounded-full border border-gray-200 shadow">
-            <img
-              src={icon}
-              alt="card icon"
-              className="w-5 h-5 object-contain"
-            />
+        ) : (
+          <div className="w-10 h-10 flex items-center justify-center bg-white rounded-full text-red-500 text-lg shadow">
+            🏢
           </div>
         )}
+
+        <h3 className="font-semibold text-lg">{title}</h3>
       </div>
 
       {/* Contacts */}

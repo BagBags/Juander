@@ -50,6 +50,13 @@ export default function GuestItineraryMain() {
 }
 
 function ItineraryCard({ itinerary, navigate }) {
+  // Resolve image URL (prepend localhost if needed)
+  const imageSrc = itinerary.imageUrl
+    ? itinerary.imageUrl.startsWith("http")
+      ? itinerary.imageUrl
+      : `http://localhost:5000${itinerary.imageUrl}`
+    : null;
+
   return (
     <div
       className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300"
@@ -59,11 +66,14 @@ function ItineraryCard({ itinerary, navigate }) {
         })
       }
     >
-      {itinerary.imageUrl ? (
+      {imageSrc ? (
         <img
-          src={itinerary.imageUrl}
+          src={imageSrc}
           alt={itinerary.name}
           className="w-full h-48 object-cover"
+          onError={(e) => {
+            e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
+          }}
         />
       ) : (
         <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">

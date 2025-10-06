@@ -4,16 +4,19 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
   const [name, setName] = useState("");
   const [channels, setChannels] = useState([{ label: "", number: "" }]);
   const [icon, setIcon] = useState(null);
+  const [preview, setPreview] = useState(null); // For image preview
 
   useEffect(() => {
     if (agencyToEdit) {
       setName(agencyToEdit.name);
       setChannels(agencyToEdit.contactChannels || [{ label: "", number: "" }]);
-      setIcon(agencyToEdit.icon || null);
+      setIcon(agencyToEdit.icon || null); // could be string URL
+      setPreview(null); // reset preview so it uses existing icon URL
     } else {
       setName("");
       setChannels([{ label: "", number: "" }]);
       setIcon(null);
+      setPreview(null);
     }
   }, [agencyToEdit]);
 
@@ -35,18 +38,19 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
   const handleIconUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setIcon(URL.createObjectURL(file));
+      setIcon(file); // Store file instead of URL
+      setPreview(URL.createObjectURL(file)); // For preview
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newAgency = {
-      name,
-      contactChannels: channels,
-      icon,
-    };
-    onSave(newAgency);
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("contactChannels", JSON.stringify(channels));
+    if (icon) formData.append("icon", icon); // ✅ append file
+
+    await onSave(formData);
   };
 
   return (
@@ -60,11 +64,20 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
 
       {/* Image Upload */}
       <div className="flex flex-col items-center space-y-3">
-          <img
-            src={icon}
-            alt="Agency Icon"
-            className="w-54 h-54 object-cover rounded-full shadow-md border border-gray-200"
-          />
+        <img
+          src={
+            preview // newly uploaded file preview
+              ? preview
+              : typeof icon === "string" // existing image URL
+              ? icon.startsWith("http") // if full URL
+                ? icon
+                : `http://localhost:5000${icon}` // prepend backend URL if needed
+              : "/placeholder.png"
+          }
+          alt="Agency Icon"
+          className="w-54 h-54 object-cover rounded-full shadow-md border border-gray-200"
+        />
+
         <label className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow transition-all">
           Upload Icon
           <input

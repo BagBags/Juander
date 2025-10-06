@@ -7,6 +7,9 @@ const router = express.Router();
 
 router.get("/", controller.getFilters);
 
+// Serve filter image by ID
+router.get("/:id/image", controller.getFilterImage);
+
 // ✅ Upload PNG + create filter
 router.post("/", upload.single("image"), verifyAdmin, controller.createFilter);
 

@@ -40,7 +40,6 @@ export default function AdminContentMain() {
 
   return (
     <section>
-      <h1 className="text-4xl font-bold text-[#f04e37] mb-6">Manage Content</h1>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
         {cardData.map((card, idx) => (
           <div

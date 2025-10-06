@@ -16,7 +16,8 @@ import {
   faXmark,
   faFloppyDisk,
   faMapPin,
-  faRotate,
+  faLock,
+  faHandPaper,
 } from "@fortawesome/free-solid-svg-icons";
 
 // ---------- Lazy-loaded components ----------
@@ -59,6 +60,7 @@ export default function AdminTourMapMain() {
   const [showLegend, setShowLegend] = useState(false);
   const [selectedPin, setSelectedPin] = useState(null);
   const [manualCoords, setManualCoords] = useState({ lat: "", lng: "" });
+  const [draggablePinIndex, setDraggablePinIndex] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [notif, setNotif] = useState(null);
@@ -354,6 +356,31 @@ export default function AdminTourMapMain() {
     }
   };
 
+  const handleRemoveGlb = async (index) => {
+    const pin = pins[index];
+    if (!pin?._id) {
+      // Just clear locally if not saved yet
+      setPins((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], glbUrl: "" };
+        return updated;
+      });
+      return;
+    }
+    try {
+      await api.delete(`/pins/${pin._id}/remove-glb`);
+      setPins((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], glbUrl: "" };
+        return updated;
+      });
+      notify("success", "3D model removed successfully");
+    } catch (err) {
+      console.error(err);
+      notify("error", "Failed to remove 3D model");
+    }
+  };
+
   return (
     <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
       <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -405,17 +432,44 @@ export default function AdminTourMapMain() {
               latitude={pin.latitude}
               longitude={pin.longitude}
               anchor="bottom"
+              draggable={draggablePinIndex === index}
+              onDragEnd={async (event) => {
+                const { lng, lat } = event.lngLat;
+
+                // Update local state immediately
+                updatePinField(index, "latitude", lat);
+                updatePinField(index, "longitude", lng);
+
+                // Update database if pin exists
+                if (pin._id) {
+                  try {
+                    await api.put(`/pins/${pin._id}`, {
+                      ...pin,
+                      latitude: lat,
+                      longitude: lng,
+                    });
+                    notify("success", "Pin position updated");
+                  } catch (err) {
+                    console.error(err);
+                    notify("error", "Failed to update pin position");
+                  }
+                }
+              }}
             >
               <div
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedPin(index);
                 }}
-                style={{ fontSize: "24px", cursor: "pointer" }}
+                className={`absolute top-1/2 left-1/2 w-5 h-5 rounded-full border-2 border-white shadow-md`}
+                style={{
+                  transform: "translate(-50%, -50%)",
+                  cursor: "pointer",
+                  backgroundColor:
+                    pin.status === "inactive" ? "#3b82f6" : "#dc2626", // blue if inactive, red if active
+                }}
                 title={pin.siteName || `Pin #${index + 1}`}
-              >
-                📍
-              </div>
+              ></div>
             </Marker>
           ))}
         </Map>
@@ -437,6 +491,7 @@ export default function AdminTourMapMain() {
               handleDeletePin={handleDeletePin}
               handleGlbUpload={handleGlbUpload}
               previewGlb={previewGlb}
+              handleRemoveGlb={handleRemoveGlb}
               handleFacadeUpload={handleFacadeUpload}
               handleRemoveFacade={handleRemoveFacade}
               onClose={() => setSelectedPin(null)}
@@ -490,8 +545,12 @@ export default function AdminTourMapMain() {
               </h4>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center space-x-2">
-                  <span>📍</span>
-                  <span>Pin</span>
+                  <span className="w-4 h-4 rounded-full bg-red-600 border border-white shadow-sm"></span>
+                  <span>Active Site</span>
+                </li>
+                <li className="flex items-center space-x-2">
+                  <span className="w-4 h-4 rounded-full bg-blue-600 border border-white shadow-sm"></span>
+                  <span>Disabled Site</span>
                 </li>
               </ul>
             </div>
@@ -542,6 +601,32 @@ export default function AdminTourMapMain() {
                   <FontAwesomeIcon icon={faFloppyDisk} />
                 </button>
               </div>
+            )}
+
+            {/* Move / Lock Pin */}
+            {selectedPin !== null && (
+              <button
+                onClick={() =>
+                  setDraggablePinIndex(
+                    draggablePinIndex === selectedPin ? null : selectedPin
+                  )
+                }
+                title={
+                  draggablePinIndex === selectedPin ? "Lock Pin" : "Enable Move"
+                }
+                className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
+                  draggablePinIndex === selectedPin
+                    ? "bg-yellow-50 text-yellow-600"
+                    : "text-gray-700"
+                }`}
+              >
+                <FontAwesomeIcon
+                  icon={
+                    draggablePinIndex === selectedPin ? faLock : faHandPaper
+                  }
+                />{" "}
+                {draggablePinIndex === selectedPin ? "Lock Pin" : "Move Pin"}
+              </button>
             )}
           </div>
         </div>

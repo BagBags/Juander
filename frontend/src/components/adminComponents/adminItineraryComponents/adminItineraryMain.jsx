@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Edit, Trash2, Plus, Check } from "lucide-react";
+import { Edit, Trash2, Plus, Check, Upload } from "lucide-react";
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
   const [selectedSites, setSelectedSites] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState(null); // <-- File state
+  const [imagePreview, setImagePreview] = useState(""); // <-- Preview URL
   const [itineraries, setItineraries] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
   const ICON_SIZE = 20;
-  const SITE_IMAGE_SIZE = 80;
   const COVER_IMAGE_HEIGHT = 192;
 
   const token = localStorage.getItem("token"); // Get admin token
@@ -24,7 +24,7 @@ export default function AdminItineraryMain() {
   useEffect(() => {
     const fetchPins = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/pins", config);
+        const res = await axios.get("/api/pins", config);
         setPins(res.data);
       } catch (err) {
         console.error("Failed to fetch pins:", err);
@@ -40,10 +40,7 @@ export default function AdminItineraryMain() {
 
   const fetchItineraries = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/itineraries",
-        config
-      );
+      const res = await axios.get("/api/itineraries", config);
       setItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch itineraries:", err);
@@ -58,44 +55,65 @@ export default function AdminItineraryMain() {
     );
   };
 
+  // Handle file input change
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImageFile(file); // store file to upload
+    setImagePreview(URL.createObjectURL(file)); // preview immediately
+  };
+
+  // Handle save / update itinerary
   const handleSave = async () => {
     if (!name.trim()) return alert("Please enter a name");
-
-    // New validation: prevent saving if no sites are selected
-    if (selectedSites.length === 0) {
-      return alert(
-        "Please select at least one site before saving an itinerary"
-      );
-    }
-
-    const payload = {
-      name,
-      description,
-      imageUrl,
-      sites: selectedSites.map((s) => s._id),
-      isAdminCreated: true,
-    };
+    if (selectedSites.length === 0)
+      return alert("Please select at least one site before saving");
 
     try {
+      let imageUrl = "";
+
+      // If user selected a new image, upload it
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        const res = await axios.post("/api/itineraries/upload", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        // Backend should return full URL like http://localhost:5000/uploads/itineraries/...
+        imageUrl = res.data.imageUrl;
+      } else if (editingId) {
+        // Keep existing image when editing if no new file
+        const existing = itineraries.find((i) => i._id === editingId);
+        imageUrl = existing?.imageUrl || "";
+      }
+
+      const payload = {
+        name,
+        description,
+        imageUrl,
+        sites: selectedSites.map((s) => s._id),
+        isAdminCreated: true,
+      };
+
       if (editingId) {
-        await axios.put(
-          `http://localhost:5000/api/itineraries/${editingId}`,
-          payload,
-          config
-        );
+        await axios.put(`/api/itineraries/${editingId}`, payload, config);
         alert("Itinerary updated!");
       } else {
-        await axios.post(
-          "http://localhost:5000/api/itineraries",
-          payload,
-          config
-        );
+        await axios.post("/api/itineraries", payload, config);
         alert("Itinerary saved!");
       }
 
+      // Reset form
       setName("");
       setDescription("");
-      setImageUrl("");
+      setImageFile(null);
+      setImagePreview("");
       setSelectedSites([]);
       setEditingId(null);
       fetchItineraries();
@@ -104,12 +122,11 @@ export default function AdminItineraryMain() {
       alert("Failed to save itinerary");
     }
   };
-
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this itinerary?")) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
+      await axios.delete(`/api/itineraries/${id}`, config);
       setItineraries(itineraries.filter((i) => i._id !== id));
     } catch (err) {
       console.error("Failed to delete itinerary:", err);
@@ -120,7 +137,20 @@ export default function AdminItineraryMain() {
   const handleEdit = (itinerary) => {
     setName(itinerary.name);
     setDescription(itinerary.description);
-    setImageUrl(itinerary.imageUrl || "");
+
+    // Only set preview if imageUrl exists
+    if (itinerary.imageUrl) {
+      setImagePreview(
+        itinerary.imageUrl.startsWith("http")
+          ? itinerary.imageUrl
+          : `http://localhost:5000${itinerary.imageUrl}`
+      ); // <-- prepend localhost if needed
+    } else {
+      setImagePreview(""); // show placeholder
+    }
+
+    setImageFile(null); // clear any previously selected file
+
     const selected = pins.filter((pin) =>
       itinerary.sites?.some((site) => site._id === pin._id)
     );
@@ -136,59 +166,62 @@ export default function AdminItineraryMain() {
           {editingId ? "Edit Itinerary" : "Add Itinerary"}
         </h2>
 
-        {/* Cover Image */}
+        {/* Cover Image Preview */}
         <div
           className="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center"
           style={{ height: COVER_IMAGE_HEIGHT }}
         >
-          {imageUrl ? (
+          {imagePreview ? (
             <img
-              src={imageUrl}
+              src={imagePreview}
               alt="Itinerary Preview"
               className="w-full h-full object-cover rounded-xl"
+              onError={(e) => {
+                e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
+              }}
             />
           ) : (
             <span className="text-gray-400">Image Preview</span>
           )}
         </div>
 
+        {/* File Upload */}
+        <div className="w-full">
+          {!imageFile && !imagePreview ? (
+            <label className="flex flex-col items-center justify-center w-full h-13 px-4 border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+              <span className="text-gray-500 text-sm">Click to upload</span>
+              <input
+                type="file"
+                accept="image/png"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+          ) : (
+            <p className="text-sm text-green-600">Image uploaded ✓</p>
+          )}
+        </div>
+
         {/* Inputs */}
-        <input
-          type="text"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="Image URL"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm outline-none"
-        />
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Itinerary Name"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm outline-none"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm"
         />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm outline-none resize-none"
+          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none"
         />
 
         {/* Selected Sites */}
-        <div
-          className="p-3 border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm h-28 overflow-y-auto"
-        >
+        <div className="p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-700 text-sm h-28 overflow-y-auto">
           {selectedSites.length ? (
             selectedSites.map((site) => (
-              <span key={site._id} className="block text-gray-700 text-sm">
+              <span key={site._id} className="block">
                 • {site.siteName || site.title}
               </span>
             ))
@@ -210,7 +243,8 @@ export default function AdminItineraryMain() {
             onClick={() => {
               setName("");
               setDescription("");
-              setImageUrl("");
+              setImageFile(null);
+              setImagePreview("");
               setSelectedSites([]);
               setEditingId(null);
             }}
@@ -249,9 +283,16 @@ export default function AdminItineraryMain() {
                   {/* Image */}
                   {itinerary.imageUrl && (
                     <img
-                      src={itinerary.imageUrl}
+                      src={
+                        itinerary.imageUrl.startsWith("http")
+                          ? itinerary.imageUrl
+                          : `http://localhost:5000${itinerary.imageUrl}`
+                      }
                       alt={itinerary.name}
                       className="w-full h-48 object-cover rounded-xl mt-3"
+                      onError={(e) => {
+                        e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
+                      }}
                     />
                   )}
 
@@ -267,7 +308,7 @@ export default function AdminItineraryMain() {
                     <button
                       onClick={() => handleEdit(itinerary)}
                       className="flex items-center justify-center gap-2 px-4 py-2 
-              bg-blue-500 hover:bg-blue-600 
+              bg-yellow-500 hover:bg-yellow-700
               text-white text-sm font-medium rounded-lg shadow-sm transition"
                     >
                       <Edit size={16} /> Edit

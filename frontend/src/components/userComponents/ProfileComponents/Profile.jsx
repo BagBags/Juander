@@ -171,15 +171,6 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Illustration */}
-        <div className="w-full mt-6 relative">
-          <img
-            src="your-intramuros-image.png"
-            alt="Intramuros"
-            className="w-full object-contain"
-          />
-        </div>
-
         {/* Logout Button */}
         <button
           onClick={handleLogout}

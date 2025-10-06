@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -17,12 +17,15 @@ export default function SignupForm({ toggleForm }) {
 
   const [step, setStep] = useState("form"); // "form" or "verify"
   const [otp, setOtp] = useState("");
-  const [errors, setErrors] = useState("");
+  const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const otpLength = 6;
+  const inputRefs = useRef([]);
 
   useEffect(() => {
     if (step === "verify" && timeLeft > 0) {
@@ -112,6 +115,44 @@ export default function SignupForm({ toggleForm }) {
     }
   };
 
+  // 🔹 OTP input handlers
+  const handleOtpChange = (value, index) => {
+    if (/^\d$/.test(value)) {
+      const newOtp = otp.split("");
+      newOtp[index] = value;
+      setOtp(newOtp.join(""));
+      if (index < otpLength - 1) {
+        inputRefs.current[index + 1].focus();
+      }
+    } else if (value === "") {
+      const newOtp = otp.split("");
+      newOtp[index] = "";
+      setOtp(newOtp.join(""));
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    const pasteData = e.clipboardData.getData("text").trim();
+    if (/^\d+$/.test(pasteData)) {
+      const digits = pasteData.split("").slice(0, otpLength);
+      setOtp(digits.join(""));
+      digits.forEach((d, i) => {
+        if (inputRefs.current[i]) {
+          inputRefs.current[i].value = d;
+        }
+      });
+      if (digits.length < otpLength) {
+        inputRefs.current[digits.length]?.focus();
+      }
+    }
+  };
+
   const handleGoogleSignup = async (credentialResponse) => {
     try {
       const { credential } = credentialResponse;
@@ -131,7 +172,7 @@ export default function SignupForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl  space-y-6 ">
+    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-800">Sign Up</h2>
         <p className="text-gray-500 text-sm mt-0">
@@ -261,28 +302,39 @@ export default function SignupForm({ toggleForm }) {
         </form>
       ) : (
         <form onSubmit={handleOtpSubmit} className="space-y-3">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 text-center">
             OTP expires in: <strong>{formatTime(timeLeft)}</strong>
           </p>
 
-          <div>
-            <input
-              type="text"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              placeholder="Enter OTP"
-              className={`w-full p-2 rounded-lg border ${
-                errors.otp ? "border-red-400" : "border-gray-300"
-              } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
-            />
-            {errors.otp && (
-              <p className="text-xs text-red-600 mt-1">{errors.otp}</p>
-            )}
+          {/* OTP Inputs */}
+          <div className="flex justify-center gap-2" onPaste={handlePaste}>
+            {Array.from({ length: otpLength }).map((_, i) => (
+              <input
+                key={i}
+                type="text"
+                maxLength="1"
+                className="w-10 h-10 border rounded text-center text-lg"
+                value={otp[i] || ""}
+                onChange={(e) => handleOtpChange(e.target.value, i)}
+                onKeyDown={(e) => handleKeyDown(e, i)}
+                ref={(el) => (inputRefs.current[i] = el)}
+              />
+            ))}
           </div>
+          {errors.otp && (
+            <p className="text-xs text-red-600 mt-1 text-center">
+              {errors.otp}
+            </p>
+          )}
 
           <button
             type="submit"
-            className="w-full bg-[#f04e37] text-white px-4 py-2 rounded-lg shadow-md font-semibold hover:bg-[#d9442f] active:scale-95"
+            disabled={otp.length !== otpLength}
+            className={`w-full px-4 py-2 rounded-lg shadow-md font-semibold active:scale-95 mt-2 ${
+              otp.length === otpLength
+                ? "bg-[#f04e37] text-white hover:bg-[#d9442f]"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
           >
             Verify OTP
           </button>
