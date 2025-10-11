@@ -7,12 +7,19 @@ import axios from "axios";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import NotificationContainer from "./NotificationContainer";
 import { useTranslation } from "react-i18next"; // 👈 import hook
+import GlobalTTSButton from "../../GlobalTTSButton";
+import ttsService from "../../../utils/textToSpeech";
 
 export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [inactivePins, setInactivePins] = useState([]);
+
+  // Announce page load
+  useEffect(() => {
+    ttsService.speak(t('tts_welcome'));
+  }, [t]);
 
   // Fetch logged-in tourist info
   useEffect(() => {
@@ -91,6 +98,7 @@ export default function Homepage() {
       <SideButtons user={currentUser} />
       <Button navigate={navigate} />
       <FloatingChatbot />
+      <GlobalTTSButton />
     </div>
   );
 }

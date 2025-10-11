@@ -3,6 +3,8 @@ import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import TermsModal from "./TermsModal";
+import PrivacyModal from "./PrivacyModal";
 
 export default function SignupForm({ toggleForm }) {
   const navigate = useNavigate();
@@ -23,6 +25,8 @@ export default function SignupForm({ toggleForm }) {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const otpLength = 6;
   const inputRefs = useRef([]);
@@ -358,9 +362,19 @@ export default function SignupForm({ toggleForm }) {
 
       <p className="text-xs text-center mt-4 text-gray-600">
         By signing up, you agree to our{" "}
-        <span className="font-semibold underline cursor-pointer">Terms</span>{" "}
+        <span 
+          className="font-semibold underline cursor-pointer hover:text-[#f04e37] transition-colors"
+          onClick={() => setShowTermsModal(true)}
+        >
+          Terms
+        </span>{" "}
         and{" "}
-        <span className="font-semibold underline cursor-pointer">Privacy</span>
+        <span 
+          className="font-semibold underline cursor-pointer hover:text-[#f04e37] transition-colors"
+          onClick={() => setShowPrivacyModal(true)}
+        >
+          Privacy
+        </span>
       </p>
 
       <p className="text-sm text-center text-gray-700 mt-2">
@@ -372,6 +386,10 @@ export default function SignupForm({ toggleForm }) {
           Log in here
         </span>
       </p>
+
+      {/* Modals */}
+      <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
+      <PrivacyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
     </div>
   );
 }

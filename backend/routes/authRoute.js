@@ -323,4 +323,7 @@ router.post(
   authController.saveLanguage
 );
 
+// Complete Profile Route
+router.post("/complete-profile", verifyToken, authController.completeProfile);
+
 module.exports = router;

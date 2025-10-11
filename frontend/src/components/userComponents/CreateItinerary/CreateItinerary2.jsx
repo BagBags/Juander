@@ -2,9 +2,6 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import SideButtons from "../sideButtons";
 import BackHeader from "../BackButton";
-import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
-import { useTranslation } from "react-i18next";
 import {
   FaCheck,
   FaPlus,
@@ -15,7 +12,6 @@ import {
 } from "react-icons/fa";
 
 export default function CreateItineraryPage() {
-  const { t } = useTranslation();
   const [selected, setSelected] = useState([]);
   const [userItineraries, setUserItineraries] = useState([]);
   const [itineraryName, setItineraryName] = useState("");
@@ -30,10 +26,9 @@ export default function CreateItineraryPage() {
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
-    ttsService.speak(t('tts_createItinerary'));
     fetchSites();
     fetchItineraries();
-  }, [t]);
+  }, []);
 
   const fetchSites = async () => {
     try {
@@ -59,6 +54,7 @@ export default function CreateItineraryPage() {
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const formData = new FormData();
     formData.append("image", file);
 
@@ -73,7 +69,7 @@ export default function CreateItineraryPage() {
           },
         }
       );
-      setImageUrl(res.data.imageUrl);
+      setImageUrl(res.data.imageUrl); // Save returned URL
     } catch (err) {
       console.error("Upload failed", err);
       alert("Image upload failed");
@@ -82,7 +78,9 @@ export default function CreateItineraryPage() {
 
   const getFullImageUrl = (url) => {
     if (!url) return "";
+    // If URL already starts with http, return as-is
     if (url.startsWith("http")) return url;
+    // Otherwise, prepend localhost
     return `http://localhost:5000${url}`;
   };
 
@@ -145,7 +143,6 @@ export default function CreateItineraryPage() {
   };
 
   const handleCancelUpdate = () => resetForm();
-
   const resetForm = () => {
     setEditingItineraryId(null);
     setItineraryName("");
@@ -159,89 +156,98 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="h-screen flex flex-col bg-[#f04e37] text-white overflow-hidden">
-      {/* Global TTS Button */}
-      <GlobalTTSButton />
-
-      {/* === STICKY BACKHEADER + FILE + NAME + SELECTED === */}
-      <div className="sticky top-0 z-40 bg-[#f04e37] px-3 py-3 pt-3 ">
+    <div className="min-h-screen flex flex-col bg-[#f04e37] text-white">
+      {/* === STICKY BACKHEADER === */}
+      <div className="sticky top-0 z-40 mt-3 ml-3 bg-[#f04e37]">
         <BackHeader title="Create Itinerary" />
       </div>
-      <div className="sticky top-18 z-30 bg-[#f04e37] px-3 py-3 pr-21 pl-7">
-        <div className="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          {/* === Upload Image Section === */}
-          <div className="bg-[#f04e37] p-3 rounded-xl  flex flex-col gap-3 items-center">
-            {/* Upload button */}
-            <label className="cursor-pointer w-full text-center bg-white text-[#f04e37] font-semibold py-2 px-4 rounded-lg hover:bg-white/90 shadow-md transition">
-              Upload Itinerary Image
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
-            </label>
 
-            {/* Image preview (large and clean) */}
-            {imageUrl && (
-              <div className="w-full flex justify-center">
-                <img
-                  src={getFullImageUrl(imageUrl)}
-                  alt="Itinerary Preview"
-                  className="w-full h-48 md:h-64 object-cover rounded-xl border-4 border-white shadow-lg transition-transform duration-300 hover:scale-[1.02]"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Itinerary name */}
-          <input
-            type="text"
-            value={itineraryName}
-            onChange={(e) => setItineraryName(e.target.value)}
-            placeholder="Enter itinerary name"
-            className="w-full md:w-1/3 px-3 py-2 rounded-lg bg-white text-gray-900 placeholder-gray-500 shadow focus:ring-2 focus:ring-[#f4cc27] text-sm md:text-base"
-          />
-
-          {/* Selected Sites summary */}
-          <div className="flex items-center justify-between bg-white/20 rounded-lg px-3 py-2 md:px-4">
-            <span className="font-semibold text-sm md:text-base">
-              Selected Sites:{" "}
-              <span className="text-[#f4cc27] font-bold">
-                {selected.length}
-              </span>
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={handleSave}
-                className="bg-[#f4cc27] text-[#f04e37] font-bold text-xs md:text-sm px-3 py-1 rounded-lg hover:bg-yellow-400"
-              >
-                {editingItineraryId ? "Update" : "Save"}
-              </button>
-              {editingItineraryId && (
-                <button
-                  onClick={handleCancelUpdate}
-                  className="bg-gray-200 text-gray-800 font-bold text-xs md:text-sm px-3 py-1 rounded-lg"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ---------------------------------------------- */}
-
-      {/* === MAIN BODY === */}
       <div className="flex flex-1 px-2 md:pr-25 pr-18">
         <SideButtons />
 
-        <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-4 px-3 md:pl-0 z-20">
-          {/* === LEFT COLUMN: My Itineraries === */}
+        {/* === MAIN CONTENT === */}
+        <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-6 px-5 md:pl-0">
+          {/* === LEFT COLUMN: FORM + MY ITINERARIES (STICKY) === */}
           <div className="w-full md:w-80 flex flex-col order-1 md:order-1">
-            <div className="flex flex-col gap-4">
-              <div className="bg-[#f04e37] rounded-xl ">
+            <div className="sticky top-16 z-20 flex flex-col gap-4">
+              {/* Itinerary Name & Image */}
+              <div className="flex flex-col gap-2 bg-[#f04e37] p-2 rounded-xl">
+                <div className="flex flex-col gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="w-full p-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-500 shadow focus:ring-2 focus:ring-[#f4cc27]"
+                  />
+                  {imageUrl && (
+                    <img
+                      src={getFullImageUrl(imageUrl)}
+                      alt="Itinerary Preview"
+                      className="w-full h-24 md:h-40 object-cover rounded-lg shadow"
+                    />
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={itineraryName}
+                  onChange={(e) => setItineraryName(e.target.value)}
+                  placeholder="Enter itinerary name"
+                  className="w-full p-3 rounded-xl bg-white/90 text-gray-900 placeholder-gray-500 shadow focus:ring-2 focus:ring-[#f4cc27]"
+                />
+              </div>
+
+              {/* Selected Sites */}
+              <div className="bg-white text-black rounded-xl shadow p-3">
+                <h2 className="font-bold text-base md:text-lg mb-2">
+                  Selected Sites ({selected.length})
+                </h2>
+                {selected.length === 0 ? (
+                  <p className="text-gray-600 text-sm">No sites selected</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 max-h-20 md:max-h-64 overflow-y-auto">
+                    {selected.map((id) => {
+                      const site = sites.find((s) => s._id === id);
+                      if (!site) return null;
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg"
+                        >
+                          <img
+                            src={
+                              site.mediaUrl || "https://via.placeholder.com/40"
+                            }
+                            alt={site.siteName}
+                            className="w-5 h-5 md:w-10 md:h-10 rounded object-cover"
+                          />
+                          <p className="text-xs md:text-sm font-semibold whitespace-nowrap">
+                            {site.siteName}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    className="flex-1 bg-[#f04e37] text-white font-bold py-1 md:py-2 rounded-lg"
+                  >
+                    {editingItineraryId ? "Update" : "Save"}
+                  </button>
+                  {editingItineraryId && (
+                    <button
+                      onClick={handleCancelUpdate}
+                      className="flex-1 bg-gray-300 text-gray-800 font-bold py-1 md:py-2 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* My Itineraries */}
+              <div className="bg-[#f04e37] rounded-xl p-2">
                 <button
                   onClick={() => setShowMyItineraries((prev) => !prev)}
                   className="w-full flex justify-between items-center font-bold text-white text-lg p-2 rounded-lg bg-white/10 hover:bg-white/20 md:hidden"
@@ -250,55 +256,47 @@ export default function CreateItineraryPage() {
                   {showMyItineraries ? <FaChevronUp /> : <FaChevronDown />}
                 </button>
 
-                {/* === My Itineraries Section === */}
                 <div
-                  className={`transition-all duration-300 ease-in-out flex flex-col overflow-hidden ${
+                  className={`transition-all duration-300 ease-in-out overflow-y-auto ${
                     showMyItineraries
-                      ? "max-h-[65vh]"
-                      : "max-h-0 md:max-h-[65vh]"
+                      ? "max-h-[60vh]"
+                      : "max-h-0 md:max-h-[60vh]"
                   }`}
                 >
-                  {/* Sticky Header (same as Available Sites) */}
-                  <div className="hidden md:block bg-[#f04e37] px-2 py-2 mb-2 border-b border-white/20 sticky top-0 z-10">
-                    <h2 className="text-2xl font-bold text-white">
-                      My Itineraries
-                    </h2>
-                  </div>
-
-                  {/* Scrollable List */}
-                  <div className="flex-1 overflow-y-auto px-2 pb-6 scroll-smooth">
-                    {userItineraries.length === 0 ? (
-                      <p className="text-white/80 text-sm">
-                        No itineraries created yet.
-                      </p>
-                    ) : (
-                      userItineraries.map((itinerary, idx) => (
-                        <ItineraryCard
-                          key={itinerary._id}
-                          itinerary={itinerary}
-                          expanded={expandedIndex === idx}
-                          toggleExpand={() => toggleExpand(idx)}
-                          handleDelete={handleDelete}
-                          handleEdit={handleEdit}
-                          getFullImageUrl={getFullImageUrl}
-                        />
-                      ))
-                    )}
-                  </div>
+                  <h2 className="hidden md:block text-xl font-bold mb-2">
+                    My Itineraries
+                  </h2>
+                  {userItineraries.length === 0 ? (
+                    <p className="text-white/80 text-sm">
+                      No itineraries created yet.
+                    </p>
+                  ) : (
+                    userItineraries.map((itinerary, idx) => (
+                      <ItineraryCard
+                        key={itinerary._id}
+                        itinerary={itinerary}
+                        expanded={expandedIndex === idx}
+                        toggleExpand={() => toggleExpand(idx)}
+                        handleDelete={handleDelete}
+                        handleEdit={handleEdit}
+                        getFullImageUrl={getFullImageUrl}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* === RIGHT COLUMN: Available Sites === */}
-          <div className="flex-1 flex flex-col order-2 overflow-hidden">
-            {/* Header fixed at top of this section */}
-            <div className="bg-[#f04e37] px-2 py-2 mb-2 border-b border-white/20">
-              <h2 className="text-2xl font-bold text-white">Available Sites</h2>
-            </div>
+          {/* === RIGHT COLUMN: AVAILABLE SITES (SCROLLABLE) === */}
+          <div className="flex-1 flex flex-col order-2">
+            {/* Sticky header */}
+            <h2 className="text-2xl font-bold text-white mb-2 sticky top-16 bg-[#f04e37] z-20 px-2">
+              Available Sites
+            </h2>
 
             {/* Scrollable site list */}
-            <div className="flex-1 overflow-y-auto px-2 pb-6 max-h-[65vh] md:max-h-[70vh] scroll-smooth">
+            <div className="overflow-y-auto flex-1 max-h-[calc(100vh-16px-64px)] px-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {sites.map((site) => {
                   const isExpanded = descriptionToggles[site._id];

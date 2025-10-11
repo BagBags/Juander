@@ -1,9 +1,20 @@
-import React, { Suspense, lazy, useState } from "react";
+import React, { Suspense, lazy, useState, useEffect } from "react";
+import { Volume2 } from "lucide-react";
+import ttsService from "../../../utils/textToSpeech";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
 const SiteCard = ({ pin, onClose, distance }) => {
   const [showAR, setShowAR] = useState(false);
+
+  // Announce site when card opens
+  useEffect(() => {
+    if (pin) {
+      const siteName = pin.title || "site";
+      const distanceText = distance ? `. Distance: ${(distance / 1000).toFixed(2)} kilometers` : "";
+      ttsService.speak(`Viewing ${siteName}${distanceText}`);
+    }
+  }, [pin?._id]);
 
   return (
     <div
@@ -56,6 +67,20 @@ const SiteCard = ({ pin, onClose, distance }) => {
             <h3 className="text-lg md:text-xl font-semibold mb-2">
               {pin.title}
             </h3>
+
+            {/* Read Description Button */}
+            <button
+              onClick={() => {
+                const description = pin.description || "No description available";
+                ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
+              }}
+              className="mb-3 w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              aria-label="Read site description aloud"
+            >
+              <Volume2 className="w-4 h-4" />
+              Read Description Aloud
+            </button>
+
             <p className="text-sm md:text-base leading-snug text-gray-700 mb-3">
               {pin.description}
             </p>

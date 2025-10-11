@@ -7,12 +7,19 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
+import ttsService from "../../../utils/textToSpeech";
+import GlobalTTSButton from "../../GlobalTTSButton";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  // Announce page load
+  useEffect(() => {
+    ttsService.speak(t('tts_profilePage'));
+  }, [t]);
 
   // Load user from localStorage
   useEffect(() => {
@@ -104,6 +111,9 @@ export default function ProfilePage() {
       transition={{ duration: 0.15 }}
       className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
+      {/* Global TTS Button */}
+      <GlobalTTSButton />
+
       <div className="w-full max-w-md">
         {/* Profile Card */}
         <div className="mt-4 w-full bg-[#f04e37] rounded-2xl p-6 flex items-center text-white gap-6">

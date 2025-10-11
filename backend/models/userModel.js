@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema(
       default: "local",
     },
     googleId: { type: String, unique: true, sparse: true }, // stores Google "sub"
+    profileCompleted: {
+      type: Boolean,
+      default: false, // New users need to complete profile
+    },
   },
 
   { timestamps: true }

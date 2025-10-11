@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Edit, Trash2, Plus, Check, X } from "lucide-react";
+import { Edit, Trash2, Plus, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 
 export default function ManagePhotobooth() {
   const [filters, setFilters] = useState([]);
+  const [sortedFilters, setSortedFilters] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [form, setForm] = useState({
     name: "",
     imageFile: null,
@@ -37,6 +39,7 @@ export default function ManagePhotobooth() {
     try {
       const res = await axios.get("/api/photobooth/filters", axiosConfig);
       setFilters(res.data);
+      setSortedFilters(res.data);
     } catch (err) {
       console.error(err);
     }
@@ -45,6 +48,41 @@ export default function ManagePhotobooth() {
   useEffect(() => {
     fetchFilters();
   }, []);
+
+  // Sorting function
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+
+    const sorted = [...filters].sort((a, b) => {
+      let aValue = a[key];
+      let bValue = b[key];
+
+      // Handle string comparison
+      if (typeof aValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) return direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    setSortedFilters(sorted);
+    setSortConfig({ key, direction });
+  };
+
+  // Update sortedFilters when filters change
+  useEffect(() => {
+    if (sortConfig.key) {
+      handleSort(sortConfig.key);
+    } else {
+      setSortedFilters(filters);
+    }
+  }, [filters]);
 
   // Handle inputs
   const handleChange = (e) => {
@@ -244,16 +282,66 @@ export default function ManagePhotobooth() {
         </h2>
         <div className="overflow-y-auto max-h-[70vh]">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-gray-600 text-left">
+            <thead className="bg-gray-100 text-gray-600 text-left sticky top-0">
               <tr>
                 <th className="p-3 font-medium">Preview</th>
-                <th className="p-3 font-medium">Name</th>
-                <th className="p-3 font-medium">Category</th>
+                <th 
+                  className="p-3 font-medium cursor-pointer hover:bg-gray-200 transition"
+                  onClick={() => handleSort("name")}
+                >
+                  <div className="flex items-center gap-1">
+                    Name
+                    <span className="flex flex-col leading-none">
+                      <ChevronUp
+                        size={12}
+                        className={`${
+                          sortConfig.key === "name" && sortConfig.direction === "asc"
+                            ? "text-red-500"
+                            : "text-gray-300"
+                        }`}
+                      />
+                      <ChevronDown
+                        size={12}
+                        className={`-mt-1 ${
+                          sortConfig.key === "name" && sortConfig.direction === "desc"
+                            ? "text-red-500"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    </span>
+                  </div>
+                </th>
+                <th 
+                  className="p-3 font-medium cursor-pointer hover:bg-gray-200 transition"
+                  onClick={() => handleSort("category")}
+                >
+                  <div className="flex items-center gap-1">
+                    Category
+                    <span className="flex flex-col leading-none">
+                      <ChevronUp
+                        size={12}
+                        className={`${
+                          sortConfig.key === "category" && sortConfig.direction === "asc"
+                            ? "text-red-500"
+                            : "text-gray-300"
+                        }`}
+                      />
+                      <ChevronDown
+                        size={12}
+                        className={`-mt-1 ${
+                          sortConfig.key === "category" && sortConfig.direction === "desc"
+                            ? "text-red-500"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    </span>
+                  </div>
+                </th>
                 <th className="p-3 font-medium text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filters.map((filter) => (
+              {sortedFilters.map((filter) => (
                 <tr
                   key={filter._id}
                   className="hover:bg-gray-50 transition border-b"
@@ -287,7 +375,7 @@ export default function ManagePhotobooth() {
                   </td>
                 </tr>
               ))}
-              {filters.length === 0 && (
+              {sortedFilters.length === 0 && (
                 <tr>
                   <td
                     colSpan="4"

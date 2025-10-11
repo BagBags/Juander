@@ -106,7 +106,12 @@ export default function LoginForm({ toggleForm }) {
         localStorage.setItem("language", user.language); // 👈 keep consistent
       }
 
-      navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
+      // Check if profile is completed
+      if (user.role !== "admin" && !user.profileCompleted) {
+        navigate("/CompleteProfile");
+      } else {
+        navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
+      }
     } catch (err) {
       console.error("Google login error:", err.response?.data || err.message);
       setError(
@@ -140,7 +145,12 @@ export default function LoginForm({ toggleForm }) {
         i18n.changeLanguage(user.language);
       }
 
-      navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
+      // Check if profile is completed
+      if (user.role !== "admin" && !user.profileCompleted) {
+        navigate("/CompleteProfile");
+      } else {
+        navigate(user.role === "admin" ? "/AdminHome" : "/Homepage");
+      }
     } catch (err) {
       setError(
         err.response?.data?.message ||

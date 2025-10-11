@@ -10,6 +10,9 @@ import MapLegend from "./MapLegend";
 import MapMarkers from "./MapMarkers";
 import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
+import ttsService from "../../../utils/textToSpeech";
+import GlobalTTSButton from "../../GlobalTTSButton";
+import { useTranslation } from "react-i18next";
 import "../../../App.css";
 
 // ✅ Axios instance with auth token
@@ -25,24 +28,28 @@ api.interceptors.request.use((config) => {
 // ✅ Centralized initial view state
 const INITIAL_VIEW = {
   latitude: 14.591, // Intramuros center
-  longitude: 120.9747,
   zoom: 16,
   bearing: 45,
   pitch: 0,
 };
 
-export default function UserMap() {
-  const [viewState, setViewState] = useState(INITIAL_VIEW);
+export default function TourMap() {
+  const { t } = useTranslation();
+  const mapRef = useRef(null);
   const [selectedPin, setSelectedPin] = useState(null);
+  const [viewState, setViewState] = useState(INITIAL_VIEW);
   const [distance, setDistance] = useState(null);
   const [route, setRoute] = useState(null);
   const [showLegend, setShowLegend] = useState(false);
 
-  const mapRef = useRef(null);
-
   // Custom hooks
   const { mask, inverseMask, pins } = useApi(api);
   const userLocation = useUserLocation(setViewState);
+
+  // Announce page load
+  useEffect(() => {
+    ttsService.speak(t('tts_tourMapLoaded'));
+  }, [t]);
 
   // ------------------ Fly to pin ------------------
   const flyToPin = (pinData, callback) => {
@@ -146,6 +153,9 @@ export default function UserMap() {
 
   return (
     <div className="relative w-full h-screen">
+      {/* Global TTS Button */}
+      <GlobalTTSButton />
+
       {/* Legend */}
       <MapLegend showLegend={showLegend} setShowLegend={setShowLegend} />
 

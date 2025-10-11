@@ -3,10 +3,19 @@ import axios from "axios";
 import Card from "./Card";
 import SideButtons from "../sideButtons";
 import BackHeader from "../BackButton";
+import ttsService from "../../../utils/textToSpeech";
+import GlobalTTSButton from "../../GlobalTTSButton";
+import { useTranslation } from "react-i18next";
 
 export default function EmergencyPage() {
+  const { t } = useTranslation();
   const [hotlines, setHotlines] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Announce page load
+  useEffect(() => {
+    ttsService.speak(t('tts_emergencyPage'));
+  }, [t]);
 
   useEffect(() => {
     const fetchHotlines = async () => {
@@ -38,6 +47,9 @@ export default function EmergencyPage() {
 
   return (
     <div className="min-h-screen  flex flex-col items-center text-sm relative px-4 md:px-0 text-white ">
+      {/* Global TTS Button */}
+      <GlobalTTSButton />
+
       <div className="w-full max-w-xl">
         {/* Sticky Back Header */}
         <div className="pt-4 sticky top-0 text-black bg-white z-20 w-full">

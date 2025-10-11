@@ -63,6 +63,8 @@ import TouristProtectedRoute from "./components/TouristProtectedRoute";
 import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
 import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
 import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
+import NotFound from "./components/NotFound";
+import CompleteProfile from "./components/userComponents/CompleteProfile";
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
 
 // Helper wrapper to inject location for AnimatePresence
@@ -75,6 +77,7 @@ function AnimatedRoutes() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupForm />} />
+        <Route path="/CompleteProfile" element={<CompleteProfile />} />
         {/* Public Pages */}\
         <Route path="/GuestHomepage" element={<GuestHomepage />} />
         <Route path="/GuestItinerary" element={<GuestItinerary />} />
@@ -133,6 +136,8 @@ function AnimatedRoutes() {
         </Route>
         {/* <Route element={<GuestProtectedRoute />}> */}
         {/* </Route> */}
+        {/* 404 Not Found - Must be last */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
   );

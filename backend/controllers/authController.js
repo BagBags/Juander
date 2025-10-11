@@ -301,6 +301,7 @@ exports.login = async (req, res) => {
         authProvider: user.authProvider,
         profilePicture: user.profilePicture || null, // ✅ include profilePicture
         language: user.language || "en",
+        profileCompleted: user.profileCompleted || false, // ✅ track profile completion
       },
     });
   } catch (err) {
@@ -372,6 +373,7 @@ exports.googleLogin = async (req, res) => {
         authProvider: user.authProvider,
         profilePicture: user.profilePicture, // ✅ return it
         language: user.language || "en",
+        profileCompleted: user.profileCompleted || false, // ✅ track profile completion
       },
     });
   } catch (err) {
@@ -635,6 +637,40 @@ exports.saveLanguage = async (req, res) => {
     });
   } catch (err) {
     console.error("Error updating language:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Mark profile as completed
+exports.completeProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if required fields are filled
+    const requiredFields = ['firstName', 'lastName', 'birthday', 'gender', 'country'];
+    const missingFields = requiredFields.filter(field => !user[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({ 
+        message: "Please complete all required fields",
+        missingFields 
+      });
+    }
+
+    user.profileCompleted = true;
+    await user.save();
+
+    res.json({
+      message: "Profile completed successfully",
+      profileCompleted: true,
+    });
+  } catch (err) {
+    console.error("Error completing profile:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

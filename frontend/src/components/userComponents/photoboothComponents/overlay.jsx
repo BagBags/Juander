@@ -4,18 +4,35 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
   const overlayRef = useRef();
   const faceSizeRef = useRef(null);
   const frameCountRef = useRef(0);
-  // const stabilizationThreshold = 5;
+  const smoothedPositionRef = useRef(null);
+  const smoothedAngleRef = useRef(null);
+  const smoothedScaleRef = useRef(null);
+  const smoothingFactor = 0.7; // High responsiveness for real-time feel
+  const angleSmoothingFactor = 0.8; // Very responsive rotation
+  const scaleSmoothingFactor = 0.6; // Smooth size changes
 
   const getSizeConfig = () => ({
-    glasses: {
-      widthRatio: 1.4,
-      heightRatio: 0.35,
-      yOffsetRatio: 0.15,
+    eyes: {
+      widthRatio: 1.4,      // Width relative to face width
+      heightRatio: 0.35,    // Height relative to face height
+      anchorPoint: 'eyes',  // Anchor to eyes
     },
-    hat: {
-      widthRatio: 1.6,
-      heightRatio: 1.2,
-      yOffsetRatio: 0.85,
+    head: {
+      widthRatio: 2.2,      // Slightly larger for better coverage
+      heightRatio: 1.3,     // Proportional height
+      anchorPoint: 'top',   // Anchor to top of head
+      verticalOffset: -0.4, // Position above forehead (negative = up)
+    },
+    frame: {
+      useFullScreen: true,  // Special flag for full screen frames
+      widthRatio: 1.0,
+      heightRatio: 1.3,
+      anchorPoint: 'center',
+    },
+    general: {
+      widthRatio: 1.2,
+      heightRatio: 0.4,
+      anchorPoint: 'eyes',
     },
   });
 
@@ -33,7 +50,59 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
   useEffect(() => {
     faceSizeRef.current = null;
     frameCountRef.current = 0;
+    smoothedPositionRef.current = null;
+    smoothedAngleRef.current = null;
+    smoothedScaleRef.current = null;
   }, [videoDims]);
+
+  // Smooth position changes for stable overlay
+  const smoothPosition = (newPos) => {
+    if (!smoothedPositionRef.current) {
+      smoothedPositionRef.current = newPos;
+      return newPos;
+    }
+    
+    const smoothed = {
+      x: smoothedPositionRef.current.x + (newPos.x - smoothedPositionRef.current.x) * smoothingFactor,
+      y: smoothedPositionRef.current.y + (newPos.y - smoothedPositionRef.current.y) * smoothingFactor,
+    };
+    
+    smoothedPositionRef.current = smoothed;
+    return smoothed;
+  };
+
+  // Smooth angle changes for stable rotation
+  const smoothAngle = (newAngle) => {
+    if (smoothedAngleRef.current === null) {
+      smoothedAngleRef.current = newAngle;
+      return newAngle;
+    }
+    
+    // Handle angle wrapping (e.g., -180 to 180 transition)
+    let diff = newAngle - smoothedAngleRef.current;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    
+    const smoothed = smoothedAngleRef.current + diff * angleSmoothingFactor;
+    smoothedAngleRef.current = smoothed;
+    return smoothed;
+  };
+
+  // Smooth scale changes for stable sizing
+  const smoothScale = (newScale) => {
+    if (!smoothedScaleRef.current) {
+      smoothedScaleRef.current = { width: newScale.width, height: newScale.height };
+      return newScale;
+    }
+    
+    const smoothed = {
+      width: smoothedScaleRef.current.width + (newScale.width - smoothedScaleRef.current.width) * scaleSmoothingFactor,
+      height: smoothedScaleRef.current.height + (newScale.height - smoothedScaleRef.current.height) * scaleSmoothingFactor,
+    };
+    
+    smoothedScaleRef.current = smoothed;
+    return smoothed;
+  };
 
   return (
     <div
@@ -89,73 +158,139 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
           };
         }
 
-        const reference = faceSizeRef.current;
         const config = getSizeConfig();
 
-        // Determine which overlay to use
-        const overlayType =
-          selectedMeta?.category === "head" ? "hat" : "glasses";
-        const { widthRatio, heightRatio, yOffsetRatio } = config[overlayType];
+        // Determine category - use the actual category from selectedMeta
+        const category = selectedMeta?.category || "general";
+        const categoryConfig = config[category] || config.general;
+        const { widthRatio, heightRatio, useFullScreen, anchorPoint, verticalOffset } = categoryConfig;
 
-        const overlayWidth = reference.width * widthRatio;
-        const overlayHeight = reference.height * heightRatio;
-
-        const widthScale = currentFaceWidth / reference.width;
-        const heightScale = currentFaceHeight / reference.height;
-        const earScale = earDistance / reference.earDistance;
-        const avgScale = (widthScale + heightScale + earScale) / 3;
+        // Calculate overlay dimensions based on CURRENT face size (not reference)
+        let overlayWidth, overlayHeight, avgScale;
+        
+        if (useFullScreen && category === "frame") {
+          // Use video dimensions for full screen coverage
+          overlayWidth = videoDims.width;
+          overlayHeight = videoDims.height;
+          avgScale = 1; // No scaling for full screen frames
+        } else {
+          // Use CURRENT face dimensions for responsive sizing
+          const rawWidth = currentFaceWidth * widthRatio;
+          const rawHeight = currentFaceHeight * heightRatio;
+          
+          // Apply smooth scaling for fluid size changes
+          const smoothedSize = smoothScale({ width: rawWidth, height: rawHeight });
+          overlayWidth = smoothedSize.width;
+          overlayHeight = smoothedSize.height;
+          avgScale = 1; // No additional scaling - size is already correct
+        }
 
         const angleRad = Math.atan2(
           rightEye.y - leftEye.y,
           rightEye.x - leftEye.x
         );
-        const angleDeg = (angleRad * 180) / Math.PI;
+        const rawAngleDeg = (angleRad * 180) / Math.PI;
+        
+        // Apply smoothing to rotation for stable tracking
+        const angleDeg = smoothAngle(rawAngleDeg);
 
-        const center =
-          overlayType === "hat"
-            ? {
-                x: noseTip.x,
-                y:
-                  forehead.y -
-                  overlayHeight *
-                    yOffsetRatio *
-                    (earDistance / reference.earDistance),
-              }
-            : {
-                x: (leftEye.x + rightEye.x) / 2,
-                y: (leftEye.y + rightEye.y) / 2 - overlayHeight * yOffsetRatio,
-              };
+        // Calculate center position based on anchor point (Snapchat-style)
+        let rawCenter;
+        
+        if (useFullScreen && category === "frame") {
+          // Position at screen center for full-screen frames
+          rawCenter = {
+            x: videoDims.width / 2,
+            y: videoDims.height / 2,
+          };
+        } else if (anchorPoint === 'top' || category === "head") {
+          // Position above forehead for hats - Snapchat style
+          const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+          const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+          
+          // Calculate the perpendicular offset from eye center to forehead
+          const faceHeight = Math.abs(chin.y - forehead.y);
+          const offsetAmount = faceHeight * (verticalOffset || -0.4);
+          
+          // Apply offset perpendicular to face angle
+          const offsetX = -Math.sin(angleRad) * offsetAmount;
+          const offsetY = Math.cos(angleRad) * offsetAmount;
+          
+          rawCenter = {
+            x: eyeCenterX + offsetX,
+            y: eyeCenterY + offsetY,
+          };
+        } else if (anchorPoint === 'eyes' || category === "eyes") {
+          // Position precisely between eyes for glasses
+          rawCenter = {
+            x: (leftEye.x + rightEye.x) / 2,
+            y: (leftEye.y + rightEye.y) / 2,
+          };
+        } else if (category === "frame") {
+          // Position centered on entire face for regular frames
+          rawCenter = {
+            x: noseTip.x,
+            y: (forehead.y + chin.y) / 2,
+          };
+        } else {
+          // General category - center on face
+          rawCenter = {
+            x: (leftEye.x + rightEye.x) / 2,
+            y: (leftEye.y + rightEye.y) / 2,
+          };
+        }
+
+        // Apply smoothing for stable positioning (skip for full-screen frames)
+        const center = (useFullScreen && category === "frame") ? rawCenter : smoothPosition(rawCenter);
 
         let screenCoords = getDisplayCoords(center.x, center.y);
         screenCoords.x = overlayRef.current
           ? overlayRef.current.getBoundingClientRect().width - screenCoords.x
           : screenCoords.x;
 
-        const shouldRenderOverlay =
-          selectedMeta?.image &&
-          (selectedValue === "all" ||
-            selectedMeta?.category === overlayType ||
-            selectedMeta?.category === "eyes");
+        const shouldRenderOverlay = selectedMeta?.image;
+
+        // Set z-index based on category
+        const getZIndex = (cat) => {
+          if (cat === "frame") return 80; // Frames behind everything
+          if (cat === "head") return 90; // Hats in middle
+          return 100; // Eyes and general on top
+        };
 
         return (
           <React.Fragment key={idx}>
             {shouldRenderOverlay && (
               <div
-                style={{
-                  position: "absolute",
-                  left: screenCoords.x - (overlayWidth * avgScale) / 2,
-                  top: screenCoords.y - (overlayHeight * avgScale) / 2,
-                  width: overlayWidth,
-                  height: overlayHeight,
-                  transform: `rotate(${-angleDeg}deg) scale(${avgScale})`,
-                  transformOrigin: "center center",
-                  transition: "transform 0.05s linear",
-                  zIndex: overlayType === "hat" ? 90 : 100,
-                }}
+                style={
+                  useFullScreen && category === "frame"
+                    ? {
+                        // Full screen frame - fixed position, no rotation
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        width: "100%",
+                        height: "100%",
+                        transform: "none",
+                        zIndex: getZIndex(category),
+                      }
+                    : {
+                        // Normal overlay - follows face
+                        position: "absolute",
+                        left: screenCoords.x - (overlayWidth * avgScale) / 2,
+                        top: screenCoords.y - (overlayHeight * avgScale) / 2,
+                        width: overlayWidth,
+                        height: overlayHeight,
+                        transform: `rotate(${-angleDeg}deg) scale(${avgScale})`,
+                        transformOrigin: "center center",
+                        transition: "none", // Remove transition for real-time feel
+                        zIndex: getZIndex(category),
+                      }
+                }
               >
                 <img
                   src={selectedMeta.image}
                   alt="overlay"
+                  crossOrigin="anonymous"
                   style={{
                     width: "100%",
                     height: "100%",

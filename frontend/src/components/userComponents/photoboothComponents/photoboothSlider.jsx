@@ -1,11 +1,13 @@
 // components/PhotoboothSlider.jsx
 import React, { useRef, useEffect } from "react";
+import { Camera } from "lucide-react";
 
 export default function PhotoboothSlider({
   repeatedFilters,
   selectedFilterId,
   setSelectedFilterId,
-  // videoWidth,
+  onCapture,
+  webcamReady,
   style,
 }) {
   const carouselRef = useRef(null);
@@ -146,32 +148,19 @@ export default function PhotoboothSlider({
         ))}
       </div>
 
-      {/* Capture Button (overlay) */}
-      <div
+      {/* Capture Button (center overlay) - Snapchat style */}
+      <button
+        onClick={onCapture}
+        disabled={!webcamReady}
+        className="absolute left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white shadow-2xl hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
         style={{
-          position: "absolute",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "70px",
-          height: "70px",
-          borderRadius: "50%",
-          border: "4px solid white",
-          pointerEvents: "none",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
+          pointerEvents: "auto",
+          background: "transparent",
         }}
       >
-        <div
-          style={{
-            width: "60px",
-            height: "60px",
-            borderRadius: "50%",
-            background: "white",
-            opacity: 0.8,
-          }}
-        />
-      </div>
+        {/* Inner ring for depth */}
+        <div className="absolute inset-1 rounded-full border-2 border-white/50"></div>
+      </button>
     </div>
   );
 }

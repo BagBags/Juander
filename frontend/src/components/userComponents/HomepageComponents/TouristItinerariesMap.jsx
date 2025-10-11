@@ -3,14 +3,7 @@ import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-import {
-  X,
-  Navigation,
-  ArrowLeft,
-  ArrowRight,
-  Clock,
-  MapPin,
-} from "lucide-react";
+import { Navigation, MapPin } from "lucide-react";
 
 import {
   MAPBOX_TOKEN,
@@ -18,6 +11,12 @@ import {
   directionsClient,
   createInverseMask,
 } from "../TourMap/mapConfig";
+
+// Import separated components
+import DirectionsPanel from "./DirectionsPanel";
+import MapControlButtons from "./MapControlButtons";
+import SitePreviewCard from "./SitePreviewCard";
+import SiteModalFullScreen from "./SiteModalFullScreen";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
@@ -45,9 +44,21 @@ export default function TouristItineraryMap() {
   // Site modals
   const [selectedPin, setSelectedPin] = useState(null);
   const [currentPinIndex, setCurrentPinIndex] = useState(0);
+  const [showFullModal, setShowFullModal] = useState(false);
+  const [isNearby, setIsNearby] = useState(false);
+  const [manuallyDismissed, setManuallyDismissed] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
+
+  // Utility to resolve relative URLs into absolute URLs
+  const resolveUrl = (url) => {
+    if (!url) return "";
+    const BACKEND_URL = "http://localhost:5000";
+    return url.startsWith("http")
+      ? url
+      : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  };
 
   /** Fetch mask */
   useEffect(() => {
@@ -86,10 +97,12 @@ export default function TouristItineraryMap() {
 
         const normalized = sites.map((s) => ({
           ...s,
-          siteName: s.siteName || "Site",
+          title: s.siteName || s.title || "Site",
+          siteName: s.siteName || s.title || "Site",
           description: s.siteDescription || s.description || "",
           mediaType: s.mediaType || "image",
-          mediaUrl: s.mediaUrl || "",
+          mediaUrl: resolveUrl(s.mediaUrl),
+          glbUrl: resolveUrl(s.glbUrl),
           arEnabled: s.arEnabled === true,
           arLink: s.arLink || "",
           status: s.status || "active",
@@ -168,18 +181,19 @@ export default function TouristItineraryMap() {
 
         withDistances.sort((a, b) => a.dist - b.dist);
         setCurrentPinIndex(withDistances[0].index);
-        setSelectedPin(withDistances[0]); // show first modal
+        // Don't auto-show preview card on initial load
+        // Let the proximity detection handle it
       }
 
       buildRoute(userLocation, pins[currentPinIndex]);
     }
   }, [userLocation, pins, currentPinIndex]);
 
-  /** Detect arrival to auto-open modal */
+  /** Detect arrival to auto-show preview card */
   useEffect(() => {
     if (!userLocation || pins.length === 0) return;
 
-    const radius = 30; // meters
+    const radius = 50; // meters - show preview when within 50m
     const EARTH_RADIUS = 6371000;
 
     const pin = pins[currentPinIndex];
@@ -196,9 +210,15 @@ export default function TouristItineraryMap() {
     const distance = EARTH_RADIUS * c;
 
     if (distance < radius) {
-      setSelectedPin(pin); // auto-show modal
+      setIsNearby(true);
+      // Only auto-show if not manually dismissed
+      if (!manuallyDismissed) {
+        setSelectedPin(pin);
+      }
+    } else {
+      setIsNearby(false);
     }
-  }, [userLocation, currentPinIndex, pins]);
+  }, [userLocation, currentPinIndex, pins, manuallyDismissed]);
 
   /** Update step index as user moves */
   useEffect(() => {
@@ -318,6 +338,7 @@ export default function TouristItineraryMap() {
               e.originalEvent.stopPropagation();
               setSelectedPin(pin);
               setCurrentPinIndex(idx);
+              setShowFullModal(false); // Show preview card first
               if (userLocation) buildRoute(userLocation, pin);
             }}
           >
@@ -344,147 +365,55 @@ export default function TouristItineraryMap() {
       </Map>
 
       {/* Directions Panel */}
-      {steps.length > 0 && (
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[340px] bg-white rounded-xl shadow-lg p-4 text-sm flex flex-col items-center">
-          <h4 className="font-semibold text-gray-800 mb-2">Directions</h4>
+      <DirectionsPanel
+        steps={steps}
+        currentStepIndex={currentStepIndex}
+        setCurrentStepIndex={setCurrentStepIndex}
+        eta={eta}
+        distance={distance}
+        arrivalTime={arrivalTime}
+      />
 
-          <div className="text-center mb-3">
-            <p className="text-base font-medium text-blue-700">
-              {steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Step {currentStepIndex + 1} of {steps.length}
-            </p>
-          </div>
-
-          {/* ETA + Distance + Arrival */}
-          {eta && distance && (
-            <div className="flex flex-col items-center text-sm text-gray-700 mb-3">
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 mr-1" />
-                {Math.round(eta / 60)} min • {(distance / 1000).toFixed(2)} km
-              </div>
-              {arrivalTime && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Arrival:{" "}
-                  {arrivalTime.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Navigation Controls */}
-          <div className="flex justify-between w-full">
-            <button
-              onClick={() =>
-                setCurrentStepIndex((prev) => Math.max(prev - 1, 0))
-              }
-              disabled={currentStepIndex === 0}
-              className={`px-3 py-1 rounded-md text-sm font-medium shadow flex items-center gap-1 ${
-                currentStepIndex === 0
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" /> Prev
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentStepIndex((prev) =>
-                  Math.min(prev + 1, steps.length - 1)
-                )
-              }
-              disabled={currentStepIndex === steps.length - 1}
-              className={`px-3 py-1 rounded-md text-sm font-medium shadow flex items-center gap-1 ${
-                currentStepIndex === steps.length - 1
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              Next <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {/* Control Buttons */}
+      {!showFullModal && (
+        <MapControlButtons
+          userLocation={userLocation}
+          selectedPin={selectedPin}
+          pins={pins}
+          currentPinIndex={currentPinIndex}
+          setViewState={setViewState}
+          setSelectedPin={setSelectedPin}
+          setManuallyDismissed={setManuallyDismissed}
+        />
       )}
 
-      {/* Site Modal */}
-      {selectedPin && (
-        <div className="absolute top-1/2 left-1/2 z-50 w-[320px] -translate-x-1/2 -translate-y-1/2">
-          <div className="relative bg-white border border-gray-200 rounded-xl shadow-lg p-4 font-sans">
-            <button
-              onClick={() => setSelectedPin(null)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      {/* Site Preview Card */}
+      {selectedPin && !showFullModal && (
+        <SitePreviewCard
+          selectedPin={selectedPin}
+          distance={distance}
+          isNearby={isNearby}
+          onExpand={() => setShowFullModal(true)}
+          onClose={() => {
+            setSelectedPin(null);
+            setManuallyDismissed(true);
+          }}
+        />
+      )}
 
-            <h3 className="text-lg font-semibold mb-2">
-              {selectedPin.siteName}
-            </h3>
-            <p className="text-sm text-gray-700 mb-3">
-              {selectedPin.description}
-            </p>
-
-            {selectedPin.mediaUrl && (
-              <div className="mb-3">
-                {selectedPin.mediaType === "video" ? (
-                  <video
-                    src={selectedPin.mediaUrl}
-                    className="w-full h-40 object-cover rounded-lg border"
-                    muted
-                    controls
-                  />
-                ) : (
-                  <img
-                    src={selectedPin.mediaUrl}
-                    alt={selectedPin.siteName}
-                    className="w-full h-40 object-cover rounded-lg border"
-                  />
-                )}
-              </div>
-            )}
-
-            {selectedPin.arEnabled && selectedPin.arLink && (
-              <a
-                href={selectedPin.arLink}
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-lg shadow mb-3"
-              >
-                View in AR Mode
-              </a>
-            )}
-
-            {selectedPin.status && (
-              <div className="text-xs font-medium px-3 py-2 rounded-md border bg-gray-50">
-                Status:{" "}
-                <span
-                  className={
-                    selectedPin.status === "active"
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }
-                >
-                  {selectedPin.status === "active" ? "Active" : "Inactive"}
-                </span>
-              </div>
-            )}
-
-            {/* Next Stop */}
-            {currentPinIndex < pins.length - 1 && (
-              <button
-                onClick={goToNextStop}
-                className="mt-4 w-full bg-blue-700 text-white px-5 py-2 rounded-md shadow-lg"
-              >
-                Go to Next Site
-              </button>
-            )}
-          </div>
-        </div>
+      {/* Site Modal - Full Screen */}
+      {selectedPin && showFullModal && (
+        <SiteModalFullScreen
+          selectedPin={selectedPin}
+          onClose={() => {
+            setShowFullModal(false);
+            setSelectedPin(null);
+          }}
+          distance={distance}
+          currentPinIndex={currentPinIndex}
+          pinsLength={pins.length}
+          goToNextStop={goToNextStop}
+        />
       )}
     </div>
   );
