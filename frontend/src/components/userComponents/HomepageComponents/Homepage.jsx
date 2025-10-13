@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import LogoHeader from "./logoHeader";
-import SideButtons from "../sideButtons";
+import MainLayout from "../MainLayout";
 import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -95,8 +95,9 @@ export default function Homepage() {
       </div>
 
       {/* Buttons */}
-      <SideButtons user={currentUser} />
-      <Button navigate={navigate} />
+      <MainLayout>
+        <Button navigate={navigate} />
+      </MainLayout>
       <FloatingChatbot />
       <GlobalTTSButton />
     </div>

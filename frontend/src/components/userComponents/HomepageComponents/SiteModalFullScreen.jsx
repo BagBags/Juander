@@ -1,5 +1,5 @@
 import React, { useState, Suspense, lazy, useEffect } from "react";
-import { X, Volume2 } from "lucide-react";
+import { X, Volume2, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 
@@ -12,6 +12,9 @@ export default function SiteModalFullScreen({
   currentPinIndex,
   pinsLength,
   goToNextStop,
+  siteReviews = [],
+  reviewsLoading = false,
+  simulateGoToNextSite,
 }) {
   const { t } = useTranslation();
   const [showAR, setShowAR] = useState(false);
@@ -152,6 +155,63 @@ export default function SiteModalFullScreen({
                   {(distance / 1000).toFixed(2)} km
                 </span>
               </div>
+            )}
+
+            {/* User Reviews Section */}
+            <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <h4 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                User Reviews
+              </h4>
+              
+              {reviewsLoading ? (
+                <p className="text-sm text-gray-500">Loading reviews...</p>
+              ) : siteReviews.length === 0 ? (
+                <p className="text-sm text-gray-500">No reviews yet. Be the first to review!</p>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {siteReviews.map((review, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm text-gray-800">
+                          {review.userId?.firstName && review.userId?.lastName
+                            ? `${review.userId.firstName} ${review.userId.lastName}`
+                            : review.userId?.firstName || review.userId?.lastName || "Anonymous"}
+                        </span>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${
+                                i < review.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {review.reviewText && (
+                        <p className="text-xs text-gray-600">{review.reviewText}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Simulation Button (for testing from home) */}
+            {simulateGoToNextSite && (
+              <button
+                onClick={simulateGoToNextSite}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 text-base font-bold rounded-lg shadow-lg mb-4 transition-all duration-200 active:scale-95"
+                aria-label="Simulate site completion"
+              >
+                 Mark Site as Done
+              </button>
             )}
 
             {/* Next Stop Button */}

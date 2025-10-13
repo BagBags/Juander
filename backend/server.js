@@ -17,6 +17,8 @@ const maskRoute = require("./routes/maskRoute");
 const itineraryRoute = require("./routes/itineraryRoute");
 const photoboothFilterRoute = require("./routes/photoboothFilterRoute");
 const tagRoutes = require("./routes/adminTagRoute");
+const visitedSiteRoute = require("./routes/visitedSiteRoute");
+const reviewRoute = require("./routes/reviewRoute");
 
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
@@ -72,6 +74,8 @@ app.use("/api/mask", maskRoute);
 app.use("/api/itineraries", itineraryRoute);
 app.use("/api/userItineraries", itineraryRoute);
 app.use("/api/photobooth/filters", photoboothFilterRoute);
+app.use("/api/visited-sites", visitedSiteRoute);
+app.use("/api/reviews", reviewRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/uploads/profile",

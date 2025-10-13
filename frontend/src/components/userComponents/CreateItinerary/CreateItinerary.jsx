@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import SideButtons from "../sideButtons";
+import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import ttsService from "../../../utils/textToSpeech";
 import GlobalTTSButton from "../../GlobalTTSButton";
@@ -159,7 +159,7 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="h-screen flex flex-col bg-[#f04e37] text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-[#f04e37] text-white overflow-hidden scroll-smooth">
       {/* Global TTS Button */}
       <GlobalTTSButton />
 
@@ -234,10 +234,9 @@ export default function CreateItineraryPage() {
       {/* ---------------------------------------------- */}
 
       {/* === MAIN BODY === */}
-      <div className="flex flex-1 px-2 md:pr-25 pr-18">
-        <SideButtons />
-
-        <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-4 px-3 md:pl-0 z-20">
+      <MainLayout>
+        <div className="flex flex-1 px-2 scroll-smooth">
+          <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-4 px-3 md:pl-0 z-20">
           {/* === LEFT COLUMN: My Itineraries === */}
           <div className="w-full md:w-80 flex flex-col order-1 md:order-1">
             <div className="flex flex-col gap-4">
@@ -266,7 +265,7 @@ export default function CreateItineraryPage() {
                   </div>
 
                   {/* Scrollable List */}
-                  <div className="flex-1 overflow-y-auto px-2 pb-6 scroll-smooth">
+                  <div className="flex-1 overflow-y-auto px-2 pb-24 md:pb-6 scroll-smooth">
                     {userItineraries.length === 0 ? (
                       <p className="text-white/80 text-sm">
                         No itineraries created yet.
@@ -298,7 +297,7 @@ export default function CreateItineraryPage() {
             </div>
 
             {/* Scrollable site list */}
-            <div className="flex-1 overflow-y-auto px-2 pb-6 max-h-[65vh] md:max-h-[70vh] scroll-smooth">
+            <div className="flex-1 overflow-y-auto px-2 pb-24 md:pb-6 max-h-[65vh] md:max-h-[70vh] scroll-smooth">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {sites.map((site) => {
                   const isExpanded = descriptionToggles[site._id];
@@ -356,7 +355,8 @@ export default function CreateItineraryPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </MainLayout>
 
       <footer className="text-center text-xs text-white opacity-70 py-4">
         ©2025 Intramuros Administration

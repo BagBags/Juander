@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import TouristItineraryMain from "./TouristItineraryMain";
-import SideButtons from "../sideButtons";
+import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import axios from "axios";
 
@@ -35,11 +35,13 @@ export default function TouristItinerary() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
-        <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
-          <TouristItineraryMain />
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
+          <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
+            <TouristItineraryMain />
+          </div>
         </div>
-      </div>
+      </MainLayout>
     </div>
   );
 }

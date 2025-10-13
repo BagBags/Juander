@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import SideButtons from "../sideButtons";
+import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import {
   FaCheck,
@@ -156,17 +156,16 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f04e37] text-white">
+    <div className="min-h-screen flex flex-col bg-[#f04e37] text-white scroll-smooth">
       {/* === STICKY BACKHEADER === */}
       <div className="sticky top-0 z-40 mt-3 ml-3 bg-[#f04e37]">
         <BackHeader title="Create Itinerary" />
       </div>
 
-      <div className="flex flex-1 px-2 md:pr-25 pr-18">
-        <SideButtons />
-
-        {/* === MAIN CONTENT === */}
-        <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-6 px-5 md:pl-0">
+      <MainLayout>
+        <div className="flex flex-1 px-2 scroll-smooth">
+          {/* === MAIN CONTENT === */}
+          <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-6 px-5 md:pl-0">
           {/* === LEFT COLUMN: FORM + MY ITINERARIES (STICKY) === */}
           <div className="w-full md:w-80 flex flex-col order-1 md:order-1">
             <div className="sticky top-16 z-20 flex flex-col gap-4">
@@ -257,7 +256,7 @@ export default function CreateItineraryPage() {
                 </button>
 
                 <div
-                  className={`transition-all duration-300 ease-in-out overflow-y-auto ${
+                  className={`transition-all duration-300 ease-in-out overflow-y-auto scroll-smooth ${
                     showMyItineraries
                       ? "max-h-[60vh]"
                       : "max-h-0 md:max-h-[60vh]"
@@ -296,7 +295,7 @@ export default function CreateItineraryPage() {
             </h2>
 
             {/* Scrollable site list */}
-            <div className="overflow-y-auto flex-1 max-h-[calc(100vh-16px-64px)] px-2">
+            <div className="overflow-y-auto flex-1 max-h-[calc(100vh-16px-64px)] px-2 pb-24 md:pb-6 scroll-smooth">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {sites.map((site) => {
                   const isExpanded = descriptionToggles[site._id];
@@ -354,7 +353,8 @@ export default function CreateItineraryPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </MainLayout>
 
       <footer className="text-center text-xs text-white opacity-70 py-4">
         ©2025 Intramuros Administration

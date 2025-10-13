@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { Navigation, MapPin } from "lucide-react";
 
 import {
@@ -13,6 +13,7 @@ import {
 } from "../TourMap/mapConfig";
 
 // Import separated components
+import BackHeader from "../BackButton";
 import DirectionsPanel from "./DirectionsPanel";
 import MapControlButtons from "./MapControlButtons";
 import SitePreviewCard from "./SitePreviewCard";
@@ -20,6 +21,7 @@ import SiteModalFullScreen from "./SiteModalFullScreen";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
+  const location = useLocation();
 
   const [pins, setPins] = useState([]);
   const [viewState, setViewState] = useState({
@@ -47,6 +49,11 @@ export default function TouristItineraryMap() {
   const [showFullModal, setShowFullModal] = useState(false);
   const [isNearby, setIsNearby] = useState(false);
   const [manuallyDismissed, setManuallyDismissed] = useState(false);
+  const [visitedSites, setVisitedSites] = useState(new Set());
+  const [siteReviews, setSiteReviews] = useState([]);
+  const [showReviews, setShowReviews] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [isSimulatingHome, setIsSimulatingHome] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -189,7 +196,7 @@ export default function TouristItineraryMap() {
     }
   }, [userLocation, pins, currentPinIndex]);
 
-  /** Detect arrival to auto-show preview card */
+  /** Detect arrival to auto-show preview card and mark as visited */
   useEffect(() => {
     if (!userLocation || pins.length === 0) return;
 
@@ -215,6 +222,8 @@ export default function TouristItineraryMap() {
       if (!manuallyDismissed) {
         setSelectedPin(pin);
       }
+      // Mark site as visited
+      markSiteAsVisited(pin);
     } else {
       setIsNearby(false);
     }
@@ -241,6 +250,79 @@ export default function TouristItineraryMap() {
 
     setCurrentStepIndex(closestIdx);
   }, [userLocation, steps]);
+
+  /** Mark site as visited */
+  const markSiteAsVisited = async (pin) => {
+    if (!pin || !pin._id || visitedSites.has(pin._id)) return;
+
+    try {
+      await axios.post(
+        "http://localhost:5000/api/visited-sites",
+        {
+          itineraryId,
+          siteId: pin._id,
+        },
+        config
+      );
+      setVisitedSites((prev) => new Set(prev).add(pin._id));
+      console.log(`✅ Site ${pin.siteName} marked as visited`);
+    } catch (err) {
+      console.error("Error marking site as visited:", err);
+    }
+  };
+
+  /** Fetch reviews for current site */
+  const fetchSiteReviews = async (siteId) => {
+    if (!siteId) return;
+
+    try {
+      setReviewsLoading(true);
+      const response = await axios.get(
+        `http://localhost:5000/api/reviews/site/${siteId}`,
+        config
+      );
+      setSiteReviews(response.data.reviews || []);
+      setShowReviews(true);
+    } catch (err) {
+      console.error("Error fetching site reviews:", err);
+      setSiteReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  /** Simulate being at home - mark current site as done */
+  const simulateGoToNextSite = async () => {
+    const currentPin = pins[currentPinIndex];
+    if (!currentPin) return;
+
+    // Mark as visited
+    await markSiteAsVisited(currentPin);
+
+    // Show confirmation
+    alert(`✅ Site "${currentPin.siteName}" marked as visited! You can now review it in Trip Archives.`);
+
+    // Go to next site
+    goToNextStop();
+  };
+
+  /** Handle location state trigger from Trip Archives */
+  useEffect(() => {
+    if (location.state?.triggerNextSite && pins.length > 0) {
+      // Trigger next site navigation
+      goToNextStop();
+    }
+  }, [location.state, pins]);
+
+  /** Fetch reviews when a pin is selected */
+  useEffect(() => {
+    if (selectedPin && selectedPin._id) {
+      fetchSiteReviews(selectedPin._id);
+    } else {
+      setSiteReviews([]);
+      setShowReviews(false);
+    }
+  }, [selectedPin]);
 
   /** Go to next stop */
   /** Go to nearest next stop */
@@ -285,6 +367,11 @@ export default function TouristItineraryMap() {
 
   return (
     <div className="w-full h-screen relative">
+      {/* Back Header */}
+      <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-auto">
+        <BackHeader title={<span className="text-black">Tourist Itinerary Map</span>} />
+      </div>
+
       <Map
         {...viewState}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -413,6 +500,9 @@ export default function TouristItineraryMap() {
           currentPinIndex={currentPinIndex}
           pinsLength={pins.length}
           goToNextStop={goToNextStop}
+          siteReviews={siteReviews}
+          reviewsLoading={reviewsLoading}
+          simulateGoToNextSite={simulateGoToNextSite}
         />
       )}
     </div>
