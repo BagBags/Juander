@@ -28,6 +28,7 @@ api.interceptors.request.use((config) => {
 // ✅ Centralized initial view state
 const INITIAL_VIEW = {
   latitude: 14.591, // Intramuros center
+  longitude: 120.9747, // Intramuros center
   zoom: 16,
   bearing: 45,
   pitch: 0,

@@ -2,48 +2,57 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-export default function SideButtons() {
+export default function SideButtons({ userType = "tourist" }) {
   const { t } = useTranslation();
 
-  const icons = [
-    { url: "icons/Home.svg", label: "home", to: "/Homepage", Device: "All" },
+  const allIcons = [
+    { url: "icons/Home.svg", label: "home", to: "/Homepage", Device: "All", allowedFor: ["tourist"] },
     {
       url: "icons/Tourmap.svg",
       label: "tourMap",
       to: "/TourMap",
-      Device: "Mobile",
+      Device: userType === "guest" ? "All" : "Mobile", // Guests see on all devices, tourists only on mobile
+      allowedFor: ["tourist", "guest"],
     },
     {
       url: "icons/Itineraries.svg",
       label: "createItinerary",
       to: "/CreateItinerary",
       Device: "All",
+      allowedFor: ["tourist"],
     },
     {
       url: "icons/Photobooth.svg",
       label: "photobooth",
       to: "/Photobooth",
       Device: "Mobile",
+      allowedFor: ["tourist", "guest"],
     },
     {
       url: "icons/Hotlines.svg",
       label: "hotlines",
       to: "/Emergency",
       Device: "Mobile",
+      allowedFor: ["tourist", "guest"],
     },
     {
       url: "icons/Profile.svg",
       label: "profile",
-      to: "/Profile",
+      to: userType === "guest" ? "/GuestProfile" : "/Profile",
       Device: "All",
+      allowedFor: ["tourist", "guest"],
     },
     {
       url: "icons/TripArchives.svg",
       label: "tripArchives",
       to: "/TripArchive",
       Device: "All",
+      allowedFor: ["tourist"],
     },
   ];
+
+  // Filter icons based on userType
+  const icons = allIcons.filter(icon => icon.allowedFor.includes(userType));
 
   return (
     <div

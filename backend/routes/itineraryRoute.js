@@ -157,7 +157,10 @@ router.put("/:id", verifyToken, async (req, res) => {
     const { name, description, imageUrl, sites } = req.body;
     itinerary.name = name || itinerary.name;
     itinerary.description = description || itinerary.description;
-    itinerary.imageUrl = imageUrl || itinerary.imageUrl;
+    // Allow empty string to clear imageUrl
+    if (imageUrl !== undefined) {
+      itinerary.imageUrl = imageUrl;
+    }
     itinerary.sites = sites || itinerary.sites;
 
     await itinerary.save();

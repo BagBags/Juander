@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
@@ -99,7 +99,7 @@ export default function CreateItineraryPage() {
 
     const payload = {
       name: itineraryName.trim(),
-      imageUrl: imageUrl.trim(),
+      imageUrl: imageUrl ? imageUrl.trim() : "", // Ensure empty string if no image
       sites: selected,
       isAdminCreated: false,
     };
@@ -111,16 +111,19 @@ export default function CreateItineraryPage() {
           payload,
           config
         );
+        alert("Itinerary updated successfully");
       } else {
         await axios.post(
           "http://localhost:5000/api/itineraries",
           payload,
           config
         );
+        alert("Itinerary created successfully");
       }
       resetForm();
       fetchItineraries();
-    } catch {
+    } catch (err) {
+      console.error("Save error:", err);
       alert("Failed to save itinerary");
     }
   };
@@ -164,64 +167,141 @@ export default function CreateItineraryPage() {
       <GlobalTTSButton />
 
       {/* === STICKY BACKHEADER + FILE + NAME + SELECTED === */}
-      <div className="sticky top-0 z-40 bg-[#f04e37] px-3 py-3 pt-3 ">
+      <div className="sticky top-0 z-40 bg-[#f04e37] px-3 py-3 pt-3">
         <BackHeader title="Create Itinerary" />
       </div>
-      <div className="sticky top-18 z-30 bg-[#f04e37] px-3 py-3 pr-21 pl-7">
-        <div className="mt-2 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          {/* === Upload Image Section === */}
-          <div className="bg-[#f04e37] p-3 rounded-xl  flex flex-col gap-3 items-center">
-            {/* Upload button */}
-            <label className="cursor-pointer w-full text-center bg-white text-[#f04e37] font-semibold py-2 px-4 rounded-lg hover:bg-white/90 shadow-md transition">
-              Upload Itinerary Image
+      <div className="sticky top-18 z-30 bg-[#f04e37] px-3 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col gap-3">
+            {/* Mobile: Name and Selected Sites first */}
+            <div className="flex flex-col gap-3 lg:hidden">
+              {/* Itinerary name */}
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
+                type="text"
+                value={itineraryName}
+                onChange={(e) => setItineraryName(e.target.value)}
+                placeholder="Enter itinerary name"
+                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-gray-500 shadow-md focus:ring-2 focus:ring-[#f4cc27] text-base"
               />
-            </label>
 
-            {/* Image preview (large and clean) */}
-            {imageUrl && (
-              <div className="w-full flex justify-center">
-                <img
-                  src={getFullImageUrl(imageUrl)}
-                  alt="Itinerary Preview"
-                  className="w-full h-48 md:h-64 object-cover rounded-xl border-4 border-white shadow-lg transition-transform duration-300 hover:scale-[1.02]"
-                />
+              {/* Selected Sites summary with buttons */}
+              <div className="flex flex-row items-center justify-between bg-white/20 rounded-lg px-4 py-3 gap-3">
+                <span className="font-semibold text-base">
+                  Selected Sites:{" "}
+                  <span className="text-[#f4cc27] font-bold text-lg">
+                    {selected.length}
+                  </span>
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    className="bg-[#f4cc27] text-[#f04e37] font-bold text-sm px-6 py-2 rounded-lg hover:bg-yellow-400 shadow-md transition whitespace-nowrap"
+                  >
+                    {editingItineraryId ? "Update" : "Save"}
+                  </button>
+                  {editingItineraryId && (
+                    <button
+                      onClick={handleCancelUpdate}
+                      className="bg-gray-200 text-gray-800 font-bold text-sm px-6 py-2 rounded-lg hover:bg-gray-300 shadow-md transition whitespace-nowrap"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Itinerary name */}
-          <input
-            type="text"
-            value={itineraryName}
-            onChange={(e) => setItineraryName(e.target.value)}
-            placeholder="Enter itinerary name"
-            className="w-full md:w-1/3 px-3 py-2 rounded-lg bg-white text-gray-900 placeholder-gray-500 shadow focus:ring-2 focus:ring-[#f4cc27] text-sm md:text-base"
-          />
+              {/* Upload Image Section for mobile */}
+              <div className="w-full">
+                {imageUrl ? (
+                  <div className="relative">
+                    <img
+                      src={getFullImageUrl(imageUrl)}
+                      alt="Itinerary Preview"
+                      className="w-full h-40 object-cover rounded-xl border-4 border-white shadow-lg"
+                    />
+                    <button
+                      onClick={() => setImageUrl("")}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 shadow-md transition font-bold"
+                      title="Remove image"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block text-center bg-white text-[#f04e37] font-semibold py-2 px-6 rounded-lg hover:bg-white/90 shadow-md transition">
+                    Upload Itinerary Image (Optional)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
 
-          {/* Selected Sites summary */}
-          <div className="flex items-center justify-between bg-white/20 rounded-lg px-3 py-2 md:px-4">
-            <span className="font-semibold text-sm md:text-base">
-              Selected Sites:{" "}
-              <span className="text-[#f4cc27] font-bold">
-                {selected.length}
-              </span>
-            </span>
-            <div className="flex gap-2">
+            {/* Desktop: Compact single row layout */}
+            <div className="hidden lg:flex gap-3 items-center">
+              {/* Left: Upload Image Button or Preview (expands when image uploaded) */}
+              <div className="flex-shrink-0">
+                {imageUrl ? (
+                  <div className="relative group">
+                    <img
+                      src={getFullImageUrl(imageUrl)}
+                      alt="Preview"
+                      className="w-32 h-20 object-cover rounded-lg border-2 border-white shadow transition-all"
+                    />
+                    <button
+                      onClick={() => setImageUrl("")}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 shadow text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove image"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer flex items-center justify-center w-12 h-12 text-center bg-white text-[#f04e37] font-bold rounded-lg hover:bg-white/90 shadow transition" title="Upload Image (Optional)">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Middle: Itinerary name input */}
+              <input
+                type="text"
+                value={itineraryName}
+                onChange={(e) => setItineraryName(e.target.value)}
+                placeholder="Enter itinerary name"
+                className="flex-1 px-3 py-2 rounded-lg bg-white text-gray-900 placeholder-gray-500 shadow focus:ring-2 focus:ring-[#f4cc27] text-sm"
+              />
+
+              {/* Right: Selected Sites counter and Save button */}
+              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
+                <span className="text-xs font-medium whitespace-nowrap">
+                  Selected Sites: <span className="text-[#f4cc27] font-bold text-sm">{selected.length}</span>
+                </span>
+              </div>
+
               <button
                 onClick={handleSave}
-                className="bg-[#f4cc27] text-[#f04e37] font-bold text-xs md:text-sm px-3 py-1 rounded-lg hover:bg-yellow-400"
+                className="bg-[#f4cc27] text-[#f04e37] font-bold text-sm px-4 py-2 rounded-lg hover:bg-yellow-300 shadow transition whitespace-nowrap"
               >
                 {editingItineraryId ? "Update" : "Save"}
               </button>
+              
               {editingItineraryId && (
                 <button
                   onClick={handleCancelUpdate}
-                  className="bg-gray-200 text-gray-800 font-bold text-xs md:text-sm px-3 py-1 rounded-lg"
+                  className="bg-white/90 text-gray-700 font-semibold text-sm px-4 py-2 rounded-lg hover:bg-white shadow transition"
                 >
                   Cancel
                 </button>
@@ -234,7 +314,7 @@ export default function CreateItineraryPage() {
       {/* ---------------------------------------------- */}
 
       {/* === MAIN BODY === */}
-      <MainLayout>
+      <MainLayout includeSideButtons={false}>
         <div className="flex flex-1 px-2 scroll-smooth">
           <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-4 px-3 md:pl-0 z-20">
           {/* === LEFT COLUMN: My Itineraries === */}
@@ -297,62 +377,13 @@ export default function CreateItineraryPage() {
             </div>
 
             {/* Scrollable site list */}
-            <div className="flex-1 overflow-y-auto px-2 pb-24 md:pb-6 max-h-[65vh] md:max-h-[70vh] scroll-smooth">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {sites.map((site) => {
-                  const isExpanded = descriptionToggles[site._id];
-                  return (
-                    <div
-                      key={site._id}
-                      className="bg-white text-black rounded-2xl shadow p-4 flex flex-col justify-between"
-                    >
-                      <img
-                        src={site.mediaUrl || "https://via.placeholder.com/150"}
-                        alt={site.siteName}
-                        className="w-full h-40 object-cover rounded-lg mb-3"
-                      />
-                      <h3 className="font-bold text-[#f04e37]">
-                        {site.siteName}
-                      </h3>
-                      <p
-                        className={`text-gray-700 text-sm mb-2 ${
-                          !isExpanded ? "line-clamp-2" : ""
-                        }`}
-                      >
-                        {site.siteDescription || "No description available"}
-                      </p>
-                      {site.siteDescription &&
-                        site.siteDescription.length > 60 && (
-                          <button
-                            className="text-xs text-[#f04e37] font-semibold mb-2"
-                            onClick={() => toggleDescription(site._id)}
-                          >
-                            {isExpanded ? "Read less" : "Read more"}
-                          </button>
-                        )}
-                      <button
-                        onClick={() => toggleSelection(site._id)}
-                        className={`w-full py-2 rounded-full font-semibold flex items-center justify-center gap-2 ${
-                          selected.includes(site._id)
-                            ? "bg-green-500 text-white"
-                            : "bg-[#f04e37]/10 text-[#f04e37] hover:bg-[#f04e37]/20"
-                        }`}
-                      >
-                        {selected.includes(site._id) ? (
-                          <>
-                            <FaCheck /> Added
-                          </>
-                        ) : (
-                          <>
-                            <FaPlus /> Add
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <SmoothScrollSiteList
+              sites={sites}
+              selected={selected}
+              descriptionToggles={descriptionToggles}
+              toggleDescription={toggleDescription}
+              toggleSelection={toggleSelection}
+            />
           </div>
         </div>
         </div>
@@ -361,6 +392,222 @@ export default function CreateItineraryPage() {
       <footer className="text-center text-xs text-white opacity-70 py-4">
         ©2025 Intramuros Administration
       </footer>
+    </div>
+  );
+}
+
+/* === SmoothScrollSiteList Component === */
+function SmoothScrollSiteList({
+  sites,
+  selected,
+  descriptionToggles,
+  toggleDescription,
+  toggleSelection,
+}) {
+  const scrollContainerRef = useRef(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight - container.clientHeight;
+      const progress = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+      setScrollProgress(progress);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      className="flex-1 overflow-y-auto px-2 pb-[calc(65vh-200px)] md:pb-8 max-h-[65vh] md:max-h-[70vh]"
+      style={{ scrollBehavior: "smooth" }}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+        {sites.map((site, index) => (
+          <SiteCard
+            key={site._id}
+            site={site}
+            index={index}
+            totalSites={sites.length}
+            scrollProgress={scrollProgress}
+            isSelected={selected.includes(site._id)}
+            isExpanded={descriptionToggles[site._id]}
+            toggleDescription={toggleDescription}
+            toggleSelection={toggleSelection}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* === SiteCard Component with Smooth Animations === */
+function SiteCard({
+  site,
+  index,
+  totalSites,
+  scrollProgress,
+  isSelected,
+  isExpanded,
+  toggleDescription,
+  toggleSelection,
+}) {
+  const cardRef = useRef(null);
+  const [isInView, setIsInView] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [cardStyle, setCardStyle] = useState({
+    opacity: 1,
+    transform: "scale(1)",
+  });
+
+  // Detect if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      {
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+        rootMargin: "-10% 0px -10% 0px",
+      }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => {
+      if (cardRef.current) {
+        observer.unobserve(cardRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cardRef.current || !isMobile) {
+      // On desktop, keep default style
+      setCardStyle({
+        opacity: 1,
+        transform: "scale(1)",
+      });
+      return;
+    }
+
+    const card = cardRef.current;
+    const container = card.closest(".overflow-y-auto");
+    if (!container) return;
+
+    const updateCardStyle = () => {
+      const cardRect = card.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      // Calculate distance from the top of the container
+      const distanceFromTop = cardRect.top - containerRect.top;
+      const cardHeight = cardRect.height;
+
+      // Define the glow zone (top portion of container)
+      const glowZoneHeight = cardHeight * 1.5;
+
+      if (distanceFromTop >= -cardHeight && distanceFromTop < glowZoneHeight) {
+        // Card is in the glow zone near the top
+        const normalizedPosition = Math.max(0, Math.min(1, distanceFromTop / glowZoneHeight));
+        
+        // Full glow at top (0), fades as it moves down
+        const opacity = 1 - (normalizedPosition * 0.6);
+        const scale = 1.05 - (normalizedPosition * 0.15);
+
+        setCardStyle({
+          opacity: Math.max(0.4, opacity),
+          transform: `scale(${Math.max(0.9, scale)})`,
+        });
+      } else {
+        // Cards outside glow zone have reduced opacity/scale
+        setCardStyle({
+          opacity: 0.4,
+          transform: "scale(0.9)",
+        });
+      }
+    };
+
+    const handleScroll = () => {
+      requestAnimationFrame(updateCardStyle);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    updateCardStyle(); // Initial calculation
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [isInView, isMobile]);
+
+  return (
+    <div
+      ref={cardRef}
+      className="bg-white text-black rounded-xl shadow p-3 flex flex-col h-full transition-all duration-300 ease-out"
+      style={{
+        opacity: cardStyle.opacity,
+        transform: cardStyle.transform,
+      }}
+    >
+      <img
+        src={site.mediaUrl || "https://via.placeholder.com/150"}
+        alt={site.siteName}
+        className="w-full h-24 object-cover rounded-lg mb-2"
+      />
+      <h3 className="font-bold text-[#f04e37] text-sm mb-1 line-clamp-1">
+        {site.siteName}
+      </h3>
+      <p
+        className={`text-gray-600 text-xs mb-2 flex-grow ${
+          !isExpanded ? "line-clamp-2" : ""
+        }`}
+      >
+        {site.siteDescription || "No description available"}
+      </p>
+      {site.siteDescription && site.siteDescription.length > 60 && (
+        <button
+          className="text-xs text-[#f04e37] font-semibold mb-2 text-left"
+          onClick={() => toggleDescription(site._id)}
+        >
+          {isExpanded ? "Read less" : "Read more"}
+        </button>
+      )}
+      <button
+        onClick={() => toggleSelection(site._id)}
+        className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-1 text-xs transition-all duration-200 ${
+          isSelected
+            ? "bg-green-500 text-white"
+            : "bg-[#f04e37] text-white hover:bg-[#d43e2a]"
+        }`}
+      >
+        {isSelected ? (
+          <>
+            <FaCheck className="text-xs" /> Added
+          </>
+        ) : (
+          <>
+            <FaPlus className="text-xs" /> Add
+          </>
+        )}
+      </button>
     </div>
   );
 }

@@ -9,7 +9,8 @@ const BACKEND_URL = "http://localhost:5000";
 // 3D Model Preview Component
 const ModelPreview = ({ url }) => {
   const { scene } = useGLTF(url, true);
-  return <primitive object={scene} scale={0.5} />;
+  // Rotate to match Blender's coordinate system: -Y front, X right, Z up
+  return <primitive object={scene} scale={0.5} rotation={[0, 0, 0]} />;
 };
 
 const AdminPinCard = ({
@@ -199,20 +200,27 @@ const AdminPinCard = ({
               <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
                 <Canvas>
                   <Suspense fallback={null}>
-                    <ambientLight intensity={0.8} />
-                    <directionalLight position={[5, 5, 5]} />
-                    <Bounds fit clip observe margin={1.2}>
-                      <ModelPreview
-                        url={
-                          pin.glbUrl
-                            ? `${BACKEND_URL}${
-                                pin.glbUrl.startsWith("/") ? "" : "/"
-                              }${pin.glbUrl}`
-                            : null
-                        }
-                      />
+                    <ambientLight intensity={1.2} />
+                    <directionalLight position={[10, 10, 10]} intensity={1.5} />
+                    <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+                    <Bounds fit clip observe margin={0.8}>
+                      <Center>
+                        <ModelPreview
+                          url={
+                            pin.glbUrl
+                              ? `${BACKEND_URL}${
+                                  pin.glbUrl.startsWith("/") ? "" : "/"
+                                }${pin.glbUrl}`
+                              : null
+                          }
+                        />
+                      </Center>
                     </Bounds>
-                    <OrbitControls enableZoom={true} />
+                    <OrbitControls
+                      enableZoom={true}
+                      minPolarAngle={Math.PI / 3}
+                      maxPolarAngle={Math.PI / 2}
+                    />
                   </Suspense>
                 </Canvas>
                 <button
@@ -281,6 +289,46 @@ const AdminPinCard = ({
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
+          
+          {/* Reason for Inactive Status */}
+          {pin.status === "inactive" && (
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for Unavailability
+              </label>
+              <select
+                value={pin.inactiveReason || ""}
+                onChange={(e) =>
+                  updatePinField(selectedPinIndex, "inactiveReason", e.target.value)
+                }
+                className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                required
+              >
+                <option value="">Select a reason</option>
+                <option value="under_construction">Under Construction</option>
+                <option value="temporarily_closed">Temporarily Closed</option>
+                <option value="maintenance">Under Maintenance</option>
+                <option value="no_longer_exists">No Longer Exists</option>
+                <option value="restricted_access">Restricted Access</option>
+                <option value="safety_concerns">Safety Concerns</option>
+                <option value="other">Other</option>
+              </select>
+              
+              {/* Additional notes for "Other" reason */}
+              {pin.inactiveReason === "other" && (
+                <textarea
+                  value={pin.inactiveReasonDetails || ""}
+                  onChange={(e) =>
+                    updatePinField(selectedPinIndex, "inactiveReasonDetails", e.target.value)
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  rows="2"
+                  placeholder="Please specify the reason..."
+                  required
+                />
+              )}
+            </div>
+          )}
         </div>
         {/* Footer Buttons */}
         <div className="pt-4 flex justify-between">

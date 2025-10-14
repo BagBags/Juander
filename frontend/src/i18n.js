@@ -20,8 +20,10 @@ i18n.use(initReactI18next).init({
         country: "Country",
         language: "Language",
         welcome: "Mabuhay!",
+        greetings: "Greetings!",
         guest: "Guest",
         logout: "Log out",
+        createAccount: "Create an Account",
         intramurosAdmin: "Intramuros Administration",
 
         // Account Page
@@ -132,8 +134,10 @@ i18n.use(initReactI18next).init({
         country: "Bansa",
         language: "Wika",
         welcome: "Mabuhay!",
+        greetings: "Mabuhay!",
         guest: "Bisita",
         logout: "Mag-logout",
+        createAccount: "Gumawa ng Account",
         intramurosAdmin: "Intramuros Administration",
 
         // Account Page

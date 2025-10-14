@@ -5,7 +5,7 @@ import { faInfo } from "@fortawesome/free-solid-svg-icons";
 
 const MapLegend = ({ showLegend, setShowLegend }) => {
   return (
-    <div className="absolute top-6 right-6 z-[9999] flex items-end space-x-3">
+    <div className="absolute top-6 right-6 z-40 flex items-end space-x-3">
       {showLegend && (
         <div className="absolute right-full mr-3 top-0 bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn">
           <h4 className="font-semibold mb-3 text-lg border-b pb-1">
@@ -25,7 +25,7 @@ const MapLegend = ({ showLegend, setShowLegend }) => {
       )}
 
       <div className="flex flex-col items-end space-y-2">
-        <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999]">
+        <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative">
           <button
             onClick={() => setShowLegend((prev) => !prev)}
             title="Map Legend"

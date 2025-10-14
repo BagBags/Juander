@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ChevronDown, ChevronUp } from "lucide-react"; // optional: icons for toggle
+import { ChevronDown, ChevronUp, Info } from "lucide-react"; // optional: icons for toggle
 
 export default function TouristItineraryMain() {
   const [itineraries, setItineraries] = useState({ admin: [], user: [] });
@@ -9,6 +9,9 @@ export default function TouristItineraryMain() {
     admin: true,
     user: false,
   }); // both can toggle independently
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [selectedItinerary, setSelectedItinerary] = useState(null);
+  const [inactiveSites, setInactiveSites] = useState([]);
   const navigate = useNavigate();
 
   const getFullImageUrl = (url) => {
@@ -40,6 +43,31 @@ export default function TouristItineraryMain() {
 
   const toggleSection = (section) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const handleItineraryClick = (itinerary) => {
+    // Check for inactive sites in the itinerary
+    const inactive = itinerary.sites?.filter(site => !site.isActive) || [];
+    
+    if (inactive.length > 0) {
+      setSelectedItinerary(itinerary);
+      setInactiveSites(inactive);
+      setShowWarningModal(true);
+    } else {
+      // No inactive sites, proceed directly
+      navigate(`/TouristItineraryMap/${itinerary._id}`, {
+        state: { itinerary },
+      });
+    }
+  };
+
+  const proceedToTour = () => {
+    setShowWarningModal(false);
+    if (selectedItinerary) {
+      navigate(`/TouristItineraryMap/${selectedItinerary._id}`, {
+        state: { itinerary: selectedItinerary },
+      });
+    }
   };
 
   const sectionClasses =
@@ -75,7 +103,7 @@ export default function TouristItineraryMain() {
                 <ItineraryCard
                   key={itinerary._id}
                   itinerary={itinerary}
-                  navigate={navigate}
+                  onCardClick={handleItineraryClick}
                   getFullImageUrl={getFullImageUrl}
                 />
               ))}
@@ -116,7 +144,7 @@ export default function TouristItineraryMain() {
                 <ItineraryCard
                   key={itinerary._id}
                   itinerary={itinerary}
-                  navigate={navigate}
+                  onCardClick={handleItineraryClick}
                   getFullImageUrl={getFullImageUrl}
                 />
               ))}
@@ -128,21 +156,86 @@ export default function TouristItineraryMain() {
           )}
         </div>
       </div>
+
+      {/* Info Modal */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+            <div className="bg-[#f04e37] p-4 flex items-center gap-3">
+              <Info className="text-white w-7 h-7" />
+              <h2 className="text-lg font-semibold text-white">Site Availability Notice</h2>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-gray-700 mb-4 text-sm">
+                Please note that the following site(s) are currently unavailable:
+              </p>
+              
+              <ul className="space-y-2 mb-5">
+                {inactiveSites.map((site) => {
+                  // Format the reason for display
+                  const formatReason = (reason) => {
+                    if (!reason) return "Temporarily unavailable";
+                    const reasonMap = {
+                      under_construction: "Under Construction",
+                      temporarily_closed: "Temporarily Closed",
+                      maintenance: "Under Maintenance",
+                      no_longer_exists: "No Longer Exists",
+                      restricted_access: "Restricted Access",
+                      safety_concerns: "Safety Concerns",
+                      other: site.inactiveReasonDetails || "Other"
+                    };
+                    return reasonMap[reason] || "Temporarily unavailable";
+                  };
+
+                  return (
+                    <li key={site._id} className="flex items-start gap-2 bg-orange-50 p-3 rounded-lg">
+                      <div className="w-2 h-2 bg-[#f04e37] rounded-full mt-1.5 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800">{site.siteName}</p>
+                        <p className="text-xs text-[#f04e37] font-medium mt-0.5">
+                          {formatReason(site.inactiveReason)}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">Will be skipped during the tour</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              
+              <p className="text-xs text-gray-500 mb-5 bg-gray-50 p-3 rounded-lg">
+                You can continue with your tour. The unavailable sites will be automatically excluded from your route.
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowWarningModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors text-sm"
+                >
+                  Go Back
+                </button>
+                <button
+                  onClick={proceedToTour}
+                  className="flex-1 px-4 py-2.5 bg-[#f04e37] hover:bg-[#d9442f] text-white font-medium rounded-lg transition-colors text-sm"
+                >
+                  Continue Tour
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ItineraryCard({ itinerary, navigate, getFullImageUrl }) {
+function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
   const imageSrc = getFullImageUrl(itinerary.imageUrl);
 
   return (
     <div
       className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300"
-      onClick={() =>
-        navigate(`/TouristItineraryMap/${itinerary._id}`, {
-          state: { itinerary },
-        })
-      }
+      onClick={() => onCardClick(itinerary)}
     >
       {imageSrc ? (
         <img

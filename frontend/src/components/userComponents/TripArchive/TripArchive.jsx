@@ -4,6 +4,37 @@ import { FaStar } from "react-icons/fa";
 import BackHeader from "../BackButton"; // ✅ import BackHeader
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { Filter } from "bad-words";
+
+const filter = new Filter();
+filter.addWords(
+  "putangina",
+  "putang ina",
+  "tanginamo",
+  "anak ng puta",
+  "pakyu",
+  "pekpek",
+  "puke",
+  "burat",
+  "pwets",
+  "ulol",
+  "gago",
+  "gaga",
+  "tanga",
+  "bobo",
+  "tarantado",
+  "hayop",
+  "loko",
+  "lokohan",
+  "pucha",
+  "puchang ina",
+  "pakshet",
+  "gago ka",
+  "tangina mo",
+  "putangi mo",
+  "ulol ka",
+  "tanga ka"
+);
 
 export default function TripArchivesPage() {
   const [visitedSites, setVisitedSites] = useState([]);
@@ -97,6 +128,12 @@ export default function TripArchivesPage() {
       return;
     }
 
+    // Check for profanity in review text
+    if (reviewText && filter.isProfane(reviewText)) {
+      alert("⚠️ Please avoid using inappropriate language in your review.");
+      return;
+    }
+
     try {
       const response = await axios.post(
         `${BACKEND_URL}/api/reviews`,
@@ -156,7 +193,7 @@ export default function TripArchivesPage() {
         <BackHeader title="Trip Archives" />
       </div>
 
-      <MainLayout>
+      <MainLayout includeSideButtons={false}>
         <div className="w-full max-w-xl">
           {/* Page content */}
           <div className="mt-4 text-center">

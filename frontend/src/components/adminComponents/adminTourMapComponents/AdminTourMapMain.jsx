@@ -54,6 +54,7 @@ export default function AdminTourMapMain() {
 
   const [pins, setPins] = useState([]);
   const [maskGeoJson, setMaskGeoJson] = useState(initialMaskFeature);
+  const [originalPinData, setOriginalPinData] = useState(null); // Store original pin data
 
   const [isAddingPin, setIsAddingPin] = useState(false);
   const [isMaskingMode, setIsMaskingMode] = useState(false);
@@ -218,7 +219,7 @@ export default function AdminTourMapMain() {
       status: "active",
     };
     setPins((prev) => [...prev, newPin]);
-    setSelectedPin(pins.length);
+    openPinCard(pins.length);
   };
 
   const addPinFromCoords = () => {
@@ -238,7 +239,7 @@ export default function AdminTourMapMain() {
       status: "active",
     };
     setPins((prev) => [...prev, newPin]);
-    setSelectedPin(pins.length);
+    openPinCard(pins.length);
     setManualCoords({ lat: "", lng: "" });
   };
 
@@ -246,6 +247,25 @@ export default function AdminTourMapMain() {
     setPins((prev) =>
       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
     );
+
+  // Open pin card and save original data
+  const openPinCard = (index) => {
+    setSelectedPin(index);
+    setOriginalPinData({ ...pins[index] }); // Deep copy of original pin data
+  };
+
+  // Close pin card and revert changes if not saved
+  const closePinCard = () => {
+    if (originalPinData && selectedPin !== null) {
+      // Revert to original data
+      setPins((prev) =>
+        prev.map((p, i) => (i === selectedPin ? originalPinData : p))
+      );
+    }
+    setSelectedPin(null);
+    setOriginalPinData(null);
+    setIsAddingPin(false);
+  };
 
   const handleFormSubmit = async (e, index) => {
     e.preventDefault();
@@ -263,6 +283,7 @@ export default function AdminTourMapMain() {
       setPins((prev) => prev.map((p, i) => (i === index ? saved : p)));
       notify("success", `Pin #${index + 1} saved`);
       setSelectedPin(null);
+      setOriginalPinData(null); // Clear original data after successful save
       setIsAddingPin(false);
     } catch (err) {
       console.error(err);
@@ -300,7 +321,7 @@ export default function AdminTourMapMain() {
       setPins((prev) =>
         prev.map((p, i) => (i === index ? { ...p, glbUrl: uploadedUrl } : p))
       );
-      notify("success", "3D model uploaded successfully");
+      notify("success", "3D model uploaded (click Save Changes to apply)");
     } catch (err) {
       console.error(err);
       notify("error", err.response?.data?.message || "Upload failed");
@@ -319,66 +340,38 @@ export default function AdminTourMapMain() {
     formData.append("facade", file);
 
     try {
-      const pinId = pins[pinIndex]._id;
-      const res = await api.post(`/pins/${pinId}/upload-facade`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const updatedPins = [...pins];
-      updatedPins[pinIndex].facadeUrl = res.data.facadeUrl;
-      setPins(updatedPins);
+      const res = await axios.post(
+        "http://localhost:5000/api/pins/upload-facade-temp",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      const uploadedUrl = res.data.url;
+      setPins((prev) =>
+        prev.map((p, i) => (i === pinIndex ? { ...p, facadeUrl: uploadedUrl } : p))
+      );
+      notify("success", "Facade image uploaded (click Save Changes to apply)");
     } catch (err) {
       console.error(err);
       notify("error", "Facade upload failed");
     }
   };
 
-  const handleRemoveFacade = async (index) => {
-    const pin = pins[index];
-    if (!pin?._id) {
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], facadeUrl: "" };
-        return updated;
-      });
-      return;
-    }
-    try {
-      await api.delete(`/pins/${pin._id}/remove-facade`);
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], facadeUrl: "" };
-        return updated;
-      });
-      notify("success", "Facade removed successfully");
-    } catch (err) {
-      console.error(err);
-      notify("error", "Failed to remove facade");
-    }
+  const handleRemoveFacade = (index) => {
+    setPins((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], facadeUrl: "" };
+      return updated;
+    });
+    notify("success", "Facade removed (click Save Changes to apply)");
   };
 
-  const handleRemoveGlb = async (index) => {
-    const pin = pins[index];
-    if (!pin?._id) {
-      // Just clear locally if not saved yet
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], glbUrl: "" };
-        return updated;
-      });
-      return;
-    }
-    try {
-      await api.delete(`/pins/${pin._id}/remove-glb`);
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], glbUrl: "" };
-        return updated;
-      });
-      notify("success", "3D model removed successfully");
-    } catch (err) {
-      console.error(err);
-      notify("error", "Failed to remove 3D model");
-    }
+  const handleRemoveGlb = (index) => {
+    setPins((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], glbUrl: "" };
+      return updated;
+    });
+    notify("success", "3D model removed (click Save Changes to apply)");
   };
 
   return (
@@ -459,7 +452,7 @@ export default function AdminTourMapMain() {
               <div
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedPin(index);
+                  openPinCard(index);
                 }}
                 className={`absolute top-1/2 left-1/2 w-5 h-5 rounded-full border-2 border-white shadow-md`}
                 style={{
@@ -494,7 +487,7 @@ export default function AdminTourMapMain() {
               handleRemoveGlb={handleRemoveGlb}
               handleFacadeUpload={handleFacadeUpload}
               handleRemoveFacade={handleRemoveFacade}
-              onClose={() => setSelectedPin(null)}
+              onClose={closePinCard}
             />
           </Suspense>
         )}

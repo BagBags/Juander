@@ -81,6 +81,29 @@ router.get("/", async (req, res) => {
   }
 });
 
+// @route   GET /api/reviews/admin/all
+// @desc    Get all reviews (admin only)
+// @access  Private (Admin)
+router.get("/admin/all", async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
+      return res.status(403).json({ error: "Access denied. Admin only." });
+    }
+
+    const reviews = await Review.find()
+      .populate("userId", "firstName lastName email")
+      .populate("itineraryId", "name")
+      .populate("siteId", "siteName siteDescription")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(reviews);
+  } catch (err) {
+    console.error("Error fetching all reviews:", err);
+    res.status(500).json({ error: "Failed to fetch reviews" });
+  }
+});
+
 // @route   GET /api/reviews/site/:siteId
 // @desc    Get all reviews for a specific site (public)
 // @access  Private

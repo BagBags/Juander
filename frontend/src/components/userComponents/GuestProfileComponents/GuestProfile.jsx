@@ -1,51 +1,69 @@
 // GuestProfilePage.jsx
-import React from "react";
+import React, { useEffect } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars } from "react-icons/fa";
 import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function GuestProfilePage() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+
+  // Load guest language preference on mount
+  useEffect(() => {
+    const savedLang = sessionStorage.getItem("guestLanguage");
+    if (savedLang) {
+      i18n.changeLanguage(savedLang);
+    }
+  }, [i18n]);
 
   const options = [
     {
       icon: <FaUser />,
-      label: "Account",
+      label: t("account"),
       to: "/Profile/Account",
       disabled: true,
     },
     {
       icon: <FaBirthdayCake />,
-      label: "Birthday",
+      label: t("birthday"),
       to: "/Profile/Birthday",
       disabled: true,
     },
     {
       icon: <FaVenusMars />,
-      label: "Gender",
+      label: t("gender"),
       to: "/Profile/Gender",
       disabled: true,
     },
     {
       icon: <GiEarthAsiaOceania />,
-      label: "Country",
+      label: t("country"),
       to: "/Profile/Country",
       disabled: true,
     },
     {
       icon: <MdLanguage />,
-      label: "Language",
+      label: t("language"),
       to: "/GuestProfile/GuestLanguage",
       disabled: false,
     },
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    // Clear sessionStorage for guest users
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("guest");
+    // Also clear any guest-related data
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith("guest_")) {
+        sessionStorage.removeItem(key);
+      }
+    });
     navigate("/"); // Redirect to login/homepage
   };
 
@@ -66,7 +84,7 @@ export default function GuestProfilePage() {
             className="w-30 h-30 rounded-full border-4 border-white object-cover mr-6"
           />
           <div>
-            <p className="text-base">Mabuhay!</p>
+            <p className="text-base">{t("greetings")}</p>
             <h1 className="text-3xl font-bold leading-tight">Guest User</h1>
           </div>
         </div>
@@ -120,10 +138,14 @@ export default function GuestProfilePage() {
 
         {/* Create an Account Button */}
         <button
-          onClick={() => navigate("/")}
+          onClick={() => {
+            // Clear all sessionStorage when creating an account
+            sessionStorage.clear();
+            navigate("/");
+          }}
           className="absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#f04e37] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#b42c21] transition-colors"
         >
-          Create an Account
+          {t("createAccount")}
         </button>
 
         {/* Footer */}

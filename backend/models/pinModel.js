@@ -13,6 +13,12 @@ const pinSchema = new mongoose.Schema(
     glbUrl: { type: String },
     facadeUrl: { type: String, default: "" },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
+    inactiveReason: { 
+      type: String, 
+      enum: ["under_construction", "temporarily_closed", "maintenance", "no_longer_exists", "restricted_access", "safety_concerns", "other"],
+      default: null 
+    },
+    inactiveReasonDetails: { type: String, default: "" },
   },
   { timestamps: true }
 );

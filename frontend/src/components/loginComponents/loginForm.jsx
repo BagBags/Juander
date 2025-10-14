@@ -301,7 +301,12 @@ export default function LoginForm({ toggleForm }) {
           <button
             type="button"
             onClick={() => {
-              localStorage.setItem("guest", "true");
+              // Use sessionStorage for guest users
+              sessionStorage.setItem("guest", "true");
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("user");
+              // Clear localStorage guest data if any
+              localStorage.removeItem("guest");
               localStorage.removeItem("token");
               localStorage.removeItem("user");
               navigate("/GuestHomepage", { replace: true });

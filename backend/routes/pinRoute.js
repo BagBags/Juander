@@ -39,6 +39,15 @@ router.post("/upload-ar", upload.single("arModel"), (req, res) => {
   return res.json({ url: filePath });
 });
 
+// 👇 Temporary facade upload (doesn't save to DB, only uploads file)
+router.post("/upload-facade-temp", upload.single("facade"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+  const filePath = `/uploads/facades/${req.file.filename}`;
+  return res.json({ url: filePath });
+});
+
 router.post("/:id/upload-facade", upload.single("facade"), async (req, res) => {
   try {
     const pin = await Pin.findById(req.params.id);

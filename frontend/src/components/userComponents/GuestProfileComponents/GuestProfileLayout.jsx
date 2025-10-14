@@ -1,14 +1,16 @@
 import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import BackHeader from "../BackHeader";
+import { useTranslation } from "react-i18next";
 
 export default function ProfileLayout() {
   const location = useLocation();
+  const { t } = useTranslation();
 
   // Determine dynamic title based on current path
   const getTitle = () => {
-    if (location.pathname.endsWith("/GuestLanguage")) return "GuestLanguage";
-    return "GuestProfile";
+    if (location.pathname.endsWith("/GuestLanguage")) return t("language");
+    return t("profile");
   };
 
   return (
