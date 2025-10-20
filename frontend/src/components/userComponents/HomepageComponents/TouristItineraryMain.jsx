@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ChevronDown, ChevronUp, Info } from "lucide-react"; // optional: icons for toggle
+import { ChevronDown, ChevronUp, Info, MapPin } from "lucide-react"; // optional: icons for toggle
 
 export default function TouristItineraryMain() {
   const [itineraries, setItineraries] = useState({ admin: [], user: [] });
@@ -47,7 +47,7 @@ export default function TouristItineraryMain() {
 
   const handleItineraryClick = (itinerary) => {
     // Check for inactive sites in the itinerary
-    const inactive = itinerary.sites?.filter(site => !site.isActive) || [];
+    const inactive = itinerary.sites?.filter(site => site.status === "inactive") || [];
     
     if (inactive.length > 0) {
       setSelectedItinerary(itinerary);
@@ -247,8 +247,8 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
           }
         />
       ) : (
-        <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400">
-          No Image
+        <div className="w-full h-48 bg-white flex flex-col items-center justify-center">
+          <MapPin className="w-16 h-16 text-[#f04e37]" />
         </div>
       )}
 

@@ -194,6 +194,20 @@ export default function SiteModalFullScreen({
                       {review.reviewText && (
                         <p className="text-xs text-gray-600">{review.reviewText}</p>
                       )}
+                      {/* Display review photos */}
+                      {review.photos && review.photos.length > 0 && (
+                        <div className="flex gap-1 mt-2 overflow-x-auto">
+                          {review.photos.map((photo, photoIdx) => (
+                            <img
+                              key={photoIdx}
+                              src={photo.startsWith('http') ? photo : `http://localhost:5000${photo}`}
+                              alt={`Review photo ${photoIdx + 1}`}
+                              className="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                              onClick={() => window.open(photo.startsWith('http') ? photo : `http://localhost:5000${photo}`, '_blank')}
+                            />
+                          ))}
+                        </div>
+                      )}
                       <p className="text-xs text-gray-400 mt-1">
                         {new Date(review.createdAt).toLocaleDateString()}
                       </p>

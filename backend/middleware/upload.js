@@ -27,6 +27,11 @@ const storage = multer.diskStorage({
       if (!fs.existsSync(uploadDir))
         fs.mkdirSync(uploadDir, { recursive: true });
       cb(null, uploadDir);
+    } else if (req.baseUrl.includes("reviews")) {
+      const uploadDir = "uploads/reviews";
+      if (!fs.existsSync(uploadDir))
+        fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
     } else {
       cb(null, "uploads/photobooth");
     }
@@ -51,6 +56,12 @@ const storage = multer.diskStorage({
 
       const ext = path.extname(file.originalname);
       cb(null, `${req.user.id}${ext}`);
+    } else if (req.baseUrl.includes("reviews")) {
+      // For reviews: use timestamp + user ID + original filename
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const basename = path.basename(file.originalname, ext);
+      cb(null, `${timestamp}-${req.user.id}-${basename}${ext}`);
     } else {
       // For everything else: keep original filename
       cb(null, file.originalname);
@@ -90,6 +101,12 @@ const fileFilter = (req, file, cb) => {
       cb(null, true);
     } else {
       cb(new Error("Only image files are allowed for emergency icons!"), false);
+    }
+  } else if (req.baseUrl.includes("reviews")) {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed for review photos!"), false);
     }
   } else {
     if (file.mimetype === "image/png") {

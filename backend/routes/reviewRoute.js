@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Review = require("../models/reviewModel");
 const { verifyToken } = require("../middleware/authMiddleware");
+const upload = require("../middleware/upload");
 
 // Apply authentication middleware to all routes
 router.use(verifyToken);
@@ -9,7 +10,7 @@ router.use(verifyToken);
 // @route   POST /api/reviews
 // @desc    Create or update a review
 // @access  Private
-router.post("/", async (req, res) => {
+router.post("/", upload.array("photos", 5), async (req, res) => {
   try {
     const { itineraryId, siteId, rating, reviewText } = req.body;
     const userId = req.user.id;
@@ -21,6 +22,9 @@ router.post("/", async (req, res) => {
     if (rating < 1 || rating > 5) {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
+
+    // Process uploaded photos
+    const photoPaths = req.files ? req.files.map(file => `/uploads/reviews/${file.filename}`) : [];
 
     // Check if review already exists
     const existingReview = await Review.findOne({
@@ -35,6 +39,10 @@ router.post("/", async (req, res) => {
       // Update existing review
       existingReview.rating = rating;
       existingReview.reviewText = reviewText || "";
+      // If new photos are uploaded, replace old photos, otherwise keep existing
+      if (photoPaths.length > 0) {
+        existingReview.photos = photoPaths;
+      }
       review = await existingReview.save();
     } else {
       // Create new review
@@ -44,6 +52,7 @@ router.post("/", async (req, res) => {
         siteId,
         rating,
         reviewText: reviewText || "",
+        photos: photoPaths,
       });
     }
 

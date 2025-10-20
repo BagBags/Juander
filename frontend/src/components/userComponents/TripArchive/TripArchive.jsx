@@ -5,6 +5,7 @@ import BackHeader from "../BackButton"; // ✅ import BackHeader
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Filter } from "bad-words";
+import { Camera, X } from "lucide-react";
 
 const filter = new Filter();
 filter.addWords(
@@ -45,6 +46,8 @@ export default function TripArchivesPage() {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [reviewPhotos, setReviewPhotos] = useState([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -114,12 +117,39 @@ export default function TripArchivesPage() {
     if (existingReview) {
       setRating(existingReview.rating);
       setReviewText(existingReview.reviewText || "");
+      // Load existing photos if available
+      if (existingReview.photos && existingReview.photos.length > 0) {
+        setPhotoPreviewUrls(existingReview.photos.map(p => resolveUrl(p)));
+      } else {
+        setPhotoPreviewUrls([]);
+      }
     } else {
       setRating(0);
       setReviewText("");
+      setPhotoPreviewUrls([]);
     }
+    setReviewPhotos([]);
     
     setShowReviewModal(true);
+  };
+
+  const handlePhotoSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // Limit to 5 photos total
+    const remainingSlots = 5 - photoPreviewUrls.length;
+    const filesToAdd = files.slice(0, remainingSlots);
+
+    // Create preview URLs
+    const newPreviewUrls = filesToAdd.map(file => URL.createObjectURL(file));
+    setPhotoPreviewUrls(prev => [...prev, ...newPreviewUrls]);
+    setReviewPhotos(prev => [...prev, ...filesToAdd]);
+  };
+
+  const handleRemovePhoto = (index) => {
+    setPhotoPreviewUrls(prev => prev.filter((_, i) => i !== index));
+    setReviewPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitReview = async () => {
@@ -135,15 +165,27 @@ export default function TripArchivesPage() {
     }
 
     try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("itineraryId", selectedSite.itineraryId._id);
+      formData.append("siteId", selectedSite.siteId._id);
+      formData.append("rating", rating);
+      formData.append("reviewText", reviewText);
+      
+      // Append photos
+      reviewPhotos.forEach((photo) => {
+        formData.append("photos", photo);
+      });
+
       const response = await axios.post(
         `${BACKEND_URL}/api/reviews`,
+        formData,
         {
-          itineraryId: selectedSite.itineraryId._id,
-          siteId: selectedSite.siteId._id,
-          rating,
-          reviewText,
-        },
-        config
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
 
       // Update reviews list
@@ -160,6 +202,8 @@ export default function TripArchivesPage() {
       setSelectedSite(null);
       setRating(0);
       setReviewText("");
+      setReviewPhotos([]);
+      setPhotoPreviewUrls([]);
       
       alert(response.data.message);
     } catch (err) {
@@ -281,6 +325,19 @@ export default function TripArchivesPage() {
                                 <p className="text-xs text-gray-500 line-clamp-3">
                                   {existingReview.reviewText || "No review text"}
                                 </p>
+                                {/* Display review photos */}
+                                {existingReview.photos && existingReview.photos.length > 0 && (
+                                  <div className="flex gap-1 mt-2 overflow-x-auto">
+                                    {existingReview.photos.map((photo, idx) => (
+                                      <img
+                                        key={idx}
+                                        src={resolveUrl(photo)}
+                                        alt={`Review photo ${idx + 1}`}
+                                        className="w-16 h-16 object-cover rounded border border-gray-300"
+                                      />
+                                    ))}
+                                  </div>
+                                )}
                                 <div className="flex gap-2 mt-2">
                                   <button
                                     onClick={() => handleOpenReviewModal(site)}
@@ -342,6 +399,50 @@ export default function TripArchivesPage() {
               />
             </div>
 
+            {/* Photo Upload Section */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 mb-2">Add Photos (optional, max 5):</p>
+              
+              {/* Photo Preview Grid */}
+              {photoPreviewUrls.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {photoPreviewUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-300"
+                      />
+                      <button
+                        onClick={() => handleRemovePhoto(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        type="button"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload Button */}
+              {photoPreviewUrls.length < 5 && (
+                <label className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:border-[#f04e37] hover:bg-gray-50 transition">
+                  <Camera className="w-5 h-5 text-gray-500" />
+                  <span className="text-sm text-gray-600">
+                    {photoPreviewUrls.length === 0 ? "Upload Photos" : `Add More (${5 - photoPreviewUrls.length} left)`}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={handleSubmitReview}
@@ -355,6 +456,8 @@ export default function TripArchivesPage() {
                   setSelectedSite(null);
                   setRating(0);
                   setReviewText("");
+                  setReviewPhotos([]);
+                  setPhotoPreviewUrls([]);
                 }}
                 className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
               >
