@@ -5,6 +5,7 @@ import BackHeader from "../BackButton";
 import ttsService from "../../../utils/textToSpeech";
 import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
+import OnlineRequiredModal from "../../shared/OnlineRequiredModal";
 import {
   FaCheck,
   FaPlus,
@@ -25,6 +26,9 @@ export default function CreateItineraryPage() {
   const [sites, setSites] = useState([]);
   const [descriptionToggles, setDescriptionToggles] = useState({});
   const [showMyItineraries, setShowMyItineraries] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(true);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [offlineMessage, setOfflineMessage] = useState("");
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -94,6 +98,17 @@ export default function CreateItineraryPage() {
     );
 
   const handleSave = async () => {
+    // Check if offline
+    if (!navigator.onLine) {
+      setOfflineMessage(
+        editingItineraryId 
+          ? "Updating itineraries requires an internet connection" 
+          : "Creating itineraries requires an internet connection"
+      );
+      setShowOfflineModal(true);
+      return;
+    }
+
     if (!itineraryName.trim() || selected.length === 0)
       return alert("Enter name & select sites");
 
@@ -124,17 +139,35 @@ export default function CreateItineraryPage() {
       fetchItineraries();
     } catch (err) {
       console.error("Save error:", err);
-      alert("Failed to save itinerary");
+      // Check if it's a network error
+      if (!navigator.onLine || err.message === 'Network Error') {
+        setOfflineMessage("Lost connection while saving. Please try again when online.");
+        setShowOfflineModal(true);
+      } else {
+        alert("Failed to save itinerary");
+      }
     }
   };
 
   const handleDelete = async (id) => {
+    // Check if offline
+    if (!navigator.onLine) {
+      setOfflineMessage("Deleting itineraries requires an internet connection");
+      setShowOfflineModal(true);
+      return;
+    }
+
     if (!confirm("Delete this itinerary?")) return;
     try {
       await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
-    } catch {
-      alert("Failed to delete itinerary");
+    } catch (err) {
+      if (!navigator.onLine || err.message === 'Network Error') {
+        setOfflineMessage("Lost connection while deleting. Please try again when online.");
+        setShowOfflineModal(true);
+      } else {
+        alert("Failed to delete itinerary");
+      }
     }
   };
 
@@ -170,7 +203,21 @@ export default function CreateItineraryPage() {
       <div className="sticky top-0 z-40 bg-[#f04e37] px-3 py-3 pt-3">
         <BackHeader title="Create Itinerary" />
       </div>
-      <div className="sticky top-18 z-30 bg-[#f04e37] px-3 py-3">
+      
+      {/* Mobile: Collapsible Toggle Button */}
+      <div className="lg:hidden bg-[#f04e37] px-3 py-2">
+        <button
+          onClick={() => setShowCreateForm((prev) => !prev)}
+          className="w-full flex justify-between items-center font-bold text-white text-lg p-3 rounded-lg bg-white/10 hover:bg-white/20 transition"
+        >
+          <span>{editingItineraryId ? "Update Itinerary" : "Create Itinerary"}</span>
+          {showCreateForm ? <FaChevronUp /> : <FaChevronDown />}
+        </button>
+      </div>
+
+      <div className={`bg-[#f04e37] px-3 transition-all duration-300 ease-in-out ${
+        showCreateForm ? 'py-3' : 'max-h-0 overflow-hidden lg:max-h-none lg:py-3'
+      }`}>
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col gap-3">
             {/* Mobile: Name and Selected Sites first */}
@@ -392,6 +439,14 @@ export default function CreateItineraryPage() {
       <footer className="text-center text-xs text-white opacity-70 py-4">
         ©2025 Intramuros Administration
       </footer>
+
+      {/* Offline Modal */}
+      <OnlineRequiredModal
+        isOpen={showOfflineModal}
+        onClose={() => setShowOfflineModal(false)}
+        message={offlineMessage}
+        showLoginOption={false}
+      />
     </div>
   );
 }
@@ -425,7 +480,7 @@ function SmoothScrollSiteList({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto px-2 pb-[calc(65vh-200px)] md:pb-8 max-h-[65vh] md:max-h-[70vh]"
+      className="flex-1 overflow-y-auto px-2 pb-[calc(65vh-200px)] md:pb-8 max-h-[65vh] md:max-h-[70vh] snap-y snap-mandatory"
       style={{ scrollBehavior: "smooth" }}
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -561,7 +616,7 @@ function SiteCard({
   return (
     <div
       ref={cardRef}
-      className="bg-white text-black rounded-xl shadow p-3 flex flex-col h-full transition-all duration-300 ease-out"
+      className="bg-white text-black rounded-xl shadow p-3 flex flex-col h-full transition-all duration-300 ease-out snap-start"
       style={{
         opacity: cardStyle.opacity,
         transform: cardStyle.transform,

@@ -228,18 +228,30 @@ export default function AdminHomeMain() {
             reports, monitor roles and system logs, and much more.
           </p>
           {/* Print Header */}
-          <div className="hidden print:block text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">INTRAMUROS ADMINISTRATION</h1>
-            <h2 className="text-2xl font-semibold text-[#f04e37] mb-4">User Analytics Report</h2>
-            <p className="text-gray-600 text-sm">
-              Generated on {new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </p>
+          <div className="hidden print:block">
+            <div className="flex items-center justify-between mb-6 gap-8">
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">INTRAMUROS ADMINISTRATION</h1>
+                <h2 className="text-2xl font-semibold text-[#f04e37] mb-3">User Analytics Report</h2>
+                <p className="text-gray-600 text-sm">
+                  Generated on {new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <img 
+                  src="/IA Colored Logo High Res.png" 
+                  alt="IA Logo" 
+                  className="h-28 w-auto"
+                  style={{ border: 'none', outline: 'none' }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -274,7 +286,7 @@ export default function AdminHomeMain() {
             <h3 className="text-3xl font-bold text-yellow-600">
               {loading || reviews.length === 0
                 ? "N/A"
-                : (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)} ⭐
+                : (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)}<span className="print:hidden"> ⭐</span>
             </h3>
           </div>
         </div>
@@ -298,13 +310,58 @@ export default function AdminHomeMain() {
             Analytics Overview
           </h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Bar Chart - Users by Country */}
-            <div className="bg-gray-50 p-4 rounded-xl shadow-inner h-80 flex flex-col">
+            {/* Horizontal Bar Chart - Users by Country */}
+            <div className="bg-gray-50 p-4 rounded-xl shadow-inner flex flex-col" style={{ height: Object.keys(countryCount).length > 10 ? '600px' : '320px' }}>
               <h4 className="text-lg font-semibold text-gray-700 mb-4">
-                Users by Country
+                Users by Country ({Object.keys(countryCount).length} countries)
               </h4>
-              <div className="flex-1">
-                <Bar data={countryData} options={chartOptions} />
+              <div className="flex-1 overflow-y-auto">
+                <Bar 
+                  data={{
+                    labels: Object.keys(countryCount).sort((a, b) => countryCount[b] - countryCount[a]),
+                    datasets: [{
+                      label: "Users by Country",
+                      data: Object.keys(countryCount).sort((a, b) => countryCount[b] - countryCount[a]).map(k => countryCount[k]),
+                      backgroundColor: "#f04e37",
+                    }]
+                  }} 
+                  options={{
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        display: false,
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => {
+                            const percentage = ((context.parsed.x / users.length) * 100).toFixed(1);
+                            return `${context.parsed.x} users (${percentage}%)`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        ticks: {
+                          stepSize: 1,
+                          precision: 0,
+                        },
+                        title: {
+                          display: true,
+                          text: 'Number of Users'
+                        }
+                      },
+                      y: {
+                        ticks: {
+                          autoSkip: false,
+                        }
+                      }
+                    },
+                  }} 
+                />
               </div>
             </div>
 
@@ -387,7 +444,7 @@ export default function AdminHomeMain() {
                 <p className="text-3xl font-bold text-yellow-600">
                   {reviews.length > 0
                     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-                    : "N/A"} ⭐
+                    : "N/A"}
                 </p>
               </div>
             </div>
@@ -548,7 +605,7 @@ export default function AdminHomeMain() {
                   return (
                     <tr key={rating}>
                       <td className="border border-gray-300 px-4 py-2">
-                        {rating} Star{rating !== 1 ? 's' : ''} ⭐
+                        {rating} Star{rating !== 1 ? 's' : ''}
                       </td>
                       <td className="border border-gray-300 px-4 py-2 text-right font-semibold">{count}</td>
                       <td className="border border-gray-300 px-4 py-2 text-right">
@@ -567,7 +624,7 @@ export default function AdminHomeMain() {
                   <td className="border border-gray-300 px-4 py-2 text-right" colSpan="2">
                     {reviews.length > 0
                       ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(2)
-                      : "N/A"} ⭐
+                      : "N/A"}
                   </td>
                 </tr>
               </tbody>
@@ -604,7 +661,7 @@ export default function AdminHomeMain() {
                         </td>
                         <td className="border border-gray-300 px-4 py-2">{siteName}</td>
                         <td className="border border-gray-300 px-4 py-2 text-right font-semibold">{count}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-right">{avgRating} ⭐</td>
+                        <td className="border border-gray-300 px-4 py-2 text-right">{avgRating}</td>
                       </tr>
                     );
                   })}

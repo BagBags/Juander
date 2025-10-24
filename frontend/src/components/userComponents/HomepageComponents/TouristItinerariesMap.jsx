@@ -109,6 +109,10 @@ export default function TouristItineraryMap() {
           description: s.siteDescription || s.description || "",
           mediaType: s.mediaType || "image",
           mediaUrl: resolveUrl(s.mediaUrl),
+          mediaFiles: s.mediaFiles?.map((media) => ({
+            url: resolveUrl(media.url),
+            type: media.type,
+          })) || [],
           glbUrl: resolveUrl(s.glbUrl),
           arEnabled: s.arEnabled === true,
           arLink: s.arLink || "",

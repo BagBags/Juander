@@ -2,6 +2,7 @@ import React, { useState, Suspense, lazy, useEffect } from "react";
 import { X, Volume2, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
+import MediaCarousel from "../../shared/MediaCarousel";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
@@ -99,8 +100,15 @@ export default function SiteModalFullScreen({
               {selectedPin.description}
             </p>
 
-            {/* Media (Image/Video) */}
-            {selectedPin.mediaUrl && (
+            {/* Media Files Carousel */}
+            {selectedPin.mediaFiles && selectedPin.mediaFiles.length > 0 && (
+              <div className="mb-4">
+                <MediaCarousel mediaFiles={selectedPin.mediaFiles} />
+              </div>
+            )}
+
+            {/* Fallback to old mediaUrl if mediaFiles not available */}
+            {(!selectedPin.mediaFiles || selectedPin.mediaFiles.length === 0) && selectedPin.mediaUrl && (
               <div className="mb-4">
                 {selectedPin.mediaType === "video" ? (
                   <video

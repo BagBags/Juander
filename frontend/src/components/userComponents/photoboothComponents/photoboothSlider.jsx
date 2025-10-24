@@ -104,7 +104,6 @@ export default function PhotoboothSlider({
               height: "70px",
               margin: "0 10px",
               borderRadius: "50%",
-              background: `url(${filter.image}) center/cover no-repeat`,
               border:
                 filter.id === selectedFilterId
                   ? "3px solid #3498db"
@@ -112,6 +111,11 @@ export default function PhotoboothSlider({
               scrollSnapAlign: "center",
               position: "relative",
               cursor: "pointer",
+              overflow: "hidden",
+              background: "#f0f0f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
             onClick={() => {
               setSelectedFilterId(filter.id);
@@ -129,6 +133,19 @@ export default function PhotoboothSlider({
             }}
             title={filter.label}
           >
+            {/* Filter preview image */}
+            <img
+              src={filter.image}
+              alt={filter.label}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                pointerEvents: "none",
+              }}
+            />
+            
+            {/* Label overlay */}
             <span
               style={{
                 position: "absolute",
@@ -137,9 +154,13 @@ export default function PhotoboothSlider({
                 transform: "translateX(-50%)",
                 fontSize: "10px",
                 color: "#fff",
-                background: "rgba(0,0,0,0.5)",
+                background: "rgba(0,0,0,0.7)",
                 padding: "2px 5px",
                 borderRadius: "4px",
+                whiteSpace: "nowrap",
+                maxWidth: "60px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {filter.label}

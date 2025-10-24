@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Edit, Trash2, Plus, Check, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Edit, Trash2, Plus, Check, X, ChevronUp, ChevronDown, Archive, RotateCcw } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 
 export default function ManagePhotobooth() {
   const [filters, setFilters] = useState([]);
+  const [archivedFilters, setArchivedFilters] = useState([]);
   const [sortedFilters, setSortedFilters] = useState([]);
+  const [sortedArchivedFilters, setSortedArchivedFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [archivedSortConfig, setArchivedSortConfig] = useState({ key: null, direction: "asc" });
   const [form, setForm] = useState({
     name: "",
     imageFile: null,
@@ -16,6 +19,7 @@ export default function ManagePhotobooth() {
     category: "general",
   });
   const [editingId, setEditingId] = useState(null);
+  const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
 
   // Get token from localStorage
   const token = localStorage.getItem("token"); // <-- make sure your token is stored here
@@ -34,7 +38,7 @@ export default function ManagePhotobooth() {
     },
   };
 
-  // Fetch filters
+  // Fetch active filters
   const fetchFilters = async () => {
     try {
       const res = await axios.get("/api/photobooth/filters", axiosConfig);
@@ -45,8 +49,20 @@ export default function ManagePhotobooth() {
     }
   };
 
+  // Fetch archived filters
+  const fetchArchivedFilters = async () => {
+    try {
+      const res = await axios.get("/api/photobooth/filters/archived", axiosConfig);
+      setArchivedFilters(res.data);
+      setSortedArchivedFilters(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchFilters();
+    fetchArchivedFilters();
   }, []);
 
   // Sorting function
@@ -156,11 +172,33 @@ export default function ManagePhotobooth() {
     setEditingId(filter._id);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this filter?")) return;
+  const handleArchive = async (id) => {
+    if (!window.confirm("Are you sure you want to archive this filter?")) return;
+    try {
+      await axios.put(`/api/photobooth/filters/${id}/archive`, {}, axiosConfig);
+      fetchFilters();
+      fetchArchivedFilters();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRestore = async (id) => {
+    if (!window.confirm("Are you sure you want to restore this filter?")) return;
+    try {
+      await axios.put(`/api/photobooth/filters/${id}/restore`, {}, axiosConfig);
+      fetchFilters();
+      fetchArchivedFilters();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handlePermanentDelete = async (id) => {
+    if (!window.confirm("⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?")) return;
     try {
       await axios.delete(`/api/photobooth/filters/${id}`, axiosConfig);
-      fetchFilters();
+      fetchArchivedFilters();
     } catch (err) {
       console.error(err);
     }
@@ -170,7 +208,7 @@ export default function ManagePhotobooth() {
     <div className="flex gap-8 ">
       {/* Form Panel */}
       <div className="w-1/2 bg-white rounded-2xl shadow-md p-6 flex flex-col gap-5">
-        <h2 className="text-xl font-semibold text-gray-800">
+        <h2 className="text-2xl font-bold text-gray-800">
           {editingId ? "Update Filter" : "Add New Filter"}
         </h2>
 
@@ -237,6 +275,7 @@ export default function ManagePhotobooth() {
             <option value="head">Head</option>
             <option value="eyes">Eyes</option>
             <option value="frame">Frame</option>
+            <option value="border">Border</option>
           </select>
 
           <FontAwesomeIcon
@@ -277,9 +316,34 @@ export default function ManagePhotobooth() {
 
       {/* Filters List */}
       <div className="w-1/2 bg-white rounded-2xl shadow-md p-6 flex flex-col">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Existing Filters
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          Filters
         </h2>
+        
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+              activeTab === "active"
+                ? "bg-red-500 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Active Filters ({filters.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("archived")}
+            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+              activeTab === "archived"
+                ? "bg-red-500 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Archived ({archivedFilters.length})
+          </button>
+        </div>
+
         <div className="overflow-y-auto max-h-[70vh]">
           <table className="w-full text-sm">
             <thead className="bg-gray-100 text-gray-600 text-left sticky top-0">
@@ -341,49 +405,100 @@ export default function ManagePhotobooth() {
               </tr>
             </thead>
             <tbody>
-              {sortedFilters.map((filter) => (
-                <tr
-                  key={filter._id}
-                  className="hover:bg-gray-50 transition border-b"
-                >
-                  <td className="p-3">
-                    <img
-                      src={filter.image}
-                      alt={filter.name}
-                      className="h-14 w-14 object-contain border-2 border-gray-300 rounded-lg"
-                    />
-                  </td>
-                  <td className="p-3 font-medium text-gray-700">
-                    {filter.name}
-                  </td>
-                  <td className="p-3 capitalize text-gray-500">
-                    {filter.category}
-                  </td>
-                  <td className="p-3 text-center flex gap-2 justify-center">
-                    <button
-                      onClick={() => handleEdit(filter)}
-                      className="px-3 py-1 flex items-center gap-1 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition"
+              {activeTab === "active" ? (
+                <>
+                  {sortedFilters.map((filter) => (
+                    <tr
+                      key={filter._id}
+                      className="hover:bg-gray-50 transition border-b"
                     >
-                      <Edit size={16} /> Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(filter._id)}
-                      className="px-3 py-1 flex items-center gap-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                      <td className="p-3">
+                        <img
+                          src={filter.image}
+                          alt={filter.name}
+                          className="h-14 w-14 object-contain border-2 border-gray-300 rounded-lg"
+                        />
+                      </td>
+                      <td className="p-3 font-medium text-gray-700">
+                        {filter.name}
+                      </td>
+                      <td className="p-3 capitalize text-gray-500">
+                        {filter.category}
+                      </td>
+                      <td className="p-3 text-center flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleEdit(filter)}
+                          className="px-3 py-1 flex items-center gap-1 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition"
+                        >
+                          <Edit size={16} /> Edit
+                        </button>
+                        <button
+                          onClick={() => handleArchive(filter._id)}
+                          className="px-3 py-1 flex items-center gap-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+                        >
+                          <Archive size={16} /> Archive
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {sortedFilters.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="p-3 text-center text-gray-400 italic"
+                      >
+                        No active filters available.
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ) : (
+                <>
+                  {sortedArchivedFilters.map((filter) => (
+                    <tr
+                      key={filter._id}
+                      className="hover:bg-gray-50 transition border-b bg-gray-50"
                     >
-                      <Trash2 size={16} /> Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {sortedFilters.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="p-3 text-center text-gray-400 italic"
-                  >
-                    No filters available.
-                  </td>
-                </tr>
+                      <td className="p-3">
+                        <img
+                          src={filter.image}
+                          alt={filter.name}
+                          className="h-14 w-14 object-contain border-2 border-gray-300 rounded-lg opacity-60"
+                        />
+                      </td>
+                      <td className="p-3 font-medium text-gray-500">
+                        {filter.name}
+                      </td>
+                      <td className="p-3 capitalize text-gray-400">
+                        {filter.category}
+                      </td>
+                      <td className="p-3 text-center flex gap-2 justify-center">
+                        <button
+                          onClick={() => handleRestore(filter._id)}
+                          className="px-3 py-1 flex items-center gap-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                        >
+                          <RotateCcw size={16} /> Restore
+                        </button>
+                        <button
+                          onClick={() => handlePermanentDelete(filter._id)}
+                          className="px-3 py-1 flex items-center gap-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                        >
+                          <Trash2 size={16} /> Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {sortedArchivedFilters.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan="4"
+                        className="p-3 text-center text-gray-400 italic"
+                      >
+                        No archived filters.
+                      </td>
+                    </tr>
+                  )}
+                </>
               )}
             </tbody>
           </table>

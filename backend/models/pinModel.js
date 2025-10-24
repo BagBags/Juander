@@ -8,6 +8,12 @@ const pinSchema = new mongoose.Schema(
     longitude: { type: Number, required: true },
     mediaUrl: { type: String },
     mediaType: { type: String, enum: ["image", "video"], default: "image" },
+    mediaFiles: [
+      {
+        url: { type: String, required: true },
+        type: { type: String, enum: ["image", "video"], required: true },
+      },
+    ],
     arEnabled: { type: Boolean, default: false },
     arLink: { type: String },
     glbUrl: { type: String },

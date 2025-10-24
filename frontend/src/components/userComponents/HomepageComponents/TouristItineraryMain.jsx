@@ -1,22 +1,35 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ChevronDown, ChevronUp, Info, MapPin } from "lucide-react"; // optional: icons for toggle
+import { ChevronLeft, ChevronRight, Info, MapPin } from "lucide-react";
 
 export default function TouristItineraryMain() {
   const [itineraries, setItineraries] = useState({ admin: [], user: [] });
-  const [openSections, setOpenSections] = useState({
-    admin: true,
-    user: false,
-  }); // both can toggle independently
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [selectedItinerary, setSelectedItinerary] = useState(null);
   const [inactiveSites, setInactiveSites] = useState([]);
+  
+  // Carousel states for admin itineraries
+  const [adminIndex, setAdminIndex] = useState(0);
+  const [adminTouchStart, setAdminTouchStart] = useState(0);
+  const [adminTouchEnd, setAdminTouchEnd] = useState(0);
+  const adminCarouselRef = useRef(null);
+  
+  // Carousel states for user itineraries
+  const [userIndex, setUserIndex] = useState(0);
+  const [userTouchStart, setUserTouchStart] = useState(0);
+  const [userTouchEnd, setUserTouchEnd] = useState(0);
+  const userCarouselRef = useRef(null);
+  
   const navigate = useNavigate();
 
   const getFullImageUrl = (url) => {
-    if (!url) return null;
-    return url.startsWith("http") ? url : `http://localhost:5000${url}`;
+    if (!url || url.trim() === "") return null;
+    // Handle both absolute URLs and relative paths
+    if (url.startsWith("http")) return url;
+    // Ensure path starts with /
+    const path = url.startsWith("/") ? url : `/${url}`;
+    return `http://localhost:5000${path}`;
   };
 
   useEffect(() => {
@@ -41,8 +54,68 @@ export default function TouristItineraryMain() {
     fetchItineraries();
   }, []);
 
-  const toggleSection = (section) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  // Admin carousel navigation
+  const goToAdminNext = () => {
+    setAdminIndex((prev) => (prev === itineraries.admin.length - 1 ? 0 : prev + 1));
+  };
+
+  const goToAdminPrevious = () => {
+    setAdminIndex((prev) => (prev === 0 ? itineraries.admin.length - 1 : prev - 1));
+  };
+
+  const goToAdminSlide = (index) => {
+    setAdminIndex(index);
+  };
+
+  // User carousel navigation
+  const goToUserNext = () => {
+    setUserIndex((prev) => (prev === itineraries.user.length - 1 ? 0 : prev + 1));
+  };
+
+  const goToUserPrevious = () => {
+    setUserIndex((prev) => (prev === 0 ? itineraries.user.length - 1 : prev - 1));
+  };
+
+  const goToUserSlide = (index) => {
+    setUserIndex(index);
+  };
+
+  // Touch handlers for admin carousel
+  const handleAdminTouchStart = (e) => {
+    setAdminTouchStart(e.targetTouches[0].clientX);
+    setAdminTouchEnd(0);
+  };
+
+  const handleAdminTouchMove = (e) => {
+    setAdminTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleAdminTouchEnd = () => {
+    if (!adminTouchStart || !adminTouchEnd) return;
+    const distance = adminTouchStart - adminTouchEnd;
+    if (distance > 50) goToAdminNext();
+    if (distance < -50) goToAdminPrevious();
+    setAdminTouchStart(0);
+    setAdminTouchEnd(0);
+  };
+
+  // Touch handlers for user carousel
+  const handleUserTouchStart = (e) => {
+    setUserTouchStart(e.targetTouches[0].clientX);
+    setUserTouchEnd(0);
+  };
+
+  const handleUserTouchMove = (e) => {
+    setUserTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleUserTouchEnd = () => {
+    if (!userTouchStart || !userTouchEnd) return;
+    const distance = userTouchStart - userTouchEnd;
+    if (distance > 50) goToUserNext();
+    if (distance < -50) goToUserPrevious();
+    setUserTouchStart(0);
+    setUserTouchEnd(0);
   };
 
   const handleItineraryClick = (itinerary) => {
@@ -70,91 +143,154 @@ export default function TouristItineraryMain() {
     }
   };
 
-  const sectionClasses =
-    "max-w-6xl w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8 bg-white/10 rounded-2xl backdrop-blur-sm shadow-md";
-
   return (
     <div className="flex flex-col items-center justify-start">
-      {/* Admin-made itineraries */}
-      <div className={sectionClasses}>
-        <button
-          onClick={() => toggleSection("admin")}
-          className="flex items-center justify-between w-full text-left text-2xl font-bold text-white focus:outline-none"
-        >
-          <span>Admin Itineraries</span>
-          {openSections.admin ? (
-            <ChevronUp className="text-white" />
-          ) : (
-            <ChevronDown className="text-white" />
-          )}
-        </button>
-
-        {/* Collapsible content */}
-        <div
-          className={`transition-all duration-500 overflow-hidden ${
-            openSections.admin
-              ? "max-h-[2000px] opacity-100"
-              : "max-h-0 opacity-0"
-          }`}
-        >
-          {itineraries.admin.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-              {itineraries.admin.map((itinerary) => (
-                <ItineraryCard
-                  key={itinerary._id}
-                  itinerary={itinerary}
-                  onCardClick={handleItineraryClick}
-                  getFullImageUrl={getFullImageUrl}
-                />
-              ))}
+      {/* Admin Itineraries - Horizontal Carousel */}
+      <div className="w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8">
+        <h2 className="text-2xl font-bold text-white mb-4 text-center">
+          Admin Itineraries
+        </h2>
+        {itineraries.admin.length ? (
+          <div className="relative max-w-4xl mx-auto w-full">
+            <div
+              ref={adminCarouselRef}
+              className="relative overflow-hidden rounded-3xl"
+              onTouchStart={handleAdminTouchStart}
+              onTouchMove={handleAdminTouchMove}
+              onTouchEnd={handleAdminTouchEnd}
+              style={{ touchAction: 'pan-y pinch-zoom' }}
+            >
+              <div
+                className="flex transition-transform duration-500 ease-out"
+                style={{ transform: `translateX(-${adminIndex * 100}%)` }}
+              >
+                {itineraries.admin.map((itinerary) => (
+                  <div key={itinerary._id} className="min-w-full px-4 md:px-8">
+                    <ItineraryCard
+                      itinerary={itinerary}
+                      onCardClick={handleItineraryClick}
+                      getFullImageUrl={getFullImageUrl}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <p className="text-white opacity-80 mt-3">
-              No admin itineraries available
-            </p>
-          )}
-        </div>
+
+            {itineraries.admin.length > 1 && (
+              <>
+                <button
+                  onClick={goToAdminPrevious}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-200 z-10 hidden md:flex items-center justify-center"
+                  aria-label="Previous itinerary"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={goToAdminNext}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-200 z-10 hidden md:flex items-center justify-center"
+                  aria-label="Next itinerary"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+                <div className="flex justify-center gap-2 mt-6">
+                  {itineraries.admin.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToAdminSlide(index)}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        index === adminIndex ? "bg-white w-8" : "bg-white/50 w-2 hover:bg-white/70"
+                      }`}
+                      aria-label={`Go to itinerary ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                <div className="text-center mt-4">
+                  <span className="text-white/80 text-sm">
+                    {adminIndex + 1} / {itineraries.admin.length}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="text-white opacity-80 text-center">
+            No admin itineraries available
+          </p>
+        )}
       </div>
 
-      {/* User-made itineraries */}
-      <div className={`${sectionClasses} mb-12`}>
-        <button
-          onClick={() => toggleSection("user")}
-          className="flex items-center justify-between w-full text-left text-2xl font-bold text-white focus:outline-none"
-        >
-          <span>My Itineraries</span>
-          {openSections.user ? (
-            <ChevronUp className="text-white" />
-          ) : (
-            <ChevronDown className="text-white" />
-          )}
-        </button>
-
-        {/* Collapsible content */}
-        <div
-          className={`transition-all duration-500 overflow-hidden ${
-            openSections.user
-              ? "max-h-[2000px] opacity-100"
-              : "max-h-0 opacity-0"
-          }`}
-        >
-          {itineraries.user.length ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-              {itineraries.user.map((itinerary) => (
-                <ItineraryCard
-                  key={itinerary._id}
-                  itinerary={itinerary}
-                  onCardClick={handleItineraryClick}
-                  getFullImageUrl={getFullImageUrl}
-                />
-              ))}
+      {/* My Itineraries - Horizontal Carousel */}
+      <div className="w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-12">
+        <h2 className="text-2xl font-bold text-white mb-4 text-center">
+          My Itineraries
+        </h2>
+        {itineraries.user.length ? (
+          <div className="relative max-w-4xl mx-auto w-full">
+            <div
+              ref={userCarouselRef}
+              className="relative overflow-hidden rounded-3xl"
+              onTouchStart={handleUserTouchStart}
+              onTouchMove={handleUserTouchMove}
+              onTouchEnd={handleUserTouchEnd}
+              style={{ touchAction: 'pan-y pinch-zoom' }}
+            >
+              <div
+                className="flex transition-transform duration-500 ease-out"
+                style={{ transform: `translateX(-${userIndex * 100}%)` }}
+              >
+                {itineraries.user.map((itinerary) => (
+                  <div key={itinerary._id} className="min-w-full px-4 md:px-8">
+                    <ItineraryCard
+                      itinerary={itinerary}
+                      onCardClick={handleItineraryClick}
+                      getFullImageUrl={getFullImageUrl}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <p className="text-white opacity-80 mt-3">
-              You have not created any itineraries
-            </p>
-          )}
-        </div>
+
+            {itineraries.user.length > 1 && (
+              <>
+                <button
+                  onClick={goToUserPrevious}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-200 z-10 hidden md:flex items-center justify-center"
+                  aria-label="Previous itinerary"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={goToUserNext}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-200 z-10 hidden md:flex items-center justify-center"
+                  aria-label="Next itinerary"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+                <div className="flex justify-center gap-2 mt-6">
+                  {itineraries.user.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => goToUserSlide(index)}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        index === userIndex ? "bg-white w-8" : "bg-white/50 w-2 hover:bg-white/70"
+                      }`}
+                      aria-label={`Go to itinerary ${index + 1}`}
+                    />
+                  ))}
+                </div>
+                <div className="text-center mt-4">
+                  <span className="text-white/80 text-sm">
+                    {userIndex + 1} / {itineraries.user.length}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="text-white opacity-80 text-center">
+            You have not created any itineraries
+          </p>
+        )}
       </div>
 
       {/* Info Modal */}
@@ -234,35 +370,37 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
 
   return (
     <div
-      className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300"
+      className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
       onClick={() => onCardClick(itinerary)}
     >
       {imageSrc ? (
         <img
           src={imageSrc}
           alt={itinerary.name}
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover flex-shrink-0"
           onError={(e) =>
             (e.currentTarget.src = "https://via.placeholder.com/192")
           }
         />
       ) : (
-        <div className="w-full h-48 bg-white flex flex-col items-center justify-center">
+        <div className="w-full h-48 bg-white flex flex-col items-center justify-center flex-shrink-0">
           <MapPin className="w-16 h-16 text-[#f04e37]" />
         </div>
       )}
 
-      <div className="p-5">
-        <h2 className="text-xl font-semibold text-red-600 mb-2">
+      <div className="p-5 flex flex-col flex-1 overflow-hidden">
+        <h2 className="text-xl font-semibold text-red-600 mb-2 flex-shrink-0">
           {itinerary.name}
         </h2>
-        <p className="text-gray-600 text-sm mb-3 line-clamp-3">
-          {itinerary.description || "No description available"}
-        </p>
+        {itinerary.description && (
+          <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-shrink-0">
+            {itinerary.description}
+          </p>
+        )}
         {itinerary.sites?.length > 0 ? (
-          <div className="text-gray-700 text-sm">
-            <span className="font-semibold">Sites:</span>
-            <ul className="list-disc list-inside mt-1 space-y-0.5">
+          <div className="text-gray-700 text-sm flex-1 overflow-hidden flex flex-col">
+            <span className="font-semibold flex-shrink-0">Sites:</span>
+            <ul className="list-disc list-inside mt-1 space-y-0.5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
               {itinerary.sites.map((site) => (
                 <li key={site._id}>{site.siteName || site.title}</li>
               ))}

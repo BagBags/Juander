@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Edit, Trash2, Plus, Check, Upload } from "lucide-react";
+import { Edit, Trash2, Plus, Check, Upload, Archive, RotateCcw } from "lucide-react";
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
@@ -10,7 +10,9 @@ export default function AdminItineraryMain() {
   const [imageFile, setImageFile] = useState(null); // <-- File state
   const [imagePreview, setImagePreview] = useState(""); // <-- Preview URL
   const [itineraries, setItineraries] = useState([]);
+  const [archivedItineraries, setArchivedItineraries] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
 
   const ICON_SIZE = 20;
   const COVER_IMAGE_HEIGHT = 192;
@@ -36,6 +38,7 @@ export default function AdminItineraryMain() {
   // Fetch itineraries
   useEffect(() => {
     fetchItineraries();
+    fetchArchivedItineraries();
   }, []);
 
   const fetchItineraries = async () => {
@@ -44,6 +47,15 @@ export default function AdminItineraryMain() {
       setItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch itineraries:", err);
+    }
+  };
+
+  const fetchArchivedItineraries = async () => {
+    try {
+      const res = await axios.get("/api/itineraries/archived", config);
+      setArchivedItineraries(res.data);
+    } catch (err) {
+      console.error("Failed to fetch archived itineraries:", err);
     }
   };
 
@@ -122,12 +134,41 @@ export default function AdminItineraryMain() {
       alert("Failed to save itinerary");
     }
   };
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this itinerary?")) return;
+  const handleArchive = async (id) => {
+    if (!confirm("Are you sure you want to archive this itinerary?")) return;
+
+    try {
+      await axios.put(`/api/itineraries/${id}/archive`, {}, config);
+      fetchItineraries();
+      fetchArchivedItineraries();
+      alert("Itinerary archived successfully!");
+    } catch (err) {
+      console.error("Failed to archive itinerary:", err);
+      alert("Failed to archive itinerary");
+    }
+  };
+
+  const handleRestore = async (id) => {
+    if (!confirm("Are you sure you want to restore this itinerary?")) return;
+
+    try {
+      await axios.put(`/api/itineraries/${id}/restore`, {}, config);
+      fetchItineraries();
+      fetchArchivedItineraries();
+      alert("Itinerary restored successfully!");
+    } catch (err) {
+      console.error("Failed to restore itinerary:", err);
+      alert("Failed to restore itinerary");
+    }
+  };
+
+  const handlePermanentDelete = async (id) => {
+    if (!confirm("⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?")) return;
 
     try {
       await axios.delete(`/api/itineraries/${id}`, config);
-      setItineraries(itineraries.filter((i) => i._id !== id));
+      fetchArchivedItineraries();
+      alert("Itinerary permanently deleted!");
     } catch (err) {
       console.error("Failed to delete itinerary:", err);
       alert("Failed to delete itinerary");
@@ -259,74 +300,164 @@ export default function AdminItineraryMain() {
       <div className="w-1/2 flex flex-col gap-6">
         {/* Existing Itineraries */}
         <div className="bg-white rounded-2xl shadow-lg p-6 flex-1 flex flex-col">
-          <h2 className="text-2xl font-bold text-gradient-red mb-4">
-            Existing Itineraries
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Itineraries
           </h2>
+          
+          {/* Tabs */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setActiveTab("active")}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+                activeTab === "active"
+                  ? "bg-red-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Active Itineraries ({itineraries.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("archived")}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+                activeTab === "archived"
+                  ? "bg-red-500 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Archived ({archivedItineraries.length})
+            </button>
+          </div>
 
           {/* Scrollable itineraries list */}
           <div className="flex flex-col gap-4 overflow-y-auto max-h-[50vh] pr-2">
-            {itineraries.length ? (
-              itineraries.map((itinerary) => (
-                <div
-                  key={itinerary._id}
-                  className="border border-gray-200 rounded-xl p-5 bg-white 
-             shadow-sm hover:shadow-lg transition"
-                >
-                  {/* Title + Subtitle */}
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {itinerary.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {itinerary.description}
-                  </p>
-
-                  {/* Image */}
-                  {itinerary.imageUrl && (
-                    <img
-                      src={
-                        itinerary.imageUrl.startsWith("http")
-                          ? itinerary.imageUrl
-                          : `http://localhost:5000${itinerary.imageUrl}`
-                      }
-                      alt={itinerary.name}
-                      className="w-full h-48 object-cover rounded-xl mt-3"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
-                      }}
-                    />
-                  )}
-
-                  {/* Sites */}
-                  {itinerary.sites?.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Sites: {itinerary.sites.length}
+            {activeTab === "active" ? (
+              itineraries.length ? (
+                itineraries.map((itinerary) => (
+                  <div
+                    key={itinerary._id}
+                    className="border border-gray-200 rounded-xl p-5 bg-white 
+               shadow-sm hover:shadow-lg transition"
+                  >
+                    {/* Title + Subtitle */}
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {itinerary.name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {itinerary.description}
                     </p>
-                  )}
 
-                  {/* Actions */}
-                  <div className="flex gap-3 mt-4">
-                    <button
-                      onClick={() => handleEdit(itinerary)}
-                      className="flex items-center justify-center gap-2 px-4 py-2 
-              bg-yellow-500 hover:bg-yellow-700
-              text-white text-sm font-medium rounded-lg shadow-sm transition"
-                    >
-                      <Edit size={16} /> Edit
-                    </button>
+                    {/* Image */}
+                    {itinerary.imageUrl && (
+                      <img
+                        src={
+                          itinerary.imageUrl.startsWith("http")
+                            ? itinerary.imageUrl
+                            : `http://localhost:5000${itinerary.imageUrl}`
+                        }
+                        alt={itinerary.name}
+                        className="w-full h-48 object-cover rounded-xl mt-3"
+                        onError={(e) => {
+                          e.currentTarget.src = "https://via.placeholder.com/192";
+                        }}
+                      />
+                    )}
 
-                    <button
-                      onClick={() => handleDelete(itinerary._id)}
-                      className="flex items-center justify-center gap-2 px-4 py-2 
-              bg-red-500 hover:bg-red-600 
-              text-white text-sm font-medium rounded-lg shadow-sm transition"
-                    >
-                      <Trash2 size={16} /> Delete
-                    </button>
+                    {/* Sites */}
+                    {itinerary.sites?.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Sites: {itinerary.sites.length}
+                      </p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => handleEdit(itinerary)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 
+                bg-yellow-500 hover:bg-yellow-700
+                text-white text-sm font-medium rounded-lg shadow-sm transition"
+                      >
+                        <Edit size={16} /> Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleArchive(itinerary._id)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 
+                bg-orange-500 hover:bg-orange-600 
+                text-white text-sm font-medium rounded-lg shadow-sm transition"
+                      >
+                        <Archive size={16} /> Archive
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
+              ) : (
+                <p className="text-gray-400">No active itineraries found</p>
+              )
             ) : (
-              <p className="text-gray-400">No itineraries found</p>
+              archivedItineraries.length ? (
+                archivedItineraries.map((itinerary) => (
+                  <div
+                    key={itinerary._id}
+                    className="border border-gray-200 rounded-xl p-5 bg-gray-50 
+               shadow-sm hover:shadow-lg transition"
+                  >
+                    {/* Title + Subtitle */}
+                    <h3 className="text-lg font-semibold text-gray-500">
+                      {itinerary.name}
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      {itinerary.description}
+                    </p>
+
+                    {/* Image */}
+                    {itinerary.imageUrl && (
+                      <img
+                        src={
+                          itinerary.imageUrl.startsWith("http")
+                            ? itinerary.imageUrl
+                            : `http://localhost:5000${itinerary.imageUrl}`
+                        }
+                        alt={itinerary.name}
+                        className="w-full h-48 object-cover rounded-xl mt-3 opacity-60"
+                        onError={(e) => {
+                          e.currentTarget.src = "https://via.placeholder.com/192";
+                        }}
+                      />
+                    )}
+
+                    {/* Sites */}
+                    {itinerary.sites?.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        Sites: {itinerary.sites.length}
+                      </p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={() => handleRestore(itinerary._id)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 
+                bg-green-500 hover:bg-green-600
+                text-white text-sm font-medium rounded-lg shadow-sm transition"
+                      >
+                        <RotateCcw size={16} /> Restore
+                      </button>
+
+                      <button
+                        onClick={() => handlePermanentDelete(itinerary._id)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 
+                bg-red-600 hover:bg-red-700 
+                text-white text-sm font-medium rounded-lg shadow-sm transition"
+                      >
+                        <Trash2 size={16} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-400">No archived itineraries</p>
+              )
             )}
           </div>
 

@@ -26,8 +26,16 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
     frame: {
       useFullScreen: true,  // Special flag for full screen frames
       widthRatio: 1.0,
-      heightRatio: 1.3,
+      heightRatio: 1.0,
       anchorPoint: 'center',
+      maintainAspectRatio: true, // Maintain original aspect ratio
+    },
+    border: {
+      useFullScreen: true,  // Border assets cover full screen
+      widthRatio: 1.0,
+      heightRatio: 1.0,
+      anchorPoint: 'center',
+      maintainAspectRatio: false, // Stretch to fit screen
     },
     general: {
       widthRatio: 1.2,
@@ -163,16 +171,16 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
         // Determine category - use the actual category from selectedMeta
         const category = selectedMeta?.category || "general";
         const categoryConfig = config[category] || config.general;
-        const { widthRatio, heightRatio, useFullScreen, anchorPoint, verticalOffset } = categoryConfig;
+        const { widthRatio, heightRatio, useFullScreen, anchorPoint, verticalOffset, maintainAspectRatio } = categoryConfig;
 
         // Calculate overlay dimensions based on CURRENT face size (not reference)
         let overlayWidth, overlayHeight, avgScale;
         
-        if (useFullScreen && category === "frame") {
+        if (useFullScreen && (category === "frame" || category === "border")) {
           // Use video dimensions for full screen coverage
           overlayWidth = videoDims.width;
           overlayHeight = videoDims.height;
-          avgScale = 1; // No scaling for full screen frames
+          avgScale = 1; // No scaling for full screen frames/borders
         } else {
           // Use CURRENT face dimensions for responsive sizing
           const rawWidth = currentFaceWidth * widthRatio;
@@ -197,8 +205,8 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
         // Calculate center position based on anchor point (Snapchat-style)
         let rawCenter;
         
-        if (useFullScreen && category === "frame") {
-          // Position at screen center for full-screen frames
+        if (useFullScreen && (category === "frame" || category === "border")) {
+          // Position at screen center for full-screen frames/borders
           rawCenter = {
             x: videoDims.width / 2,
             y: videoDims.height / 2,
@@ -240,8 +248,8 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
           };
         }
 
-        // Apply smoothing for stable positioning (skip for full-screen frames)
-        const center = (useFullScreen && category === "frame") ? rawCenter : smoothPosition(rawCenter);
+        // Apply smoothing for stable positioning (skip for full-screen frames/borders)
+        const center = (useFullScreen && (category === "frame" || category === "border")) ? rawCenter : smoothPosition(rawCenter);
 
         let screenCoords = getDisplayCoords(center.x, center.y);
         screenCoords.x = overlayRef.current
@@ -252,7 +260,7 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
 
         // Set z-index based on category
         const getZIndex = (cat) => {
-          if (cat === "frame") return 80; // Frames behind everything
+          if (cat === "border" || cat === "frame") return 80; // Borders/Frames behind everything
           if (cat === "head") return 90; // Hats in middle
           return 100; // Eyes and general on top
         };
@@ -262,14 +270,14 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
             {shouldRenderOverlay && (
               <div
                 style={
-                  useFullScreen && category === "frame"
+                  useFullScreen && (category === "frame" || category === "border")
                     ? {
-                        // Full screen frame - fixed position, no rotation
-                        position: "absolute",
+                        // Full screen frame/border - fixed position, no rotation
+                        position: "fixed",
                         left: 0,
                         top: 0,
-                        width: "100%",
-                        height: "100%",
+                        width: "100vw",
+                        height: "100vh",
                         transform: "none",
                         zIndex: getZIndex(category),
                       }
@@ -294,7 +302,7 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
                   style={{
                     width: "100%",
                     height: "100%",
-                    objectFit: "contain",
+                    objectFit: (category === "border" || category === "frame") ? "fill" : "contain",
                   }}
                 />
               </div>

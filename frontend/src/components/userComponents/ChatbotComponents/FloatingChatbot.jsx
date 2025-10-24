@@ -92,10 +92,11 @@ export default function FloatingChatbot() {
             transform: "translate(-50%, -50%)",
             position: "fixed",
           }}
-          className="bg-white shadow-2xl rounded-2xl flex flex-col
-                     w-[70vw] h-[60vh] sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem] z-[60]"
+          className="bg-white shadow-2xl flex flex-col z-[60]
+                     w-full h-full sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem]
+                     sm:rounded-2xl"
         >
-          <div className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20">
+          <div className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20">
             <h2 className="font-bold text-lg text-white tracking-wide drop-shadow-sm">
               AskJuan
             </h2>

@@ -51,6 +51,10 @@ export const useApi = (api) => {
           description: p.siteDescription || "",
           mediaType: p.mediaType || "image",
           mediaUrl: resolveUrl(p.mediaUrl), // ✅ fixed
+          mediaFiles: p.mediaFiles?.map((media) => ({
+            url: resolveUrl(media.url),
+            type: media.type,
+          })) || [], // ✅ added mediaFiles array
           facadeUrl: resolveUrl(p.facadeUrl), // ✅ added
           glbUrl: resolveUrl(p.glbUrl), // ✅ fixed
           arEnabled: p.arEnabled === true,

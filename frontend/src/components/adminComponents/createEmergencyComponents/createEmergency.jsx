@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export default function CreateEmergency({ onSave, agencyToEdit }) {
+export default function CreateEmergency({ onSave, onCancel, agencyToEdit }) {
   const [name, setName] = useState("");
   const [channels, setChannels] = useState([{ label: "", number: "" }]);
   const [icon, setIcon] = useState(null);
@@ -58,9 +58,9 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
       onSubmit={handleSubmit}
       className="space-y-6 p-6 bg-white rounded-2xl shadow-md"
     >
-      <h2 className="text-2xl font-semibold text-[#f04e37]">
+      {/* <h2 className="text-2xl font-semibold text-[#f04e37]">
         {agencyToEdit ? "Update Agency" : "Add Agency"}
-      </h2>
+      </h2> */}
 
       {/* Image Upload */}
       <div className="flex flex-col items-center space-y-3">
@@ -147,13 +147,22 @@ export default function CreateEmergency({ onSave, agencyToEdit }) {
         Add Contact
       </button>
 
-      {/* Save */}
-      <button
-        type="submit"
-        className="w-full bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg font-medium transition shadow-md"
-      >
-        Save
-      </button>
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-gray-400 hover:bg-gray-500 text-white px-5 py-3 rounded-lg font-medium transition shadow-md"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg font-medium transition shadow-md"
+        >
+          Save
+        </button>
+      </div>
     </form>
   );
 }

@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
 import { Volume2, X } from "lucide-react";
 import ttsService from "../../../utils/textToSpeech";
+import MediaCarousel from "../../shared/MediaCarousel";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
@@ -88,8 +89,15 @@ const SiteCard = ({ pin, onClose, distance }) => {
               {pin.description}
             </p>
 
-            {/* Media (Image/Video) */}
-            {pin.mediaUrl && (
+            {/* Media Files Carousel */}
+            {pin.mediaFiles && pin.mediaFiles.length > 0 && (
+              <div className="mb-4">
+                <MediaCarousel mediaFiles={pin.mediaFiles} />
+              </div>
+            )}
+
+            {/* Fallback to old mediaUrl if mediaFiles not available */}
+            {(!pin.mediaFiles || pin.mediaFiles.length === 0) && pin.mediaUrl && (
               <div className="mb-4">
                 {pin.mediaType === "video" ? (
                   <video

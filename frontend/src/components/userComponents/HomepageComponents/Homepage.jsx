@@ -9,12 +9,33 @@ import NotificationContainer from "./NotificationContainer";
 import { useTranslation } from "react-i18next"; // 👈 import hook
 import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
+import { WifiOff } from "lucide-react";
 
 export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [inactivePins, setInactivePins] = useState([]);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [fromCache, setFromCache] = useState(false);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      // Refetch data when back online
+      window.location.reload();
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Announce page load
   useEffect(() => {
@@ -28,12 +49,31 @@ export default function Homepage() {
       if (!token) return;
 
       try {
+        // Check if offline
+        if (!navigator.onLine) {
+          // Try to load from cache
+          const cachedUser = localStorage.getItem('cached_user');
+          if (cachedUser) {
+            setCurrentUser(JSON.parse(cachedUser));
+            setFromCache(true);
+          }
+          return;
+        }
+
         const res = await axios.get("http://localhost:5000/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser(res.data);
+        // Cache user data
+        localStorage.setItem('cached_user', JSON.stringify(res.data));
       } catch (err) {
         console.error("Error fetching user:", err);
+        // Try cache on error
+        const cachedUser = localStorage.getItem('cached_user');
+        if (cachedUser) {
+          setCurrentUser(JSON.parse(cachedUser));
+          setFromCache(true);
+        }
       }
     };
 
@@ -43,6 +83,11 @@ export default function Homepage() {
   // Fetch inactive pins
   useEffect(() => {
     const fetchInactivePins = async () => {
+      // Skip if offline - notifications require real-time data
+      if (!navigator.onLine) {
+        return;
+      }
+
       try {
         const res = await axios.get("http://localhost:5000/api/pins/inactive");
         setInactivePins(res.data);
@@ -53,8 +98,12 @@ export default function Homepage() {
 
     fetchInactivePins();
 
-    // Optional: poll every 10 seconds
-    const interval = setInterval(fetchInactivePins, 10000);
+    // Optional: poll every 10 seconds (only when online)
+    const interval = setInterval(() => {
+      if (navigator.onLine) {
+        fetchInactivePins();
+      }
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -71,8 +120,27 @@ export default function Homepage() {
         backgroundColor: "#d9d9d9",
       }}
     >
+      {/* Offline Indicator */}
+      {isOffline && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-orange-500 text-white px-4 py-3 text-center shadow-lg">
+          <div className="flex items-center justify-center gap-2">
+            <WifiOff className="w-5 h-5" />
+            <span className="font-semibold">
+              You're offline - Some features may be limited
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Cache Indicator */}
+      {fromCache && !isOffline && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-blue-500 text-white px-4 py-2 text-center text-sm">
+          📦 Showing cached data
+        </div>
+      )}
+
       {/* Logo Header */}
-      <div className="w-full mt-10 flex justify-center px-4">
+      <div className={`w-full flex justify-center px-4 ${isOffline || fromCache ? 'mt-20' : 'mt-10'}`}>
         <LogoHeader />
       </div>
 

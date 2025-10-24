@@ -174,32 +174,31 @@ export default function AdminChatbot() {
 
   // --- Render ---
   return (
-    <section className="p-6 bg-gray-50 min-h-screen">
-      <h2 className="text-3xl font-bold mb-8 text-gray-800">Admin Panel</h2>
-
-      <div className="flex flex-col lg:flex-row gap-8">
+    <section className="bg-gray-50 min-h-screen">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Knowledge Base Entries */}
         <div className="flex-1 space-y-6">
-          <h3 className="text-xl font-semibold text-gray-700">
-            Chatbot Knowledge Base
-          </h3>
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">
+              Knowledge Base
+            </h3>
 
           {/* Tag Filter */}
-          <div className="bg-white p-4 rounded-xl shadow-sm">
-            <h4 className="font-medium mb-2 text-gray-600">Filter by Tags</h4>
+          <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 mb-6">
+            <h4 className="font-semibold mb-3 text-gray-700">Filter by Tags</h4>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
-                <label
+                <button
                   key={tag._id}
-                  className="flex items-center gap-1 text-sm text-gray-700"
+                  onClick={() => handleFilterCheckbox(tag._id)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    filterTags.includes(tag._id)
+                      ? "bg-red-500 text-white shadow-md"
+                      : "bg-white text-gray-700 border-2 border-gray-300 hover:border-red-300"
+                  }`}
                 >
-                  <input
-                    type="checkbox"
-                    checked={filterTags.includes(tag._id)}
-                    onChange={() => handleFilterCheckbox(tag._id)}
-                  />
                   {tag.name}
-                </label>
+                </button>
               ))}
             </div>
           </div>
@@ -208,86 +207,79 @@ export default function AdminChatbot() {
           {filteredEntries.map((entry) => (
             <div
               key={entry._id}
-              className="bg-white p-5 rounded-xl shadow-sm border border-gray-100"
+              className="bg-white p-5 rounded-xl shadow-sm border-2 border-gray-200 hover:border-red-300 transition-all"
             >
-              <p className="font-semibold text-gray-800">Information (EN):</p>
-              <p className="text-gray-700 whitespace-pre-wrap">
-                {entry.info_en}
-              </p>
-
-              {entry.info_fil && (
-                <>
-                  <p className="mt-3 font-semibold text-gray-800">
-                    Information (FIL):
+              <div className="flex justify-between items-start gap-4 mb-3">
+                <div className="flex-1">
+                  <p className="text-gray-800 font-medium line-clamp-2">
+                    {entry.info_en}
                   </p>
-                  <p className="text-gray-700 whitespace-pre-wrap">
-                    {entry.info_fil}
-                  </p>
-                </>
-              )}
+                  {entry.info_fil && (
+                    <p className="text-gray-600 text-sm mt-1 line-clamp-1 italic">
+                      {entry.info_fil}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleEdit(entry)}
+                    className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm font-medium transition"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(entry._id)}
+                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
 
-              <div className="mt-3">
-                <span className="font-semibold text-gray-800">Keywords:</span>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {entry.keywords.map((kw, i) => (
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-xs font-semibold text-gray-500 mr-1">Keywords:</span>
+                {entry.keywords.slice(0, 5).map((kw, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
+                  >
+                    {kw}
+                  </span>
+                ))}
+                {entry.keywords.length > 5 && (
+                  <span className="text-xs text-gray-500">+{entry.keywords.length - 5} more</span>
+                )}
+              </div>
+
+              {entry.tags && entry.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {entry.tags.map((t) => (
                     <span
-                      key={i}
-                      className="px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs"
+                      key={typeof t === "string" ? t : t._id}
+                      className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium"
                     >
-                      {kw}
+                      {t.name ? t.name : t}
                     </span>
                   ))}
                 </div>
-              </div>
-
-              <div className="mt-3">
-                <span className="font-semibold text-gray-800">Tags:</span>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {entry.tags && entry.tags.length > 0 ? (
-                    entry.tags.map((t) => (
-                      <span
-                        key={typeof t === "string" ? t : t._id}
-                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs"
-                      >
-                        {t.name ? t.name : t}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-500 text-sm">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => handleEdit(entry)}
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(entry._id)}
-                  className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm"
-                >
-                  Delete
-                </button>
-              </div>
+              )}
             </div>
           ))}
 
           {filteredEntries.length === 0 && (
             <p className="text-gray-500">No entries found.</p>
           )}
+          </div>
         </div>
 
         {/* Right: Entry Form + Tag Management */}
         <div
-          className="w-full lg:w-96 space-y-8 lg:sticky lg:top-6 self-start 
+          className="w-full lg:w-96 space-y-6 lg:sticky lg:top-6 self-start 
                 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2"
         >
           {/* Entry Form */}
-          <div className="bg-white p-5 rounded-xl shadow-sm ">
-            <h3 className="text-lg font-semibold mb-4 text-gray-700 ">
+          <div className="bg-white p-6 rounded-2xl shadow-lg">
+            <h3 className="text-2xl font-bold mb-6 text-gray-800">
               {editId ? "Edit Entry" : "Add Entry"}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">

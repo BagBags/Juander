@@ -13,13 +13,23 @@ export default function AdminHome() {
       <AdminSidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
 
       {/* Main Content */}
-      <main
-        className={`transition-all duration-300 flex-1 p-6 ${
+      <div
+        className={`flex-1 transition-all duration-300 ${
           isExpanded ? "ml-80" : "ml-20"
         }`}
       >
-        <AdminChatbotMain />
-      </main>
+        {/* Page Header */}
+        <div className="w-full bg-white shadow-md px-8 py-4">
+          <h1 className="text-2xl text-gray-800 pr-20 pl-20 font-medium">
+            Chatbot Knowledge Base
+          </h1>
+        </div>
+
+        {/* Main Content */}
+        <main className="p-6">
+          <AdminChatbotMain />
+        </main>
+      </div>
     </div>
   );
 }

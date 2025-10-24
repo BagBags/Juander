@@ -59,6 +59,7 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
     await Log.create({
       adminName,
       action: `Changed role of ${updatedUser.firstName} ${updatedUser.lastName} to ${role}`,
+      role: "admin",
     });
 
     res.json(updatedUser);
@@ -68,7 +69,7 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
   }
 });
 
-// GET logs
+// GET logs (all actions - admin and user)
 router.get("/logs", verifyAdmin, async (req, res) => {
   try {
     const logs = await Log.find().sort({ createdAt: -1 });

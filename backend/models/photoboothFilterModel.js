@@ -13,12 +13,16 @@ const photoboothFilterSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["general", "head", "eyes", "frame"],
+      enum: ["general", "head", "eyes", "frame", "border"],
       default: "general",
     },
     position: {
       type: Number,
       default: 0, // used for ordering
+    },
+    isArchived: {
+      type: Boolean,
+      default: false, // false = active, true = archived
     },
   },
   { timestamps: true }

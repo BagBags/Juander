@@ -15,14 +15,25 @@ const logAction = async (req, action) => {
   }
 };
 
-// --- GET all filters ---
+// --- GET all filters (active only) ---
 const getFilters = async (req, res) => {
   try {
-    const filters = await PhotoboothFilter.find().sort({ position: 1 });
+    const filters = await PhotoboothFilter.find({ isArchived: false }).sort({ position: 1 });
     res.json(filters);
   } catch (err) {
     console.error("❌ Error fetching filters:", err);
     res.status(500).json({ message: "Error fetching filters", error: err });
+  }
+};
+
+// --- GET archived filters ---
+const getArchivedFilters = async (req, res) => {
+  try {
+    const filters = await PhotoboothFilter.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.json(filters);
+  } catch (err) {
+    console.error("❌ Error fetching archived filters:", err);
+    res.status(500).json({ message: "Error fetching archived filters", error: err });
   }
 };
 
@@ -140,7 +151,49 @@ const updateFilter = async (req, res) => {
   }
 };
 
-// --- DELETE filter ---
+// --- ARCHIVE filter (soft delete) ---
+const archiveFilter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const filter = await PhotoboothFilter.findByIdAndUpdate(
+      id,
+      { isArchived: true },
+      { new: true }
+    );
+    
+    if (!filter) return res.status(404).json({ message: "Filter not found" });
+
+    await logAction(req, `Archived photobooth filter: "${filter.name}"`);
+
+    res.json({ message: "Filter archived successfully", filter });
+  } catch (err) {
+    console.error("❌ Error archiving filter:", err);
+    res.status(500).json({ message: "Error archiving filter", error: err });
+  }
+};
+
+// --- RESTORE filter from archive ---
+const restoreFilter = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const filter = await PhotoboothFilter.findByIdAndUpdate(
+      id,
+      { isArchived: false },
+      { new: true }
+    );
+    
+    if (!filter) return res.status(404).json({ message: "Filter not found" });
+
+    await logAction(req, `Restored photobooth filter: "${filter.name}"`);
+
+    res.json({ message: "Filter restored successfully", filter });
+  } catch (err) {
+    console.error("❌ Error restoring filter:", err);
+    res.status(500).json({ message: "Error restoring filter", error: err });
+  }
+};
+
+// --- DELETE filter permanently ---
 const deleteFilter = async (req, res) => {
   try {
     const { id } = req.params;
@@ -174,9 +227,9 @@ const deleteFilter = async (req, res) => {
       }
     }
 
-    await logAction(req, `Deleted photobooth filter: "${deleted.name}"`);
+    await logAction(req, `Permanently deleted photobooth filter: "${deleted.name}"`);
 
-    res.json({ message: "Filter deleted successfully" });
+    res.json({ message: "Filter permanently deleted successfully" });
   } catch (err) {
     console.error("❌ Error deleting filter:", err);
     res.status(500).json({ message: "Error deleting filter", error: err });
@@ -204,9 +257,12 @@ const reorderFilters = async (req, res) => {
 
 module.exports = {
   getFilters,
+  getArchivedFilters,
   getFilterImage,
   createFilter,
   updateFilter,
+  archiveFilter,
+  restoreFilter,
   deleteFilter,
   reorderFilters,
 };

@@ -8,7 +8,22 @@ const storage = multer.diskStorage({
       cb(null, "uploads/profile");
     } else if (req.baseUrl.includes("pins")) {
       if (file.mimetype.startsWith("image/")) {
-        cb(null, "uploads/facades");
+        // Check if it's a facade upload based on field name
+        if (file.fieldname === "facade") {
+          cb(null, "uploads/facades");
+        } else {
+          // Media files go to media folder
+          const uploadDir = "uploads/media";
+          if (!fs.existsSync(uploadDir))
+            fs.mkdirSync(uploadDir, { recursive: true });
+          cb(null, uploadDir);
+        }
+      } else if (file.mimetype.startsWith("video/")) {
+        // Videos go to media folder
+        const uploadDir = "uploads/media";
+        if (!fs.existsSync(uploadDir))
+          fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
       } else {
         cb(null, "uploads/arModels");
       }
@@ -62,6 +77,12 @@ const storage = multer.diskStorage({
       const ext = path.extname(file.originalname);
       const basename = path.basename(file.originalname, ext);
       cb(null, `${timestamp}-${req.user.id}-${basename}${ext}`);
+    } else if (req.baseUrl.includes("pins") && file.fieldname === "mediaFiles") {
+      // For pin media files: use timestamp + original filename
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const basename = path.basename(file.originalname, ext);
+      cb(null, `${timestamp}-${basename}${ext}`);
     } else {
       // For everything else: keep original filename
       cb(null, file.originalname);
@@ -83,13 +104,15 @@ const fileFilter = (req, file, cb) => {
   } else if (req.baseUrl.includes("pins")) {
     if (file.mimetype.startsWith("image/")) {
       cb(null, true);
+    } else if (file.mimetype.startsWith("video/")) {
+      cb(null, true);
     } else if (
       file.mimetype === "model/gltf-binary" ||
       file.originalname.endsWith(".glb")
     ) {
       cb(null, true);
     } else {
-      cb(new Error("Only image or .glb files are allowed for pins!"), false);
+      cb(new Error("Only image, video, or .glb files are allowed for pins!"), false);
     }
   } else if (
     req.baseUrl.includes("itineraries") ||
@@ -117,6 +140,12 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({ 
+  storage, 
+  fileFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit for video files
+  }
+});
 
 module.exports = upload;

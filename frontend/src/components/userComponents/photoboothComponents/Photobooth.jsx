@@ -18,11 +18,6 @@ import Overlays from "./overlay";
 import BackHeader from "../BackButton";
 import "../../../Photobooth.css";
 
-const videoDims = {
-  width: Math.min(window.innerWidth, 430),
-  height: Math.min(window.innerHeight, 932),
-};
-
 export default function Photobooth() {
   const webcamRef = useRef(null);
   const sliderRef = useRef(null);
@@ -35,6 +30,30 @@ export default function Photobooth() {
   const [filters, setFilters] = useState([]);
   const [capturedImage, setCapturedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Dynamic video dimensions that adapt to screen size
+  const [videoDims, setVideoDims] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  // ✅ Handle window resize for responsive border assets
+  useEffect(() => {
+    const handleResize = () => {
+      setVideoDims({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
 
   // ✅ Load filters from backend (fallback to baseFilters)
   useEffect(() => {
@@ -113,10 +132,10 @@ export default function Photobooth() {
   const capturePhoto = useCallback(() => {
     if (!webcamRef.current) return;
 
-    // Create canvas
+    // Create canvas with actual viewport dimensions
     const canvas = document.createElement("canvas");
-    canvas.width = videoDims.width;
-    canvas.height = videoDims.height;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     const ctx = canvas.getContext("2d");
 
     // Get video element
@@ -141,38 +160,47 @@ export default function Photobooth() {
           try {
             const parent = img.parentElement;
             const parentStyle = window.getComputedStyle(parent);
+            const position = parentStyle.position;
             
-            // Get the actual rendered position and size
-            const rect = parent.getBoundingClientRect();
-            const cameraRect = document.querySelector(".camera-view").getBoundingClientRect();
-            
-            // Calculate position relative to camera
-            const x = rect.left - cameraRect.left;
-            const y = rect.top - cameraRect.top;
-            const width = rect.width;
-            const height = rect.height;
-            
-            // Get transform matrix
-            const transform = parentStyle.transform;
-            
-            ctx.save();
-            
-            // Move to the center of where the overlay should be
-            ctx.translate(x + width / 2, y + height / 2);
-            
-            // Apply rotation if exists
-            if (transform && transform !== "none" && transform !== "matrix(1, 0, 0, 1, 0, 0)") {
-              const matrix = transform.match(/matrix\(([^)]+)\)/);
-              if (matrix) {
-                const values = matrix[1].split(", ").map(parseFloat);
-                const angle = Math.atan2(values[1], values[0]);
-                ctx.rotate(angle);
+            // Check if this is a full-screen border/frame (position: fixed)
+            if (position === "fixed") {
+              // For fixed position borders, draw at full canvas size
+              ctx.save();
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              ctx.restore();
+            } else {
+              // For face-tracking overlays, calculate relative position
+              const rect = parent.getBoundingClientRect();
+              const cameraRect = document.querySelector(".camera-view").getBoundingClientRect();
+              
+              // Calculate position relative to camera
+              const x = rect.left - cameraRect.left;
+              const y = rect.top - cameraRect.top;
+              const width = rect.width;
+              const height = rect.height;
+              
+              // Get transform matrix
+              const transform = parentStyle.transform;
+              
+              ctx.save();
+              
+              // Move to the center of where the overlay should be
+              ctx.translate(x + width / 2, y + height / 2);
+              
+              // Apply rotation if exists
+              if (transform && transform !== "none" && transform !== "matrix(1, 0, 0, 1, 0, 0)") {
+                const matrix = transform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                  const values = matrix[1].split(", ").map(parseFloat);
+                  const angle = Math.atan2(values[1], values[0]);
+                  ctx.rotate(angle);
+                }
               }
+              
+              // Draw the image (already loaded in DOM)
+              ctx.drawImage(img, -width / 2, -height / 2, width, height);
+              ctx.restore();
             }
-            
-            // Draw the image (already loaded in DOM)
-            ctx.drawImage(img, -width / 2, -height / 2, width, height);
-            ctx.restore();
           } catch (err) {
             console.error("Error drawing overlay:", err);
           }
@@ -215,7 +243,7 @@ export default function Photobooth() {
     <div className="photobooth-container">
       <div className="phone-frame">
         {/* ✅ Back button + refresh */}
-        <div className="absolute top-0 left-0 w-full z-20 p-4 flex items-center justify-between">
+        <div className="absolute top-0 left-0 w-full z-[200] p-4 flex items-center justify-between">
           <BackHeader />
           <button
             className="refresh-btn"

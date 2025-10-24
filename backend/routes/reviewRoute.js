@@ -4,13 +4,10 @@ const Review = require("../models/reviewModel");
 const { verifyToken } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
-// Apply authentication middleware to all routes
-router.use(verifyToken);
-
 // @route   POST /api/reviews
 // @desc    Create or update a review
 // @access  Private
-router.post("/", upload.array("photos", 5), async (req, res) => {
+router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
   try {
     const { itineraryId, siteId, rating, reviewText } = req.body;
     const userId = req.user.id;
@@ -74,7 +71,7 @@ router.post("/", upload.array("photos", 5), async (req, res) => {
 // @route   GET /api/reviews
 // @desc    Get all reviews for the logged-in user
 // @access  Private
-router.get("/", async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -93,7 +90,7 @@ router.get("/", async (req, res) => {
 // @route   GET /api/reviews/admin/all
 // @desc    Get all reviews (admin only)
 // @access  Private (Admin)
-router.get("/admin/all", async (req, res) => {
+router.get("/admin/all", verifyToken, async (req, res) => {
   try {
     // Check if user is admin
     if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
@@ -144,7 +141,7 @@ router.get("/site/:siteId", async (req, res) => {
 // @route   GET /api/reviews/:id
 // @desc    Get a specific review
 // @access  Private
-router.get("/:id", async (req, res) => {
+router.get("/:id", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -167,7 +164,7 @@ router.get("/:id", async (req, res) => {
 // @route   PUT /api/reviews/:id
 // @desc    Update a review
 // @access  Private
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -206,7 +203,7 @@ router.put("/:id", async (req, res) => {
 // @route   DELETE /api/reviews/:id
 // @desc    Delete a review
 // @access  Private
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;

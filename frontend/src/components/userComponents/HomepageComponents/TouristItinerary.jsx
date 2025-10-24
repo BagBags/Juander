@@ -35,7 +35,7 @@ export default function TouristItinerary() {
       </div>
 
       {/* Main Content */}
-      <MainLayout>
+      <MainLayout includeSideButtons={false}>
         <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
           <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
             <TouristItineraryMain />

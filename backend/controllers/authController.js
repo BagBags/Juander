@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 
 const User = require("../models/userModel");
+const Log = require("../models/logModel");
 const argon2 = require("argon2");
 const jwt = require("jsonwebtoken");
 
@@ -447,6 +448,14 @@ exports.uploadProfilePicture = async (req, res) => {
     user.profilePicture = `/uploads/profile/${req.file.filename}`;
     await user.save();
 
+    // Log action
+    const userName = `${user.firstName} ${user.lastName || ""}`.trim();
+    await Log.create({
+      adminName: userName,
+      action: `Updated profile picture`,
+      role: user.role || "tourist",
+    });
+
     res.json({
       message: "Profile picture updated successfully",
       profilePicture: user.profilePicture, // already has correct path
@@ -462,21 +471,39 @@ exports.saveAccount = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
 
-    const updates = {};
-    if (firstName) updates.firstName = firstName;
-    if (lastName) updates.lastName = lastName;
+    // Fetch current user data before updating
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
 
-    if (email) {
+    const updates = {};
+    const changedFields = [];
+    let nameChanged = false;
+    const oldName = `${currentUser.firstName} ${currentUser.lastName || ""}`.trim();
+    
+    if (firstName && firstName !== currentUser.firstName) {
+      updates.firstName = firstName;
+      changedFields.push("first name");
+      nameChanged = true;
+    }
+    if (lastName && lastName !== currentUser.lastName) {
+      updates.lastName = lastName;
+      changedFields.push("last name");
+      nameChanged = true;
+    }
+
+    if (email && email !== currentUser.email) {
       // 🔎 Check if email is already taken
       const existingUser = await User.findOne({ email });
       if (existingUser && existingUser._id.toString() !== req.user.id) {
         return res.status(400).json({ message: "Email already in use" });
       }
       updates.email = email;
+      changedFields.push("email");
     }
 
     if (password) {
       updates.password = await argon2.hash(password);
+      changedFields.push("password");
     }
 
     const user = await User.findByIdAndUpdate(req.user.id, updates, {
@@ -485,6 +512,28 @@ exports.saveAccount = async (req, res) => {
     });
 
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Log action
+    if (changedFields.length > 0) {
+      const newName = `${user.firstName} ${user.lastName || ""}`.trim();
+      let logAction = "";
+      
+      if (nameChanged) {
+        logAction = `Changed name from "${oldName}" to "${newName}"`;
+        if (changedFields.length > (changedFields.includes("first name") ? 1 : 0) + (changedFields.includes("last name") ? 1 : 0)) {
+          const otherFields = changedFields.filter(f => f !== "first name" && f !== "last name");
+          logAction += ` and updated: ${otherFields.join(", ")}`;
+        }
+      } else {
+        logAction = `Updated account info: ${changedFields.join(", ")}`;
+      }
+      
+      await Log.create({
+        adminName: newName,
+        action: logAction,
+        role: user.role || "tourist",
+      });
+    }
 
     res.json({ message: "Account updated successfully", user });
   } catch (err) {
@@ -496,6 +545,12 @@ exports.saveAccount = async (req, res) => {
 // Update Profile Pre-req Save Account Info
 exports.updateProfile = async (req, res) => {
   try {
+    // Fetch current user data before updating
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+    const oldName = `${currentUser.firstName} ${currentUser.lastName || ""}`.trim();
+    
     const updates = { ...req.body };
     if (updates.password) {
       updates.password = await argon2.hash(updates.password);
@@ -507,6 +562,24 @@ exports.updateProfile = async (req, res) => {
     });
 
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Log action
+    const newName = `${user.firstName} ${user.lastName || ""}`.trim();
+    const nameChanged = (updates.firstName && updates.firstName !== currentUser.firstName) || 
+                        (updates.lastName && updates.lastName !== currentUser.lastName);
+    
+    let logAction = "";
+    if (nameChanged) {
+      logAction = `Changed name from "${oldName}" to "${newName}"`;
+    } else {
+      logAction = `Updated profile information`;
+    }
+    
+    await Log.create({
+      adminName: newName,
+      action: logAction,
+      role: user.role || "tourist",
+    });
 
     res.json(user);
   } catch (err) {
@@ -554,6 +627,14 @@ exports.saveBirthday = async (req, res) => {
       { new: true, select: "-password -otp -otpExpires" }
     );
 
+    // Log action
+    const userName = `${user.firstName} ${user.lastName || ""}`.trim();
+    await Log.create({
+      adminName: userName,
+      action: `Updated birthday`,
+      role: user.role || "tourist",
+    });
+
     res.json({ message: "Birthday updated successfully", user });
   } catch (err) {
     console.error("Error updating birthday:", err);
@@ -575,6 +656,14 @@ exports.saveGender = async (req, res) => {
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Log action
+    const userName = `${user.firstName} ${user.lastName || ""}`.trim();
+    await Log.create({
+      adminName: userName,
+      action: `Updated gender`,
+      role: user.role || "tourist",
+    });
 
     res.json(user);
   } catch (err) {
@@ -599,6 +688,14 @@ exports.saveCountry = async (req, res) => {
 
     user.country = country;
     await user.save();
+
+    // Log action
+    const userName = `${user.firstName} ${user.lastName || ""}`.trim();
+    await Log.create({
+      adminName: userName,
+      action: `Updated country`,
+      role: user.role || "tourist",
+    });
 
     res.json({
       message: "Country updated successfully",
@@ -630,6 +727,14 @@ exports.saveLanguage = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // Log action
+    const userName = `${user.firstName} ${user.lastName || ""}`.trim();
+    await Log.create({
+      adminName: userName,
+      action: `Updated language preference`,
+      role: user.role || "tourist",
+    });
 
     res.json({
       message: "Language updated successfully",

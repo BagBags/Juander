@@ -6,7 +6,28 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import App from "./App.jsx";
 
-registerSW({ immediate: true });
+// Register service worker with update notification
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    if (confirm("New content available. Reload to update?")) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log("✅ App ready to work offline");
+  },
+  onRegistered(registration) {
+    console.log("✅ Service Worker registered");
+    // Check for updates every hour
+    setInterval(() => {
+      registration?.update();
+    }, 60 * 60 * 1000);
+  },
+  onRegisterError(error) {
+    console.error("❌ Service Worker registration failed:", error);
+  },
+});
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 

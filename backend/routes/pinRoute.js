@@ -117,4 +117,66 @@ router.delete("/:id/remove-glb", async (req, res) => {
   }
 });
 
+// 👇 Upload Media Files (Images/Videos)
+router.post("/upload-media", (req, res) => {
+  upload.array("mediaFiles", 10)(req, res, (err) => {
+    if (err) {
+      console.error("Upload error:", err);
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ 
+          message: "File too large. Maximum size is 50MB per file.",
+          error: err.message 
+        });
+      }
+      return res.status(400).json({ 
+        message: err.message || "File upload failed",
+        error: err.message 
+      });
+    }
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No files uploaded" });
+    }
+    
+    const uploadedFiles = req.files.map((file) => ({
+      url: `/uploads/media/${file.filename}`,
+      type: file.mimetype.startsWith("video/") ? "video" : "image",
+    }));
+    
+    return res.json({ files: uploadedFiles });
+  });
+});
+
+// 👇 Remove Single Media File
+router.delete("/:id/remove-media/:index", async (req, res) => {
+  try {
+    const pin = await Pin.findById(req.params.id);
+    if (!pin) return res.status(404).json({ msg: "Pin not found" });
+
+    const index = parseInt(req.params.index);
+    if (index < 0 || index >= pin.mediaFiles.length) {
+      return res.status(400).json({ msg: "Invalid media index" });
+    }
+
+    const mediaFile = pin.mediaFiles[index];
+    const filePath = path.join(
+      __dirname,
+      "..",
+      mediaFile.url.replace(/^\//, "")
+    );
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    pin.mediaFiles.splice(index, 1);
+    await pin.save();
+
+    res.json({ success: true, message: "Media file removed successfully", mediaFiles: pin.mediaFiles });
+  } catch (err) {
+    console.error("❌ Remove media file error:", err);
+    res.status(500).json({ msg: "Server error", err });
+  }
+});
+
 module.exports = router;

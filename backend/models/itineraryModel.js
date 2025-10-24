@@ -21,6 +21,10 @@ const itinerarySchema = new mongoose.Schema(
       type: Boolean,
       default: false, // admin itineraries = true
     },
+    isArchived: {
+      type: Boolean,
+      default: false, // false = active, true = archived
+    },
   },
   { timestamps: true }
 );

@@ -6,6 +6,7 @@ const { verifyAdmin } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.get("/", controller.getFilters);
+router.get("/archived", verifyAdmin, controller.getArchivedFilters);
 
 // Serve filter image by ID
 router.get("/:id/image", controller.getFilterImage);
@@ -19,6 +20,12 @@ router.put(
   verifyAdmin,
   controller.updateFilter
 );
+
+// Archive and restore routes
+router.put("/:id/archive", verifyAdmin, controller.archiveFilter);
+router.put("/:id/restore", verifyAdmin, controller.restoreFilter);
+
+// Permanent delete
 router.delete("/:id", verifyAdmin, controller.deleteFilter);
 router.put("/reorder", verifyAdmin, controller.reorderFilters);
 

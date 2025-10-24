@@ -65,12 +65,21 @@ export default function ManageEmergency() {
     }
   };
 
+  const handleCancel = () => {
+    setShowForm(false);
+    setSelectedAgency(null);
+  };
+
   const handleEdit = (agency) => {
     setSelectedAgency(agency);
     setShowForm(true);
   };
 
   const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this emergency hotline? This action cannot be undone.")) {
+      return;
+    }
+    
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`/api/emergency/${id}`, {
@@ -122,24 +131,24 @@ export default function ManageEmergency() {
         }`}
       >
         {/* Page Header */}
-        <div className="w-full bg-white shadow-md px-8 py-4">
+        <div className="w-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.1)] border-b-2 border-gray-300 px-8 py-4">
           <h1 className="text-2xl text-gray-800 pr-20 pl-20 font-medium">
             Emergency Hotlines
           </h1>
         </div>
 
         {/* Main Section */}
-        <main className="p-6">
+        <main className="p-6 bg-gray-50 min-h-screen">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Hotline List */}
-            <div className="w-full lg:w-2/3 bg-white rounded-2xl shadow-lg p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-red-500">Hotlines</h2>
+            <div className="w-full lg:w-2/3 bg-white rounded-2xl shadow-lg p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Hotlines</h2>
                 <button
                   onClick={handleAddAgency}
-                  className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow transition"
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:shadow-lg hover:scale-105 text-white px-5 py-2.5 rounded-xl font-semibold transition-all"
                 >
-                  <Plus size={16} /> Add Agency
+                  <Plus size={18} /> Add Agency
                 </button>
               </div>
 
@@ -162,7 +171,7 @@ export default function ManageEmergency() {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className="flex justify-between items-start p-4 rounded-2xl bg-red-100 shadow hover:shadow-md transition"
+                              className="flex justify-between items-start p-5 rounded-xl bg-gray-50 border-2 border-gray-200 hover:border-red-300 hover:shadow-md transition-all cursor-move"
                             >
                               <div className="flex gap-3">
                                 {agency.icon ? (
@@ -189,7 +198,7 @@ export default function ManageEmergency() {
                                 )}
 
                                 <div>
-                                  <p className="font-semibold text-red-600 text-lg">
+                                  <p className="font-bold text-gray-800 text-lg mb-1">
                                     {agency.name}
                                   </p>
                                   {agency.contactChannels?.map(
@@ -215,15 +224,15 @@ export default function ManageEmergency() {
                               <div className="flex gap-2 mt-2 lg:mt-0">
                                 <button
                                   onClick={() => handleEdit(agency)}
-                                  className="flex items-center gap-1 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm shadow transition"
+                                  className="flex items-center gap-1 px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm font-medium shadow transition"
                                 >
-                                  <Edit size={14} /> Edit
+                                  <Edit size={16} /> Edit
                                 </button>
                                 <button
                                   onClick={() => handleDelete(agency._id)}
-                                  className="flex items-center gap-1 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm shadow transition"
+                                  className="flex items-center gap-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium shadow transition"
                                 >
-                                  <Trash2 size={14} /> Delete
+                                  <Trash2 size={16} /> Delete
                                 </button>
                               </div>
                             </div>
@@ -238,16 +247,22 @@ export default function ManageEmergency() {
             </div>
 
             {/* Form */}
-            <div className="w-full lg:w-1/3 bg-white rounded-2xl shadow-lg p-5 min-h-[480px] flex items-center justify-center">
+            <div className="w-full lg:w-1/3 bg-white rounded-2xl shadow-lg p-6 min-h-[480px] flex flex-col">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                {selectedAgency ? "Edit Agency" : "Add Agency"}
+              </h2>
               {showForm ? (
                 <CreateEmergency
                   onSave={handleSaveAgency}
+                  onCancel={handleCancel}
                   agencyToEdit={selectedAgency}
                 />
               ) : (
-                <p className="text-gray-400 italic">
-                  Select or add an agency to view the form
-                </p>
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-gray-400 italic text-center">
+                    Click "Add Agency" to create a new hotline
+                  </p>
+                </div>
               )}
             </div>
           </div>

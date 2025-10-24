@@ -3,7 +3,8 @@ import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
 import { useParams, useLocation } from "react-router-dom";
-import { Navigation, MapPin } from "lucide-react";
+import { Navigation, MapPin, WifiOff } from "lucide-react";
+import { guestApi } from "../../../utils/offlineAwareApi";
 
 import {
   MAPBOX_TOKEN,
@@ -54,10 +55,26 @@ export default function GuestItineraryMap() {
   const [showReviews, setShowReviews] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [isSimulatingHome, setIsSimulatingHome] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [fromCache, setFromCache] = useState(false);
 
   // Use sessionStorage for guest users
   const token = sessionStorage.getItem("token");
   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+  // Monitor online/offline status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -109,6 +126,10 @@ export default function GuestItineraryMap() {
           description: s.siteDescription || s.description || "",
           mediaType: s.mediaType || "image",
           mediaUrl: resolveUrl(s.mediaUrl),
+          mediaFiles: s.mediaFiles?.map((media) => ({
+            url: resolveUrl(media.url),
+            type: media.type,
+          })) || [],
           glbUrl: resolveUrl(s.glbUrl),
           arEnabled: s.arEnabled === true,
           arLink: s.arLink || "",

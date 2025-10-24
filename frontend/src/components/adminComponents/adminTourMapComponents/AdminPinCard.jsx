@@ -23,6 +23,8 @@ const AdminPinCard = ({
   handleFacadeUpload,
   handleRemoveFacade,
   handleRemoveGlb,
+  handleMediaUpload,
+  handleRemoveMedia,
   previewGlb,
   onClose,
 }) => {
@@ -124,52 +126,66 @@ const AdminPinCard = ({
             )}
           </div>
         </div>
-        {/* Media */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Media URL
+        {/* Media Files Upload */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Media Files (Images/Videos)
           </label>
-          <input
-            type="text"
-            value={pin.mediaUrl || ""}
-            onChange={(e) =>
-              updatePinField(selectedPinIndex, "mediaUrl", e.target.value)
-            }
-            className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            placeholder="https://example.com/media.jpg"
-          />
-          <div className="mt-3 flex items-center space-x-2">
-            <label className="text-sm text-gray-600">Media Type:</label>
-            <select
-              className="border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              value={pin.mediaType || "image"}
-              onChange={(e) =>
-                updatePinField(selectedPinIndex, "mediaType", e.target.value)
-              }
-            >
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-            </select>
-          </div>
-
-          {/* Media Preview */}
-          {pin.mediaUrl && (
-            <div className="mt-4 rounded-xl overflow-hidden border border-gray-200">
-              {pin.mediaType === "video" ? (
-                <video
-                  src={pin.mediaUrl}
-                  controls
-                  className="w-full h-48 object-cover"
+          <div className="flex flex-col space-y-3">
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={(e) => handleMediaUpload(e, selectedPinIndex)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+                <FontAwesomeIcon
+                  icon={faUpload}
+                  className="text-gray-400 text-lg mb-2"
                 />
-              ) : (
-                <img
-                  src={pin.mediaUrl}
-                  alt="Preview"
-                  className="w-full h-48 object-cover"
-                />
-              )}
+                <p className="text-sm text-gray-600">
+                  {pin.mediaFiles && pin.mediaFiles.length > 0
+                    ? "Add More Media Files"
+                    : "Upload Images/Videos"}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select multiple files (Max 10)
+                </p>
+              </div>
             </div>
-          )}
+            
+            {/* Media Files Preview */}
+            {pin.mediaFiles && pin.mediaFiles.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {pin.mediaFiles.map((media, index) => (
+                  <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
+                    {media.type === "video" ? (
+                      <video
+                        src={`${BACKEND_URL}${media.url}`}
+                        className="w-full h-32 object-cover"
+                        controls
+                      />
+                    ) : (
+                      <img
+                        src={`${BACKEND_URL}${media.url}`}
+                        alt={`Media ${index + 1}`}
+                        className="w-full h-32 object-cover"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMedia(selectedPinIndex, index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow hover:bg-red-600 transition"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         {/* 3D Model Section */}
         <div className="border-t border-gray-200 pt-4 mt-4">

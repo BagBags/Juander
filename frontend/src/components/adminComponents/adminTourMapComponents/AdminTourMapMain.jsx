@@ -374,6 +374,65 @@ export default function AdminTourMapMain() {
     notify("success", "3D model removed (click Save Changes to apply)");
   };
 
+  const handleMediaUpload = async (e, index) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    // Validate file sizes (50MB limit per file)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    const oversizedFiles = files.filter(file => file.size > maxSize);
+    
+    if (oversizedFiles.length > 0) {
+      const fileNames = oversizedFiles.map(f => f.name).join(", ");
+      notify("error", `File(s) too large: ${fileNames}. Maximum size is 50MB per file.`);
+      return;
+    }
+    
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("mediaFiles", file);
+    });
+
+    try {
+      notify("info", "Uploading files...");
+      const res = await axios.post(
+        "http://localhost:5000/api/pins/upload-media",
+        formData,
+        { 
+          headers: { "Content-Type": "multipart/form-data" },
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
+        }
+      );
+      const uploadedFiles = res.data.files;
+      
+      setPins((prev) =>
+        prev.map((p, i) => {
+          if (i === index) {
+            const existingFiles = p.mediaFiles || [];
+            return { ...p, mediaFiles: [...existingFiles, ...uploadedFiles] };
+          }
+          return p;
+        })
+      );
+      notify("success", `${uploadedFiles.length} file(s) uploaded (click Save Changes to apply)`);
+    } catch (err) {
+      console.error(err);
+      notify("error", err.response?.data?.message || "Media upload failed");
+    }
+  };
+
+  const handleRemoveMedia = (pinIndex, mediaIndex) => {
+    setPins((prev) => {
+      const updated = [...prev];
+      const mediaFiles = [...(updated[pinIndex].mediaFiles || [])];
+      mediaFiles.splice(mediaIndex, 1);
+      updated[pinIndex] = { ...updated[pinIndex], mediaFiles };
+      return updated;
+    });
+    notify("success", "Media removed (click Save Changes to apply)");
+  };
+
   return (
     <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
       <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -487,6 +546,8 @@ export default function AdminTourMapMain() {
               handleRemoveGlb={handleRemoveGlb}
               handleFacadeUpload={handleFacadeUpload}
               handleRemoveFacade={handleRemoveFacade}
+              handleMediaUpload={handleMediaUpload}
+              handleRemoveMedia={handleRemoveMedia}
               onClose={closePinCard}
             />
           </Suspense>
