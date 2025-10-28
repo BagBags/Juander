@@ -526,8 +526,8 @@ export default function AdminTourMapMain() {
           ))}
         </Map>
 
-        {/* Pin Card */}
-        {selectedPin !== null && pins[selectedPin] && (
+        {/* Pin Card - Hidden when moving pin */}
+        {selectedPin !== null && pins[selectedPin] && draggablePinIndex !== selectedPin && (
           <Suspense
             fallback={
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -659,28 +659,29 @@ export default function AdminTourMapMain() {
 
             {/* Move / Lock Pin */}
             {selectedPin !== null && (
-              <button
-                onClick={() =>
-                  setDraggablePinIndex(
-                    draggablePinIndex === selectedPin ? null : selectedPin
-                  )
-                }
-                title={
-                  draggablePinIndex === selectedPin ? "Lock Pin" : "Enable Move"
-                }
-                className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
-                  draggablePinIndex === selectedPin
-                    ? "bg-yellow-50 text-yellow-600"
-                    : "text-gray-700"
-                }`}
-              >
-                <FontAwesomeIcon
-                  icon={
-                    draggablePinIndex === selectedPin ? faLock : faHandPaper
+              <div className="bg-white rounded-lg shadow-md overflow-hidden relative z-[9999] w-full">
+                <button
+                  onClick={() =>
+                    setDraggablePinIndex(
+                      draggablePinIndex === selectedPin ? null : selectedPin
+                    )
                   }
-                />{" "}
-                {draggablePinIndex === selectedPin ? "Lock Pin" : "Move Pin"}
-              </button>
+                  title={
+                    draggablePinIndex === selectedPin ? "Lock Pin" : "Move Pin"
+                  }
+                  className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
+                    draggablePinIndex === selectedPin
+                      ? "bg-yellow-50 text-yellow-600"
+                      : "text-gray-700"
+                  }`}
+                >
+                  <FontAwesomeIcon
+                    icon={
+                      draggablePinIndex === selectedPin ? faLock : faHandPaper
+                    }
+                  />
+                </button>
+              </div>
             )}
           </div>
         </div>

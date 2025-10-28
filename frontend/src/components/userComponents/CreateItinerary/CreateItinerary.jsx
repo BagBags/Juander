@@ -643,13 +643,19 @@ function SiteCard({
       <h3 className="font-bold text-[#f04e37] text-sm mb-1 line-clamp-1">
         {site.siteName}
       </h3>
-      <p
-        className={`text-gray-600 text-xs mb-2 flex-grow ${
+      <div
+        className={`text-gray-600 text-xs mb-2 flex-grow space-y-1 ${
           !isExpanded ? "line-clamp-2" : ""
         }`}
       >
-        {site.siteDescription || "No description available"}
-      </p>
+        {site.siteDescription ? (
+          site.siteDescription.split('\n\n').map((paragraph, index) => (
+            <p key={index}>{paragraph.trim()}</p>
+          ))
+        ) : (
+          <p>No description available</p>
+        )}
+      </div>
       {site.siteDescription && site.siteDescription.length > 60 && (
         <button
           className="text-xs text-[#f04e37] font-semibold mb-2 text-left"
@@ -748,13 +754,19 @@ function ItineraryCard({
                 />
                 <div className="flex-1">
                   <p className="font-semibold">{site.siteName}</p>
-                  <p
-                    className={`text-xs text-gray-600 ${
+                  <div
+                    className={`text-xs text-gray-600 space-y-1 ${
                       !expandedDesc ? "line-clamp-2" : ""
                     }`}
                   >
-                    {site.siteDescription || "No description available"}
-                  </p>
+                    {site.siteDescription ? (
+                      site.siteDescription.split('\n\n').map((paragraph, index) => (
+                        <p key={index}>{paragraph.trim()}</p>
+                      ))
+                    ) : (
+                      <p>No description available</p>
+                    )}
+                  </div>
                   {site.siteDescription && site.siteDescription.length > 60 && (
                     <button
                       className="text-xs text-[#f04e37] font-semibold"

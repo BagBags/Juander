@@ -317,9 +317,15 @@ export default function TripArchivesPage() {
                         <Calendar className="w-4 h-4 text-[#f04e37]" />
                         <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
                       </div>
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {site.siteId?.siteDescription || "No description available"}
-                      </p>
+                      <div className="text-sm text-gray-600 line-clamp-2 space-y-1">
+                        {site.siteId?.siteDescription ? (
+                          site.siteId.siteDescription.split('\n\n').map((paragraph, index) => (
+                            <p key={index}>{paragraph.trim()}</p>
+                          ))
+                        ) : (
+                          <p>No description available</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

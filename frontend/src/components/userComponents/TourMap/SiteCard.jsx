@@ -85,9 +85,11 @@ const SiteCard = ({ pin, onClose, distance }) => {
             </button>
 
             {/* Description */}
-            <p className="text-base leading-relaxed text-gray-700 mb-4">
-              {pin.description}
-            </p>
+            <div className="text-base leading-relaxed text-gray-700 mb-4 space-y-3">
+              {pin.description?.split('\n\n').map((paragraph, index) => (
+                <p key={index}>{paragraph.trim()}</p>
+              ))}
+            </div>
 
             {/* Media Files Carousel */}
             {pin.mediaFiles && pin.mediaFiles.length > 0 && (
