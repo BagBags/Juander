@@ -10,7 +10,7 @@ import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
 import GlobalTTSButton from "../../GlobalTTSButton";
 
-export default function ProfilePage() {
+export default function ProfilePageBK() {
   const [currentUser, setCurrentUser] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [imageError, setImageError] = useState(false);
@@ -62,7 +62,6 @@ export default function ProfilePage() {
       const formData = new FormData();
       formData.append("profilePicture", file);
 
-      // get token from either sessionStorage or localStorage (like Birthday.jsx)
       const token =
         sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
@@ -70,7 +69,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // ✅ Use proxy-friendly relative path (/api)
       const res = await axios.post(
         "/api/auth/upload-profile-picture",
         formData,
@@ -82,7 +80,6 @@ export default function ProfilePage() {
         }
       );
 
-      // ✅ Append timestamp to force browser to fetch new image
       const newProfilePic = `${res.data.profilePicture}?t=${Date.now()}`;
 
       const updatedUser = {
@@ -110,25 +107,15 @@ export default function ProfilePage() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="min-h-screen bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
+      className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
-      {/* Decorative Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
-      </div>
-
       {/* Global TTS Button */}
       <GlobalTTSButton />
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-md">
         {/* Profile Card */}
-        <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
-          {/* Decorative circles */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          <div className="relative flex-shrink-0 w-28 h-28 z-10">
-            <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
+        <div className="mt-4 w-full bg-[#f04e37] rounded-2xl p-6 flex items-center text-white gap-6">
+          <div className="relative flex-shrink-0 w-24 h-24 md:w-28 md:h-28">
             {!imageError ? (
               <img
                 src={
@@ -145,7 +132,7 @@ export default function ProfilePage() {
                       "&background=ffffff&color=f04e37&size=200&bold=true"
                 }
                 alt="Profile"
-                className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
+                className="w-full h-full rounded-full border-4 border-white object-cover bg-white"
                 onError={(e) => {
                   console.log('Image failed to load, using fallback');
                   setImageError(true);
@@ -153,7 +140,7 @@ export default function ProfilePage() {
                 crossOrigin="anonymous"
               />
             ) : (
-              <div className="w-full h-full rounded-full border-4 border-white bg-white flex items-center justify-center text-[#f04e37] font-bold text-3xl shadow-2xl relative">
+              <div className="w-full h-full rounded-full border-4 border-white bg-gradient-to-br from-[#f04e37] to-orange-600 flex items-center justify-center text-white font-bold text-2xl">
                 {currentUser?.firstName?.[0]?.toUpperCase() || 'U'}
                 {currentUser?.lastName?.[0]?.toUpperCase() || ''}
               </div>
@@ -164,9 +151,9 @@ export default function ProfilePage() {
               <>
                 <label
                   htmlFor="profileUpload"
-                  className="absolute bottom-0 right-0 bg-white text-[#f04e37] p-3 rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform z-10"
+                  className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-white text-[#f04e37] p-2 rounded-full shadow cursor-pointer hover:bg-gray-100 transition"
                 >
-                  <FaCamera className="w-4 h-4" />
+                  <FaCamera className="w-3 h-3 md:w-4 md:h-4" />
                 </label>
                 <input
                   id="profileUpload"
@@ -179,39 +166,29 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="z-10">
-            <p className="text-sm text-white/80 mb-1">{t("welcome")}</p>
-            <h1 className="text-3xl font-bold leading-tight mb-1">
+          <div>
+            <p className="text-base">{t("welcome")}</p>
+            <h1 className="text-3xl font-bold leading-tight">
               {currentUser
                 ? `${currentUser.firstName} ${currentUser.lastName}`
                 : t("guest")}
             </h1>
-            {currentUser?.authProvider === "google" && (
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-xs">G</span>
-                </div>
-                <p className="text-xs text-white/80">Google Account</p>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Option Buttons */}
-        <div className="mt-6 w-full space-y-3">
+        <div className="mt-4 w-full space-y-2">
           {options.map((opt, index) => (
             <Link
               key={index}
               to={opt.to}
-              className="flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 group border border-gray-100"
+              className="flex items-center justify-between px-4 py-4 bg-[#f04e37] rounded-xl text-white hover:bg-[#b42c21] transition"
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
-                  <span className="text-xl">{opt.icon}</span>
-                </div>
-                <span className="font-semibold text-gray-800 group-hover:text-[#f04e37] transition-colors">{opt.label}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-lg">{opt.icon}</span>
+                <span>{opt.label}</span>
               </div>
-              <IoChevronForwardSharp className="text-gray-400 group-hover:text-[#f04e37] group-hover:translate-x-1 transition-all" />
+              <IoChevronForwardSharp />
             </Link>
           ))}
         </div>
@@ -219,14 +196,14 @@ export default function ProfilePage() {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="mt-8 w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
+          className="absolute bottom-30 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-[#f04e37] text-white font-semibold py-4 rounded-xl shadow-md hover:bg-[#b42c21] transition-colors"
         >
           {t("logout")}
         </button>
 
         {/* Footer */}
-        <p className="mt-12 mb-8 text-xs text-center text-gray-400">
-          © 2025 {t("intramurosAdmin")}. All rights reserved.
+        <p className="mt-80 md:mt-30 text-xs text-center text-[#cf3325] opacity-70">
+          ©2025 {t("intramurosAdmin")}
         </p>
       </div>
     </motion.div>

@@ -378,15 +378,24 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
           src={imageSrc}
           alt={itinerary.name}
           className="w-full h-48 object-cover flex-shrink-0"
-          onError={(e) =>
-            (e.currentTarget.src = "https://via.placeholder.com/192")
-          }
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling.style.display = 'flex';
+          }}
         />
-      ) : (
-        <div className="w-full h-48 bg-white flex flex-col items-center justify-center flex-shrink-0">
-          <MapPin className="w-16 h-16 text-[#f04e37]" />
+      ) : null}
+      
+      {/* Placeholder for missing images */}
+      <div 
+        className="w-full h-48 bg-gradient-to-br from-orange-50 to-red-50 flex flex-col items-center justify-center flex-shrink-0 border-b-2 border-[#f04e37]/10"
+        style={{ display: imageSrc ? 'none' : 'flex' }}
+      >
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
+          <MapPin className="w-20 h-20 text-[#f04e37] relative animate-pulse" strokeWidth={1.5} />
         </div>
-      )}
+        <p className="text-[#f04e37]/60 text-sm font-medium mt-3">Itinerary Image</p>
+      </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
         <h2 className="text-xl font-semibold text-red-600 mb-2 flex-shrink-0">

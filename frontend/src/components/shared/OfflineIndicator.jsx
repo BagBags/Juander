@@ -1,55 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { WifiOff, Wifi } from 'lucide-react';
+import { Wifi } from 'lucide-react';
 
 const OfflineIndicator = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showNotification, setShowNotification] = useState(false);
+  const [showOnlineNotification, setShowOnlineNotification] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => {
-      setIsOnline(true);
-      setShowNotification(true);
-      setTimeout(() => setShowNotification(false), 3000);
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-      setShowNotification(true);
+      setShowOnlineNotification(true);
+      setTimeout(() => setShowOnlineNotification(false), 3000);
     };
 
     window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
 
     return () => {
       window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  if (!showNotification && isOnline) return null;
+  if (!showOnlineNotification) return null;
 
   return (
     <div
-      className={`fixed top-4 left-1/2 -translate-x-1/2 z-[10000] px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-all duration-300 ${
-        isOnline
-          ? 'bg-green-500 text-white'
-          : 'bg-red-500 text-white'
-      }`}
+      className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[10000] px-4 py-3 rounded-lg shadow-lg flex items-center justify-center gap-3 bg-green-500 text-white transition-all duration-300"
       style={{
-        animation: showNotification ? 'slideDown 0.3s ease-out' : 'none',
+        animation: 'slideDown 0.3s ease-out',
       }}
     >
-      {isOnline ? (
-        <>
-          <Wifi className="w-5 h-5" />
-          <span className="font-medium">Back online!</span>
-        </>
-      ) : (
-        <>
-          <WifiOff className="w-5 h-5" />
-          <span className="font-medium">You're offline - Using cached content</span>
-        </>
-      )}
+      <Wifi className="w-5 h-5" />
+      <span className="font-medium">Back online!</span>
     </div>
   );
 };

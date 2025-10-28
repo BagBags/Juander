@@ -478,9 +478,10 @@ export default function AdminItineraryMain() {
                   {/* Thumbnail */}
                   <img
                     src={
-                      pin.mediaUrl ||
-                      pin.image ||
-                      "https://via.placeholder.com/80"
+                      // Get first image from mediaFiles (not video)
+                      pin.mediaFiles?.find(m => m.type === "image")?.url
+                        ? `http://localhost:5000${pin.mediaFiles.find(m => m.type === "image").url}`
+                        : pin.mediaUrl || pin.image || "https://via.placeholder.com/80"
                     }
                     alt={pin.siteName || pin.title}
                     className="object-cover rounded-xl flex-shrink-0"

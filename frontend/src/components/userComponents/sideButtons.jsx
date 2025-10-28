@@ -72,7 +72,7 @@ export default function SideButtons({ userType = "tourist" }) {
           >
             <div
               className="w-16 h-16 max-[375px]:w-12 max-[375px]:h-12
-                     sm:w-20 sm:h-20 lg:w-16 lg:h-16
+                     sm:w-20 sm:h-20 lg:w-20 lg:h-20
                      rounded-full bg-yellow-400 flex items-center justify-center
                      shadow-lg hover:shadow-yellow-300/50 hover:scale-110
                      transition-transform duration-300 ease-out"
@@ -80,13 +80,14 @@ export default function SideButtons({ userType = "tourist" }) {
               <img
                 src={icon.url}
                 alt={`icon-${index}`}
-                className="w-8 h-8 max-[375px]:w-6 max-[375px]:h-6 sm:w-10 sm:h-10 lg:w-8 lg:h-8 object-contain"
+                className="w-8 h-8 max-[375px]:w-6 max-[375px]:h-6 sm:w-10 sm:h-10 lg:w-10 lg:h-10 object-contain"
               />
             </div>
 
             <span
-              className="text-xs sm:text-sm lg:text-base text-white mt-2 
+              className="text-xs sm:text-sm lg:text-base text-white mt-2 font-semibold
                      opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.4)' }}
             >
               {t(icon.label)}
             </span>

@@ -159,6 +159,26 @@ export default function GuestItineraryMap() {
     return () => navigator.geolocation.clearWatch(id);
   }, []);
 
+  /** Check if route stays within Intramuros bounds */
+  const isRouteWithinBounds = (routeGeometry) => {
+    if (!mask?.geometry?.coordinates?.[0]) return true;
+
+    const bounds = mask.geometry.coordinates[0];
+    const minLng = Math.min(...bounds.map(c => c[0]));
+    const maxLng = Math.max(...bounds.map(c => c[0]));
+    const minLat = Math.min(...bounds.map(c => c[1]));
+    const maxLat = Math.max(...bounds.map(c => c[1]));
+
+    // Check if all route coordinates are within bounds
+    for (const coord of routeGeometry.coordinates) {
+      const [lng, lat] = coord;
+      if (lng < minLng || lng > maxLng || lat < minLat || lat > maxLat) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   /** Build route from user → current pin */
   const buildRoute = async (start, pin) => {
     if (!start || !pin) return;
@@ -178,6 +198,39 @@ export default function GuestItineraryMap() {
         .send();
 
       const routeData = resp.body.routes[0];
+      
+      // Check if route stays within Intramuros bounds
+      if (!isRouteWithinBounds(routeData.geometry)) {
+        console.warn('⚠️ Route goes outside Intramuros, using straight line');
+        // Use straight line instead
+        const straightLine = {
+          type: "LineString",
+          coordinates: [
+            [start.longitude, start.latitude],
+            [pin.longitude, pin.latitude],
+          ],
+        };
+        
+        // Calculate straight-line distance
+        const dx = pin.latitude - start.latitude;
+        const dy = pin.longitude - start.longitude;
+        const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
+        
+        setDistance(distance);
+        setEta(distance / 1.4); // walking speed ~1.4 m/s
+        setArrivalTime(new Date(Date.now() + (distance / 1.4) * 1000));
+        setRoute({
+          type: "Feature",
+          geometry: straightLine,
+          properties: {},
+        });
+        setSteps([{
+          maneuver: { instruction: `Walk directly to ${pin.siteName}`, location: [start.longitude, start.latitude] }
+        }]);
+        setCurrentStepIndex(0);
+        return;
+      }
+
       setDistance(routeData.distance);
       setEta(routeData.duration);
 
@@ -217,7 +270,7 @@ export default function GuestItineraryMap() {
     }
   }, [userLocation, pins, currentPinIndex]);
 
-  /** Detect arrival to auto-show preview card and mark as visited */
+  /** Detect arrival to auto-show preview card */
   useEffect(() => {
     if (!userLocation || pins.length === 0) return;
 
@@ -243,8 +296,7 @@ export default function GuestItineraryMap() {
       if (!manuallyDismissed) {
         setSelectedPin(pin);
       }
-      // Mark site as visited
-      markSiteAsVisited(pin);
+      // Don't auto-mark as visited - let user manually mark sites as done
     } else {
       setIsNearby(false);
     }
@@ -317,14 +369,20 @@ export default function GuestItineraryMap() {
     const currentPin = pins[currentPinIndex];
     if (!currentPin) return;
 
-    // Mark as visited
-    await markSiteAsVisited(currentPin);
+    // Immediately add to visited sites Set
+    setVisitedSites((prev) => new Set(prev).add(currentPin._id));
+
+    // Mark as visited in sessionStorage (async, but we don't wait)
+    markSiteAsVisited(currentPin);
+
+    // Close the modal first
+    setShowFullModal(false);
 
     // Show confirmation
     alert(`✅ Site "${currentPin.siteName}" marked as visited!`);
 
-    // Go to next site
-    goToNextStop();
+    // Go to next site, passing the site we just marked as done
+    goToNextStop(currentPin._id);
   };
 
   /** Handle location state trigger from Trip Archives */
@@ -345,45 +403,61 @@ export default function GuestItineraryMap() {
     }
   }, [selectedPin]);
 
-  /** Go to next stop */
-  /** Go to nearest next stop */
-  const goToNextStop = () => {
+  /** Go to next stop - follows itinerary order */
+  const goToNextStop = (justVisitedSiteId = null) => {
     if (!userLocation || pins.length === 0) return;
 
-    // Find nearest site that is NOT the current one
-    const remainingPins = pins.filter((_, i) => i !== currentPinIndex);
+    console.log('🔍 goToNextStop called');
+    console.log('Current index:', currentPinIndex);
+    console.log('Current visitedSites:', Array.from(visitedSites));
+    console.log('Just visited site ID:', justVisitedSiteId);
 
-    if (remainingPins.length === 0) {
+    // Find next unvisited site in itinerary order (after current index)
+    let nextPin = null;
+    let nextIndex = -1;
+
+    // First, try to find next unvisited site after current position
+    for (let i = currentPinIndex + 1; i < pins.length; i++) {
+      const pin = pins[i];
+      const isVisited = visitedSites.has(pin._id) || pin._id === justVisitedSiteId;
+      if (!isVisited) {
+        nextPin = pin;
+        nextIndex = i;
+        break;
+      }
+    }
+
+    // If no unvisited sites after current, wrap around and check from beginning
+    if (!nextPin) {
+      for (let i = 0; i < currentPinIndex; i++) {
+        const pin = pins[i];
+        const isVisited = visitedSites.has(pin._id) || pin._id === justVisitedSiteId;
+        if (!isVisited) {
+          nextPin = pin;
+          nextIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (!nextPin) {
       // No more sites left
+      console.log('🎉 All sites visited!');
+      alert('🎉 All sites visited! Great job!');
       setSelectedPin(null);
       setRoute(null);
       setSteps([]);
       return;
     }
 
-    // Compute nearest site by Haversine formula
-    const EARTH_RADIUS = 6371000;
-    const distances = remainingPins.map((p, idx) => {
-      const dLat = ((p.latitude - userLocation.latitude) * Math.PI) / 180;
-      const dLng = ((p.longitude - userLocation.longitude) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((userLocation.latitude * Math.PI) / 180) *
-          Math.cos((p.latitude * Math.PI) / 180) *
-          Math.sin(dLng / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return { pin: p, distance: EARTH_RADIUS * c };
-    });
+    console.log('✅ Next site (in order):', nextPin.siteName, 'at index', nextIndex);
 
-    distances.sort((a, b) => a.distance - b.distance);
-    const nearestPin = distances[0].pin;
-    const nearestIndex = pins.findIndex((p) => p._id === nearestPin._id);
+    // Update current site to next in order
+    setCurrentPinIndex(nextIndex);
+    setSelectedPin(nextPin);
+    setManuallyDismissed(false); // Reset manual dismissal for new site
 
-    // Update current site to nearest
-    setCurrentPinIndex(nearestIndex);
-    setSelectedPin(nearestPin);
-
-    if (userLocation) buildRoute(userLocation, nearestPin);
+    if (userLocation) buildRoute(userLocation, nextPin);
   };
 
   return (

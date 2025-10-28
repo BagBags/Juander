@@ -243,14 +243,17 @@ export default function Photobooth() {
     <div className="photobooth-container">
       <div className="phone-frame">
         {/* ✅ Back button + refresh */}
-        <div className="absolute top-0 left-0 w-full z-[200] p-4 flex items-center justify-between">
-          <BackHeader />
-          <button
-            className="refresh-btn"
-            onClick={() => window.location.reload()}
-          >
-            ↻
-          </button>
+        <div className="absolute top-0 left-0 w-full z-[200] bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
+          <div className="p-4 flex items-center justify-between">
+            <BackHeader />
+            <button
+              className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl hover:bg-white/30 transition-all shadow-lg"
+              onClick={() => window.location.reload()}
+              title="Refresh"
+            >
+              ↻
+            </button>
+          </div>
         </div>
 
         <div className="camera-view" style={{ display: showPreview ? 'none' : 'block' }}>

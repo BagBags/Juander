@@ -6,7 +6,6 @@ import axios from "axios";
 import { MAPBOX_TOKEN, INTRAMUROS_BOUNDS } from "./mapConfig";
 import { useApi } from "./useApi";
 import { useUserLocation } from "./useUserLocation";
-import MapLegend from "./MapLegend";
 import MapMarkers from "./MapMarkers";
 import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
@@ -78,12 +77,13 @@ export default function TourMap() {
 
     map.flyTo({
       center: [pinData.longitude, pinData.latitude],
-      zoom: 20.2,
+      zoom: 19.5, // Reduced from 20.2 for better performance
       bearing: 30,
-      pitch: 75,
-      speed: 1.2,
-      curve: 1.5,
+      pitch: 60, // Reduced from 75 for smoother rendering
+      speed: 1.8, // Increased from 1.2 for faster, smoother animation
+      curve: 1.2, // Reduced from 1.5 for more direct path
       essential: true,
+      easing: (t) => t * (2 - t), // Ease-out quad for smoother deceleration
     });
 
     map.once("moveend", () => callback?.());
@@ -164,9 +164,10 @@ export default function TourMap() {
         zoom: INITIAL_VIEW.zoom,
         bearing: INITIAL_VIEW.bearing,
         pitch: INITIAL_VIEW.pitch,
-        speed: 1.2,
-        curve: 1.5,
+        speed: 1.8, // Faster animation to reduce lag
+        curve: 1.2, // More direct path
         essential: true,
+        easing: (t) => t * (2 - t), // Smooth ease-out
       });
     }
   };
@@ -175,9 +176,6 @@ export default function TourMap() {
     <div className="relative w-full h-screen">
       {/* Global TTS Button */}
       <GlobalTTSButton />
-
-      {/* Legend */}
-      <MapLegend showLegend={showLegend} setShowLegend={setShowLegend} />
 
       {/* Offline Map Warning */}
       {!isOnline && (
@@ -192,13 +190,33 @@ export default function TourMap() {
       {/* Map */}
       <Map
         ref={mapRef}
-        initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5 }}
+        initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5, maxZoom: 20 }}
         maxBounds={INTRAMUROS_BOUNDS}
         mapboxAccessToken={MAPBOX_TOKEN}
         attributionControl={false}
-        onMove={(evt) => setViewState(evt.viewState)}
+        onMove={(evt) => {
+          // Clamp longitude and latitude to bounds with padding for web view
+          const [minLng, minLat] = INTRAMUROS_BOUNDS[0];
+          const [maxLng, maxLat] = INTRAMUROS_BOUNDS[1];
+          
+          // Add tighter padding for web view (wider screens)
+          const isWideScreen = window.innerWidth > 768;
+          const padding = isWideScreen ? 0.001 : 0; // Tighter bounds for desktop
+          
+          const clampedLng = Math.max(minLng + padding, Math.min(maxLng - padding, evt.viewState.longitude));
+          const clampedLat = Math.max(minLat + padding, Math.min(maxLat - padding, evt.viewState.latitude));
+          
+          setViewState({
+            ...evt.viewState,
+            longitude: clampedLng,
+            latitude: clampedLat,
+          });
+        }}
         mapStyle="mapbox://styles/mapbox/streets-v11"
         className="w-full h-full"
+        maxZoom={20}
+        minZoom={15.5}
+        renderWorldCopies={false}
         onError={(e) => {
           console.error('Map error:', e);
           if (!navigator.onLine) {
@@ -227,6 +245,8 @@ export default function TourMap() {
         selectedPin={selectedPin}
         distance={distance}
         onCloseCard={handleCloseCard}
+        showLegend={showLegend}
+        setShowLegend={setShowLegend}
       />
     </div>
   );

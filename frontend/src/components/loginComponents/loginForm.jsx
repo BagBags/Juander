@@ -303,12 +303,15 @@ export default function LoginForm({ toggleForm }) {
             onClick={() => {
               // Use sessionStorage for guest users
               sessionStorage.setItem("guest", "true");
+              sessionStorage.setItem("guestLanguage", "en"); // Set English as default for guests
               sessionStorage.removeItem("token");
               sessionStorage.removeItem("user");
               // Clear localStorage guest data if any
               localStorage.removeItem("guest");
               localStorage.removeItem("token");
               localStorage.removeItem("user");
+              // Set language to English immediately
+              i18n.changeLanguage("en");
               navigate("/GuestHomepage", { replace: true });
             }}
             className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95"

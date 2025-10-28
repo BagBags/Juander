@@ -5,19 +5,18 @@ import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
-import NotificationContainer from "./NotificationContainer";
 import { useTranslation } from "react-i18next"; // 👈 import hook
 import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
-import { WifiOff } from "lucide-react";
+import { WifiOff, X } from "lucide-react";
 
 export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
-  const [inactivePins, setInactivePins] = useState([]);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [fromCache, setFromCache] = useState(false);
+  const [showOfflineBanner, setShowOfflineBanner] = useState(true);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -80,33 +79,6 @@ export default function Homepage() {
     fetchUser();
   }, []);
 
-  // Fetch inactive pins
-  useEffect(() => {
-    const fetchInactivePins = async () => {
-      // Skip if offline - notifications require real-time data
-      if (!navigator.onLine) {
-        return;
-      }
-
-      try {
-        const res = await axios.get("http://localhost:5000/api/pins/inactive");
-        setInactivePins(res.data);
-      } catch (err) {
-        console.error("Error fetching inactive pins:", err);
-      }
-    };
-
-    fetchInactivePins();
-
-    // Optional: poll every 10 seconds (only when online)
-    const interval = setInterval(() => {
-      if (navigator.onLine) {
-        fetchInactivePins();
-      }
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div
       className="
@@ -121,35 +93,28 @@ export default function Homepage() {
       }}
     >
       {/* Offline Indicator */}
-      {isOffline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-orange-500 text-white px-4 py-3 text-center shadow-lg">
-          <div className="flex items-center justify-center gap-2">
+      {isOffline && showOfflineBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-4 py-3 shadow-lg">
+          <div className="flex items-center justify-center gap-2 relative">
             <WifiOff className="w-5 h-5" />
             <span className="font-semibold">
               You're offline - Some features may be limited
             </span>
+            <button
+              onClick={() => setShowOfflineBanner(false)}
+              className="absolute right-0 hover:bg-red-700 rounded p-1 transition-colors"
+              aria-label="Close banner"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}
 
-      {/* Cache Indicator */}
-      {fromCache && !isOffline && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-blue-500 text-white px-4 py-2 text-center text-sm">
-          📦 Showing cached data
-        </div>
-      )}
-
       {/* Logo Header */}
-      <div className={`w-full flex justify-center px-4 ${isOffline || fromCache ? 'mt-20' : 'mt-10'}`}>
+      <div className={`w-full flex justify-center px-4 ${isOffline && showOfflineBanner ? 'mt-20' : 'mt-10'}`}>
         <LogoHeader />
       </div>
-
-      <NotificationContainer
-        notifications={inactivePins}
-        removeNotification={(id) =>
-          setInactivePins((prev) => prev.filter((n) => n._id !== id))
-        }
-      />
 
       {/* Title */}
       <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10">

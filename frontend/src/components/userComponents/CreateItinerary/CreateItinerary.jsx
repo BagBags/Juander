@@ -430,6 +430,7 @@ export default function CreateItineraryPage() {
               descriptionToggles={descriptionToggles}
               toggleDescription={toggleDescription}
               toggleSelection={toggleSelection}
+              getFullImageUrl={getFullImageUrl}
             />
           </div>
         </div>
@@ -458,6 +459,7 @@ function SmoothScrollSiteList({
   descriptionToggles,
   toggleDescription,
   toggleSelection,
+  getFullImageUrl,
 }) {
   const scrollContainerRef = useRef(null);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -495,6 +497,7 @@ function SmoothScrollSiteList({
             isExpanded={descriptionToggles[site._id]}
             toggleDescription={toggleDescription}
             toggleSelection={toggleSelection}
+            getFullImageUrl={getFullImageUrl}
           />
         ))}
       </div>
@@ -512,6 +515,7 @@ function SiteCard({
   isExpanded,
   toggleDescription,
   toggleSelection,
+  getFullImageUrl,
 }) {
   const cardRef = useRef(null);
   const [isInView, setIsInView] = useState(false);
@@ -623,9 +627,18 @@ function SiteCard({
       }}
     >
       <img
-        src={site.mediaUrl || "https://via.placeholder.com/150"}
+        src={
+          site.mediaFiles?.find(m => m.type === "image")?.url
+            ? getFullImageUrl(site.mediaFiles.find(m => m.type === "image").url)
+            : site.mediaUrl 
+              ? getFullImageUrl(site.mediaUrl)
+              : "https://via.placeholder.com/150"
+        }
         alt={site.siteName}
         className="w-full h-24 object-cover rounded-lg mb-2"
+        onError={(e) => {
+          e.currentTarget.src = "https://via.placeholder.com/150";
+        }}
       />
       <h3 className="font-bold text-[#f04e37] text-sm mb-1 line-clamp-1">
         {site.siteName}
@@ -720,9 +733,18 @@ function ItineraryCard({
                 className="flex items-center gap-3 bg-gray-100 p-2 rounded-lg"
               >
                 <img
-                  src={site.mediaUrl || "https://via.placeholder.com/50"}
+                  src={
+                    site.mediaFiles?.find(m => m.type === "image")?.url
+                      ? getFullImageUrl(site.mediaFiles.find(m => m.type === "image").url)
+                      : site.mediaUrl 
+                        ? getFullImageUrl(site.mediaUrl)
+                        : "https://via.placeholder.com/50"
+                  }
                   alt={site.siteName}
                   className="w-10 h-10 rounded object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://via.placeholder.com/50";
+                  }}
                 />
                 <div className="flex-1">
                   <p className="font-semibold">{site.siteName}</p>

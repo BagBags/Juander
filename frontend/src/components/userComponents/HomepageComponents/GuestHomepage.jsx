@@ -2,15 +2,14 @@ import { React, useState, useEffect } from "react";
 import LogoHeader from "./logoHeader";
 import { useNavigate } from "react-router-dom";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
-import NotificationContainer from "./NotificationContainer";
 import SideButtons from "../sideButtons";
-import axios from "axios";
 import { useTranslation } from "react-i18next";
+import GlobalTTSButton from "../../GlobalTTSButton";
+import ttsService from "../../../utils/textToSpeech";
 
 export default function GuestHomepage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const [inactivePins, setInactivePins] = useState([]);
 
   // Load guest language preference on mount
   useEffect(() => {
@@ -20,23 +19,10 @@ export default function GuestHomepage() {
     }
   }, [i18n]);
 
-  // Fetch inactive pins
+  // Announce page load with TTS
   useEffect(() => {
-    const fetchInactivePins = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/pins/inactive");
-        setInactivePins(res.data);
-      } catch (err) {
-        console.error("Error fetching inactive pins:", err);
-      }
-    };
-
-    fetchInactivePins();
-
-    // Optional: poll every 10 seconds
-    const interval = setInterval(fetchInactivePins, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    ttsService.speak(t('tts_welcome'));
+  }, [t]);
 
   return (
     <div
@@ -50,13 +36,6 @@ export default function GuestHomepage() {
       <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
       </div>
-
-      <NotificationContainer
-        notifications={inactivePins}
-        removeNotification={(id) =>
-          setInactivePins((prev) => prev.filter((n) => n._id !== id))
-        }
-      />
 
       {/* Title */}
       <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10">
@@ -104,6 +83,9 @@ export default function GuestHomepage() {
 
       {/* Floating Chatbot (Juan Mascot) */}
       <FloatingChatbot />
+      
+      {/* Global TTS Button */}
+      <GlobalTTSButton />
     </div>
   );
 }

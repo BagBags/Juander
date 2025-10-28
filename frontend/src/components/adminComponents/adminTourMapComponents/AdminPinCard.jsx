@@ -1,7 +1,7 @@
 // components/adminComponents/AdminPinCard.jsx
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faCheck, faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
 const BACKEND_URL = "http://localhost:5000";
@@ -29,6 +29,43 @@ const AdminPinCard = ({
   onClose,
 }) => {
   if (!pin) return null;
+
+  // Initialize description sections from existing siteDescription
+  const [descriptionSections, setDescriptionSections] = useState([]);
+
+  useEffect(() => {
+    // Split existing description into sections (by double line breaks or keep as single section)
+    if (pin.siteDescription) {
+      const sections = pin.siteDescription.split('\n\n').filter(s => s.trim());
+      setDescriptionSections(sections.length > 0 ? sections : [pin.siteDescription]);
+    } else {
+      setDescriptionSections(['']);
+    }
+  }, [pin._id]); // Only reset when pin changes
+
+  // Add a new description section
+  const addDescriptionSection = () => {
+    setDescriptionSections([...descriptionSections, '']);
+  };
+
+  // Remove a description section
+  const removeDescriptionSection = (index) => {
+    if (descriptionSections.length > 1) {
+      const newSections = descriptionSections.filter((_, i) => i !== index);
+      setDescriptionSections(newSections);
+      // Update the pin field immediately
+      updatePinField(selectedPinIndex, 'siteDescription', newSections.join('\n\n'));
+    }
+  };
+
+  // Update a specific section
+  const updateDescriptionSection = (index, value) => {
+    const newSections = [...descriptionSections];
+    newSections[index] = value;
+    setDescriptionSections(newSections);
+    // Compile all sections into one paragraph and update pin
+    updatePinField(selectedPinIndex, 'siteDescription', newSections.join('\n\n'));
+  };
 
   return (
     <div className="absolute top-6 left-6 w-[380px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
@@ -64,24 +101,54 @@ const AdminPinCard = ({
             required
           />
         </div>
-        {/* Site Description */}
+        {/* Site Description - Multiple Sections */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Site Description
-          </label>
-          <textarea
-            value={pin.siteDescription || ""}
-            onChange={(e) =>
-              updatePinField(
-                selectedPinIndex,
-                "siteDescription",
-                e.target.value
-              )
-            }
-            className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            rows="3"
-            placeholder="Enter site description"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Site Description
+            </label>
+            <button
+              type="button"
+              onClick={addDescriptionSection}
+              className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <FontAwesomeIcon icon={faPlus} className="text-xs" />
+              Add Section
+            </button>
+          </div>
+          <div className="space-y-3">
+            {descriptionSections.map((section, index) => (
+              <div key={index} className="relative">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Section {index + 1}
+                    </label>
+                    <textarea
+                      value={section}
+                      onChange={(e) => updateDescriptionSection(index, e.target.value)}
+                      className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      rows="3"
+                      placeholder={`Enter description section ${index + 1}`}
+                    />
+                  </div>
+                  {descriptionSections.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDescriptionSection(index)}
+                      className="mt-6 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      title="Remove section"
+                    >
+                      <FontAwesomeIcon icon={faMinus} className="text-xs" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Multiple sections will be combined into one paragraph when saved.
+          </p>
         </div>
         {/* 2D Facade Landmark */}
         <div className="border-t border-gray-200 pt-4 mt-4">

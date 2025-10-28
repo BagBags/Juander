@@ -5,7 +5,7 @@ import BackHeader from "../BackButton"; // ✅ import BackHeader
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Filter } from "bad-words";
-import { Camera, X } from "lucide-react";
+import { Camera, X, MapPin, Calendar, Star as StarIcon } from "lucide-react";
 
 const filter = new Filter();
 filter.addWords(
@@ -48,6 +48,8 @@ export default function TripArchivesPage() {
   const [loading, setLoading] = useState(true);
   const [reviewPhotos, setReviewPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
+  const [showAllArchives, setShowAllArchives] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -68,12 +70,27 @@ export default function TripArchivesPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [visitedRes, reviewsRes] = await Promise.all([
+        const [visitedRes, reviewsRes, pinsRes] = await Promise.all([
           axios.get(`${BACKEND_URL}/api/visited-sites`, config),
           axios.get(`${BACKEND_URL}/api/reviews`, config),
+          axios.get(`${BACKEND_URL}/api/pins`), // Fetch all pins to get media URLs
         ]);
 
-        setVisitedSites(visitedRes.data);
+        // Enrich visited sites with pin media data
+        const pins = pinsRes.data;
+        const enrichedSites = visitedRes.data.map(site => {
+          const pin = pins.find(p => p._id === site.siteId?._id);
+          return {
+            ...site,
+            siteId: {
+              ...site.siteId,
+              mediaUrl: pin?.mediaUrl || site.siteId?.mediaUrl,
+              mediaFiles: pin?.mediaFiles || site.siteId?.mediaFiles,
+            }
+          };
+        });
+
+        setVisitedSites(enrichedSites);
         setReviews(reviewsRes.data);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -111,7 +128,7 @@ export default function TripArchivesPage() {
     
     // Check if review already exists for this site
     const existingReview = reviews.find(
-      (r) => r.siteId._id === site.siteId._id && r.itineraryId._id === site.itineraryId._id
+      (r) => r.siteId?._id === site.siteId?._id && r.itineraryId?._id === site.itineraryId?._id
     );
     
     if (existingReview) {
@@ -167,8 +184,8 @@ export default function TripArchivesPage() {
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append("itineraryId", selectedSite.itineraryId._id);
-      formData.append("siteId", selectedSite.siteId._id);
+      formData.append("itineraryId", selectedSite.itineraryId?._id || selectedSite.itineraryId);
+      formData.append("siteId", selectedSite.siteId?._id || selectedSite.siteId);
       formData.append("rating", rating);
       formData.append("reviewText", reviewText);
       
@@ -192,8 +209,8 @@ export default function TripArchivesPage() {
       const updatedReviews = reviews.filter(
         (r) =>
           !(
-            r.siteId._id === selectedSite.siteId._id &&
-            r.itineraryId._id === selectedSite.itineraryId._id
+            r.siteId?._id === selectedSite.siteId?._id &&
+            r.itineraryId?._id === selectedSite.itineraryId?._id
           )
       );
       setReviews([response.data.review, ...updatedReviews]);
@@ -231,123 +248,202 @@ export default function TripArchivesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f04e37] flex flex-col items-center text-sm relative px-4 md:px-0 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col items-center text-sm relative">
+      {/* Decorative Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
+      </div>
+
       {/* ✅ Sticky back header (matching profile layout) */}
-      <div className="pt-4 z-10 sticky top-0 bg-[#f04e37] w-full">
+      <div className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md shadow-sm px-4 md:px-0 pb-2 pt-4">
         <BackHeader title="Trip Archives" />
       </div>
 
       <MainLayout includeSideButtons={false}>
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-4xl relative z-10">
           {/* Page content */}
-          <div className="mt-4 text-center">
-            {/* Trip Archives */}
-            <h2 className="text-3xl font-bold mb-6">Trip Archives</h2>
+          <div className="mt-4">
+            {/* Trip Archives Header */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#f04e37] to-orange-600 rounded-full shadow-lg mb-4">
+                <MapPin className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Trip Archives</h2>
+              <p className="text-gray-600 text-sm">Your journey through Intramuros</p>
+            </div>
             {loading ? (
-              <p className="text-white">Loading visited sites...</p>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-16 h-16 border-4 border-[#f04e37]/30 border-t-[#f04e37] rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-600 text-lg">Loading visited sites...</p>
+              </div>
             ) : visitedSites.length === 0 ? (
-              <p className="text-white">No visited sites yet. Start exploring!</p>
+              <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-3xl border border-gray-200">
+                <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">No visited sites yet. Start exploring!</p>
+              </div>
             ) : (
-              <div className="flex flex-col items-center gap-6">
-                {visitedSites.map((site, index) => (
+              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(showAllArchives ? visitedSites : visitedSites.slice(0, 4)).map((site, index) => (
                   <div
                     key={index}
-                    className="bg-[#f4cc27] text-black rounded-2xl shadow-md flex gap-4 p-4 items-center w-full"
+                    className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02]"
                   >
-                    <img
-                      src={
-                        resolveUrl(site.siteId?.mediaUrl) ||
-                        "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80"
-                      }
-                      alt={site.siteId?.siteName || "Site"}
-                      className="w-24 h-24 rounded-lg object-cover flex-shrink-0"
-                    />
-                    <div className="text-left flex-1">
-                      <h3 className="text-lg font-bold text-[#f04e37]">
-                        {site.siteId?.siteName || "Unknown Site"}
-                      </h3>
-                      <p className="text-sm text-gray-700">
-                        {site.itineraryId?.name || "Unknown Itinerary"}
-                      </p>
-                      <p className="text-xs mt-1 text-gray-600 line-clamp-2">
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={
+                          site.siteId?.mediaFiles?.find(m => m.type === "image")?.url
+                            ? resolveUrl(site.siteId.mediaFiles.find(m => m.type === "image").url)
+                            : site.siteId?.mediaUrl
+                              ? resolveUrl(site.siteId.mediaUrl)
+                              : "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80"
+                        }
+                        alt={site.siteId?.siteName || "Site"}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        onError={(e) => {
+                          e.currentTarget.src = "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80";
+                        }}
+                      />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                            {site.siteId?.siteName || "Unknown Site"}
+                          </h3>
+                        </div>
+                      </div>
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                        <Calendar className="w-4 h-4 text-[#f04e37]" />
+                        <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">
                         {site.siteId?.siteDescription || "No description available"}
                       </p>
-                   
                     </div>
                   </div>
                 ))}
               </div>
+              
+              {/* Show More/Less Button */}
+              {visitedSites.length > 4 && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    onClick={() => setShowAllArchives(!showAllArchives)}
+                    className="px-8 py-3 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    {showAllArchives ? (
+                      <>
+                        <span>Show Less</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <span>Show More ({visitedSites.length - 4} more)</span>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+              </>
             )}
 
             {/* Manage Reviews */}
-            <h2 className="text-3xl font-bold mt-10 mb-6">Manage Reviews</h2>
+            <div className="text-center mt-16 mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-lg mb-4">
+                <StarIcon className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Manage Reviews</h2>
+              <p className="text-gray-600 text-sm">Share your experiences with others</p>
+            </div>
             {loading ? (
-              <p className="text-white">Loading reviews...</p>
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-16 h-16 border-4 border-[#f04e37]/30 border-t-[#f04e37] rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-600 text-lg">Loading reviews...</p>
+              </div>
             ) : (
               <div className="flex flex-col items-center gap-6">
                 {visitedSites.length === 0 ? (
-                  <p className="text-white">Visit sites to leave reviews!</p>
+                  <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-3xl border border-gray-200">
+                    <StarIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Visit sites to leave reviews!</p>
+                  </div>
                 ) : (
                   <>
                     {/* Show visited sites for review */}
-                    {visitedSites.map((site, index) => {
+                    {(showAllReviews ? visitedSites : visitedSites.slice(0, 4)).map((site, index) => {
                       const existingReview = reviews.find(
                         (r) =>
-                          r.siteId._id === site.siteId._id &&
-                          r.itineraryId._id === site.itineraryId._id
+                          r.siteId?._id === site.siteId?._id &&
+                          r.itineraryId?._id === site.itineraryId?._id
                       );
 
                       return (
                         <div
                           key={index}
-                          className="bg-white text-black rounded-2xl shadow-md p-4 flex gap-4 items-start w-full"
+                          className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 flex gap-5 items-start w-full border border-gray-100 group"
                         >
-                          <img
-                            src={
-                              resolveUrl(site.siteId?.mediaUrl) ||
-                              "https://images.unsplash.com/photo-1549640376-1957636d1ab0?w=400&q=80"
-                            }
-                            alt={site.siteId?.siteName || "Site"}
-                            className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                          />
+                          <div className="relative flex-shrink-0">
+                            <div className="absolute inset-0 bg-[#f04e37]/10 rounded-2xl blur-md"></div>
+                            <img
+                              src={
+                                site.siteId?.mediaFiles?.find(m => m.type === "image")?.url
+                                  ? resolveUrl(site.siteId.mediaFiles.find(m => m.type === "image").url)
+                                  : site.siteId?.mediaUrl
+                                    ? resolveUrl(site.siteId.mediaUrl)
+                                    : "https://images.unsplash.com/photo-1549640376-1957636d1ab0?w=400&q=80"
+                              }
+                              alt={site.siteId?.siteName || "Site"}
+                              className="w-24 h-24 rounded-2xl object-cover border-2 border-white shadow-md relative"
+                              onError={(e) => {
+                                e.currentTarget.src = "https://images.unsplash.com/photo-1549640376-1957636d1ab0?w=400&q=80";
+                              }}
+                            />
+                          </div>
                           <div className="flex-1 text-left">
-                            <h3 className="font-bold text-[#f04e37]">
+                            <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#f04e37] transition-colors">
                               {site.siteId?.siteName || "Unknown Site"}
                             </h3>
-                            <p className="text-xs text-gray-600">
-                              Visited: {new Date(site.visitedAt).toLocaleDateString()}
-                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                              <Calendar className="w-3 h-3" />
+                              <span>Visited: {new Date(site.visitedAt).toLocaleDateString()}</span>
+                            </div>
                             {existingReview ? (
                               <>
                                 <div className="flex items-center gap-1 my-1">
                                   {renderStars(existingReview.rating)}
                                 </div>
-                                <p className="text-xs text-gray-500 line-clamp-3">
+                                <p className="text-sm text-gray-600 line-clamp-3 mt-2">
                                   {existingReview.reviewText || "No review text"}
                                 </p>
                                 {/* Display review photos */}
                                 {existingReview.photos && existingReview.photos.length > 0 && (
-                                  <div className="flex gap-1 mt-2 overflow-x-auto">
+                                  <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
                                     {existingReview.photos.map((photo, idx) => (
                                       <img
                                         key={idx}
                                         src={resolveUrl(photo)}
                                         alt={`Review photo ${idx + 1}`}
-                                        className="w-16 h-16 object-cover rounded border border-gray-300"
+                                        className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm hover:scale-110 transition-transform"
                                       />
                                     ))}
                                   </div>
                                 )}
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex gap-3 mt-4">
                                   <button
                                     onClick={() => handleOpenReviewModal(site)}
-                                    className="text-xs text-blue-600 hover:underline"
+                                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
                                   >
                                     Edit Review
                                   </button>
                                   <button
                                     onClick={() => handleDeleteReview(existingReview._id)}
-                                    className="text-xs text-red-600 hover:underline"
+                                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
                                   >
                                     Delete Review
                                   </button>
@@ -356,7 +452,7 @@ export default function TripArchivesPage() {
                             ) : (
                               <button
                                 onClick={() => handleOpenReviewModal(site)}
-                                className="mt-2 bg-[#f04e37] text-white px-4 py-1 rounded-lg text-xs font-semibold hover:bg-[#d43e2a] transition"
+                                className="mt-3 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
                               >
                                 Write Review
                               </button>
@@ -365,6 +461,32 @@ export default function TripArchivesPage() {
                         </div>
                       );
                     })}
+                    
+                    {/* Show More/Less Button for Reviews */}
+                    {visitedSites.length > 4 && (
+                      <div className="flex justify-center mt-8 w-full">
+                        <button
+                          onClick={() => setShowAllReviews(!showAllReviews)}
+                          className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                        >
+                          {showAllReviews ? (
+                            <>
+                              <span>Show Less</span>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              <span>Show More ({visitedSites.length - 4} more)</span>
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -375,47 +497,55 @@ export default function TripArchivesPage() {
 
       {/* Review Modal */}
       {showReviewModal && selectedSite && (
-        <div className="fixed inset-0 bg-[#f04e37] bg-opacity-95 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-            <h3 className="text-xl font-bold text-[#f04e37] mb-4">
-              Review: {selectedSite.siteId?.siteName}
-            </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-200">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
+              <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-orange-600 rounded-full flex items-center justify-center">
+                <StarIcon className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">
+                  Review: {selectedSite.siteId?.siteName}
+                </h3>
+                <p className="text-xs text-gray-500">Share your experience</p>
+              </div>
+            </div>
             
-            <div className="mb-4">
-              <p className="text-sm text-gray-700 mb-2">Rating:</p>
-              <div className="flex gap-1">
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Rating:</p>
+              <div className="flex gap-2">
                 {renderStars(rating, true, setHoverRating, setRating)}
               </div>
             </div>
 
-            <div className="mb-4">
-              <p className="text-sm text-gray-700 mb-2">Review (optional):</p>
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Review (optional):</p>
               <textarea
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
-                className="w-full border-2 border-gray-300 rounded-lg p-3 text-sm bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                className="w-full border-2 border-gray-200 rounded-2xl p-4 text-sm bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f04e37] focus:border-transparent transition-all"
                 rows="4"
                 placeholder="Share your experience..."
               />
             </div>
 
             {/* Photo Upload Section */}
-            <div className="mb-4">
-              <p className="text-sm text-gray-700 mb-2">Add Photos (optional, max 5):</p>
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Add Photos (optional, max 5):</p>
               
               {/* Photo Preview Grid */}
               {photoPreviewUrls.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   {photoPreviewUrls.map((url, index) => (
                     <div key={index} className="relative group">
                       <img
                         src={url}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-300"
+                        className="w-full h-24 object-cover rounded-xl border-2 border-gray-200 shadow-sm"
                       />
                       <button
                         onClick={() => handleRemovePhoto(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
                         type="button"
                       >
                         <X className="w-3 h-3" />
@@ -427,9 +557,11 @@ export default function TripArchivesPage() {
 
               {/* Upload Button */}
               {photoPreviewUrls.length < 5 && (
-                <label className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:border-[#f04e37] hover:bg-gray-50 transition">
-                  <Camera className="w-5 h-5 text-gray-500" />
-                  <span className="text-sm text-gray-600">
+                <label className="flex items-center justify-center gap-3 w-full border-2 border-dashed border-gray-300 rounded-2xl p-5 cursor-pointer hover:border-[#f04e37] hover:bg-orange-50 transition-all group">
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-[#f04e37]/10 transition-colors">
+                    <Camera className="w-5 h-5 text-gray-500 group-hover:text-[#f04e37] transition-colors" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-600 group-hover:text-[#f04e37] transition-colors">
                     {photoPreviewUrls.length === 0 ? "Upload Photos" : `Add More (${5 - photoPreviewUrls.length} left)`}
                   </span>
                   <input
@@ -443,10 +575,10 @@ export default function TripArchivesPage() {
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4 mt-8">
               <button
                 onClick={handleSubmitReview}
-                className="flex-1 bg-[#f04e37] text-white py-2 rounded-lg font-semibold hover:bg-[#d43e2a] transition"
+                className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
               >
                 Submit Review
               </button>
@@ -459,7 +591,7 @@ export default function TripArchivesPage() {
                   setReviewPhotos([]);
                   setPhotoPreviewUrls([]);
                 }}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-400 transition"
+                className="flex-1 bg-gray-200 text-gray-700 py-3.5 rounded-xl font-bold hover:bg-gray-300 hover:scale-105 active:scale-95 transition-all"
               >
                 Cancel
               </button>
@@ -468,9 +600,11 @@ export default function TripArchivesPage() {
         </div>
       )}
 
-      <p className="mt-10 text-xs text-center text-white opacity-70">
-        ©2025 Intramuros Administration
-      </p>
+      <div className="mt-auto py-8 text-center relative z-10">
+        <p className="text-xs text-gray-400">
+          © 2025 Intramuros Administration. All rights reserved.
+        </p>
+      </div>
     </div>
   );
 }

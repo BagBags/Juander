@@ -1,7 +1,7 @@
 // GuestItineraryMain.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
 
 export default function GuestItineraryMain() {
@@ -213,14 +213,23 @@ function ItineraryCard({ itinerary, navigate }) {
           alt={itinerary.name}
           className="w-full h-48 object-cover flex-shrink-0"
           onError={(e) => {
-            e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling.style.display = 'flex';
           }}
         />
-      ) : (
-        <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-400 flex-shrink-0">
-          No Image
+      ) : null}
+      
+      {/* Placeholder for missing images */}
+      <div 
+        className="w-full h-48 bg-gradient-to-br from-orange-50 to-red-50 flex flex-col items-center justify-center flex-shrink-0 border-b-2 border-[#f04e37]/10"
+        style={{ display: imageSrc ? 'none' : 'flex' }}
+      >
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
+          <MapPin className="w-20 h-20 text-[#f04e37] relative animate-pulse" strokeWidth={1.5} />
         </div>
-      )}
+        <p className="text-[#f04e37]/60 text-sm font-medium mt-3">Itinerary Image</p>
+      </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
         <h2 className="text-xl font-semibold text-red-600 mb-2 flex-shrink-0">
