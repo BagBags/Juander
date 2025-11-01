@@ -79,7 +79,7 @@ export default function GuestItineraryMap() {
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
     if (!url) return "";
-    const BACKEND_URL = "http://localhost:5000";
+    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
     return url.startsWith("http")
       ? url
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
@@ -89,7 +89,7 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     const fetchMask = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/mask");
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/mask`);
         if (!data?.geometry) return;
 
         const feature = {
@@ -112,7 +112,7 @@ export default function GuestItineraryMap() {
     const fetchItinerary = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/itineraries/guest/${itineraryId}`
+          `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/guest/${itineraryId}`
         );
 
         const sites = (res.data.sites || []).filter(
@@ -352,7 +352,7 @@ export default function GuestItineraryMap() {
     try {
       setReviewsLoading(true);
       const response = await axios.get(
-        `http://localhost:5000/api/reviews/site/${siteId}`
+        `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/reviews/site/${siteId}`
       );
       setSiteReviews(response.data.reviews || []);
       setShowReviews(true);

@@ -41,9 +41,19 @@ export default function ManagePhotobooth() {
   // Fetch active filters
   const fetchFilters = async () => {
     try {
-      const res = await axios.get("/api/photobooth/filters", axiosConfig);
-      setFilters(res.data);
-      setSortedFilters(res.data);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`, axiosConfig);
+      const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+      
+      // Resolve image URLs
+      const filtersWithUrls = res.data.map(f => ({
+        ...f,
+        image: f.image && !f.image.startsWith('http') 
+          ? `${BACKEND_URL}${f.image.startsWith('/') ? '' : '/'}${f.image}`
+          : f.image
+      }));
+      
+      setFilters(filtersWithUrls);
+      setSortedFilters(filtersWithUrls);
     } catch (err) {
       console.error(err);
     }
@@ -52,9 +62,19 @@ export default function ManagePhotobooth() {
   // Fetch archived filters
   const fetchArchivedFilters = async () => {
     try {
-      const res = await axios.get("/api/photobooth/filters/archived", axiosConfig);
-      setArchivedFilters(res.data);
-      setSortedArchivedFilters(res.data);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/archived`, axiosConfig);
+      const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+      
+      // Resolve image URLs
+      const filtersWithUrls = res.data.map(f => ({
+        ...f,
+        image: f.image && !f.image.startsWith('http') 
+          ? `${BACKEND_URL}${f.image.startsWith('/') ? '' : '/'}${f.image}`
+          : f.image
+      }));
+      
+      setArchivedFilters(filtersWithUrls);
+      setSortedArchivedFilters(filtersWithUrls);
     } catch (err) {
       console.error(err);
     }
@@ -135,13 +155,13 @@ export default function ManagePhotobooth() {
 
       if (editingId) {
         await axios.put(
-          `/api/photobooth/filters/${editingId}`,
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${editingId}`,
           formData,
           axiosMultipartConfig
         );
       } else {
         await axios.post(
-          "/api/photobooth/filters",
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
           formData,
           axiosMultipartConfig
         );
@@ -175,7 +195,7 @@ export default function ManagePhotobooth() {
   const handleArchive = async (id) => {
     if (!window.confirm("Are you sure you want to archive this filter?")) return;
     try {
-      await axios.put(`/api/photobooth/filters/${id}/archive`, {}, axiosConfig);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}/archive`, {}, axiosConfig);
       fetchFilters();
       fetchArchivedFilters();
     } catch (err) {
@@ -186,7 +206,7 @@ export default function ManagePhotobooth() {
   const handleRestore = async (id) => {
     if (!window.confirm("Are you sure you want to restore this filter?")) return;
     try {
-      await axios.put(`/api/photobooth/filters/${id}/restore`, {}, axiosConfig);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}/restore`, {}, axiosConfig);
       fetchFilters();
       fetchArchivedFilters();
     } catch (err) {
@@ -197,7 +217,7 @@ export default function ManagePhotobooth() {
   const handlePermanentDelete = async (id) => {
     if (!window.confirm("⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?")) return;
     try {
-      await axios.delete(`/api/photobooth/filters/${id}`, axiosConfig);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}`, axiosConfig);
       fetchArchivedFilters();
     } catch (err) {
       console.error(err);

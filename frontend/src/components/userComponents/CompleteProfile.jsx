@@ -54,7 +54,7 @@ export default function CompleteProfile() {
           return;
         }
         // Save name immediately (include email as required by endpoint)
-        await axios.put("http://localhost:5000/api/auth/account", {
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`, {
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
           email: currentUser.email, // Required by endpoint
@@ -78,7 +78,7 @@ export default function CompleteProfile() {
           year: parseInt(formData.birthday.year, 10),
         };
         console.log("Sending birthday payload:", birthdayPayload);
-        await axios.post("http://localhost:5000/api/auth/birthday", birthdayPayload, {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/birthday`, birthdayPayload, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -90,7 +90,7 @@ export default function CompleteProfile() {
           return;
         }
         // Save gender immediately
-        await axios.post("http://localhost:5000/api/auth/gender", { gender: formData.gender }, {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/gender`, { gender: formData.gender }, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -102,17 +102,17 @@ export default function CompleteProfile() {
           return;
         }
         // Save country and complete profile
-        await axios.post("http://localhost:5000/api/auth/country", { country: formData.country }, {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/country`, { country: formData.country }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         // Mark profile as completed
-        await axios.post("http://localhost:5000/api/auth/complete-profile", {}, {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/complete-profile`, {}, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
         // Fetch updated user data
-        const userRes = await axios.get("http://localhost:5000/api/auth/me", {
+        const userRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 

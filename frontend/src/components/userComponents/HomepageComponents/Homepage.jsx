@@ -59,7 +59,7 @@ export default function Homepage() {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser(res.data);
@@ -90,6 +90,8 @@ export default function Homepage() {
   "
       style={{
         backgroundColor: "#d9d9d9",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {/* Offline Indicator */}
@@ -112,14 +114,14 @@ export default function Homepage() {
       )}
 
       {/* Logo Header */}
-      <div className={`w-full flex justify-center px-4 ${isOffline && showOfflineBanner ? 'mt-20' : 'mt-10'}`}>
+      <div className={`w-full flex justify-center px-4 ${isOffline && showOfflineBanner ? 'mt-20' : 'mt-2'}`}>
         <LogoHeader />
       </div>
 
       {/* Title */}
-      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10">
+      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10 px-4">
         <h5
-          className="text-[42px] sm:text-[60px] md:text-[72px] 
+          className="text-[38px] sm:text-[56px] md:text-[68px] 
              font-poppins font-extrabold tracking-tight leading-[1.1] 
              text-[#f5f5dc] drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
         >

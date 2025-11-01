@@ -22,7 +22,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side (scrolls internally if content is taller) */}
-        <div className="flex flex-col items-center px-4 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-8 md:py-10 h-full overflow-hidden">
+        <div className="flex flex-col items-center px-4 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-8 md:py-10 h-full overflow-y-auto">
           {/* Mobile Logo (visible only on small screens) */}
           <div className="block md:hidden mb-6">
             <img

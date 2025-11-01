@@ -55,7 +55,7 @@ export default function TripArchivesPage() {
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
-  const BACKEND_URL = "http://localhost:5000";
+  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {

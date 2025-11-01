@@ -80,7 +80,7 @@ export const apiWithOfflineHandler = async (apiCall, options = {}) => {
  */
 export const createOfflineAwareAxios = () => {
   const instance = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000',
   });
 
   // Request interceptor - check online status before request

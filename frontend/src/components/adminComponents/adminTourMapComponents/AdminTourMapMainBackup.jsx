@@ -289,7 +289,7 @@
 //     if (!confirmDelete) return;
 
 //     try {
-//       await axios.delete(`/api/pins/${id}`);
+//       await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins/${id}`);
 //       setPins((prev) => prev.filter((pin) => pin._id !== id)); // update local state
 //       setSelectedPin(null); // close panel after delete
 //       alert("Pin deleted successfully");

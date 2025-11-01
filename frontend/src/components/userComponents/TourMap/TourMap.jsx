@@ -16,7 +16,7 @@ import "../../../App.css";
 
 // ✅ Axios instance with auth token
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
 });
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -173,7 +173,7 @@ export default function TourMap() {
   };
 
   return (
-    <div className="relative w-full h-screen">
+    <div className="relative w-full h-screen" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Global TTS Button */}
       <GlobalTTSButton />
 

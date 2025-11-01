@@ -519,7 +519,12 @@ Always answer in ENGLISH with complete, detailed, and accurate information. Read
   };
 
   return (
-    <div className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl">
+    <div 
+      className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
+      style={{
+        paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))"
+      }}
+    >
       {/* TTS Toggle Button */}
       <div className="flex justify-end mb-2">
         <button

@@ -47,7 +47,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
         try {
           const token = localStorage.getItem("token");
           if (!token) return;
-          const res = await axios.get("/api/auth/me", {
+          const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           // Append timestamp to avoid caching old images
@@ -166,7 +166,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
                   src={
                     currentAdmin.profilePicture.startsWith("http")
                       ? currentAdmin.profilePicture + `?t=${Date.now()}`
-                      : `http://localhost:5000${
+                      : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${
                           currentAdmin.profilePicture
                         }?t=${Date.now()}`
                   }

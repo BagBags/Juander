@@ -26,7 +26,7 @@ export default function AdminItineraryMain() {
   useEffect(() => {
     const fetchPins = async () => {
       try {
-        const res = await axios.get("/api/pins", config);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins`, config);
         setPins(res.data);
       } catch (err) {
         console.error("Failed to fetch pins:", err);
@@ -43,7 +43,7 @@ export default function AdminItineraryMain() {
 
   const fetchItineraries = async () => {
     try {
-      const res = await axios.get("/api/itineraries", config);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`, config);
       setItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch itineraries:", err);
@@ -52,7 +52,7 @@ export default function AdminItineraryMain() {
 
   const fetchArchivedItineraries = async () => {
     try {
-      const res = await axios.get("/api/itineraries/archived", config);
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/archived`, config);
       setArchivedItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch archived itineraries:", err);
@@ -90,7 +90,7 @@ export default function AdminItineraryMain() {
         const formData = new FormData();
         formData.append("image", imageFile);
 
-        const res = await axios.post("/api/itineraries/upload", formData, {
+        const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/upload`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -114,10 +114,10 @@ export default function AdminItineraryMain() {
       };
 
       if (editingId) {
-        await axios.put(`/api/itineraries/${editingId}`, payload, config);
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/${editingId}`, payload, config);
         alert("Itinerary updated!");
       } else {
-        await axios.post("/api/itineraries", payload, config);
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`, payload, config);
         alert("Itinerary saved!");
       }
 
@@ -138,7 +138,7 @@ export default function AdminItineraryMain() {
     if (!confirm("Are you sure you want to archive this itinerary?")) return;
 
     try {
-      await axios.put(`/api/itineraries/${id}/archive`, {}, config);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/${id}/archive`, {}, config);
       fetchItineraries();
       fetchArchivedItineraries();
       alert("Itinerary archived successfully!");
@@ -152,7 +152,7 @@ export default function AdminItineraryMain() {
     if (!confirm("Are you sure you want to restore this itinerary?")) return;
 
     try {
-      await axios.put(`/api/itineraries/${id}/restore`, {}, config);
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/${id}/restore`, {}, config);
       fetchItineraries();
       fetchArchivedItineraries();
       alert("Itinerary restored successfully!");
@@ -166,7 +166,7 @@ export default function AdminItineraryMain() {
     if (!confirm("⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?")) return;
 
     try {
-      await axios.delete(`/api/itineraries/${id}`, config);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/${id}`, config);
       fetchArchivedItineraries();
       alert("Itinerary permanently deleted!");
     } catch (err) {
@@ -184,7 +184,7 @@ export default function AdminItineraryMain() {
       setImagePreview(
         itinerary.imageUrl.startsWith("http")
           ? itinerary.imageUrl
-          : `http://localhost:5000${itinerary.imageUrl}`
+          : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${itinerary.imageUrl}`
       ); // <-- prepend localhost if needed
     } else {
       setImagePreview(""); // show placeholder
@@ -352,7 +352,7 @@ export default function AdminItineraryMain() {
                         src={
                           itinerary.imageUrl.startsWith("http")
                             ? itinerary.imageUrl
-                            : `http://localhost:5000${itinerary.imageUrl}`
+                            : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${itinerary.imageUrl}`
                         }
                         alt={itinerary.name}
                         className="w-full h-48 object-cover rounded-xl mt-3"
@@ -416,7 +416,7 @@ export default function AdminItineraryMain() {
                         src={
                           itinerary.imageUrl.startsWith("http")
                             ? itinerary.imageUrl
-                            : `http://localhost:5000${itinerary.imageUrl}`
+                            : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${itinerary.imageUrl}`
                         }
                         alt={itinerary.name}
                         className="w-full h-48 object-cover rounded-xl mt-3 opacity-60"
@@ -480,7 +480,7 @@ export default function AdminItineraryMain() {
                     src={
                       // Get first image from mediaFiles (not video)
                       pin.mediaFiles?.find(m => m.type === "image")?.url
-                        ? `http://localhost:5000${pin.mediaFiles.find(m => m.type === "image").url}`
+                        ? `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${pin.mediaFiles.find(m => m.type === "image").url}`
                         : pin.mediaUrl || pin.image || "https://via.placeholder.com/80"
                     }
                     alt={pin.siteName || pin.title}

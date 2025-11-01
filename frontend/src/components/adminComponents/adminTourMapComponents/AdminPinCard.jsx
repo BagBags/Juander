@@ -4,7 +4,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
-const BACKEND_URL = "http://localhost:5000";
+// Extract base URL from VITE_API_BASE_URL (remove /api suffix if present)
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
+  : "http://juander-backend-env.eba-3v3p4pbh.ap-southeast-2.elasticbeanstalk.com";
 
 // 3D Model Preview Component
 const ModelPreview = ({ url }) => {

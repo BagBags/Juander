@@ -59,13 +59,23 @@ export default function Photobooth() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await axios.get("/api/photobooth/filters");
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`);
         if (res.data && res.data.length > 0) {
-          const normalized = res.data.map((f) => ({
-            ...f,
-            label: f.label || f.name, // ensure label exists
-            value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
-          }));
+          const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+          const normalized = res.data.map((f) => {
+            // Resolve image URL
+            let imageUrl = f.imageUrl || f.image;
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${BACKEND_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+            
+            return {
+              ...f,
+              label: f.label || f.name, // ensure label exists
+              value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
+              image: imageUrl, // map imageUrl to image for slider
+            };
+          });
           setFilters([...baseFilters, ...normalized]);
         } else {
           setFilters(baseFilters);
@@ -240,7 +250,7 @@ export default function Photobooth() {
   }, []);
 
   return (
-    <div className="photobooth-container">
+    <div className="photobooth-container" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="phone-frame">
         {/* ✅ Back button + refresh */}
         <div className="absolute top-0 left-0 w-full z-[200] bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">

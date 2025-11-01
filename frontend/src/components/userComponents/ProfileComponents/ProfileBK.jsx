@@ -126,7 +126,7 @@ export default function ProfilePageBK() {
                     : currentUser?.profilePicture
                     ? currentUser.profilePicture.startsWith("http")
                       ? currentUser.profilePicture
-                      : `http://localhost:5000${currentUser.profilePicture}`
+                      : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${currentUser.profilePicture}`
                     : "https://ui-avatars.com/api/?name=" + 
                       encodeURIComponent(`${currentUser?.firstName || 'User'} ${currentUser?.lastName || ''}`) +
                       "&background=ffffff&color=f04e37&size=200&bold=true"

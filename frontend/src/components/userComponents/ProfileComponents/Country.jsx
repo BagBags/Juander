@@ -20,7 +20,7 @@ export default function CountrySelector() {
       if (!token) return;
 
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.data?.country) {
@@ -66,7 +66,7 @@ export default function CountrySelector() {
     try {
       setLoading(true);
       await axios.post(
-        "http://localhost:5000/api/auth/country",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/country`,
         { country: countries[selected].name },
         { headers: { Authorization: `Bearer ${token}` } }
       );

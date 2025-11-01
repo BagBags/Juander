@@ -71,7 +71,7 @@ export default function TouristItineraryMap() {
   useEffect(() => {
     const fetchMask = async () => {
       try {
-        const { data } = await axios.get("http://localhost:5000/api/mask");
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/mask`);
         if (!data?.geometry) return;
 
         const feature = {
@@ -94,7 +94,7 @@ export default function TouristItineraryMap() {
     const fetchItinerary = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/itineraries/${itineraryId}`,
+          `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/${itineraryId}`,
           config
         );
 
@@ -313,7 +313,7 @@ export default function TouristItineraryMap() {
 
     try {
       await axios.post(
-        "http://localhost:5000/api/visited-sites",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/visited-sites`,
         {
           itineraryId,
           siteId: pin._id,
@@ -334,7 +334,7 @@ export default function TouristItineraryMap() {
     try {
       setReviewsLoading(true);
       const response = await axios.get(
-        `http://localhost:5000/api/reviews/site/${siteId}`,
+        `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/reviews/site/${siteId}`,
         config
       );
       setSiteReviews(response.data.reviews || []);

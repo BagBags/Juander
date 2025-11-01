@@ -41,7 +41,7 @@ export default function AdminHomeMain() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/admin/users", {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data);
@@ -55,7 +55,7 @@ export default function AdminHomeMain() {
   const fetchReviews = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/reviews/admin/all", {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/admin/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setReviews(res.data);

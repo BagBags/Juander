@@ -20,7 +20,7 @@ export default function Language() {
 
         if (!token) return;
 
-        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -46,7 +46,7 @@ export default function Language() {
       }
 
       await axios.post(
-        "http://localhost:5000/api/auth/language",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/language`,
         { language: selected }, // now "en" or "tl"
         { headers: { Authorization: `Bearer ${token}` } }
       );

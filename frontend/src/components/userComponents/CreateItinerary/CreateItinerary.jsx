@@ -41,7 +41,7 @@ export default function CreateItineraryPage() {
 
   const fetchSites = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/pins");
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins`);
       setSites(res.data);
     } catch {
       alert("Failed to load sites");
@@ -51,7 +51,7 @@ export default function CreateItineraryPage() {
   const fetchItineraries = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/itineraries",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`,
         config
       );
       setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
@@ -68,7 +68,7 @@ export default function CreateItineraryPage() {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/userItineraries/upload",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/userItineraries/upload`,
         formData,
         {
           headers: {
@@ -87,7 +87,7 @@ export default function CreateItineraryPage() {
   const getFullImageUrl = (url) => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
-    return `http://localhost:5000${url}`;
+    return `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${url}`;
   };
 
   const toggleSelection = (siteId) =>
@@ -122,14 +122,14 @@ export default function CreateItineraryPage() {
     try {
       if (editingItineraryId) {
         await axios.put(
-          `http://localhost:5000/api/itineraries/${editingItineraryId}`,
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/${editingItineraryId}`,
           payload,
           config
         );
         alert("Itinerary updated successfully");
       } else {
         await axios.post(
-          "http://localhost:5000/api/itineraries",
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`,
           payload,
           config
         );
@@ -159,7 +159,7 @@ export default function CreateItineraryPage() {
 
     if (!confirm("Delete this itinerary?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries/${id}`, config);
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
     } catch (err) {
       if (!navigator.onLine || err.message === 'Network Error') {

@@ -19,7 +19,7 @@ export default function RolesPage() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/admin/users", {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data);
@@ -33,7 +33,7 @@ export default function RolesPage() {
   const fetchCurrentUser = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/auth/me", {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCurrentUser(res.data);

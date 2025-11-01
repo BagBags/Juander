@@ -12,10 +12,27 @@ export default function FloatingChatbot() {
 
   const nodeRef = useRef(null);
   const wasDragged = useRef(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const touchStartPos = useRef({ x: 0, y: 0 });
+  const touchStartTime = useRef(0);
+
+  const handleStart = (_, data) => {
+    wasDragged.current = false; // Reset at start of each interaction
+    dragStartPos.current = { x: data.x, y: data.y };
+  };
 
   // ✅ now updates live
   const handleDrag = (_, data) => {
-    wasDragged.current = true;
+    // Only mark as dragged if moved more than 5px from start
+    const dragDistance = Math.sqrt(
+      Math.pow(data.x - dragStartPos.current.x, 2) + 
+      Math.pow(data.y - dragStartPos.current.y, 2)
+    );
+    
+    if (dragDistance > 5) {
+      wasDragged.current = true;
+    }
+    
     setPosition({ x: data.x, y: data.y });
   };
 
@@ -23,6 +40,8 @@ export default function FloatingChatbot() {
     const newPos = { x: data.x, y: data.y };
     setPosition(newPos);
     setDraggedPosition(newPos);
+    
+    // Reset wasDragged after a short delay to allow click handler to check it
     setTimeout(() => {
       wasDragged.current = false;
     }, 50);
@@ -48,6 +67,7 @@ export default function FloatingChatbot() {
           bounds="parent"
           handle=".drag-handle"
           position={position}
+          onStart={handleStart}
           onDrag={handleDrag}
           onStop={handleStop}
         >
@@ -68,7 +88,30 @@ export default function FloatingChatbot() {
                 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32
                 transition-transform duration-300 ease-in-out
                 ${isOpen ? "rotate-[45deg] scale-75" : "rotate-0 scale-100"}`}
-              onClick={() => !isOpen && handleToggle()}
+              onClick={handleToggle}
+              onTouchStart={(e) => {
+                const touch = e.touches[0];
+                touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+                touchStartTime.current = Date.now();
+              }}
+              onTouchEnd={(e) => {
+                const touch = e.changedTouches[0];
+                const touchEndPos = { x: touch.clientX, y: touch.clientY };
+                const touchDuration = Date.now() - touchStartTime.current;
+                
+                // Calculate distance moved
+                const distance = Math.sqrt(
+                  Math.pow(touchEndPos.x - touchStartPos.current.x, 2) +
+                  Math.pow(touchEndPos.y - touchStartPos.current.y, 2)
+                );
+                
+                // If moved less than 10px and duration less than 300ms, it's a tap
+                if (distance < 10 && touchDuration < 300) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleToggle();
+                }
+              }}
             >
               <img
                 src={isOpen ? "/icons/juan_close.svg" : "/icons/juan_open.svg"}
@@ -96,7 +139,13 @@ export default function FloatingChatbot() {
                      w-full h-full sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem]
                      sm:rounded-2xl"
         >
-          <div className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20">
+          <div 
+            className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20"
+            style={{
+              paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)",
+              height: "calc(3.5rem + env(safe-area-inset-top))"
+            }}
+          >
             <h2 className="font-bold text-lg text-white tracking-wide drop-shadow-sm">
               AskJuan
             </h2>

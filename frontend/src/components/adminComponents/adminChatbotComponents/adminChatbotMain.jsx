@@ -17,8 +17,8 @@ export default function AdminChatbot() {
   const [editTagId, setEditTagId] = useState(null);
 
   // --- API ---
-  const API_BASE = "/api/admin/bot";
-  const TAG_API_BASE = "/api/admin/tags";
+  const API_BASE = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/bot`;
+  const TAG_API_BASE = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/tags`;
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");

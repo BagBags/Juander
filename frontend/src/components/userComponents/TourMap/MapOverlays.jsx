@@ -20,8 +20,8 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
   return (
     <>
       {/* Header with Legend Button */}
-      <div className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-md">
-        <div className="px-4 pb-2 pt-4 flex items-center justify-between">
+      <div className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-md" style={{ paddingTop: "max(env(safe-area-inset-top), 16px)" }}>
+        <div className="px-4 pb-2 flex items-center justify-between">
           <div className="flex items-center">
             <span
               className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
@@ -92,7 +92,7 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
       )}
 
       {/* Footer */}
-      <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-30 pointer-events-auto">
+      <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-30 pointer-events-auto" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}>
         Tour Map
       </div>
     </>

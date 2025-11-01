@@ -30,6 +30,11 @@ router.get("/inactive", async (req, res) => {
   }
 });
 
+// Handle CORS preflight for upload-ar
+router.options("/upload-ar", (req, res) => {
+  res.status(200).end();
+});
+
 // 👇 New route for uploading AR models (.glb)
 router.post("/upload-ar", upload.single("arModel"), (req, res) => {
   if (!req.file) {

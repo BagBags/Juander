@@ -29,7 +29,7 @@ export default function TouristItineraryMain() {
     if (url.startsWith("http")) return url;
     // Ensure path starts with /
     const path = url.startsWith("/") ? url : `/${url}`;
-    return `http://localhost:5000${path}`;
+    return `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${path}`;
   };
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function TouristItineraryMain() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const res = await axios.get("http://localhost:5000/api/itineraries", {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

@@ -21,7 +21,7 @@ export default function ManageEmergency() {
   const fetchHotlines = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`/api/emergency`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -42,7 +42,7 @@ export default function ManageEmergency() {
     try {
       const token = localStorage.getItem("token");
       if (selectedAgency) {
-        await axios.put(`/api/emergency/${selectedAgency._id}`, agencyData, {
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency/${selectedAgency._id}`, agencyData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -50,7 +50,7 @@ export default function ManageEmergency() {
         });
       } else {
         agencyData.append("position", hotlines.length);
-        await axios.post(`/api/emergency`, agencyData, {
+        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`, agencyData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -82,7 +82,7 @@ export default function ManageEmergency() {
     
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`/api/emergency/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchHotlines();
@@ -108,7 +108,7 @@ export default function ManageEmergency() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `/api/emergency/reorder`,
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency/reorder`,
         { agencies: updated },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -181,7 +181,7 @@ export default function ManageEmergency() {
                                         ? typeof agency.icon === "string"
                                           ? agency.icon.startsWith("http")
                                             ? agency.icon
-                                            : `http://localhost:5000${agency.icon}` // prepend backend URL
+                                            : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${agency.icon}` // prepend backend URL
                                           : "/placeholder.png"
                                         : "/placeholder.png"
                                     }

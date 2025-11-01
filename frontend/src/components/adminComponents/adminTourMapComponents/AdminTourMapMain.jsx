@@ -36,7 +36,7 @@ const ThreeDModelPreview = React.lazy(() =>
 
 // ---------- Axios instance ----------
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || "/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
 });
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
@@ -313,7 +313,7 @@ export default function AdminTourMapMain() {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/pins/upload-ar",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins/upload-ar`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -341,7 +341,7 @@ export default function AdminTourMapMain() {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/pins/upload-facade-temp",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins/upload-facade-temp`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
@@ -396,7 +396,7 @@ export default function AdminTourMapMain() {
     try {
       notify("info", "Uploading files...");
       const res = await axios.post(
-        "http://localhost:5000/api/pins/upload-media",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins/upload-media`,
         formData,
         { 
           headers: { "Content-Type": "multipart/form-data" },

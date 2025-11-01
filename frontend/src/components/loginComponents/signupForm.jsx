@@ -84,7 +84,7 @@ export default function SignupForm({ toggleForm }) {
     }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", {
+      const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/register`, {
         firstName: form.firstName,
         lastName: form.lastName,
         email: form.email,
@@ -104,7 +104,7 @@ export default function SignupForm({ toggleForm }) {
     e.preventDefault();
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/verify-otp",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/verify-otp`,
         {
           email: form.email,
           otp,
@@ -161,7 +161,7 @@ export default function SignupForm({ toggleForm }) {
     try {
       const { credential } = credentialResponse;
       const res = await axios.post(
-        "http://localhost:5000/api/auth/google-login",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/google-login`,
         {
           token: credential,
         }

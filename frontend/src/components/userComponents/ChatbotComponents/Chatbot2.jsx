@@ -49,7 +49,7 @@ export default function Chatbot() {
   useEffect(() => {
     async function fetchEntries() {
       try {
-        const res = await axios.get("/api/bot");
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/bot`);
         setBotEntries(res.data);
       } catch (err) {
         console.error("Error fetching bot entries:", err);

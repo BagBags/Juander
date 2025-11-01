@@ -208,10 +208,10 @@ export default function SiteModalFullScreen({
                           {review.photos.map((photo, photoIdx) => (
                             <img
                               key={photoIdx}
-                              src={photo.startsWith('http') ? photo : `http://localhost:5000${photo}`}
+                              src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${photo}`}
                               alt={`Review photo ${photoIdx + 1}`}
                               className="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
-                              onClick={() => window.open(photo.startsWith('http') ? photo : `http://localhost:5000${photo}`, '_blank')}
+                              onClick={() => window.open(photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${photo}`, '_blank')}
                             />
                           ))}
                         </div>

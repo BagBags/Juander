@@ -10,7 +10,7 @@ export default function BackHeader({ title, fallback = "/AdminProfile" }) {
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-white pt-4 pb-2 px-4 flex items-center border-b border-gray-200">
+    <div className="sticky top-0 z-20 bg-white pb-2 px-4 flex items-center border-b border-gray-200" style={{ paddingTop: "max(env(safe-area-inset-top), 16px)" }}>
       <span
         className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
         onClick={handleBack}

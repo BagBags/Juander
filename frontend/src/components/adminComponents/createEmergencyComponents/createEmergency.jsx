@@ -71,7 +71,7 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit }) {
               : typeof icon === "string" // existing image URL
               ? icon.startsWith("http") // if full URL
                 ? icon
-                : `http://localhost:5000${icon}` // prepend backend URL if needed
+                : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${icon}` // prepend backend URL if needed
               : "/placeholder.png"
           }
           alt="Agency Icon"
