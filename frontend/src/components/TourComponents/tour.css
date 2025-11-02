@@ -31,6 +31,7 @@
 .__floater__open .side-button-photobooth,
 .__floater__open .side-button-emergency,
 .__floater__open .side-button-profile,
+.__floater__open .side-button-archives,
 .__floater__open .floating-chatbot {
   animation: pulse-ring 2s infinite;
 }
@@ -38,7 +39,8 @@
 /* Smooth transitions for tour overlay */
 .react-joyride__overlay {
   transition: opacity 0.3s ease-in-out;
-  backdrop-filter: blur(2px);
+  /* Removed blur to keep spotlight content crisp */
+  backdrop-filter: none;
 }
 
 /* Ensure tour tooltip is above everything */
