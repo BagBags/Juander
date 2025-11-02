@@ -76,3 +76,19 @@ exports.verifySuperAdmin = async (req, res, next) => {
     res.status(401).json({ message: "Invalid or expired token" });
   }
 };
+
+// Alias for verifyToken (commonly used as 'protect' in routes)
+exports.protect = exports.verifyToken;
+
+// Middleware to ensure user is a tourist
+exports.touristOnly = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  if (req.user.role !== "tourist") {
+    return res.status(403).json({ message: "Tourist access only" });
+  }
+
+  next();
+};

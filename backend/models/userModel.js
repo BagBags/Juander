@@ -52,6 +52,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false, // Show Fort Santiago modal by default
     },
+    hasCompletedTour: {
+      type: Boolean,
+      default: false, // New users need to see the onboarding tour
+    },
+    tourCompletedAt: {
+      type: Date,
+      default: null, // Timestamp when tour was completed
+    },
   },
 
   { timestamps: true }

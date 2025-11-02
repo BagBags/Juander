@@ -5,10 +5,12 @@ import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
-import { useTranslation } from "react-i18next"; // 👈 import hook
+import { useTranslation } from "react-i18next";
 import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
 import { WifiOff, X } from "lucide-react";
+import TourProvider from "../../TourComponents/TourProvider";
+import { homepageTourSteps } from "../../TourComponents/tourSteps";
 
 export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
@@ -80,25 +82,26 @@ export default function Homepage() {
   }, []);
 
   return (
-    <div
-      className="
-    fixed inset-0 bg-cover bg-no-repeat bg-center 
-    flex flex-col items-center justify-start 
-    px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden
-    bg-[url('/JuanderBGPhone.png')] 
-    sm:bg-[url('/JuanderBGWeb1.svg')]
-  "
-      style={{
-        backgroundColor: "#d9d9d9",
-        backgroundAttachment: "fixed",
-        backgroundSize: "cover",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        touchAction: "none",
-        overscrollBehavior: "none",
-        WebkitOverscrollBehavior: "none",
-      }}
-    >
+    <TourProvider steps={homepageTourSteps} userRole="tourist">
+      <div
+        className="
+      fixed inset-0 bg-cover bg-no-repeat bg-center 
+      flex flex-col items-center justify-start 
+      px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden
+      bg-[url('/JuanderBGPhone.png')] 
+      sm:bg-[url('/JuanderBGWeb1.svg')]
+    "
+        style={{
+          backgroundColor: "#d9d9d9",
+          backgroundAttachment: "fixed",
+          backgroundSize: "cover",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          touchAction: "none",
+          overscrollBehavior: "none",
+          WebkitOverscrollBehavior: "none",
+        }}
+      >
       {/* Offline Indicator */}
       {isOffline && showOfflineBanner && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-4 py-3 shadow-lg">
@@ -138,8 +141,9 @@ export default function Homepage() {
       <MainLayout>
         <Button navigate={navigate} />
       </MainLayout>
-      <FloatingChatbot />
-      <GlobalTTSButton />
-    </div>
+        <FloatingChatbot />
+        <GlobalTTSButton />
+      </div>
+    </TourProvider>
   );
 }

@@ -6,6 +6,8 @@ import SideButtons from "../sideButtons";
 import { useTranslation } from "react-i18next";
 import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
+import TourProvider from "../../TourComponents/TourProvider";
+import { guestTourSteps } from "../../TourComponents/tourSteps";
 
 export default function GuestHomepage() {
   const { t, i18n } = useTranslation();
@@ -25,20 +27,21 @@ export default function GuestHomepage() {
   }, [t]);
 
   return (
-    <div
-      className="fixed inset-0 bg-cover bg-center bg-no-repeat flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden"
-      style={{
-        backgroundImage: "url('/JuanderBGWeb.svg')",
-        backgroundColor: "#f04e37",
-        backgroundAttachment: "fixed",
-        backgroundSize: "cover",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        touchAction: "none",
-        overscrollBehavior: "none",
-        WebkitOverscrollBehavior: "none",
-      }}
-    >
+    <TourProvider steps={guestTourSteps} userRole="guest">
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden"
+        style={{
+          backgroundImage: "url('/JuanderBGWeb.svg')",
+          backgroundColor: "#f04e37",
+          backgroundAttachment: "fixed",
+          backgroundSize: "cover",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          touchAction: "none",
+          overscrollBehavior: "none",
+          WebkitOverscrollBehavior: "none",
+        }}
+      >
       {/* Logo Header */}
       <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
@@ -88,11 +91,12 @@ export default function GuestHomepage() {
         Sign up to Explore
       </button>
 
-      {/* Floating Chatbot (Juan Mascot) */}
-      <FloatingChatbot />
-      
-      {/* Global TTS Button */}
-      <GlobalTTSButton />
-    </div>
+        {/* Floating Chatbot (Juan Mascot) */}
+        <FloatingChatbot />
+        
+        {/* Global TTS Button */}
+        <GlobalTTSButton />
+      </div>
+    </TourProvider>
   );
 }

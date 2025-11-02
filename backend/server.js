@@ -25,6 +25,7 @@ const photoboothFilterRoute = require("./routes/photoboothFilterRoute");
 const tagRoutes = require("./routes/adminTagRoute");
 const visitedSiteRoute = require("./routes/visitedSiteRoute");
 const reviewRoute = require("./routes/reviewRoute");
+const tourRoute = require("./routes/tourRoute");
 
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
@@ -55,7 +56,7 @@ app.use(
       "http://juander-frontend.s3-website-ap-southeast-2.amazonaws.com", // Production S3
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
     maxAge: 600, // Cache preflight for 10 minutes
@@ -94,6 +95,8 @@ const connectDB = async () => {
 // Connect to DB (non-blocking)
 connectDB().catch(err => console.error("DB connection failed:", err));
 // API routes
+app.use("/api/tour", tourRoute);
+
 app.use("/api/auth", authRoute);
 app.use("/api/emergency", emergencyRoute);
 app.use("/api/filters", filters);

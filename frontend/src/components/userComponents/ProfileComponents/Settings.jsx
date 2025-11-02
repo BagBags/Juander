@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, Play } from "lucide-react";
 import axios from "axios";
+import { resetTour } from "../../../utils/tourApi";
 
 export default function Settings() {
   const { t } = useTranslation();
   const [showFortModal, setShowFortModal] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tourLoading, setTourLoading] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -57,6 +59,27 @@ export default function Settings() {
 
     // Clear success message after 3 seconds
     setTimeout(() => setSuccessMessage(""), 3000);
+  };
+
+  const handleReplayTutorial = async () => {
+    setTourLoading(true);
+    try {
+      await resetTour();
+      setSuccessMessage("Tutorial reset! Return to the homepage to replay it.");
+      
+      // Redirect to homepage after a short delay
+      setTimeout(() => {
+        window.location.href = "/Homepage";
+      }, 2000);
+    } catch (err) {
+      console.error("Error resetting tour:", err);
+      setSuccessMessage("Failed to reset tutorial. Please try again.");
+    } finally {
+      setTourLoading(false);
+    }
+
+    // Clear success message after 5 seconds
+    setTimeout(() => setSuccessMessage(""), 5000);
   };
 
   return (
@@ -112,6 +135,32 @@ export default function Settings() {
                     {loading ? "Updating..." : showFortModal ? "Enabled" : "Disabled"}
                   </span>
                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Replay Tutorial Setting */}
+          <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <Play className="w-6 h-6 text-[#f04e37]" />
+              </div>
+              
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 mb-2">
+                  Replay Tutorial
+                </h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                  Restart the interactive tour guide to learn about app features again.
+                </p>
+                
+                <button
+                  onClick={handleReplayTutorial}
+                  disabled={tourLoading}
+                  className="px-4 py-2 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {tourLoading ? "Resetting..." : "Replay Tutorial"}
+                </button>
               </div>
             </div>
           </div>

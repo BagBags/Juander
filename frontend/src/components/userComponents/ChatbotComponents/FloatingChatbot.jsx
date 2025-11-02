@@ -78,7 +78,7 @@ export default function FloatingChatbot() {
         >
           <motion.div
             ref={nodeRef}
-            className={`absolute ${
+            className={`absolute floating-chatbot ${
               isOpen ? "pointer-events-none" : "pointer-events-auto"
             }`}
             animate={{ x: position.x, y: position.y }}

@@ -1,0 +1,71 @@
+/* Tour Animations */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(240, 78, 55, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 20px rgba(240, 78, 55, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(240, 78, 55, 0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Add pulse animation to highlighted elements */
+.__floater__open .side-button-map,
+.__floater__open .side-button-itinerary,
+.__floater__open .side-button-photobooth,
+.__floater__open .side-button-emergency,
+.__floater__open .side-button-profile,
+.__floater__open .floating-chatbot {
+  animation: pulse-ring 2s infinite;
+}
+
+/* Smooth transitions for tour overlay */
+.react-joyride__overlay {
+  transition: opacity 0.3s ease-in-out;
+  backdrop-filter: blur(2px);
+}
+
+/* Ensure tour tooltip is above everything */
+.react-joyride__tooltip {
+  z-index: 10001 !important;
+  animation: fadeIn 0.5s ease-in-out;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .react-joyride__tooltip {
+    max-width: 90vw !important;
+  }
+}
+
+/* Accessibility: Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .__floater__open .side-button-map,
+  .__floater__open .side-button-itinerary,
+  .__floater__open .side-button-photobooth,
+  .__floater__open .side-button-emergency,
+  .__floater__open .side-button-profile,
+  .__floater__open .floating-chatbot {
+    animation: none;
+  }
+}

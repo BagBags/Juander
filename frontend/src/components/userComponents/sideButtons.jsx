@@ -10,8 +10,9 @@ export default function SideButtons({ userType = "tourist" }) {
       url: "icons/Tourmap.svg",
       label: "tourMap",
       to: "/TourMap",
-      Device: userType === "guest" ? "All" : "Mobile", // Guests see on all devices, tourists only on mobile
+      Device: userType === "guest" ? "All" : "Mobile",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-map", // Tour target
     },
     {
       url: "icons/Itineraries.svg",
@@ -19,6 +20,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/CreateItinerary",
       Device: "All",
       allowedFor: ["tourist"],
+      tourClass: "side-button-itinerary", // Tour target
     },
     {
       url: "icons/Photobooth.svg",
@@ -26,6 +28,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/Photobooth",
       Device: "Mobile",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-photobooth", // Tour target
     },
     {
       url: "icons/Hotlines.svg",
@@ -33,6 +36,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/Emergency",
       Device: "Mobile",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-emergency", // Tour target
     },
     {
       url: "icons/Profile.svg",
@@ -40,6 +44,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: userType === "guest" ? "/GuestProfile" : "/Profile",
       Device: "All",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-profile", // Tour target
     },
     {
       url: "icons/TripArchives.svg",
@@ -47,6 +52,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/TripArchive",
       Device: "All",
       allowedFor: ["tourist"],
+      tourClass: "side-button-archives", // Tour target
     },
   ];
 
@@ -67,7 +73,7 @@ export default function SideButtons({ userType = "tourist" }) {
           <Link
             to={icon.to}
             key={index}
-            className={`${visibilityClass} flex flex-col items-center group`}
+            className={`${visibilityClass} ${icon.tourClass || ''} flex flex-col items-center group`}
           >
             <div
               className="w-14 h-14 max-[375px]:w-11 max-[375px]:h-11
