@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
-import { useParams, useLocation } from "react-router-dom";
-import { Navigation, MapPin } from "lucide-react";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
+import { Navigation, MapPin, Car, Bike, Footprints, User } from "lucide-react";
 
 import {
   MAPBOX_TOKEN,
@@ -18,10 +18,12 @@ import DirectionsPanel from "./DirectionsPanel";
 import MapControlButtons from "./MapControlButtons";
 import SitePreviewCard from "./SitePreviewCard";
 import SiteModalFullScreen from "./SiteModalFullScreen";
+import GpsConsentModal from "../../shared/GpsConsentModal";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [pins, setPins] = useState([]);
   const [viewState, setViewState] = useState({
@@ -30,6 +32,10 @@ export default function TouristItineraryMap() {
     zoom: 16,
   });
   const [userLocation, setUserLocation] = useState(null);
+  const [showGpsModal, setShowGpsModal] = useState(true);
+  const [gpsError, setGpsError] = useState("");
+  const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
+  const [showTransportPanel, setShowTransportPanel] = useState(false);
 
   // Routing
   const [route, setRoute] = useState(null);
@@ -38,6 +44,8 @@ export default function TouristItineraryMap() {
   const [arrivalTime, setArrivalTime] = useState(null); // clock time
   const [steps, setSteps] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isRouting, setIsRouting] = useState(false);
+  const routingReqId = useRef(0);
 
   // Map bounds
   const [mask, setMask] = useState(null);
@@ -128,8 +136,9 @@ export default function TouristItineraryMap() {
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
 
-  /** Track user location */
+  /** Track user location (after consent) */
   useEffect(() => {
+    if (showGpsModal) return; // wait for user to enable
     const id = navigator.geolocation.watchPosition(
       ({ coords }) => {
         const loc = { latitude: coords.latitude, longitude: coords.longitude };
@@ -140,7 +149,7 @@ export default function TouristItineraryMap() {
       { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
     return () => navigator.geolocation.clearWatch(id);
-  }, []);
+  }, [showGpsModal]);
 
   /** Check if route stays within Intramuros bounds */
   const isRouteWithinBounds = (routeGeometry) => {
@@ -167,9 +176,11 @@ export default function TouristItineraryMap() {
     if (!start || !pin) return;
 
     try {
+      const reqId = ++routingReqId.current;
+      setIsRouting(true);
       const resp = await directionsClient
         .getDirections({
-          profile: "walking",
+          profile: transportMode,
           geometries: "geojson",
           overview: "full",
           steps: true,
@@ -199,21 +210,29 @@ export default function TouristItineraryMap() {
         const dy = pin.longitude - start.longitude;
         const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
         
+        // Ignore stale responses
+        if (reqId !== routingReqId.current) return;
         setDistance(distance);
-        setEta(distance / 1.4); // walking speed ~1.4 m/s
-        setArrivalTime(new Date(Date.now() + (distance / 1.4) * 1000));
+        const speedByMode = { walking: 1.4, cycling: 4.0, driving: 8.33 }; // m/s
+        const speed = speedByMode[transportMode] || 1.4;
+        setEta(distance / speed);
+        setArrivalTime(new Date(Date.now() + (distance / speed) * 1000));
         setRoute({
           type: "Feature",
           geometry: straightLine,
           properties: {},
         });
-        setSteps([{
-          maneuver: { instruction: `Walk directly to ${pin.siteName}`, location: [start.longitude, start.latitude] }
+        const verb = transportMode === "driving" ? "Drive" : transportMode === "cycling" ? "Bike" : "Walk";
+        setSteps([{ // simple instruction for straight line fallback
+          maneuver: { instruction: `${verb} directly to ${pin.siteName}`, location: [start.longitude, start.latitude] }
         }]);
         setCurrentStepIndex(0);
+        setIsRouting(false);
         return;
       }
 
+      // Ignore stale responses
+      if (reqId !== routingReqId.current) return;
       setDistance(routeData.distance);
       setEta(routeData.duration);
 
@@ -228,10 +247,27 @@ export default function TouristItineraryMap() {
       });
       setSteps(routeData.legs.flatMap((leg) => leg.steps));
       setCurrentStepIndex(0);
+      setIsRouting(false);
     } catch (err) {
       console.error("Directions error:", err);
+      setIsRouting(false);
     }
   };
+
+  // Rebuild route when transport mode changes (if we have a target)
+  useEffect(() => {
+    if (!showGpsModal && userLocation && selectedPin) {
+      // Optimistic ETA update to make mode change feel instant
+      if (distance) {
+        const speedByMode = { walking: 1.4, cycling: 4.0, driving: 8.33 }; // m/s
+        const speed = speedByMode[transportMode] || 1.4;
+        const newEta = distance / speed;
+        setEta(newEta);
+        setArrivalTime(new Date(Date.now() + newEta * 1000));
+      }
+      buildRoute(userLocation, selectedPin);
+    }
+  }, [transportMode]);
 
   /** Pick nearest site on load */
   useEffect(() => {
@@ -445,6 +481,36 @@ export default function TouristItineraryMap() {
 
   return (
     <div className="w-full h-screen relative">
+      <GpsConsentModal
+        isOpen={showGpsModal}
+        errorMessage={gpsError}
+        onEnable={() => {
+          if (navigator?.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              () => {
+                setGpsError("");
+                setShowGpsModal(false);
+              },
+              (err) => {
+                setGpsError(
+                  "We couldn’t access your location. Please enable GPS in device settings or use Tour Map features from the homepage."
+                );
+              },
+              { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+            );
+          } else {
+            setGpsError(
+              "GPS is unavailable in this browser. Please use Tour Map features from the homepage."
+            );
+          }
+        }}
+        onDecline={() => {
+          navigate("/");
+        }}
+      />
+
+      {!showGpsModal && (
+        <>
       {/* Back Header */}
       <div 
         className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-sm"
@@ -535,61 +601,70 @@ export default function TouristItineraryMap() {
             />
           </Source>
         )}
-      </Map>
+          </Map>
 
-      {/* Directions Panel */}
-      <DirectionsPanel
-        steps={steps}
-        currentStepIndex={currentStepIndex}
-        setCurrentStepIndex={setCurrentStepIndex}
-        eta={eta}
-        distance={distance}
-        arrivalTime={arrivalTime}
-      />
+          {/* Directions Panel */}
+          <DirectionsPanel
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            setCurrentStepIndex={setCurrentStepIndex}
+            eta={eta}
+            distance={distance}
+            arrivalTime={arrivalTime}
+            isRouting={isRouting}
+            transportMode={transportMode}
+          />
 
-      {/* Control Buttons */}
-      {!showFullModal && (
-        <MapControlButtons
-          userLocation={userLocation}
-          selectedPin={selectedPin}
-          pins={pins}
-          currentPinIndex={currentPinIndex}
-          setViewState={setViewState}
-          setSelectedPin={setSelectedPin}
-          setManuallyDismissed={setManuallyDismissed}
-        />
-      )}
+          {/* Control Buttons */}
+          {!showFullModal && (
+            <MapControlButtons
+              userLocation={userLocation}
+              selectedPin={selectedPin}
+              pins={pins}
+              currentPinIndex={currentPinIndex}
+              setViewState={setViewState}
+              setSelectedPin={setSelectedPin}
+              setManuallyDismissed={setManuallyDismissed}
+              enableTransportMode={true}
+              showTransportPanel={showTransportPanel}
+              setShowTransportPanel={setShowTransportPanel}
+              transportMode={transportMode}
+              setTransportMode={setTransportMode}
+            />
+          )}
 
-      {/* Site Preview Card */}
-      {selectedPin && !showFullModal && (
-        <SitePreviewCard
-          selectedPin={selectedPin}
-          distance={distance}
-          isNearby={isNearby}
-          onExpand={() => setShowFullModal(true)}
-          onClose={() => {
-            setSelectedPin(null);
-            setManuallyDismissed(true);
-          }}
-        />
-      )}
+          {/* Site Preview Card */}
+          {selectedPin && !showFullModal && (
+            <SitePreviewCard
+              selectedPin={selectedPin}
+              distance={distance}
+              isNearby={isNearby}
+              onExpand={() => setShowFullModal(true)}
+              onClose={() => {
+                setSelectedPin(null);
+                setManuallyDismissed(true);
+              }}
+            />
+          )}
 
-      {/* Site Modal - Full Screen */}
-      {selectedPin && showFullModal && (
-        <SiteModalFullScreen
-          selectedPin={selectedPin}
-          onClose={() => {
-            setShowFullModal(false);
-            setSelectedPin(null);
-          }}
-          distance={distance}
-          currentPinIndex={currentPinIndex}
-          pinsLength={pins.length}
-          goToNextStop={goToNextStop}
-          siteReviews={siteReviews}
-          reviewsLoading={reviewsLoading}
-          simulateGoToNextSite={simulateGoToNextSite}
-        />
+          {/* Site Modal - Full Screen */}
+          {selectedPin && showFullModal && (
+            <SiteModalFullScreen
+              selectedPin={selectedPin}
+              onClose={() => {
+                setShowFullModal(false);
+                setSelectedPin(null);
+              }}
+              distance={distance}
+              currentPinIndex={currentPinIndex}
+              pinsLength={pins.length}
+              goToNextStop={goToNextStop}
+              siteReviews={siteReviews}
+              reviewsLoading={reviewsLoading}
+              simulateGoToNextSite={simulateGoToNextSite}
+            />
+          )}
+        </>
       )}
     </div>
   );

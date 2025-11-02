@@ -1,7 +1,7 @@
 // GuestProfilePage.jsx
 import React, { useEffect } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars } from "react-icons/fa";
-import { MdLanguage } from "react-icons/md";
+import { MdLanguage, MdSettings } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
@@ -49,6 +49,12 @@ export default function GuestProfilePage() {
       icon: <MdLanguage />,
       label: t("language"),
       to: "/GuestProfile/GuestLanguage",
+      disabled: false,
+    },
+    {
+      icon: <MdSettings />,
+      label: t("settings") || "Settings",
+      to: "/GuestProfile/GuestSettings",
       disabled: false,
     },
   ];

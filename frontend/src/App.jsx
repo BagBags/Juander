@@ -69,6 +69,7 @@ import TouristProtectedRoute from "./components/TouristProtectedRoute";
 import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
 import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
 import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
+import GuestSettings from "./components/userComponents/GuestProfileComponents/GuestSettings";
 import NotFound from "./components/NotFound";
 import CompleteProfile from "./components/userComponents/CompleteProfile";
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
@@ -99,6 +100,7 @@ function AnimatedRoutes() {
         <Route path="/GuestProfile" element={<GuestProfileLayout />}>
           <Route index element={<GuestProfile />} />
           <Route path="GuestLanguage" element={<GuestLanguage />} />
+          <Route path="GuestSettings" element={<GuestSettings />} />
         </Route>
         <Route element={<AdminProtectedRoute />}>
           {/* Admin */}

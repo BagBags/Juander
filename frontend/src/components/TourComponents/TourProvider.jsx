@@ -40,7 +40,7 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
           // Small delay to ensure DOM is ready
           setTimeout(() => {
             console.log(" Tour starting NOW!");
-            setRun(true);
+            startTour();
           }, 1000);
         } else {
           console.log(" User has already completed tour");
@@ -83,6 +83,8 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
     setRun(true);
   };
 
+  // Removed GPS consent gating logic
+
   const stopTour = () => {
     setRun(false);
     setStepIndex(0);
@@ -96,7 +98,7 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
         run={run}
         stepIndex={stepIndex}
         continuous
-        showProgress
+        showProgress={false}
         showSkipButton
         scrollToFirstStep
         disableScrolling={false}

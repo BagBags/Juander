@@ -75,6 +75,27 @@ export const guestTourSteps = [
     avatar: "/juan/Juan3.png",
   },
   {
+    target: ".side-button-emergency",
+    content: "Quick access to emergency hotlines and important contacts for your safety during your visit.",
+    placement: "left",
+    title: "Emergency Contacts",
+    avatar: "/juan/Juan4.png",
+  },
+  {
+    target: ".side-button-profile",
+    content: "Access profile settings. Sign up or log in to save preferences.",
+    placement: "left",
+    title: "Profile Settings",
+    avatar: "/juan/Juan1.png",
+  },
+  {
+    target: ".side-button-archives",
+    content: "Review trips, photos, and memories in Trip Archives. Some features may require signup.",
+    placement: "left",
+    title: "Trip Archives",
+    avatar: "/juan/Juan4.png",
+  },
+  {
     target: ".floating-chatbot",
     content: "Your AI tour guide is ready to answer questions about Intramuros. Drag to reposition anywhere on screen.",
     placement: "left",

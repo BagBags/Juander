@@ -51,7 +51,7 @@ export default function SideButtons({ userType = "tourist" }) {
       label: "tripArchives",
       to: "/TripArchive",
       Device: "All",
-      allowedFor: ["tourist"],
+      allowedFor: ["tourist", "guest"],
       tourClass: "side-button-archives", // Tour target
     },
   ];

@@ -1,4 +1,4 @@
-import { React, useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import LogoHeader from "./logoHeader";
 import { useNavigate } from "react-router-dom";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
@@ -6,12 +6,21 @@ import SideButtons from "../sideButtons";
 import { useTranslation } from "react-i18next";
 import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
-import TourProvider from "../../TourComponents/TourProvider";
+import TourProvider, { useTour } from "../../TourComponents/TourProvider";
 import { guestTourSteps } from "../../TourComponents/tourSteps";
 
 export default function GuestHomepage() {
+  return (
+    <TourProvider steps={guestTourSteps} userRole="guest">
+      <GuestHomepageContent />
+    </TourProvider>
+  );
+}
+
+function GuestHomepageContent() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { startTour } = useTour();
 
   // Load guest language preference on mount
   useEffect(() => {
@@ -26,22 +35,32 @@ export default function GuestHomepage() {
     ttsService.speak(t('tts_welcome'));
   }, [t]);
 
+  // Auto-start guest tutorial when flagged from GuestSettings
+  useEffect(() => {
+    const replay = sessionStorage.getItem("guestReplayTutorial") === "true";
+    if (replay) {
+      setTimeout(() => {
+        startTour();
+        sessionStorage.removeItem("guestReplayTutorial");
+      }, 800);
+    }
+  }, [startTour]);
+
   return (
-    <TourProvider steps={guestTourSteps} userRole="guest">
-      <div
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden"
-        style={{
-          backgroundImage: "url('/JuanderBGWeb.svg')",
-          backgroundColor: "#f04e37",
-          backgroundAttachment: "fixed",
-          backgroundSize: "cover",
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          touchAction: "none",
-          overscrollBehavior: "none",
-          WebkitOverscrollBehavior: "none",
-        }}
-      >
+    <div
+      className="fixed inset-0 bg-cover bg-center bg-no-repeat flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden"
+      style={{
+        backgroundImage: "url('/JuanderBGWeb.svg')",
+        backgroundColor: "#f04e37",
+        backgroundAttachment: "fixed",
+        backgroundSize: "cover",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        touchAction: "none",
+        overscrollBehavior: "none",
+        WebkitOverscrollBehavior: "none",
+      }}
+    >
       {/* Logo Header */}
       <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
@@ -91,12 +110,11 @@ export default function GuestHomepage() {
         Sign up to Explore
       </button>
 
-        {/* Floating Chatbot (Juan Mascot) */}
-        <FloatingChatbot />
-        
-        {/* Global TTS Button */}
-        <GlobalTTSButton />
-      </div>
-    </TourProvider>
+      {/* Floating Chatbot (Juan Mascot) */}
+      <FloatingChatbot />
+      
+      {/* Global TTS Button */}
+      <GlobalTTSButton />
+    </div>
   );
 }

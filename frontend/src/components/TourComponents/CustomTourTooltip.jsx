@@ -122,9 +122,6 @@ export default function CustomTourTooltip({
         <p id={contentId} className="text-gray-700 text-sm leading-relaxed">
           {step.content}
         </p>
-        <div className="mt-2 text-xs text-gray-500" aria-live="polite">
-          Step {index + 1} of {size}
-        </div>
       </div>
 
       {/* Footer */}
