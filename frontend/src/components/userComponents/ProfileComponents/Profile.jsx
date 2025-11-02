@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars, FaCamera } from "react-icons/fa";
 import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
-import { IoChevronForwardSharp } from "react-icons/io5";
+import { IoChevronForwardSharp, IoSettingsSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -44,6 +44,7 @@ export default function ProfilePage() {
       to: "/Profile/Country",
     },
     { icon: <MdLanguage />, label: t("language"), to: "/Profile/Language" },
+    { icon: <IoSettingsSharp />, label: "Settings", to: "/Profile/Settings" },
   ];
 
   // Handle profile picture upload

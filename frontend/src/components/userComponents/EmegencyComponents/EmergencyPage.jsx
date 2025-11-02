@@ -52,8 +52,16 @@ export default function EmergencyPage() {
       <GlobalTTSButton />
 
       {/* Sticky Back Header */}
-      <div className="pt-4 sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full px-4">
-        <BackHeader title={<span className="text-white">Emergency Hotlines</span>} />
+      <div 
+        className="sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
+        <BackHeader title={<span className="text-white">Emergency Hotlines</span>} className="text-white" />
       </div>
 
       <MainLayout includeSideButtons={false}>

@@ -52,6 +52,7 @@ import Birthday from "./components/userComponents/ProfileComponents/Birthday";
 import Gender from "./components/userComponents/ProfileComponents/Gender";
 import Country from "./components/userComponents/ProfileComponents/Country";
 import Language from "./components/userComponents/ProfileComponents/Language";
+import Settings from "./components/userComponents/ProfileComponents/Settings";
 import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 import TourMap from "./components/userComponents/TourMap/LazyUserMap";
@@ -137,6 +138,7 @@ function AnimatedRoutes() {
             <Route path="Gender" element={<Gender />} />
             <Route path="Country" element={<Country />} />
             <Route path="Language" element={<Language />} />
+            <Route path="Settings" element={<Settings />} />
           </Route>
         </Route>
         {/* <Route element={<GuestProtectedRoute />}> */}

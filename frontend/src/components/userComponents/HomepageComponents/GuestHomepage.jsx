@@ -26,12 +26,17 @@ export default function GuestHomepage() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 relative"
+      className="fixed inset-0 bg-cover bg-center bg-no-repeat flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden"
       style={{
         backgroundImage: "url('/JuanderBGWeb.svg')",
         backgroundColor: "#f04e37",
+        backgroundAttachment: "fixed",
+        backgroundSize: "cover",
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        touchAction: "none",
+        overscrollBehavior: "none",
+        WebkitOverscrollBehavior: "none",
       }}
     >
       {/* Logo Header */}

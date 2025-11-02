@@ -7,8 +7,8 @@ import { motion } from "framer-motion";
 
 export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 550 }); // initial
-  const [draggedPosition, setDraggedPosition] = useState({ x: 0, y: 550 });
+  const [position, setPosition] = useState({ x: -30, y: 550 }); // Start peeking from left
+  const [draggedPosition, setDraggedPosition] = useState({ x: -30, y: 550 });
 
   const nodeRef = useRef(null);
   const wasDragged = useRef(false);
@@ -37,7 +37,10 @@ export default function FloatingChatbot() {
   };
 
   const handleStop = (_, data) => {
-    const newPos = { x: data.x, y: data.y };
+    // Always snap to left side (partially off-screen)
+    const snappedX = -30;
+    const newPos = { x: snappedX, y: data.y };
+    
     setPosition(newPos);
     setDraggedPosition(newPos);
     
@@ -51,9 +54,11 @@ export default function FloatingChatbot() {
     if (wasDragged.current) return;
 
     if (!isOpen) {
-      setPosition({ x: -40, y: draggedPosition.y }); // half outside screen
+      // When opening, move slightly inward from the left edge
+      setPosition({ x: 10, y: draggedPosition.y });
       setIsOpen(true);
     } else {
+      // When closing, snap back to hidden position on left
       setPosition(draggedPosition);
       setIsOpen(false);
     }
@@ -87,7 +92,7 @@ export default function FloatingChatbot() {
               className={`drag-handle flex items-center justify-center cursor-grab active:cursor-grabbing
                 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32
                 transition-transform duration-300 ease-in-out
-                ${isOpen ? "rotate-[45deg] scale-75" : "rotate-0 scale-100"}`}
+                ${isOpen ? "rotate-[45deg] scale-75" : "rotate-[30deg] scale-90"}`}
               onClick={handleToggle}
               onTouchStart={(e) => {
                 const touch = e.touches[0];

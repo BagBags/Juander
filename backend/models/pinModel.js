@@ -18,6 +18,7 @@ const pinSchema = new mongoose.Schema(
     arLink: { type: String },
     glbUrl: { type: String },
     facadeUrl: { type: String, default: "" },
+    insideFortSantiago: { type: Boolean, default: false },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
     inactiveReason: { 
       type: String, 

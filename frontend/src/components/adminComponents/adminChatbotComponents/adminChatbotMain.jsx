@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Edit, Trash2, Plus, X, Check } from "lucide-react";
 
 export default function AdminChatbot() {
   // --- States ---
@@ -184,17 +185,27 @@ export default function AdminChatbot() {
             </h3>
 
           {/* Tag Filter */}
-          <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 mb-6">
-            <h4 className="font-semibold mb-3 text-gray-700">Filter by Tags</h4>
-            <div className="flex flex-wrap gap-2">
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-gray-700 text-sm">Filter by Tags</h4>
+              {filterTags.length > 0 && (
+                <button
+                  onClick={() => setFilterTags([])}
+                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                >
+                  Clear all ({filterTags.length})
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
               {tags.map((tag) => (
                 <button
                   key={tag._id}
                   onClick={() => handleFilterCheckbox(tag._id)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition flex-shrink-0 ${
                     filterTags.includes(tag._id)
-                      ? "bg-red-500 text-white shadow-md"
-                      : "bg-white text-gray-700 border-2 border-gray-300 hover:border-red-300"
+                      ? "bg-red-500 text-white"
+                      : "bg-white text-gray-700 border border-gray-300 hover:border-red-300"
                   }`}
                 >
                   {tag.name}
@@ -223,14 +234,16 @@ export default function AdminChatbot() {
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleEdit(entry)}
-                    className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm font-medium transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
                   >
+                    <Edit size={14} />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(entry._id)}
-                    className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
                   >
+                    <Trash2 size={14} />
                     Delete
                   </button>
                 </div>
@@ -274,7 +287,7 @@ export default function AdminChatbot() {
 
         {/* Right: Entry Form + Tag Management */}
         <div
-          className="w-full lg:w-96 space-y-6 lg:sticky lg:top-6 self-start 
+          className="w-full lg:w-[600px] space-y-6 lg:sticky lg:top-6 self-start 
                 max-h-[calc(100vh-3rem)] overflow-y-auto pr-2"
         >
           {/* Entry Form */}
@@ -283,36 +296,56 @@ export default function AdminChatbot() {
               {editId ? "Edit Entry" : "Add Entry"}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <textarea
-                name="info_en"
-                value={form.info_en}
-                onChange={handleChange}
-                placeholder="Information (English)*"
-                rows={4}
-                required
-                className="w-full border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm"
-              />
-              <textarea
-                name="info_fil"
-                value={form.info_fil}
-                onChange={handleChange}
-                placeholder="Information (Filipino)"
-                rows={4}
-                className="w-full border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm"
-              />
-              <input
-                name="keywords"
-                value={form.keywords}
-                onChange={handleChange}
-                placeholder="Keywords (comma separated)"
-                className="w-full border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white p-2 text-sm"
-              />
+              {/* English Information */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Information (English) <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  name="info_en"
+                  value={form.info_en}
+                  onChange={handleChange}
+                  placeholder="Information (English)*"
+                  rows={4}
+                  required
+                  className="w-full border-2 border-gray-300 rounded-lg 
+                 focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+                 outline-none transition text-gray-700 bg-white p-2 text-sm"
+                />
+              </div>
+              
+              {/* Filipino Information */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Information (Filipino)
+                </label>
+                <textarea
+                  name="info_fil"
+                  value={form.info_fil}
+                  onChange={handleChange}
+                  placeholder="Information (Filipino)"
+                  rows={4}
+                  className="w-full border-2 border-gray-300 rounded-lg 
+                 focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+                 outline-none transition text-gray-700 bg-white p-2 text-sm"
+                />
+              </div>
+              
+              {/* Keywords */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Keywords
+                </label>
+                <input
+                  name="keywords"
+                  value={form.keywords}
+                  onChange={handleChange}
+                  placeholder="Keywords (comma separated)"
+                  className="w-full border-2 border-gray-300 rounded-lg 
+                 focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
+                 outline-none transition text-gray-700 bg-white p-2 text-sm"
+                />
+              </div>
 
               {/* Tags selection */}
               <div>
@@ -338,8 +371,9 @@ export default function AdminChatbot() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-[#f04e37] hover:bg-[#d03b27] text-white py-2 rounded-lg text-sm"
+                  className="flex-1 flex items-center justify-center gap-1.5 bg-[#f04e37] hover:bg-[#d03b27] text-white py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition"
                 >
+                  {editId ? <Check size={16} /> : <Plus size={16} />}
                   {editId ? "Update" : "Add"}
                 </button>
                 {editId && (
@@ -354,11 +388,9 @@ export default function AdminChatbot() {
                         tags: [],
                       });
                     }}
-                    className="flex-1 py-2 rounded-lg text-sm font-medium 
-             border border-gray-300 text-gray-600 bg-white 
-             hover:bg-gray-100 hover:text-gray-700 
-             transition shadow-sm"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-700 transition shadow-sm"
                   >
+                    <X size={16} />
                     Cancel
                   </button>
                 )}
@@ -376,14 +408,16 @@ export default function AdminChatbot() {
                 value={tagName}
                 onChange={(e) => setTagName(e.target.value)}
                 placeholder="Tag name"
-                className=" p-2 border-2 border-gray-300 rounded-lg 
+                className="p-2 border-2 border-gray-300 rounded-lg 
                focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
                outline-none transition text-gray-700 bg-white flex-1 text-sm"
               />
               <button
                 type="submit"
-                className="bg-[#f04e37] hover:bg-[#d03b27] text-white px-4 rounded-lg text-sm"
+                className="flex items-center gap-1.5 bg-[#f04e37] hover:bg-[#d03b27] text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition"
               >
+                 {editTagId ? <Check size={16} /> : <Plus size={16} />}
+
                 {editTagId ? "Update" : "Add"}
               </button>
               {editTagId && (
@@ -393,8 +427,9 @@ export default function AdminChatbot() {
                     setEditTagId(null);
                     setTagName("");
                   }}
-                  className="px-3 border rounded-lg text-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-600 bg-white hover:bg-gray-100 hover:text-gray-700 transition shadow-sm"
                 >
+                  <X size={16} />
                   Cancel
                 </button>
               )}
@@ -408,17 +443,19 @@ export default function AdminChatbot() {
                   className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg"
                 >
                   <span className="text-sm text-gray-700">{tag.name}</span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleTagEdit(tag)}
-                      className="text-blue-600 text-sm hover:underline"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
                     >
+                      <Edit size={14} />
                       Edit
                     </button>
                     <button
                       onClick={() => handleTagDelete(tag._id)}
-                      className="text-red-600 text-sm hover:underline"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
                     >
+                      <Trash2 size={14} />
                       Delete
                     </button>
                   </div>

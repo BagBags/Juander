@@ -17,11 +17,11 @@ router.post(
       // The upload middleware automatically determines the correct folder based on baseUrl
       // For /api/userItineraries/upload -> uploads/userItineraries/
       // For /api/itineraries/upload -> uploads/itineraries/
-      const folder = req.baseUrl.includes("userItineraries") 
-        ? "userItineraries" 
+      const folder = req.baseUrl.includes("userItineraries")
+        ? "userItineraries"
         : "itineraries";
       const imageUrl = `/uploads/${folder}/${req.file.filename}`;
-      
+
       console.log("Image uploaded successfully:", imageUrl);
       res.status(200).json({ imageUrl });
     } catch (err) {
@@ -38,12 +38,14 @@ const getUserName = (user) =>
 // CREATE a new itinerary (user or admin)
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { name, description, imageUrl, sites, isAdminCreated } = req.body;
+    const { name, description, imageUrl, duration, sites, isAdminCreated } =
+      req.body;
 
     console.log("Creating itinerary with data:", {
       name,
       description,
       imageUrl,
+      duration,
       sitesCount: sites?.length,
       isAdminCreated: isAdminCreated || false,
     });
@@ -52,6 +54,7 @@ router.post("/", verifyToken, async (req, res) => {
       name,
       description,
       imageUrl,
+      duration,
       sites,
       createdBy: req.user._id,
       isAdminCreated: isAdminCreated || false,
@@ -97,7 +100,9 @@ router.get("/archived", verifyAdmin, async (req, res) => {
   try {
     const itineraries = await Itinerary.find({
       isArchived: true,
-    }).populate("sites").sort({ updatedAt: -1 });
+    })
+      .populate("sites")
+      .sort({ updatedAt: -1 });
 
     res.json(itineraries);
   } catch (err) {
@@ -108,9 +113,9 @@ router.get("/archived", verifyAdmin, async (req, res) => {
 // Public itineraries for guests (exclude archived)
 router.get("/guest", async (req, res) => {
   try {
-    const itineraries = await Itinerary.find({ 
+    const itineraries = await Itinerary.find({
       isAdminCreated: true,
-      isArchived: false 
+      isArchived: false,
     }).populate("sites");
     res.json(itineraries);
   } catch (err) {
@@ -172,12 +177,16 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    const { name, description, imageUrl, sites } = req.body;
+    const { name, description, imageUrl, sites, duration } = req.body;
     itinerary.name = name || itinerary.name;
     itinerary.description = description || itinerary.description;
     // Allow empty string to clear imageUrl
     if (imageUrl !== undefined) {
       itinerary.imageUrl = imageUrl;
+    }
+    // Allow duration to be set to 0 or any number; only fallback to existing when undefined
+    if (duration !== undefined) {
+      itinerary.duration = Number(duration) || 0;
     }
     itinerary.sites = sites || itinerary.sites;
 

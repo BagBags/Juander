@@ -446,7 +446,15 @@ export default function TouristItineraryMap() {
   return (
     <div className="w-full h-screen relative">
       {/* Back Header */}
-      <div className="absolute top-0 left-0 w-full z-30 p-4 pointer-events-auto">
+      <div 
+        className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-sm"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
         <BackHeader title={<span className="text-black">Tourist Itinerary Map</span>} />
       </div>
 

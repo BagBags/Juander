@@ -1,23 +1,33 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-export default function BackHeader({ title, fallback = "/AdminProfile" }) {
+/**
+ * Admin-specific BackHeader - IDENTICAL to main BackHeader
+ * Only difference: uses fallback navigation instead of history-based
+ */
+export default function BackHeader({ title, fallback = "/AdminProfile", className = "" }) {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    // safest: always go to fallback
     navigate(fallback);
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-white pb-2 px-4 flex items-center border-b border-gray-200" style={{ paddingTop: "max(env(safe-area-inset-top), 16px)" }}>
-      <span
-        className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
+    <div className={`flex items-center gap-2 ${className}`}>
+      <button
+        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
         onClick={handleBack}
+        aria-label="Go back"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          color: 'inherit'
+        }}
       >
-        &lt;
-      </span>
-      <h1 className="ml-2 font-bold text-xl">{title}</h1>
+        ‹
+      </button>
+      <h1 className="font-bold text-xl truncate" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+        {title}
+      </h1>
     </div>
   );
 }

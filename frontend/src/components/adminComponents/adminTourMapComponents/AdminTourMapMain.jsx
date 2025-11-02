@@ -257,10 +257,15 @@ export default function AdminTourMapMain() {
   // Close pin card and revert changes if not saved
   const closePinCard = () => {
     if (originalPinData && selectedPin !== null) {
-      // Revert to original data
-      setPins((prev) =>
-        prev.map((p, i) => (i === selectedPin ? originalPinData : p))
-      );
+      // If pin has no _id, it's a new unsaved pin - remove it
+      if (!originalPinData._id) {
+        setPins((prev) => prev.filter((_, i) => i !== selectedPin));
+      } else {
+        // If pin has _id, it's an existing pin - revert to original data
+        setPins((prev) =>
+          prev.map((p, i) => (i === selectedPin ? originalPinData : p))
+        );
+      }
     }
     setSelectedPin(null);
     setOriginalPinData(null);

@@ -256,7 +256,15 @@ export default function TripArchivesPage() {
       </div>
 
       {/* ✅ Sticky back header (matching profile layout) */}
-      <div className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md shadow-sm px-4 md:px-0 pb-2 pt-4">
+      <div 
+        className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md shadow-sm"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
         <BackHeader title="Trip Archives" />
       </div>
 

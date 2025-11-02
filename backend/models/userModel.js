@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false, // New users need to complete profile
     },
+    hideFortSantiagoModal: {
+      type: Boolean,
+      default: false, // Show Fort Santiago modal by default
+    },
   },
 
   { timestamps: true }

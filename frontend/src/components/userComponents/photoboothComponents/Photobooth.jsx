@@ -252,14 +252,23 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       <div className="phone-frame">
-        {/* ✅ Back button + refresh */}
-        <div className="absolute top-0 left-0 w-full z-[200] bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
-          <div className="p-4 flex items-center justify-between">
-            <BackHeader />
+        {/* ✅ Back button + refresh - White background */}
+        <div 
+          className="absolute top-0 left-0 w-full z-[200] bg-white/95 backdrop-blur-md shadow-md"
+          style={{
+            paddingTop: "max(env(safe-area-inset-top), 16px)",
+            paddingBottom: "8px",
+            paddingLeft: "16px",
+            paddingRight: "16px"
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <BackHeader className="flex-1" />
             <button
-              className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl hover:bg-white/30 transition-all shadow-lg"
+              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-700 text-2xl hover:bg-gray-200 transition-all shadow-md active:scale-90"
               onClick={() => window.location.reload()}
               title="Refresh"
+              aria-label="Refresh camera"
             >
               ↻
             </button>

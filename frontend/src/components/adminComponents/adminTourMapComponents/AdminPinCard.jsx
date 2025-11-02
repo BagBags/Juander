@@ -35,6 +35,7 @@ const AdminPinCard = ({
 
   // Initialize description sections from existing siteDescription
   const [descriptionSections, setDescriptionSections] = useState([]);
+  const [showFortSantiagoModal, setShowFortSantiagoModal] = useState(false);
 
   useEffect(() => {
     // Split existing description into sections (by double line breaks or keep as single section)
@@ -361,6 +362,43 @@ const AdminPinCard = ({
             This link will only be visible to tourists if enabled.
           </p>
         </div>
+        
+        {/* Inside Fort Santiago Toggle */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Inside Fort Santiago
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <div className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={pin.insideFortSantiago || false}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    if (isChecked) {
+                      setShowFortSantiagoModal(true);
+                    }
+                    updatePinField(
+                      selectedPinIndex,
+                      "insideFortSantiago",
+                      isChecked
+                    );
+                  }}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+              </div>
+              <span className="text-sm text-gray-600">
+                {pin.insideFortSantiago ? "Yes" : "No"}
+              </span>
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Enable this if the site is located inside Fort Santiago.
+          </p>
+        </div>
+        
         {/* Site Status */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -437,6 +475,44 @@ const AdminPinCard = ({
           </button>
         </div>
       </form>
+      
+      {/* Inside Fort Santiago Modal */}
+      {showFortSantiagoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 border-2 border-green-200 max-w-md w-full mx-4 animate-fade-in">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Site Inside Fort Santiago
+                </h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  This site has been marked as being located inside Fort Santiago.
+                </p>
+                <div className="bg-amber-50 border-l-4 border-amber-400 p-3 mb-4 rounded">
+                  <p className="text-sm text-amber-800 font-medium">
+                    ⚠️ Important: Fort Santiago requires an entrance fee. This information will be visible to tourists.
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setShowFortSantiagoModal(false)}
+                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
