@@ -26,6 +26,7 @@ const tagRoutes = require("./routes/adminTagRoute");
 const visitedSiteRoute = require("./routes/visitedSiteRoute");
 const reviewRoute = require("./routes/reviewRoute");
 const tourRoute = require("./routes/tourRoute");
+const openaiRoute = require("./routes/openaiRoute");
 
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
@@ -54,6 +55,8 @@ app.use(
     origin: [
       "http://localhost:5173", // Development
       "http://juander-frontend.s3-website-ap-southeast-2.amazonaws.com", // Production S3
+      "https://d39zx5gyblzxjs.cloudfront.net", // Production Frontend CloudFront HTTPS
+      "https://d3des4qdhz53rp.cloudfront.net", // Production Backend CloudFront HTTPS
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -111,6 +114,7 @@ app.use("/api/userItineraries", itineraryRoute);
 app.use("/api/photobooth/filters", photoboothFilterRoute);
 app.use("/api/visited-sites", visitedSiteRoute);
 app.use("/api/reviews", reviewRoute);
+app.use("/api/openai", openaiRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/uploads/profile",

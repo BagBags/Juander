@@ -36,8 +36,8 @@ if exist "..\juander-backend-UNIX.zip" (
 echo Creating ZIP with Unix-compatible paths...
 echo.
 
-REM Create ZIP with Unix line endings and paths
-%SEVENZIP% a -tzip "..\juander-backend-UNIX.zip" * -x!node_modules\.cache -x!.git
+REM Create ZIP with Unix line endings and paths (exclude node_modules to force rebuild on Linux)
+%SEVENZIP% a -tzip "..\juander-backend-UNIX.zip" * -x!node_modules -x!.git
 
 if %ERRORLEVEL% EQU 0 (
     echo.

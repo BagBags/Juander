@@ -7,7 +7,7 @@ import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
 // Extract base URL from VITE_API_BASE_URL (remove /api suffix if present)
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
-  : "http://juander-backend-env.eba-3v3p4pbh.ap-southeast-2.elasticbeanstalk.com";
+  : "https://d3des4qdhz53rp.cloudfront.net";
 
 // 3D Model Preview Component
 const ModelPreview = ({ url }) => {

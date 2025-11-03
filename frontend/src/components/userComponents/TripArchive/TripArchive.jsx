@@ -4,38 +4,7 @@ import { FaStar } from "react-icons/fa";
 import BackHeader from "../BackButton"; // ✅ import BackHeader
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Filter } from "bad-words";
 import { Camera, X, MapPin, Calendar, Star as StarIcon } from "lucide-react";
-
-const filter = new Filter();
-filter.addWords(
-  "putangina",
-  "putang ina",
-  "tanginamo",
-  "anak ng puta",
-  "pakyu",
-  "pekpek",
-  "puke",
-  "burat",
-  "pwets",
-  "ulol",
-  "gago",
-  "gaga",
-  "tanga",
-  "bobo",
-  "tarantado",
-  "hayop",
-  "loko",
-  "lokohan",
-  "pucha",
-  "puchang ina",
-  "pakshet",
-  "gago ka",
-  "tangina mo",
-  "putangi mo",
-  "ulol ka",
-  "tanga ka"
-);
 
 export default function TripArchivesPage() {
   const [visitedSites, setVisitedSites] = useState([]);
@@ -175,10 +144,60 @@ export default function TripArchivesPage() {
       return;
     }
 
-    // Check for profanity in review text
-    if (reviewText && filter.isProfane(reviewText)) {
-      alert("⚠️ Please avoid using inappropriate language in your review.");
-      return;
+    // Check for inappropriate content using OpenAI Moderation API
+    if (reviewText) {
+      try {
+        const moderationResponse = await axios.post(
+          `${BACKEND_URL}/api/openai/moderate`,
+          { input: reviewText },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        if (moderationResponse.data.flagged) {
+          const categories = Object.entries(moderationResponse.data.categories)
+            .filter(([_, value]) => value)
+            .map(([key]) => key);
+            
+          let warningMessage = "⚠️ Your review contains inappropriate content";
+          if (categories.length > 0) {
+            warningMessage += ` (${categories.join(", ")})`;
+          }
+          warningMessage += ". Please revise your review.";
+          
+          alert(warningMessage);
+          console.log("Flagged categories:", moderationResponse.data.categories);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking content moderation:", err);
+        
+        // Check if it's a rate limit error
+        if (err.response && 
+            err.response.status === 500 && 
+            err.response.data && 
+            err.response.data.details === "Too Many Requests") {
+          
+          alert("We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.");
+          console.log("OpenAI rate limit reached, proceeding with submission");
+          
+          // Optional: Add basic profanity check as fallback
+          const basicProfanityList = ["fuck", "shit", "ass", "sex", "porn", "dick"];
+          const containsProfanity = basicProfanityList.some(word => 
+            reviewText.toLowerCase().includes(word.toLowerCase())
+          );
+          
+          if (containsProfanity) {
+            alert("⚠️ Your review may contain inappropriate content. Please revise it.");
+            return;
+          }
+        }
+        // Continue with submission for other errors
+      }
     }
 
     try {

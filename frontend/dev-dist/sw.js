@@ -79,14 +79,14 @@ define(['./workbox-3e1353d5'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "/index.html",
-    "revision": "0.sg8dbe5kc6g"
+    "revision": "0.k1uqusothlo"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/],
     denylist: [/^\/api/, /^\/admin/, /^\/create-itinerary/, /^\/profile/, /^\/homepage/]
   }));
-  workbox.registerRoute(/^http:\/\/localhost:5000\/api\/(pins|reviews|itineraries\/admin)\/.*/i, new workbox.NetworkFirst({
+  workbox.registerRoute(/^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i, new workbox.NetworkFirst({
     "cacheName": "guest-api-cache",
     "networkTimeoutSeconds": 10,
     plugins: [new workbox.ExpirationPlugin({
@@ -96,7 +96,7 @@ define(['./workbox-3e1353d5'], (function (workbox) { 'use strict';
       statuses: [0, 200]
     })]
   }), 'GET');
-  workbox.registerRoute(/^http:\/\/localhost:5000\/api\/(admin|auth|users|userItineraries)\/.*/i, new workbox.NetworkOnly(), 'GET');
+  workbox.registerRoute(/^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i, new workbox.NetworkOnly(), 'GET');
   workbox.registerRoute(/\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i, new workbox.CacheFirst({
     "cacheName": "image-cache",
     plugins: [new workbox.ExpirationPlugin({
