@@ -67,7 +67,26 @@ export const useApi = (api) => {
         console.error("❌ Error fetching pins:", err);
       }
     };
+    
+    // Initial fetch
     fetchPins();
+    
+    // Set up polling to refetch pins every 30 seconds
+    const intervalId = setInterval(fetchPins, 30000);
+    
+    // Refetch when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchPins();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup interval and event listener on unmount
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [api]);
 
   return { mask, inverseMask, pins };

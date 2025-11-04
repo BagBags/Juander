@@ -361,22 +361,66 @@ export default function AdminTourMapMain() {
     }
   };
 
-  const handleRemoveFacade = (index) => {
-    setPins((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], facadeUrl: "" };
-      return updated;
-    });
-    notify("success", "Facade removed (click Save Changes to apply)");
+  const handleRemoveFacade = async (index) => {
+    const pin = pins[index];
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the facade image for "${pin.siteName}"?\n\n` +
+      `This will permanently delete the file from the server and cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      notify("info", "Deleting facade image...");
+      
+      // Call backend to delete the file and update database
+      await api.delete(`/pins/${pin._id}/remove-facade`);
+      
+      // Update local state
+      setPins((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], facadeUrl: "" };
+        return updated;
+      });
+      
+      notify("success", "Facade image deleted successfully");
+    } catch (error) {
+      console.error("Error removing facade:", error);
+      notify("error", "Failed to delete facade image. Please try again.");
+    }
   };
 
-  const handleRemoveGlb = (index) => {
-    setPins((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], glbUrl: "" };
-      return updated;
-    });
-    notify("success", "3D model removed (click Save Changes to apply)");
+  const handleRemoveGlb = async (index) => {
+    const pin = pins[index];
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the 3D model for "${pin.siteName}"?\n\n` +
+      `This will permanently delete the file from the server and cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      notify("info", "Deleting 3D model...");
+      
+      // Call backend to delete the file and update database
+      await api.delete(`/pins/${pin._id}/remove-glb`);
+      
+      // Update local state
+      setPins((prev) => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], glbUrl: "" };
+        return updated;
+      });
+      
+      notify("success", "3D model deleted successfully");
+    } catch (error) {
+      console.error("Error removing 3D model:", error);
+      notify("error", "Failed to delete 3D model. Please try again.");
+    }
   };
 
   const handleMediaUpload = async (e, index) => {
@@ -427,15 +471,38 @@ export default function AdminTourMapMain() {
     }
   };
 
-  const handleRemoveMedia = (pinIndex, mediaIndex) => {
-    setPins((prev) => {
-      const updated = [...prev];
-      const mediaFiles = [...(updated[pinIndex].mediaFiles || [])];
-      mediaFiles.splice(mediaIndex, 1);
-      updated[pinIndex] = { ...updated[pinIndex], mediaFiles };
-      return updated;
-    });
-    notify("success", "Media removed (click Save Changes to apply)");
+  const handleRemoveMedia = async (pinIndex, mediaIndex) => {
+    const pin = pins[pinIndex];
+    const mediaFile = pin.mediaFiles[mediaIndex];
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this media file?\n\n` +
+      `This will permanently delete the file from the server and cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      notify("info", "Deleting media file...");
+      
+      // Call backend to delete the file and update database
+      await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
+      
+      // Update local state
+      setPins((prev) => {
+        const updated = [...prev];
+        const mediaFiles = [...(updated[pinIndex].mediaFiles || [])];
+        mediaFiles.splice(mediaIndex, 1);
+        updated[pinIndex] = { ...updated[pinIndex], mediaFiles };
+        return updated;
+      });
+      
+      notify("success", "Media file deleted successfully");
+    } catch (error) {
+      console.error("Error removing media file:", error);
+      notify("error", "Failed to delete media file. Please try again.");
+    }
   };
 
   return (

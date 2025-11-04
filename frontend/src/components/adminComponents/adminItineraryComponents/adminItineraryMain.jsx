@@ -26,9 +26,12 @@ export default function AdminItineraryMain() {
   const ICON_SIZE = 20;
   const COVER_IMAGE_HEIGHT = 192;
 
-  const token = localStorage.getItem("token"); // Get admin token
-  const config = {
-    headers: { Authorization: `Bearer ${token}` },
+  // Helper function to get fresh config with token
+  const getConfig = () => {
+    const token = localStorage.getItem("token");
+    return {
+      headers: { Authorization: `Bearer ${token}` },
+    };
   };
 
   // Fetch pins
@@ -39,7 +42,7 @@ export default function AdminItineraryMain() {
           `${
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
           }/pins`,
-          config
+          getConfig()
         );
         setPins(res.data);
       } catch (err) {
@@ -61,7 +64,7 @@ export default function AdminItineraryMain() {
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries`,
-        config
+        getConfig()
       );
       setItineraries(res.data);
     } catch (err) {
@@ -75,7 +78,7 @@ export default function AdminItineraryMain() {
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/archived`,
-        config
+        getConfig()
       );
       setArchivedItineraries(res.data);
     } catch (err) {
@@ -114,6 +117,7 @@ export default function AdminItineraryMain() {
         const formData = new FormData();
         formData.append("image", imageFile);
 
+        const token = localStorage.getItem("token");
         const res = await axios.post(
           `${
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -150,7 +154,7 @@ export default function AdminItineraryMain() {
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
           }/itineraries/${editingId}`,
           payload,
-          config
+          getConfig()
         );
         alert("Itinerary updated!");
       } else {
@@ -159,7 +163,7 @@ export default function AdminItineraryMain() {
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
           }/itineraries`,
           payload,
-          config
+          getConfig()
         );
         alert("Itinerary saved!");
       }
@@ -187,7 +191,7 @@ export default function AdminItineraryMain() {
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/${id}/archive`,
         {},
-        config
+        getConfig()
       );
       fetchItineraries();
       fetchArchivedItineraries();
@@ -207,7 +211,7 @@ export default function AdminItineraryMain() {
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/${id}/restore`,
         {},
-        config
+        getConfig()
       );
       fetchItineraries();
       fetchArchivedItineraries();
@@ -231,7 +235,7 @@ export default function AdminItineraryMain() {
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/${id}`,
-        config
+        getConfig()
       );
       fetchArchivedItineraries();
       alert("Itinerary permanently deleted!");
