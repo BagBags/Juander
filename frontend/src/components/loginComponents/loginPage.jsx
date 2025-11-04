@@ -9,9 +9,15 @@ export default function LoginPage() {
   const toggleForm = () => setIsLogin((prev) => !prev);
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative">
+    <div 
+      className="h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top), 16px)",
+        paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+      }}
+    >
       {/* Main Two-Column Container */}
-      <div className="w-full max-w-5xl h-[100vh] bg-white rounded-2xl shadow-xl grid grid-cols-1 md:grid-cols-2 border border-gray-100 overflow-hidden">
+      <div className="w-full max-w-5xl h-full bg-white rounded-2xl shadow-xl grid grid-cols-1 md:grid-cols-2 border border-gray-100 overflow-hidden">
         {/* Left Side (fixed area, does not move) */}
         <div className="hidden md:flex items-center justify-center h-full p-6">
           <img

@@ -24,7 +24,12 @@ export default function SitePreviewCard({
   }, [selectedPin?._id, isNearby]);
 
   return (
-    <div className="absolute top-4 left-4 right-4 z-40 animate-slide-down">
+    <div 
+      className="absolute left-4 right-4 z-40 animate-slide-down"
+      style={{
+        top: "calc(env(safe-area-inset-top) + 16px)",
+      }}
+    >
       <div className="bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden">
         {/* Header with status indicator */}
         <div

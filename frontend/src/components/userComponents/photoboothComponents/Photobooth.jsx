@@ -250,22 +250,24 @@ export default function Photobooth() {
   }, []);
 
   return (
-    <div className="photobooth-container" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div className="photobooth-container">
       <div className="phone-frame">
-        {/* ✅ Back button + refresh - White background */}
+        {/* ✅ Back button + refresh - Blurred transparent background */}
         <div 
-          className="absolute top-0 left-0 w-full z-[200] bg-white/95 backdrop-blur-md shadow-md"
+          className="absolute top-0 left-0 w-full z-[200] bg-black/30 backdrop-blur-md"
           style={{
             paddingTop: "max(env(safe-area-inset-top), 16px)",
-            paddingBottom: "8px",
+            paddingBottom: "12px",
             paddingLeft: "16px",
             paddingRight: "16px"
           }}
         >
           <div className="flex items-center justify-between gap-3">
-            <BackHeader className="flex-1" />
+            <div className="flex-1 text-white">
+              <BackHeader className="flex-1" />
+            </div>
             <button
-              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-700 text-2xl hover:bg-gray-200 transition-all shadow-md active:scale-90"
+              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-2xl hover:bg-white/30 transition-all active:scale-90"
               onClick={() => window.location.reload()}
               title="Refresh"
               aria-label="Refresh camera"
@@ -285,10 +287,7 @@ export default function Photobooth() {
             onUserMedia={handleWebcamLoad}
             onUserMediaError={(err) => console.error("Webcam error:", err)}
             videoConstraints={{
-              width: videoDims.width,
-              height: videoDims.height,
               facingMode: "user",
-              frameRate: 15,
             }}
             screenshotFormat="image/jpeg"
             mirrored={true}

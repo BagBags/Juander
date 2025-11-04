@@ -158,8 +158,13 @@ export default function TripArchivesPage() {
           }
         );
         
-        if (moderationResponse.data.flagged) {
-          const categories = Object.entries(moderationResponse.data.categories)
+        // OpenAI returns results in results[0]
+        const result = moderationResponse.data.results?.[0];
+        console.log("Moderation API Response:", moderationResponse.data);
+        console.log("Moderation Result:", result);
+        
+        if (result && result.flagged) {
+          const categories = Object.entries(result.categories)
             .filter(([_, value]) => value)
             .map(([key]) => key);
             
@@ -170,11 +175,22 @@ export default function TripArchivesPage() {
           warningMessage += ". Please revise your review.";
           
           alert(warningMessage);
-          console.log("Flagged categories:", moderationResponse.data.categories);
+          console.log("Flagged categories:", result.categories);
           return;
         }
       } catch (err) {
         console.error("Error checking content moderation:", err);
+        
+        // Always apply basic profanity check as fallback when moderation API fails
+        const basicProfanityList = ["fuck", "shit", "ass", "bitch", "sex", "porn", "dick", "pussy", "cock", "damn", "hell"];
+        const containsProfanity = basicProfanityList.some(word => 
+          reviewText.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (containsProfanity) {
+          alert("⚠️ Your review contains inappropriate content. Please revise it.");
+          return;
+        }
         
         // Check if it's a rate limit error
         if (err.response && 
@@ -183,20 +199,11 @@ export default function TripArchivesPage() {
             err.response.data.details === "Too Many Requests") {
           
           alert("We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.");
-          console.log("OpenAI rate limit reached, proceeding with submission");
-          
-          // Optional: Add basic profanity check as fallback
-          const basicProfanityList = ["fuck", "shit", "ass", "sex", "porn", "dick"];
-          const containsProfanity = basicProfanityList.some(word => 
-            reviewText.toLowerCase().includes(word.toLowerCase())
-          );
-          
-          if (containsProfanity) {
-            alert("⚠️ Your review may contain inappropriate content. Please revise it.");
-            return;
-          }
+          console.log("OpenAI rate limit reached, proceeding with submission after profanity check");
+        } else {
+          // For other errors, warn user but allow submission after profanity check
+          console.warn("Moderation API unavailable, used fallback profanity filter");
         }
-        // Continue with submission for other errors
       }
     }
 

@@ -29,7 +29,13 @@ export default function SiteModalFullScreen({
   }, [selectedPin?._id, t]);
 
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto">
+    <div 
+      className="absolute inset-0 z-50 bg-white overflow-y-auto"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       {/* Header with Close Button */}
       <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm z-10">
         <h2 className="text-xl font-bold text-gray-800">Site Information</h2>
@@ -141,19 +147,6 @@ export default function SiteModalFullScreen({
               </button>
             )}
 
-            {/* Status */}
-            <div className="text-sm font-medium px-4 py-3 rounded-lg shadow-sm border border-gray-200 bg-gray-50 mb-4">
-              <span className="text-gray-700">Status: </span>
-              <span
-                className={
-                  selectedPin.status === "active"
-                    ? "text-green-600 font-semibold"
-                    : "text-red-600 font-semibold"
-                }
-              >
-                {selectedPin.status === "active" ? "✓ Active" : "✗ Inactive"}
-              </span>
-            </div>
 
             {/* Distance */}
             {distance !== null && (

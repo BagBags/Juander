@@ -1,12 +1,15 @@
 import React, { Suspense, lazy, useState, useEffect } from "react";
-import { Volume2, X } from "lucide-react";
+import { Volume2, X, Star } from "lucide-react";
 import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
+import axios from "axios";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
 const SiteCard = ({ pin, onClose, distance }) => {
   const [showAR, setShowAR] = useState(false);
+  const [siteReviews, setSiteReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   // Announce site when card opens
   useEffect(() => {
@@ -17,8 +20,42 @@ const SiteCard = ({ pin, onClose, distance }) => {
     }
   }, [pin?._id]);
 
+  // Fetch reviews for this site
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!pin?._id) {
+        setSiteReviews([]);
+        setReviewsLoading(false);
+        return;
+      }
+      
+      try {
+        setReviewsLoading(true);
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/reviews/site/${pin._id}`
+        );
+        // Backend returns { reviews, averageRating, totalReviews }
+        const reviews = Array.isArray(response.data.reviews) ? response.data.reviews : [];
+        setSiteReviews(reviews);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        setSiteReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [pin?._id]);
+
   return (
-    <div className="absolute inset-0 z-50 bg-white overflow-y-auto">
+    <div 
+      className="absolute inset-0 z-50 bg-white overflow-y-auto"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       {/* Header with Close Button */}
       <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between shadow-sm z-10">
         <h2 className="text-xl font-bold text-gray-800">Site Information</h2>
@@ -132,29 +169,59 @@ const SiteCard = ({ pin, onClose, distance }) => {
               </button>
             )}
 
-            {/* Status */}
-            <div className="text-sm font-medium px-4 py-3 rounded-lg shadow-sm border border-gray-200 bg-gray-50 mb-4">
-              <span className="text-gray-700">Status: </span>
-              <span
-                className={
-                  pin.status === "active"
-                    ? "text-green-600 font-semibold"
-                    : "text-red-600 font-semibold"
-                }
-              >
-                {pin.status === "active" ? "✓ Active" : "✗ Inactive"}
-              </span>
+            {/* User Reviews Section */}
+            <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <h4 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                User Reviews
+              </h4>
+              
+              {reviewsLoading ? (
+                <p className="text-sm text-gray-500">Loading reviews...</p>
+              ) : !Array.isArray(siteReviews) || siteReviews.length === 0 ? (
+                <p className="text-sm text-gray-500">No reviews yet. Be the first to review!</p>
+              ) : (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {siteReviews.map((review, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm text-gray-800">
+                          {review.userId?.firstName && review.userId?.lastName
+                            ? `${review.userId.firstName} ${review.userId.lastName}`
+                            : review.userId?.firstName || review.userId?.lastName || "Anonymous"}
+                        </span>
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }, (_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${
+                                i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {review.reviewText && (
+                        <p className="text-xs text-gray-600 mt-1">{review.reviewText}</p>
+                      )}
+                      {review.photos && review.photos.length > 0 && (
+                        <div className="flex gap-2 mt-2 overflow-x-auto">
+                          {review.photos.map((photo, photoIdx) => (
+                            <img
+                              key={photoIdx}
+                              src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000'}${photo}`}
+                              alt={`Review ${photoIdx + 1}`}
+                              className="w-16 h-16 object-cover rounded border border-gray-200"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Distance */}
-            {distance !== null && (
-              <div className="bg-blue-50 text-sm px-4 py-3 rounded-lg shadow-sm border border-blue-200 mb-4">
-                <span className="text-gray-700 font-medium">🛣️ Distance: </span>
-                <span className="text-blue-700 font-bold">
-                  {(distance / 1000).toFixed(2)} km
-                </span>
-              </div>
-            )}
           </>
         )}
       </div>

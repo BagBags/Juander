@@ -16,21 +16,21 @@ export default defineConfig({
         name: "Juander - Intramuros Tour Guide",
         short_name: "Juander",
         description: "Your personal guide to exploring Intramuros, Manila",
-        start_url: "https://d39zx5gyblzxjs.cloudfront.net/login",
-        scope: "https://d39zx5gyblzxjs.cloudfront.net/",
+        start_url: "/",
+        scope: "/",
         display: "standalone",
         orientation: "portrait-primary",
         background_color: "#ffffff",
         theme_color: "#f04e37",
         icons: [
           {
-            src: "https://d39zx5gyblzxjs.cloudfront.net/icons/logo.png",
+            src: "/icons/logo.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable"
           },
           {
-            src: "https://d39zx5gyblzxjs.cloudfront.net/icons/logo.png",
+            src: "/icons/logo.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable"

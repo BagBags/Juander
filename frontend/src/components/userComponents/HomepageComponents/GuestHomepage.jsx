@@ -48,12 +48,13 @@ function GuestHomepageContent() {
 
   return (
     <div
-      className="fixed inset-0 bg-cover bg-center bg-no-repeat flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative"
       style={{
         backgroundImage: "url('/JuanderBGWeb.svg')",
         backgroundColor: "#f04e37",
-        backgroundAttachment: "fixed",
         backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
         touchAction: "none",
@@ -61,8 +62,8 @@ function GuestHomepageContent() {
         WebkitOverscrollBehavior: "none",
       }}
     >
-      {/* Logo Header */}
-      <div className="w-full mt-10 flex justify-center px-4">
+        {/* Logo Header */}
+        <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
       </div>
 
@@ -83,7 +84,7 @@ function GuestHomepageContent() {
       {/* Explore Button (Mobile Only) */}
       <button
         onClick={() => navigate("/GuestItinerary")}
-        className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
+        className="absolute lg:top-[83%] lg:bottom-auto 
         left-1/2 -translate-x-1/2
         bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
         w-40 sm:w-40 lg:w-52 
@@ -91,6 +92,9 @@ function GuestHomepageContent() {
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200
         block md:hidden"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom) + 40px)",
+        }}
       >
         Explore
       </button>
@@ -98,7 +102,7 @@ function GuestHomepageContent() {
       {/* Sign Up to Explore Button (Desktop Only) */}
       <button
         onClick={() => navigate("/login")}
-        className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
+        className="absolute lg:top-[83%] lg:bottom-auto 
         left-1/2 -translate-x-1/2
         bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
         w-40 sm:w-40 lg:w-52 
@@ -106,6 +110,9 @@ function GuestHomepageContent() {
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200
         hidden md:block"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom) + 40px)",
+        }}
       >
         Sign up to Explore
       </button>

@@ -307,7 +307,27 @@ export default function Chatbot() {
       // Continue with normal processing if content is not flagged
     } catch (error) {
       console.error("Error checking content with moderation API:", error);
-      // Continue with normal processing if moderation check fails
+      
+      // Apply basic profanity filter as fallback when moderation API fails
+      const basicProfanityList = ["fuck", "shit", "ass", "bitch", "sex", "porn", "dick", "pussy", "cock", "damn", "hell"];
+      const containsProfanity = basicProfanityList.some(word => 
+        userMessage.toLowerCase().includes(word.toLowerCase())
+      );
+      
+      if (containsProfanity) {
+        setMessages((prev) => 
+          prev.map((msg, i) => 
+            i === prev.length - 1 
+              ? { role: "assistant", content: "⚠️ Your message contains inappropriate content. Please keep our conversation respectful." }
+              : msg
+          )
+        );
+        setIsBotTyping(false);
+        return;
+      }
+      
+      // Continue with normal processing if moderation check fails and no profanity detected
+      console.warn("Moderation API unavailable, used fallback profanity filter");
     }
 
     const lang = detectLanguage(userMessage);

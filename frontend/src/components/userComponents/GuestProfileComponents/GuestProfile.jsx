@@ -80,6 +80,10 @@ export default function GuestProfilePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       className="min-h-screen bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top), 16px)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
