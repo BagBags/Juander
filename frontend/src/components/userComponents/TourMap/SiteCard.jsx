@@ -170,7 +170,6 @@ const SiteCard = ({ pin, onClose, distance }) => {
                 🔍 View in AR Mode
               </button>
             )}
-<<<<<<< Updated upstream
 
             {/* User Reviews Section */}
             <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
@@ -225,8 +224,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
               )}
             </div>
 
-=======
->>>>>>> Stashed changes
+
           </>
         )}
       </div>

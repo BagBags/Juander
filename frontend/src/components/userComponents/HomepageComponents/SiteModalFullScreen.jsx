@@ -149,20 +149,7 @@ export default function SiteModalFullScreen({
               </button>
             )}
 
-<<<<<<< Updated upstream
 
-            {/* Distance */}
-            {distance !== null && (
-              <div className="bg-blue-50 text-sm px-4 py-3 rounded-lg shadow-sm border border-blue-200 mb-4">
-                <span className="text-gray-700 font-medium">🛣️ Distance: </span>
-                <span className="text-blue-700 font-bold">
-                  {(distance / 1000).toFixed(2)} km
-                </span>
-              </div>
-            )}
-
-=======
->>>>>>> Stashed changes
             {/* User Reviews Section */}
             <div className="mb-8 bg-gray-50 rounded-lg border border-gray-200 p-4">
               <h4 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
