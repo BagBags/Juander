@@ -268,4 +268,31 @@ router.delete("/:id", verifyToken, async (req, res) => {
   }
 });
 
+// @route   DELETE /api/reviews/admin/:id
+// @desc    Delete any review (admin only)
+// @access  Private (Admin)
+router.delete("/admin/:id", verifyToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
+      return res.status(403).json({ error: "Access denied. Admin only." });
+    }
+
+    const { id } = req.params;
+
+    const review = await Review.findById(id);
+
+    if (!review) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    await Review.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Review deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting review:", err);
+    res.status(500).json({ error: "Failed to delete review" });
+  }
+});
+
 module.exports = router;

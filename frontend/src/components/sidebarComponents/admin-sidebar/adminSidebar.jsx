@@ -6,6 +6,7 @@ import {
   faFolder,
   faUser,
   faHistory,
+  faChartBar,
 } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
@@ -23,6 +24,7 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
     { icon: faHome, label: "Home", to: "/AdminHome" },
     { icon: faFolder, label: "Contents", to: "/AdminManageContent" },
     { icon: faUser, label: "Roles", to: "/AdminManageRole" },
+    { icon: faChartBar, label: "Reports", to: "/AdminReports" },
     { icon: faHistory, label: "Logs", to: "/AdminLog" },
   ];
 

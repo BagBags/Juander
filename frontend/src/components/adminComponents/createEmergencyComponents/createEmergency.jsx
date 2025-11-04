@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-export default function CreateEmergency({ onSave, onCancel, agencyToEdit }) {
+export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formErrors = {}, setFormErrors }) {
   const [name, setName] = useState("");
   const [channels, setChannels] = useState([{ label: "", number: "" }]);
   const [icon, setIcon] = useState(null);
@@ -40,6 +40,10 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit }) {
     if (file) {
       setIcon(file); // Store file instead of URL
       setPreview(URL.createObjectURL(file)); // For preview
+      // Clear icon error when file is uploaded
+      if (formErrors && formErrors.icon && setFormErrors) {
+        setFormErrors({ ...formErrors, icon: "" });
+      }
     }
   };
 
@@ -78,7 +82,9 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit }) {
           className="w-54 h-54 object-cover rounded-full shadow-md border border-gray-200"
         />
 
-        <label className="cursor-pointer px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow transition-all">
+        <label className={`cursor-pointer px-4 py-2 rounded-lg border bg-white text-sm font-medium hover:bg-gray-50 hover:shadow transition-all ${
+          formErrors.icon ? "border-red-500 text-red-600" : "border-gray-200 text-gray-700"
+        }`}>
           Upload Icon
           <input
             type="file"
@@ -87,55 +93,93 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit }) {
             className="hidden"
           />
         </label>
+        {formErrors.icon && (
+          <p className="text-red-500 text-xs">{formErrors.icon}</p>
+        )}
       </div>
 
       {/* Agency Name */}
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Name
-      </label>
-      <input
-        type="text"
-        placeholder="Agency/Department"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full border border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/40 rounded-lg px-4 py-2 text-sm outline-none transition"
-      />
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Contacts
-      </label>
-      {/* Channels */}
-      {channels.map((channel, idx) => (
-        <div
-          key={idx}
-          className="relative mb-5 space-y-3 p-5 rounded-xl bg-gray-50 shadow-sm"
-        >
-          {/* Remove button on top-right */}
-          {channels.length > 1 && (
-            <button
-              type="button"
-              onClick={() => handleRemoveChannel(idx)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-red-600 transition"
-            >
-              ✕
-            </button>
-          )}
+      <div>
+        <h3 className="text-lg font-semibold mb-3 text-gray-700">Agency Name</h3>
+        {formErrors.agency && (
+          <p className="text-red-500 text-xs mb-2">{formErrors.agency}</p>
+        )}
+        <input
+          type="text"
+          placeholder="Agency Name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            if (formErrors.agency && e.target.value.trim()) {
+              setFormErrors({ ...formErrors, agency: "" });
+            }
+          }}
+          className={`w-full p-3 border-2 rounded-lg focus:ring-2 outline-none transition ${
+            formErrors.agency ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+          }`}
+        />
+      </div>
 
-          <input
-            type="text"
-            placeholder={`Contact Channel${idx > 0 ? " (Secondary)" : ""}`}
-            value={channel.label}
-            onChange={(e) => handleChannelChange(idx, "label", e.target.value)}
-            className="w-full border border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/40 rounded-lg px-4 py-2 text-sm outline-none transition"
-          />
-          <input
-            type="text"
-            placeholder="Contact Number/Link"
-            value={channel.number}
-            onChange={(e) => handleChannelChange(idx, "number", e.target.value)}
-            className="w-full border border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/40 rounded-lg px-4 py-2 text-sm outline-none transition"
-          />
-        </div>
-      ))}
+      {/* Contact Channels */}
+      <div>
+        <h3 className="text-lg font-semibold mb-3 text-gray-700">Contact Channels</h3>
+        {channels.map((channel, idx) => (
+          <div
+            key={idx}
+            className="relative mb-5 space-y-3 p-5 rounded-xl bg-gray-50 shadow-sm"
+          >
+            {/* Remove button on top-right */}
+            {channels.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleRemoveChannel(idx)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-red-600 transition"
+              >
+                ✕
+              </button>
+            )}
+
+            <div className="w-full">
+              <input
+                type="text"
+                placeholder={`Contact Channel${idx > 0 ? " (Secondary)" : ""}`}
+                value={channel.label}
+                onChange={(e) => {
+                  handleChannelChange(idx, "label", e.target.value);
+                  if (formErrors.contactChannelLabel && e.target.value.trim()) {
+                    setFormErrors({ ...formErrors, contactChannelLabel: "" });
+                  }
+                }}
+                className={`w-full p-2 border-2 rounded-lg focus:ring-2 outline-none transition ${
+                  formErrors.contactChannelLabel && idx === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+                }`}
+              />
+              {formErrors.contactChannelLabel && idx === 0 && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.contactChannelLabel}</p>
+              )}
+            </div>
+            <div className="w-full">
+              <input
+                type="text"
+                placeholder="Contact Number/Link"
+                value={channel.number}
+                onChange={(e) => {
+                  handleChannelChange(idx, "number", e.target.value);
+                  if (formErrors.contactChannelNumber && e.target.value.trim()) {
+                    setFormErrors({ ...formErrors, contactChannelNumber: "" });
+                  }
+                }}
+                className={`w-full p-2 border-2 rounded-lg focus:ring-2 outline-none transition ${
+                  formErrors.contactChannelNumber && idx === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+                }`}
+              />
+              {formErrors.contactChannelNumber && idx === 0 && (
+                <p className="text-red-500 text-xs mt-1">{formErrors.contactChannelNumber}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Add Contact */}
       <button

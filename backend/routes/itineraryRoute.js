@@ -87,7 +87,10 @@ router.get("/", verifyToken, async (req, res) => {
     const itineraries = await Itinerary.find({
       $or: [{ isAdminCreated: true }, { createdBy: req.user._id }],
       isArchived: false,
-    }).populate("sites");
+    }).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
 
     res.json(itineraries);
   } catch (err) {
@@ -101,7 +104,10 @@ router.get("/archived", verifyAdmin, async (req, res) => {
     const itineraries = await Itinerary.find({
       isArchived: true,
     })
-      .populate("sites")
+      .populate({
+        path: "sites",
+        populate: { path: "category", select: "name" }
+      })
       .sort({ updatedAt: -1 });
 
     res.json(itineraries);
@@ -116,7 +122,10 @@ router.get("/guest", async (req, res) => {
     const itineraries = await Itinerary.find({
       isAdminCreated: true,
       isArchived: false,
-    }).populate("sites");
+    }).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
     res.json(itineraries);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -126,7 +135,10 @@ router.get("/guest", async (req, res) => {
 // Public itinerary by ID (guest)
 router.get("/guest/:id", async (req, res) => {
   try {
-    const itinerary = await Itinerary.findById(req.params.id).populate("sites");
+    const itinerary = await Itinerary.findById(req.params.id).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
@@ -145,7 +157,10 @@ router.get("/guest/:id", async (req, res) => {
 // GET single itinerary by ID
 router.get("/:id", verifyToken, async (req, res) => {
   try {
-    const itinerary = await Itinerary.findById(req.params.id).populate("sites");
+    const itinerary = await Itinerary.findById(req.params.id).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
@@ -198,7 +213,10 @@ router.put("/:id", verifyToken, async (req, res) => {
       action: `Updated itinerary: "${itinerary.name}"`,
     });
 
-    res.json(await itinerary.populate("sites"));
+    res.json(await itinerary.populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    }));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

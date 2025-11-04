@@ -247,16 +247,16 @@ export default function RolesPage() {
                         onChange={(e) =>
                           confirmRoleChange(user._id, e.target.value)
                         }
-                        className="border rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-[#f04e37]"
+                        className="min-w-[120px] border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-white hover:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37] focus:border-[#f04e37] focus:outline-none transition-colors cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23666%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
                       >
-                        <option value="tourist">Tourist</option>
-                        <option value="admin">Admin</option>
+                        <option value="tourist">tourist</option>
+                        <option value="admin">admin</option>
                       </select>
                     ) : (
                       <select
                         value={user.role}
                         disabled
-                        className="border rounded-lg px-3 py-1 text-sm bg-gray-100 text-gray-400"
+                        className="min-w-[120px] border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium bg-gray-50 text-gray-500 cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23ccc%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
                       >
                         <option>{user.role}</option>
                       </select>

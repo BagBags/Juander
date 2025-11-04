@@ -9,6 +9,7 @@ import {
   Archive,
   RotateCcw,
 } from "lucide-react";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
@@ -22,6 +23,25 @@ export default function AdminItineraryMain() {
   const [archivedItineraries, setArchivedItineraries] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
+  
+  // Validation errors
+  const [errors, setErrors] = useState({
+    name: "",
+    description: "",
+    duration: "",
+    image: "",
+    sites: "",
+  });
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "warning",
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false,
+  });
 
   const ICON_SIZE = 20;
   const COVER_IMAGE_HEIGHT = 192;
@@ -101,147 +121,197 @@ export default function AdminItineraryMain() {
   };
 
   // Handle save / update itinerary
-  const handleSave = async () => {
-    if (!name.trim()) return alert("Please enter a name");
-    if (selectedSites.length === 0)
-      return alert("Please select at least one site before saving");
+  const handleSave = () => {
+    // Validation
+    const newErrors = {};
+    if (!name.trim()) {
+      newErrors.name = "Itinerary name is required";
+    }
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    }
+    if (!duration || duration <= 0) {
+      newErrors.duration = "Duration is required and must be greater than 0";
+    }
+    // Image is required for both new and edit
+    if (!imageFile && !imagePreview) {
+      newErrors.image = "Image is required";
+    }
+    if (selectedSites.length === 0) {
+      newErrors.sites = "Please select at least one site";
+    }
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
-    try {
-      let imageUrl = "";
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: editingId ? "Update Itinerary?" : "Add New Itinerary?",
+      message: editingId 
+        ? `Are you sure you want to update the itinerary "${name}"?`
+        : `Are you sure you want to add the itinerary "${name}"?`,
+      confirmText: editingId ? "Update" : "Add Itinerary",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          let imageUrl = "";
 
-      // If user selected a new image, upload it
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("image", imageFile);
+          // If user selected a new image, upload it
+          if (imageFile) {
+            const formData = new FormData();
+            formData.append("image", imageFile);
 
-        const res = await axios.post(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/itineraries/upload`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
+            const res = await axios.post(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/upload`,
+              formData,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "multipart/form-data",
+                },
+              }
+            );
+
+            imageUrl = res.data.imageUrl;
+          } else if (editingId) {
+            const existing = itineraries.find((i) => i._id === editingId);
+            imageUrl = existing?.imageUrl || "";
           }
-        );
 
-        // Backend should return full URL like http://localhost:5000/uploads/itineraries/...
-        imageUrl = res.data.imageUrl;
-      } else if (editingId) {
-        // Keep existing image when editing if no new file
-        const existing = itineraries.find((i) => i._id === editingId);
-        imageUrl = existing?.imageUrl || "";
-      }
+          const payload = {
+            name,
+            description,
+            imageUrl,
+            duration: duration ? Number(duration) : 0,
+            sites: selectedSites.map((s) => s._id),
+            isAdminCreated: true,
+          };
 
-      const payload = {
-        name,
-        description,
-        imageUrl,
-        duration: duration ? Number(duration) : 0,
-        sites: selectedSites.map((s) => s._id),
-        isAdminCreated: true,
-      };
+          if (editingId) {
+            await axios.put(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/${editingId}`,
+              payload,
+              config
+            );
+          } else {
+            await axios.post(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries`,
+              payload,
+              config
+            );
+          }
 
-      if (editingId) {
-        await axios.put(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/itineraries/${editingId}`,
-          payload,
-          config
-        );
-        alert("Itinerary updated!");
-      } else {
-        await axios.post(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/itineraries`,
-          payload,
-          config
-        );
-        alert("Itinerary saved!");
-      }
-
-      // Reset form
-      setName("");
-      setDescription("");
-      setDuration("");
-      setImageFile(null);
-      setImagePreview("");
-      setSelectedSites([]);
-      setEditingId(null);
-      fetchItineraries();
-    } catch (err) {
-      console.error("Failed to save itinerary:", err);
-      alert("Failed to save itinerary");
-    }
+          // Reset form
+          setName("");
+          setDescription("");
+          setDuration("");
+          setImageFile(null);
+          setImagePreview("");
+          setSelectedSites([]);
+          setEditingId(null);
+          fetchItineraries();
+          setErrors({ name: "", description: "", duration: "", image: "", sites: "" }); // Clear errors
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to save itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
-  const handleArchive = async (id) => {
-    if (!confirm("Are you sure you want to archive this itinerary?")) return;
-
-    try {
-      await axios.put(
-        `${
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-        }/itineraries/${id}/archive`,
-        {},
-        config
-      );
-      fetchItineraries();
-      fetchArchivedItineraries();
-      alert("Itinerary archived successfully!");
-    } catch (err) {
-      console.error("Failed to archive itinerary:", err);
-      alert("Failed to archive itinerary");
-    }
-  };
-
-  const handleRestore = async (id) => {
-    if (!confirm("Are you sure you want to restore this itinerary?")) return;
-
-    try {
-      await axios.put(
-        `${
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-        }/itineraries/${id}/restore`,
-        {},
-        config
-      );
-      fetchItineraries();
-      fetchArchivedItineraries();
-      alert("Itinerary restored successfully!");
-    } catch (err) {
-      console.error("Failed to restore itinerary:", err);
-      alert("Failed to restore itinerary");
-    }
+  const handleArchive = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "info",
+      title: "Archive Itinerary?",
+      message: "This itinerary will be moved to the archived section. You can restore it later if needed.",
+      confirmText: "Archive",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/itineraries/${id}/archive`,
+            {},
+            config
+          );
+          fetchItineraries();
+          fetchArchivedItineraries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to archive itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
-  const handlePermanentDelete = async (id) => {
-    if (
-      !confirm(
-        "⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?"
-      )
-    )
-      return;
+  const handleRestore = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "restore",
+      title: "Restore Itinerary?",
+      message: "This itinerary will be restored to the active itineraries list and will be available for users again.",
+      confirmText: "Restore",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/itineraries/${id}/restore`,
+            {},
+            config
+          );
+          fetchItineraries();
+          fetchArchivedItineraries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to restore itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
+  };
 
-    try {
-      await axios.delete(
-        `${
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-        }/itineraries/${id}`,
-        config
-      );
-      fetchArchivedItineraries();
-      alert("Itinerary permanently deleted!");
-    } catch (err) {
-      console.error("Failed to delete itinerary:", err);
-      alert("Failed to delete itinerary");
-    }
+  const handlePermanentDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Permanent Delete?",
+      message: "WARNING: This action cannot be undone! The itinerary will be permanently deleted from the database.",
+      confirmText: "Delete Forever",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.delete(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/itineraries/${id}`,
+            config
+          );
+          fetchArchivedItineraries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to delete itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleEdit = (itinerary) => {
+    // Clear any existing validation errors
+    setErrors({ name: "", description: "", duration: "", image: "", sites: "" });
+    
     setName(itinerary.name);
     setDescription(itinerary.description);
 
@@ -270,7 +340,20 @@ export default function AdminItineraryMain() {
   };
 
   return (
-    <div className="flex gap-6 p-6">
+    <>
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
+      
+      <div className="flex gap-6 p-6">
       {/* Form Panel */}
       <div className="w-1/2 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
         <h2 className="text-2xl font-bold text-gradient-red mb-4">
@@ -299,45 +382,91 @@ export default function AdminItineraryMain() {
           {/* File Upload */}
           <div className="w-full">
             {!imageFile && !imagePreview ? (
-              <label className="flex flex-col items-center justify-center w-full h-13 px-4 border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+              <label className={`flex flex-col items-center justify-center w-full h-13 px-4 border-2 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition ${
+                errors.image ? "border-red-500" : "border-gray-300"
+              }`}>
                 <span className="text-gray-500 text-sm">Click to upload</span>
                 <input
                   type="file"
                   accept="image/png"
-                  onChange={handleFileChange}
+                  onChange={(e) => {
+                    handleFileChange(e);
+                    if (errors.image) {
+                      setErrors({ ...errors, image: "" });
+                    }
+                  }}
                   className="hidden"
                 />
               </label>
             ) : (
               <p className="text-sm text-green-600">Image uploaded ✓</p>
             )}
+            {errors.image && (
+              <p className="text-red-500 text-xs mt-1">{errors.image}</p>
+            )}
           </div>
 
-          {/* Inputs */}
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Itinerary Name"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm"
-          />
+          {/* Name Input */}
+          <div>
+            <input
+              type="text"
+              placeholder="Itinerary Name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name && e.target.value.trim()) {
+                  setErrors({ ...errors, name: "" });
+                }
+              }}
+              className={`w-full border-2 rounded-lg p-3 text-sm focus:ring-2 outline-none transition ${
+                errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-red-400 focus:ring-red-200"
+              }`}
+            />
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+            )}
+          </div>
+
+          {/* Description */}
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              if (errors.description && e.target.value.trim()) {
+                setErrors({ ...errors, description: "" });
+              }
+            }}
             placeholder="Description"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none"
+            className={`w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none ${
+              errors.description ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""
+            }`}
           />
+          {errors.description && (
+            <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+          )}
 
           {/* Duration input */}
-          <input
-            type="number"
-            min="0"
-            step="0.5"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            placeholder="Duration (hours)"
-            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm"
-          />
+          <div>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={duration}
+              onChange={(e) => {
+                setDuration(e.target.value);
+                if (errors.duration && e.target.value > 0) {
+                  setErrors({ ...errors, duration: "" });
+                }
+              }}
+              placeholder="Duration (hours)"
+              className={`w-full p-3 border-2 rounded-lg focus:ring-2 outline-none text-gray-700 text-sm transition ${
+                errors.duration ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+              }`}
+            />
+            {errors.duration && (
+              <p className="text-red-500 text-xs mt-1">{errors.duration}</p>
+            )}
+          </div>
 
           {/* Selected Sites */}
           <div className="p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-700 text-sm h-28 overflow-y-auto">
@@ -351,6 +480,9 @@ export default function AdminItineraryMain() {
               <span className="text-gray-400">No sites selected</span>
             )}
           </div>
+          {errors.sites && (
+            <p className="text-red-500 text-xs mt-1">{errors.sites}</p>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 mt-2">
@@ -384,11 +516,13 @@ export default function AdminItineraryMain() {
 
         {/* Itineraries & Sites Panel */}
         <div className="w-1/2 flex flex-col gap-6">
-          {/* Existing Itineraries */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 flex-1 flex flex-col">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Itineraries
-            </h2>
+          {/* Existing Itineraries Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Itineraries
+              </h2>
+            </div>
 
             {/* Tabs */}
             <div className="flex gap-2 mb-4">
@@ -415,7 +549,7 @@ export default function AdminItineraryMain() {
             </div>
 
             {/* Scrollable itineraries list */}
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[50vh] pr-2">
+            <div className="flex flex-col gap-4 overflow-y-auto max-h-[45vh] pr-2">
               {activeTab === "active" ? (
                 itineraries.length ? (
                   itineraries.map((itinerary) => (
@@ -569,13 +703,25 @@ export default function AdminItineraryMain() {
                 <p className="text-gray-400">No archived itineraries</p>
               )}
             </div>
+          </div>
 
-            {/* Sites below */}
-            <h2 className="text-2xl font-bold text-gradient-red mt-6 mb-4">
-              Sites
-            </h2>
+          {/* Sites Card - Separate section */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col border-2 border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Sites
+              </h2>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {pins.length} available
+              </span>
+            </div>
 
-            <div className="flex flex-col gap-4 max-h-[35vh] overflow-y-auto pr-2">
+            <p className="text-sm text-gray-600 mb-4">
+              Select sites to add to your itinerary
+            </p>
+
+            {/* Scrollable sites list */}
+            <div className="flex flex-col gap-4 max-h-[40vh] overflow-y-auto pr-2">
               {pins.map((pin) => {
                 const isSelected = selectedSites.some((s) => s._id === pin._id);
                 return (
@@ -636,5 +782,6 @@ export default function AdminItineraryMain() {
           </div>
         </div>
       </div>
+      </>
   );
 }

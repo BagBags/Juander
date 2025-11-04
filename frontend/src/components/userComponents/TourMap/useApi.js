@@ -48,7 +48,10 @@ export const useApi = (api) => {
           latitude: p.latitude,
           longitude: p.longitude,
           title: p.siteName || "Site",
+          siteName: p.siteName || "Site",
           description: p.siteDescription || "",
+          siteDescription: p.siteDescription || "",
+          siteDescriptionTagalog: p.siteDescriptionTagalog || "",
           mediaType: p.mediaType || "image",
           mediaUrl: resolveUrl(p.mediaUrl), // ✅ fixed
           mediaFiles: p.mediaFiles?.map((media) => ({
@@ -60,6 +63,9 @@ export const useApi = (api) => {
           arEnabled: p.arEnabled === true,
           arLink: p.arLink || "",
           status: p.status || "active",
+          category: p.category || null,
+          feeType: p.feeType || "none",
+          feeAmount: p.feeAmount || null,
         }));
 
         setPins(normalized);

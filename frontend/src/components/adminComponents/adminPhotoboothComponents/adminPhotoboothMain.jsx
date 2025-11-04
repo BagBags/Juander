@@ -3,6 +3,7 @@ import axios from "axios";
 import { Edit, Trash2, Plus, Check, X, ChevronUp, ChevronDown, Archive, RotateCcw } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function ManagePhotobooth() {
   const [filters, setFilters] = useState([]);
@@ -20,6 +21,22 @@ export default function ManagePhotobooth() {
   });
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
+  
+  // Validation errors
+  const [errors, setErrors] = useState({
+    name: "",
+    image: "",
+  });
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "warning",
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false,
+  });
 
   // Get token from localStorage
   const token = localStorage.getItem("token"); // <-- make sure your token is stored here
@@ -143,42 +160,70 @@ export default function ManagePhotobooth() {
   };
 
   // Submit create/update
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      const formData = new FormData();
-      formData.append("name", form.name);
-      formData.append("category", form.category);
-
-      if (form.imageFile) formData.append("image", form.imageFile);
-      else if (form.imageUrl) formData.append("image", form.imageUrl);
-
-      if (editingId) {
-        await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${editingId}`,
-          formData,
-          axiosMultipartConfig
-        );
-      } else {
-        await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
-          formData,
-          axiosMultipartConfig
-        );
-      }
-
-      setForm({
-        name: "",
-        imageFile: null,
-        imageUrl: "",
-        preview: "",
-        category: "general",
-      });
-      setEditingId(null);
-      fetchFilters();
-    } catch (err) {
-      console.error(err);
+    
+    // Validation
+    const newErrors = {};
+    if (!form.name.trim()) {
+      newErrors.name = "Filter name is required";
     }
+    if (!form.imageFile && !form.imageUrl) {
+      newErrors.image = "Image is required";
+    }
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: editingId ? "Update Filter?" : "Add New Filter?",
+      message: editingId 
+        ? `Are you sure you want to update the filter "${form.name}"?`
+        : `Are you sure you want to add the filter "${form.name}"?`,
+      confirmText: editingId ? "Update" : "Add Filter",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          const formData = new FormData();
+          formData.append("name", form.name);
+          formData.append("category", form.category);
+
+          if (form.imageFile) formData.append("image", form.imageFile);
+          else if (form.imageUrl) formData.append("image", form.imageUrl);
+
+          if (editingId) {
+            await axios.put(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${editingId}`,
+              formData,
+              axiosMultipartConfig
+            );
+          } else {
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
+              formData,
+              axiosMultipartConfig
+            );
+          }
+
+          setForm({
+            name: "",
+            imageFile: null,
+            imageUrl: "",
+            preview: "",
+            category: "general",
+          });
+          setEditingId(null);
+          fetchFilters();
+          setErrors({ name: "", image: "" }); // Clear errors
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error(err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleEdit = (filter) => {
@@ -192,40 +237,86 @@ export default function ManagePhotobooth() {
     setEditingId(filter._id);
   };
 
-  const handleArchive = async (id) => {
-    if (!window.confirm("Are you sure you want to archive this filter?")) return;
-    try {
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}/archive`, {}, axiosConfig);
-      fetchFilters();
-      fetchArchivedFilters();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleArchive = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "info",
+      title: "Archive Filter?",
+      message: "This filter will be moved to the archived section. You can restore it later if needed.",
+      confirmText: "Archive",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}/archive`, {}, axiosConfig);
+          fetchFilters();
+          fetchArchivedFilters();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error(err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
-  const handleRestore = async (id) => {
-    if (!window.confirm("Are you sure you want to restore this filter?")) return;
-    try {
-      await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}/restore`, {}, axiosConfig);
-      fetchFilters();
-      fetchArchivedFilters();
-    } catch (err) {
-      console.error(err);
-    }
+  const handleRestore = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "restore",
+      title: "Restore Filter?",
+      message: "This filter will be restored to the active filters list and will be available for users again.",
+      confirmText: "Restore",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}/restore`, {}, axiosConfig);
+          fetchFilters();
+          fetchArchivedFilters();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error(err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
-  const handlePermanentDelete = async (id) => {
-    if (!window.confirm("⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?")) return;
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}`, axiosConfig);
-      fetchArchivedFilters();
-    } catch (err) {
-      console.error(err);
-    }
+  const handlePermanentDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Permanent Delete?",
+      message: "WARNING: This action cannot be undone! The filter will be permanently deleted from the database.",
+      confirmText: "Delete Forever",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.delete(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/${id}`, axiosConfig);
+          fetchArchivedFilters();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error(err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   return (
-    <div className="flex gap-8 ">
+    <>
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
+      
+      <div className="flex gap-8 ">
       {/* Form Panel */}
       <div className="w-1/2 bg-white rounded-2xl shadow-md p-6 flex flex-col gap-5">
         <h2 className="text-2xl font-bold text-gray-800">
@@ -262,14 +353,21 @@ export default function ManagePhotobooth() {
 
         <input
           type="text"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
           placeholder="Filter Name"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg
-             focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none transition"
-          required
+          value={form.name}
+          onChange={(e) => {
+            setForm({ ...form, name: e.target.value });
+            if (errors.name && e.target.value.trim()) {
+              setErrors({ ...errors, name: "" });
+            }
+          }}
+          className={`border-2 rounded-lg p-3 text-sm focus:ring-2 outline-none transition ${
+            errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-red-400 focus:ring-red-200"
+          }`}
         />
+        {errors.name && (
+          <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+        )}
 
         <input
           type="text"
@@ -525,5 +623,6 @@ export default function ManagePhotobooth() {
         </div>
       </div>
     </div>
+    </>
   );
 }

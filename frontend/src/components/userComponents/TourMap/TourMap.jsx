@@ -10,7 +10,6 @@ import MapMarkers from "./MapMarkers";
 import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
 import "../../../App.css";
 
@@ -174,9 +173,6 @@ export default function TourMap() {
 
   return (
     <div className="relative w-full h-screen" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      {/* Global TTS Button */}
-      <GlobalTTSButton />
-
       {/* Offline Map Warning */}
       {!isOnline && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">

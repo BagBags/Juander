@@ -102,7 +102,9 @@ const MediaCarousel = ({ mediaFiles = [], className = "" }) => {
                   playsInline
                   muted
                   crossOrigin="anonymous"
-                />
+                >
+                  <track kind="captions" />
+                </video>
               ) : (
                 <img
                   src={media.url}
@@ -145,7 +147,7 @@ const MediaCarousel = ({ mediaFiles = [], className = "" }) => {
 
       {/* Dots Indicator */}
       {mediaFiles.length > 1 && (
-        <div className="flex justify-center gap-2 mt-3">
+        <div className="flex justify-center gap-2 mt-3 mb-4">
           {mediaFiles.map((_, index) => (
             <button
               key={index}

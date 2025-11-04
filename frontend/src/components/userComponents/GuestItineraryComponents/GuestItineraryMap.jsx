@@ -142,6 +142,9 @@ export default function GuestItineraryMap() {
           arEnabled: s.arEnabled === true,
           arLink: s.arLink || "",
           status: s.status || "active",
+          category: s.category || null,
+          feeType: s.feeType || "none",
+          feeAmount: s.feeAmount || null,
         }));
 
         setPins(normalized);

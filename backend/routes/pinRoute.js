@@ -5,6 +5,9 @@ const {
   createPin,
   updatePin,
   deletePin,
+  getArchivedPins,
+  archivePin,
+  restorePin,
 } = require("../controllers/pinController.js");
 const Pin = require("../models/pinModel");
 const upload = require("../middleware/upload");
@@ -14,6 +17,12 @@ const fs = require("fs");
 
 const router = express.Router();
 
+// Archive routes - must come before /:id routes
+router.get("/archived", getArchivedPins);
+router.put("/:id/archive", verifyAdmin, archivePin);
+router.put("/:id/restore", verifyAdmin, restorePin);
+
+// Standard CRUD routes
 router.get("/", getPins);
 router.post("/", verifyAdmin, createPin);
 router.put("/:id", verifyAdmin, updatePin);

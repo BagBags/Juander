@@ -20,10 +20,22 @@ function processKeywords(keywords) {
     .filter((k) => k.length > 0);
 }
 
-// GET all entries (with tags populated)
+// GET all entries (excluding archived, with tags populated)
 router.get("/", async (req, res) => {
   try {
-    const entries = await BotEntry.find()
+    const entries = await BotEntry.find({ isArchived: { $ne: true } })
+      .populate("tags", "name")
+      .sort({ createdAt: -1 });
+    res.json(entries);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET archived entries
+router.get("/archived", async (req, res) => {
+  try {
+    const entries = await BotEntry.find({ isArchived: true })
       .populate("tags", "name")
       .sort({ createdAt: -1 });
     res.json(entries);
@@ -88,7 +100,63 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE entry
+// ARCHIVE entry
+router.put("/:id/archive", async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+
+    const entry = await BotEntry.findByIdAndUpdate(
+      id,
+      { isArchived: true },
+      { new: true }
+    ).populate("tags", "name");
+
+    if (!entry) return res.status(404).json({ message: "Entry not found" });
+
+    await Log.create({
+      adminName: getAdminName(req),
+      action: `Archived chatbot entry (ID: ${entry._id})`,
+    });
+
+    res.json(entry);
+  } catch (err) {
+    console.error("Error archiving entry:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// RESTORE entry
+router.put("/:id/restore", async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid ID format" });
+    }
+
+    const entry = await BotEntry.findByIdAndUpdate(
+      id,
+      { isArchived: false },
+      { new: true }
+    ).populate("tags", "name");
+
+    if (!entry) return res.status(404).json({ message: "Entry not found" });
+
+    await Log.create({
+      adminName: getAdminName(req),
+      action: `Restored chatbot entry (ID: ${entry._id})`,
+    });
+
+    res.json(entry);
+  } catch (err) {
+    console.error("Error restoring entry:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// DELETE entry (permanent)
 router.delete("/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -103,7 +171,7 @@ router.delete("/:id", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Deleted chatbot entry with keywords: ${entry.keywords.join(
+      action: `Permanently deleted chatbot entry with keywords: ${entry.keywords.join(
         ", "
       )}`,
     });

@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ChevronLeft, ChevronRight, Info, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, MapPin, DollarSign } from "lucide-react";
 
-function FortSantiagoModal({ isOpen, onClose }) {
+function FortSantiagoModal({ isOpen, onClose, feeAmount }) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -24,11 +24,17 @@ function FortSantiagoModal({ isOpen, onClose }) {
             <div className="w-2 h-2 bg-[#f04e37] rounded-full mt-1.5 flex-shrink-0"></div>
             <div className="flex-1">
               <p className="text-gray-700 text-sm">
-                Please be advised that an entrance fee is required to access
-                these locations.
+                Please be advised that an entrance fee is required to access Fort Santiago.
               </p>
+              {feeAmount && (
+                <p className="text-sm text-gray-800 mt-2 font-semibold">
+                  Entrance Fee: ₱{feeAmount}
+                </p>
+              )}
               <p className="text-xs text-gray-600 mt-1">
-                You will need to purchase tickets at the Fort Santiago entrance.
+                {feeAmount
+                  ? "You will need to purchase tickets at the Fort Santiago entrance."
+                  : "Please check the current entrance fee at the Fort Santiago entrance."}
               </p>
             </div>
           </div>
@@ -47,12 +53,73 @@ function FortSantiagoModal({ isOpen, onClose }) {
   );
 }
 
+function CustomFeeModal({ isOpen, onClose, sites }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <div className="bg-blue-600 p-4 flex items-center gap-3">
+          <DollarSign className="text-white w-7 h-7" />
+          <h2 className="text-lg font-semibold text-white">
+            Entrance Fee Notice
+          </h2>
+        </div>
+
+        <div className="p-6">
+          <p className="text-gray-700 mb-4 text-sm">
+            Your selected itinerary includes sites that require an entrance fee:
+          </p>
+
+          <div className="space-y-2 mb-5">
+            {sites.map((site) => (
+              <div key={site._id} className="bg-blue-50 p-3 rounded-lg flex items-start gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full mt-1.5 flex-shrink-0"></div>
+                <div className="flex-1">
+                  <p className="text-gray-800 text-sm font-semibold">
+                    {site.siteName}
+                  </p>
+                  {site.feeAmount && (
+                    <p className="text-sm text-blue-700 mt-1">
+                      Entrance Fee: ₱{site.feeAmount}
+                    </p>
+                  )}
+                  {!site.feeAmount && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Entrance fee required - Please check on-site for current rates.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-xs text-gray-500 mb-5 bg-gray-50 p-3 rounded-lg">
+            Please be prepared to pay the entrance fees when visiting these sites.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TouristItineraryMain() {
   const [itineraries, setItineraries] = useState({ admin: [], user: [] });
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [showFortModal, setShowFortModal] = useState(false);
+  const [showCustomFeeModal, setShowCustomFeeModal] = useState(false);
   const [selectedItinerary, setSelectedItinerary] = useState(null);
   const [inactiveSites, setInactiveSites] = useState([]);
+  const [feeSites, setFeeSites] = useState([]);
+  const [fortFeeAmount, setFortFeeAmount] = useState(null);
 
   // Carousel states for admin itineraries
   const [adminIndex, setAdminIndex] = useState(0);
@@ -187,18 +254,11 @@ export default function TouristItineraryMain() {
     const inactive =
       itinerary.sites?.filter((site) => site.status === "inactive") || [];
 
-    // Check for Fort Santiago sites
-    const fortSites =
-      itinerary.sites?.filter((site) => site.insideFortSantiago) || [];
-
     if (inactive.length > 0) {
       setInactiveSites(inactive);
       setShowWarningModal(true);
-    } else if (fortSites.length > 0) {
-      // Show Fort Santiago modal if there are sites inside Fort Santiago
-      setShowFortModal(true);
     } else {
-      // No inactive sites or Fort Santiago sites, proceed directly
+      // No inactive sites, proceed directly
       navigate(`/TouristItineraryMap/${itinerary._id}`, {
         state: { itinerary },
       });
@@ -206,20 +266,7 @@ export default function TouristItineraryMain() {
   };
 
   const proceedToTour = () => {
-    if (showWarningModal) {
-      setShowWarningModal(false);
-
-      // After closing warning modal, check for Fort Santiago sites
-      const fortSites =
-        selectedItinerary?.sites?.filter((site) => site.insideFortSantiago) ||
-        [];
-      if (fortSites.length > 0) {
-        setShowFortModal(true);
-        return;
-      }
-    } else if (showFortModal) {
-      setShowFortModal(false);
-    }
+    setShowWarningModal(false);
 
     // Proceed with navigation
     if (selectedItinerary) {
@@ -232,7 +279,16 @@ export default function TouristItineraryMain() {
   return (
     <div className="flex flex-col items-center justify-start">
       {/* Modals */}
-      <FortSantiagoModal isOpen={showFortModal} onClose={proceedToTour} />
+      <FortSantiagoModal 
+        isOpen={showFortModal} 
+        onClose={proceedToTour} 
+        feeAmount={fortFeeAmount}
+      />
+      <CustomFeeModal 
+        isOpen={showCustomFeeModal} 
+        onClose={proceedToTour} 
+        sites={feeSites}
+      />
 
       {/* Admin Itineraries - Horizontal Carousel */}
       <div className="w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8">

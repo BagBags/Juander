@@ -44,8 +44,9 @@ exports.updateContact = async (req, res) => {
 
 exports.getContacts = async (req, res) => {
   try {
-    // Fetch contacts in sorted order
-    const contacts = await EmergencyContact.find().sort({ position: 1 });
+    // Fetch only non-archived contacts in sorted order
+    // Use $ne: true to also include documents without isArchived field (existing records)
+    const contacts = await EmergencyContact.find({ isArchived: { $ne: true } }).sort({ position: 1 });
 
     res.status(200).json(contacts);
   } catch (error) {
@@ -54,7 +55,76 @@ exports.getContacts = async (req, res) => {
   }
 };
 
-// DELETE
+// GET ARCHIVED
+exports.getArchivedContacts = async (req, res) => {
+  try {
+    const contacts = await EmergencyContact.find({ isArchived: true }).sort({ updatedAt: -1 });
+    res.status(200).json(contacts);
+  } catch (error) {
+    console.error("Error fetching archived contacts:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ARCHIVE
+exports.archiveContact = async (req, res) => {
+  try {
+    const contact = await EmergencyContact.findByIdAndUpdate(
+      req.params.id,
+      { isArchived: true },
+      { new: true }
+    );
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    // Log action
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Archived emergency contact: "${contact.name}"`,
+    });
+
+    res.status(200).json(contact);
+  } catch (error) {
+    console.error("Error archiving contact:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// RESTORE
+exports.restoreContact = async (req, res) => {
+  try {
+    const contact = await EmergencyContact.findByIdAndUpdate(
+      req.params.id,
+      { isArchived: false },
+      { new: true }
+    );
+
+    if (!contact) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    // Log action
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Restored emergency contact: "${contact.name}"`,
+    });
+
+    res.status(200).json(contact);
+  } catch (error) {
+    console.error("Error restoring contact:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// PERMANENT DELETE (only for archived items)
 exports.deleteContact = async (req, res) => {
   try {
     const deleted = await EmergencyContact.findByIdAndDelete(req.params.id);
@@ -66,7 +136,7 @@ exports.deleteContact = async (req, res) => {
     if (deleted) {
       await Log.create({
         adminName,
-        action: `Deleted emergency contact agency: "${deleted.name}"`,
+        action: `Permanently deleted emergency contact: "${deleted.name}"`,
       });
     }
 

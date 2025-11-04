@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Edit, Trash2, Plus, X, Check } from "lucide-react";
+import { Edit, Trash2, Plus, X, Check, Archive, RotateCcw } from "lucide-react";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function AdminChatbot() {
   // --- States ---
   const [entries, setEntries] = useState([]);
+  const [archivedEntries, setArchivedEntries] = useState([]);
+  const [activeTab, setActiveTab] = useState("active");
   const [tags, setTags] = useState([]);
   const [filterTags, setFilterTags] = useState([]);
   const [form, setForm] = useState({
@@ -16,6 +19,22 @@ export default function AdminChatbot() {
   const [tagName, setTagName] = useState("");
   const [editId, setEditId] = useState(null);
   const [editTagId, setEditTagId] = useState(null);
+  
+  // Validation errors
+  const [errors, setErrors] = useState({
+    info_en: "",
+    tagName: "",
+  });
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "warning",
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false,
+  });
 
   // --- API ---
   const API_BASE = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/bot`;
@@ -29,6 +48,7 @@ export default function AdminChatbot() {
   // --- Init Fetch ---
   useEffect(() => {
     fetchEntries();
+    fetchArchivedEntries();
     fetchTags();
   }, []);
 
@@ -36,8 +56,17 @@ export default function AdminChatbot() {
     try {
       const res = await axios.get(API_BASE, { headers: getAuthHeader() });
       setEntries(res.data);
-    } catch {
-      alert("Error fetching entries.");
+    } catch (err) {
+      console.error("Error fetching entries:", err);
+    }
+  };
+
+  const fetchArchivedEntries = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/archived`, { headers: getAuthHeader() });
+      setArchivedEntries(res.data);
+    } catch (err) {
+      console.error("Error fetching archived entries:", err);
     }
   };
 
@@ -45,8 +74,8 @@ export default function AdminChatbot() {
     try {
       const res = await axios.get(TAG_API_BASE, { headers: getAuthHeader() });
       setTags(res.data);
-    } catch {
-      alert("Error fetching tags.");
+    } catch (err) {
+      console.error("Error fetching tags:", err);
     }
   };
 
@@ -69,7 +98,7 @@ export default function AdminChatbot() {
     );
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const payload = {
       info_en: form.info_en.trim(),
@@ -81,22 +110,44 @@ export default function AdminChatbot() {
       tags: form.tags,
     };
 
-    if (!payload.info_en) return alert("English information is required");
-
-    try {
-      if (editId) {
-        await axios.put(`${API_BASE}/${editId}`, payload, {
-          headers: getAuthHeader(),
-        });
-        setEditId(null);
-      } else {
-        await axios.post(API_BASE, payload, { headers: getAuthHeader() });
-      }
-      setForm({ info_en: "", info_fil: "", keywords: "", tags: [] });
-      fetchEntries();
-    } catch {
-      alert("Error saving entry.");
+    // Validation
+    const newErrors = {};
+    if (!payload.info_en) {
+      newErrors.info_en = "English information is required";
     }
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: editId ? "Update Entry?" : "Add New Entry?",
+      message: editId 
+        ? "Are you sure you want to update this chatbot entry?"
+        : "Are you sure you want to add this chatbot entry?",
+      confirmText: editId ? "Update" : "Add Entry",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          if (editId) {
+            await axios.put(`${API_BASE}/${editId}`, payload, {
+              headers: getAuthHeader(),
+            });
+            setEditId(null);
+          } else {
+            await axios.post(API_BASE, payload, { headers: getAuthHeader() });
+          }
+          setForm({ info_en: "", info_fil: "", keywords: "", tags: [] });
+          fetchEntries();
+          setErrors({ info_en: "", tagName: "" }); // Clear errors
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Error saving entry:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleEdit = (entry) => {
@@ -111,20 +162,83 @@ export default function AdminChatbot() {
     });
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this entry?")) return;
-    try {
-      await axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeader() });
-      fetchEntries();
-    } catch {
-      alert("Error deleting entry.");
-    }
+  const handleArchive = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "warning",
+      title: "Archive Chatbot Entry?",
+      message: "This entry will be moved to the archived section. Users will no longer receive this information when they ask related questions.",
+      confirmText: "Archive Entry",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(`${API_BASE}/${id}/archive`, {}, { headers: getAuthHeader() });
+          fetchEntries();
+          fetchArchivedEntries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Error archiving entry:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
+  };
+
+  const handleRestore = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: "Restore Chatbot Entry?",
+      message: "This entry will be restored to the active knowledge base. Users will be able to receive this information again.",
+      confirmText: "Restore Entry",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(`${API_BASE}/${id}/restore`, {}, { headers: getAuthHeader() });
+          fetchEntries();
+          fetchArchivedEntries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Error restoring entry:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
+  };
+
+  const handlePermanentDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Permanently Delete Entry?",
+      message: "This chatbot entry will be permanently deleted and cannot be recovered. This action cannot be undone.",
+      confirmText: "Delete Forever",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.delete(`${API_BASE}/${id}`, { headers: getAuthHeader() });
+          fetchArchivedEntries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Error deleting entry:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   // --- Tag CRUD ---
   const handleTagSubmit = async (e) => {
     e.preventDefault();
-    if (!tagName.trim()) return alert("Tag name required");
+    
+    // Validation
+    const newErrors = {};
+    if (!tagName.trim()) {
+      newErrors.tagName = "Tag name is required";
+    }
+    
+    setErrors({...errors, ...newErrors});
+    if (Object.keys(newErrors).length > 0) return;
 
     try {
       if (editTagId) {
@@ -143,8 +257,9 @@ export default function AdminChatbot() {
       }
       setTagName("");
       fetchTags();
-    } catch {
-      alert("Error saving tag.");
+      setErrors({...errors, tagName: ""}); // Clear tag error
+    } catch (err) {
+      console.error("Error saving tag:", err);
     }
   };
 
@@ -153,14 +268,25 @@ export default function AdminChatbot() {
     setTagName(tag.name);
   };
 
-  const handleTagDelete = async (id) => {
-    if (!window.confirm("Delete this tag?")) return;
-    try {
-      await axios.delete(`${TAG_API_BASE}/${id}`, { headers: getAuthHeader() });
-      fetchTags();
-    } catch {
-      alert("Error deleting tag.");
-    }
+  const handleTagDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete Tag?",
+      message: "This tag will be permanently deleted. All chatbot entries using this tag will need to be updated.",
+      confirmText: "Delete Tag",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.delete(`${TAG_API_BASE}/${id}`, { headers: getAuthHeader() });
+          fetchTags();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Error deleting tag:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   // --- Filtered Entries ---
@@ -175,16 +301,56 @@ export default function AdminChatbot() {
 
   // --- Render ---
   return (
-    <section className="bg-gray-50 min-h-screen">
+    <>
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
+      
+      <section className="bg-gray-50 min-h-screen">
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Knowledge Base Entries */}
         <div className="flex-1 space-y-6">
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-2xl font-bold text-gray-800 mb-6">
-              Knowledge Base
+              Knowledge Base Management
             </h3>
 
-          {/* Tag Filter */}
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setActiveTab("active")}
+              className={`flex-1 py-2.5 px-4 rounded-lg font-semibold transition ${
+                activeTab === "active"
+                  ? "text-white shadow-md"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              style={activeTab === "active" ? { backgroundColor: '#f04e37' } : {}}
+            >
+              Active Entries ({entries.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("archived")}
+              className={`flex-1 py-2.5 px-4 rounded-lg font-semibold transition ${
+                activeTab === "archived"
+                  ? "text-white shadow-md"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+              style={activeTab === "archived" ? { backgroundColor: '#f04e37' } : {}}
+            >
+              Archived ({archivedEntries.length})
+            </button>
+          </div>
+
+          {/* Tag Filter - Only show for active tab */}
+          {activeTab === "active" && (
           <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
             <div className="flex items-center justify-between mb-2">
               <h4 className="font-medium text-gray-700 text-sm">Filter by Tags</h4>
@@ -213,9 +379,10 @@ export default function AdminChatbot() {
               ))}
             </div>
           </div>
+          )}
 
-          {/* Entries List */}
-          {filteredEntries.map((entry) => (
+          {/* Active Entries List */}
+          {activeTab === "active" && filteredEntries.map((entry) => (
             <div
               key={entry._id}
               className="bg-white p-5 rounded-xl shadow-sm border-2 border-gray-200 hover:border-red-300 transition-all"
@@ -240,11 +407,11 @@ export default function AdminChatbot() {
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(entry._id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
+                    onClick={() => handleArchive(entry._id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
                   >
-                    <Trash2 size={14} />
-                    Delete
+                    <Archive size={14} />
+                    Archive
                   </button>
                 </div>
               </div>
@@ -279,8 +446,77 @@ export default function AdminChatbot() {
             </div>
           ))}
 
-          {filteredEntries.length === 0 && (
-            <p className="text-gray-500">No entries found.</p>
+          {activeTab === "active" && filteredEntries.length === 0 && (
+            <p className="text-gray-500 text-center py-8">No active entries found.</p>
+          )}
+
+          {/* Archived Entries List */}
+          {activeTab === "archived" && archivedEntries.map((entry) => (
+            <div
+              key={entry._id}
+              className="bg-gray-50 p-5 rounded-xl shadow-sm border-2 border-gray-300 hover:border-gray-400 transition-all opacity-80"
+            >
+              <div className="flex justify-between items-start gap-4 mb-3">
+                <div className="flex-1">
+                  <p className="text-gray-600 font-medium line-clamp-2">
+                    {entry.info_en}
+                  </p>
+                  {entry.info_fil && (
+                    <p className="text-gray-500 text-sm mt-1 line-clamp-1 italic">
+                      {entry.info_fil}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleRestore(entry._id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
+                  >
+                    <RotateCcw size={14} />
+                    Restore
+                  </button>
+                  <button
+                    onClick={() => handlePermanentDelete(entry._id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="text-xs font-semibold text-gray-500 mr-1">Keywords:</span>
+                {entry.keywords.slice(0, 5).map((kw, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs"
+                  >
+                    {kw}
+                  </span>
+                ))}
+                {entry.keywords.length > 5 && (
+                  <span className="text-xs text-gray-500">+{entry.keywords.length - 5} more</span>
+                )}
+              </div>
+
+              {entry.tags && entry.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {entry.tags.map((t) => (
+                    <span
+                      key={typeof t === "string" ? t : t._id}
+                      className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs font-medium"
+                    >
+                      {t.name ? t.name : t}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {activeTab === "archived" && archivedEntries.length === 0 && (
+            <p className="text-gray-500 text-center py-8">No archived entries found.</p>
           )}
           </div>
         </div>
@@ -304,14 +540,21 @@ export default function AdminChatbot() {
                 <textarea
                   name="info_en"
                   value={form.info_en}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.info_en && e.target.value.trim()) {
+                      setErrors({...errors, info_en: ""});
+                    }
+                  }}
                   placeholder="Information (English)*"
                   rows={4}
-                  required
-                  className="w-full border-2 border-gray-300 rounded-lg 
-                 focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-                 outline-none transition text-gray-700 bg-white p-2 text-sm"
+                  className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                    errors.info_en ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+                  }`}
                 />
+                {errors.info_en && (
+                  <p className="text-red-500 text-xs mt-1">{errors.info_en}</p>
+                )}
               </div>
               
               {/* Filipino Information */}
@@ -405,19 +648,27 @@ export default function AdminChatbot() {
             </h3>
             <form onSubmit={handleTagSubmit} className="flex gap-2 mb-4">
               <input
+                type="text"
                 value={tagName}
-                onChange={(e) => setTagName(e.target.value)}
+                onChange={(e) => {
+                  setTagName(e.target.value);
+                  if (errors.tagName && e.target.value.trim()) {
+                    setErrors({...errors, tagName: ""});
+                  }
+                }}
                 placeholder="Tag name"
-                className="p-2 border-2 border-gray-300 rounded-lg 
-               focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-               outline-none transition text-gray-700 bg-white flex-1 text-sm"
+                className={`flex-1 border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                  errors.tagName ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+                }`}
               />
+              {errors.tagName && (
+                <p className="text-red-500 text-xs mt-1 absolute">{errors.tagName}</p>
+              )}
               <button
                 type="submit"
                 className="flex items-center gap-1.5 bg-[#f04e37] hover:bg-[#d03b27] text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition"
               >
                  {editTagId ? <Check size={16} /> : <Plus size={16} />}
-
                 {editTagId ? "Update" : "Add"}
               </button>
               {editTagId && (
@@ -466,5 +717,6 @@ export default function AdminChatbot() {
         </div>
       </div>
     </section>
+    </>
   );
 }

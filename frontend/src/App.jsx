@@ -33,6 +33,8 @@ import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
 import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
 import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import AdminItinerary from "./components/adminComponents/adminItineraryComponents/adminItinerary";
+import AdminReviews from "./components/adminComponents/adminReviewsComponents/adminReviews";
+import AdminReports from "./components/adminComponents/adminReportsComponents/adminReports";
 import AdminProfileLayout from "./components/adminComponents/adminProfileComponents/adminProfileLayout";
 import AdminProfile from "./components/adminComponents/adminProfileComponents/adminProfile";
 import AdminAccount from "./components/adminComponents/adminProfileComponents/adminAccount";
@@ -113,6 +115,8 @@ function AnimatedRoutes() {
           <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
           <Route path="/AdminItinerary" element={<AdminItinerary />} />
           <Route path="/AdminPhotobooth" element={<AdminPhotobooth />} />
+          <Route path="/AdminReviews" element={<AdminReviews />} />
+          <Route path="/AdminReports" element={<AdminReports />} />
           <Route path="/AdminProfile" element={<AdminProfileLayout />}>
             <Route index element={<AdminProfile />} />
             <Route path="Account" element={<AdminAccount />} />

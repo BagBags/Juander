@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, ChevronUp, Navigation } from "lucide-react";
 import { announceSiteInfo, announceArrival } from "../../../utils/textToSpeech";
 
 export default function SitePreviewCard({
@@ -100,7 +100,8 @@ export default function SitePreviewCard({
               {/* Distance badge */}
               {distance !== null && (
                 <div className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
-                  🛣️ {(distance / 1000).toFixed(2)} km away
+                  <Navigation className="w-3 h-3" />
+                  <span>{(distance / 1000).toFixed(2)} km away</span>
                 </div>
               )}
             </div>
@@ -108,8 +109,9 @@ export default function SitePreviewCard({
 
           {/* Tap to expand hint */}
           <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500 font-medium">
-              👆 Tap to view full details
+            <p className="text-xs text-gray-500 font-medium flex items-center justify-center gap-1">
+              <ChevronUp className="w-3.5 h-3.5" />
+              <span>Tap to view full details</span>
             </p>
           </div>
         </div>

@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
+import { Lightbulb, Search, X } from "lucide-react";
+import axios from "axios";
 // Extract base URL from VITE_API_BASE_URL (remove /api suffix if present)
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
@@ -21,7 +23,7 @@ const AdminPinCard = ({
   selectedPinIndex,
   updatePinField,
   handleFormSubmit,
-  handleDeletePin,
+  handleArchive,
   handleGlbUpload,
   handleFacadeUpload,
   handleRemoveFacade,
@@ -30,46 +32,124 @@ const AdminPinCard = ({
   handleRemoveMedia,
   previewGlb,
   onClose,
+  categories = [],
+  fetchCategories,
 }) => {
   if (!pin) return null;
 
-  // Initialize description sections from existing siteDescription
+  // Language toggle state
+  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  
+  // Category search state
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  
+  // English sections
   const [descriptionSections, setDescriptionSections] = useState([]);
-  const [showFortSantiagoModal, setShowFortSantiagoModal] = useState(false);
+  // Tagalog sections
+  const [tagalogSections, setTagalogSections] = useState([]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showCategoryDropdown && !e.target.closest('.category-dropdown-container')) {
+        setShowCategoryDropdown(false);
+        setCategorySearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCategoryDropdown]);
 
   useEffect(() => {
-    // Split existing description into sections (by double line breaks or keep as single section)
+    // Initialize English sections
     if (pin.siteDescription) {
       const sections = pin.siteDescription.split('\n\n').filter(s => s.trim());
-      setDescriptionSections(sections.length > 0 ? sections : [pin.siteDescription]);
+      setDescriptionSections(sections.length > 0 ? sections : ['']);
     } else {
       setDescriptionSections(['']);
     }
-  }, [pin._id]); // Only reset when pin changes
+    
+    // Initialize Tagalog sections
+    if (pin.siteDescriptionTagalog) {
+      const sections = pin.siteDescriptionTagalog.split('\n\n').filter(s => s.trim());
+      setTagalogSections(sections.length > 0 ? sections : ['']);
+    } else {
+      setTagalogSections(['']);
+    }
+  }, [pin._id]);
 
-  // Add a new description section
-  const addDescriptionSection = () => {
+  // English section handlers
+  const addEnglishSection = () => {
     setDescriptionSections([...descriptionSections, '']);
   };
 
-  // Remove a description section
-  const removeDescriptionSection = (index) => {
+  const removeEnglishSection = (index) => {
     if (descriptionSections.length > 1) {
       const newSections = descriptionSections.filter((_, i) => i !== index);
       setDescriptionSections(newSections);
-      // Update the pin field immediately
       updatePinField(selectedPinIndex, 'siteDescription', newSections.join('\n\n'));
     }
   };
 
-  // Update a specific section
-  const updateDescriptionSection = (index, value) => {
+  const updateEnglishSection = (index, value) => {
     const newSections = [...descriptionSections];
     newSections[index] = value;
     setDescriptionSections(newSections);
-    // Compile all sections into one paragraph and update pin
     updatePinField(selectedPinIndex, 'siteDescription', newSections.join('\n\n'));
   };
+
+  // Tagalog section handlers
+  const addTagalogSection = () => {
+    setTagalogSections([...tagalogSections, '']);
+  };
+
+  const removeTagalogSection = (index) => {
+    if (tagalogSections.length > 1) {
+      const newSections = tagalogSections.filter((_, i) => i !== index);
+      setTagalogSections(newSections);
+      updatePinField(selectedPinIndex, 'siteDescriptionTagalog', newSections.join('\n\n'));
+    }
+  };
+
+  const updateTagalogSection = (index, value) => {
+    const newSections = [...tagalogSections];
+    newSections[index] = value;
+    setTagalogSections(newSections);
+    updatePinField(selectedPinIndex, 'siteDescriptionTagalog', newSections.join('\n\n'));
+  };
+
+  // Category handlers
+  const filteredCategories = categories.filter(cat =>
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
+  const handleAddNewCategory = async () => {
+    if (!categorySearch.trim()) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/categories`,
+        { name: categorySearch.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (fetchCategories) {
+        await fetchCategories();
+      }
+      
+      // Set the newly created category
+      updatePinField(selectedPinIndex, "category", res.data._id);
+      setCategorySearch('');
+      setShowCategoryDropdown(false);
+    } catch (err) {
+      console.error("Error creating category:", err);
+      alert(err.response?.data?.message || "Failed to create category");
+    }
+  };
+
+  const selectedCategory = categories.find(cat => cat._id === pin.category);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4 pointer-events-none">
@@ -103,57 +183,269 @@ const AdminPinCard = ({
             }
             className="w-full border border-gray-300 rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             placeholder="Enter site name"
-            required
           />
         </div>
-        {/* Site Description - Multiple Sections */}
+
+        {/* Category */}
+        <div className="relative category-dropdown-container">
+          <label className="block text-base font-semibold text-gray-700 mb-2">
+            Category
+          </label>
+          <div className="relative">
+            <div
+              className="w-full border border-gray-300 rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between"
+              style={{ borderColor: '#d1d5db' }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f04e37'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+            >
+              <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
+                {selectedCategory ? selectedCategory.name : "Select a category"}
+              </span>
+              <Search className="w-5 h-5 text-gray-400" />
+            </div>
+            
+            {showCategoryDropdown && (
+              <div className="absolute z-50 w-full mt-2 bg-white border-2 rounded-xl shadow-lg max-h-64 overflow-hidden flex flex-col" style={{ borderColor: '#f9c5bd' }}>
+                <div className="p-3 border-b border-gray-200">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      placeholder="Search or add new category..."
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      onFocus={(e) => { e.target.style.borderColor = '#f04e37'; e.target.style.boxShadow = '0 0 0 3px rgba(240, 78, 55, 0.1)'; }}
+                      onBlur={(e) => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none'; }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                
+                <div className="overflow-y-auto max-h-48">
+                  {/* None option */}
+                  <div
+                    className="px-4 py-2.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-600 border-b border-gray-100"
+                    onClick={() => {
+                      updatePinField(selectedPinIndex, "category", null);
+                      setShowCategoryDropdown(false);
+                      setCategorySearch('');
+                    }}
+                  >
+                    <span className="italic">None</span>
+                  </div>
+                  
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map((cat) => (
+                      <div
+                        key={cat._id}
+                        className="px-4 py-2.5 cursor-pointer text-sm transition"
+                        style={pin.category === cat._id ? { backgroundColor: '#fef2f0', color: '#f04e37', fontWeight: '500' } : { color: '#374151' }}
+                        onMouseEnter={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = '#fef2f0'; }}
+                        onMouseLeave={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        onClick={() => {
+                          updatePinField(selectedPinIndex, "category", cat._id);
+                          setShowCategoryDropdown(false);
+                          setCategorySearch('');
+                        }}
+                      >
+                        {cat.name}
+                      </div>
+                    ))
+                  ) : categorySearch.trim() ? (
+                    <div
+                      className="px-4 py-3 hover:bg-green-50 cursor-pointer text-sm text-green-700 font-medium border-t border-green-200 bg-green-50/50"
+                      onClick={handleAddNewCategory}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                      Add "{categorySearch}"
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-gray-500 italic">
+                      No categories found
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {selectedCategory && (
+            <button
+              type="button"
+              onClick={() => {
+                updatePinField(selectedPinIndex, "category", null);
+              }}
+              className="absolute right-12 top-[46px] text-gray-400 hover:text-red-500 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Site Description - Language Toggle with Sections */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <label className="block text-base font-semibold text-gray-700">
               Site Description
             </label>
-            <button
-              type="button"
-              onClick={addDescriptionSection}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              <FontAwesomeIcon icon={faPlus} className="text-sm" />
-              Add Section
-            </button>
+            {/* Language Toggle Slider */}
+            <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setSelectedLanguage('english')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                  selectedLanguage === 'english'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedLanguage('tagalog')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                  selectedLanguage === 'tagalog'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Tagalog
+              </button>
+            </div>
           </div>
-          <div className="space-y-3">
-            {descriptionSections.map((section, index) => (
-              <div key={index} className="relative">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">
-                      Section {index + 1}
-                    </label>
-                    <textarea
-                      value={section}
-                      onChange={(e) => updateDescriptionSection(index, e.target.value)}
-                      className="w-full border border-gray-300 rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      rows="4"
-                      placeholder={`Enter description section ${index + 1}`}
-                    />
-                  </div>
-                  {descriptionSections.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDescriptionSection(index)}
-                      className="mt-8 p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                      title="Remove section"
-                    >
-                      <FontAwesomeIcon icon={faMinus} className="text-sm" />
-                    </button>
-                  )}
-                </div>
+          
+          {/* English Description Sections */}
+          {selectedLanguage === 'english' && (
+            <div className="animate-fadeIn">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-600">
+                  English Description (Sections)
+                </label>
+                <button
+                  type="button"
+                  onClick={addEnglishSection}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                  Add Section
+                </button>
               </div>
-            ))}
+              <div className="space-y-3">
+                {descriptionSections.map((section, index) => (
+                  <div key={index} className="relative">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Section {index + 1}
+                        </label>
+                        <textarea
+                          value={section}
+                          onChange={(e) => updateEnglishSection(index, e.target.value)}
+                          className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          rows="4"
+                          placeholder={`Enter English section ${index + 1}`}
+                        />
+                      </div>
+                      {descriptionSections.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEnglishSection(index)}
+                          className="mt-6 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                          title="Remove section"
+                        >
+                          <FontAwesomeIcon icon={faMinus} className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+                <Lightbulb className="w-3.5 h-3.5" />
+                <p>Each section will be a separate paragraph</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Tagalog Description Sections */}
+          {selectedLanguage === 'tagalog' && (
+            <div className="animate-fadeIn">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-600">
+                  Tagalog Description (Mga Seksyon)
+                </label>
+                <button
+                  type="button"
+                  onClick={addTagalogSection}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                  Add Section
+                </button>
+              </div>
+              <div className="space-y-3">
+                {tagalogSections.map((section, index) => (
+                  <div key={index} className="relative">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Section {index + 1}
+                        </label>
+                        <textarea
+                          value={section}
+                          onChange={(e) => updateTagalogSection(index, e.target.value)}
+                          className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          rows="4"
+                          placeholder={`Enter Tagalog section ${index + 1}`}
+                        />
+                      </div>
+                      {tagalogSections.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeTagalogSection(index)}
+                          className="mt-6 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                          title="Remove section"
+                        >
+                          <FontAwesomeIcon icon={faMinus} className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+                <Lightbulb className="w-3.5 h-3.5" />
+                <p>Each section will be a separate paragraph</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Status Indicators */}
+          <div className="flex gap-2 mt-3">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              (pin.siteDescription || '').trim() 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                (pin.siteDescription || '').trim() ? 'bg-green-500' : 'bg-gray-400'
+              }`}></span>
+              English: {(pin.siteDescription || '').trim() ? `${descriptionSections.length} section(s)` : 'Empty'}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              (pin.siteDescriptionTagalog || '').trim() 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                (pin.siteDescriptionTagalog || '').trim() ? 'bg-green-500' : 'bg-gray-400'
+              }`}></span>
+              Tagalog: {(pin.siteDescriptionTagalog || '').trim() ? `${tagalogSections.length} sections` : 'Empty'}
+            </div>
           </div>
-          <p className="text-sm text-gray-600 mt-3">
-            Multiple sections will be saved as separate paragraphs.
-          </p>
         </div>
         {/* 2D Facade Landmark */}
         <div className="border-t border-gray-200 pt-4 mt-4">
@@ -238,7 +530,9 @@ const AdminPinCard = ({
                         src={`${BACKEND_URL}${media.url}`}
                         className="w-full h-32 object-cover"
                         controls
-                      />
+                      >
+                        <track kind="captions" />
+                      </video>
                     ) : (
                       <img
                         src={`${BACKEND_URL}${media.url}`}
@@ -363,39 +657,56 @@ const AdminPinCard = ({
           </p>
         </div>
         
-        {/* Inside Fort Santiago Toggle */}
+        {/* Entrance Fee Configuration */}
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Inside Fort Santiago
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <div className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={pin.insideFortSantiago || false}
-                  onChange={(e) => {
-                    const isChecked = e.target.checked;
-                    if (isChecked) {
-                      setShowFortSantiagoModal(true);
-                    }
-                    updatePinField(
-                      selectedPinIndex,
-                      "insideFortSantiago",
-                      isChecked
-                    );
-                  }}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-              </div>
-              <span className="text-sm text-gray-600">
-                {pin.insideFortSantiago ? "Yes" : "No"}
-              </span>
-            </label>
-          </div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Entrance Fee
+          </label>
+          <select
+            value={pin.feeType || "none"}
+            onChange={(e) => {
+              const newFeeType = e.target.value;
+              updatePinField(selectedPinIndex, "feeType", newFeeType);
+              
+              if (newFeeType === "none") {
+                updatePinField(selectedPinIndex, "feeAmount", null);
+              }
+            }}
+            className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          >
+            <option value="none">None (Free Entry)</option>
+            <option value="fort_santiago">Inside Fort Santiago</option>
+            <option value="custom_fee">Custom Entrance Fee</option>
+          </select>
+          
+          {/* Fee Amount Input - Show only when Fort Santiago or Custom Fee is selected */}
+          {(pin.feeType === "fort_santiago" || pin.feeType === "custom_fee") && (
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                {pin.feeType === "fort_santiago" ? "Fort Santiago Entrance Fee (₱)" : "Custom Entrance Fee (₱)"}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={pin.feeAmount || ""}
+                onChange={(e) => {
+                  const value = e.target.value === "" ? null : Number(e.target.value);
+                  updatePinField(selectedPinIndex, "feeAmount", value);
+                }}
+                className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder="Enter fee amount (optional)"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {pin.feeType === "fort_santiago" 
+                  ? "Leave empty to use the default Fort Santiago entrance fee message" 
+                  : "Specify the entrance fee amount for this site"}
+              </p>
+            </div>
+          )}
+          
           <p className="text-xs text-gray-500 mt-2">
-            Enable this if the site is located inside Fort Santiago.
+            Configure the entrance fee information for this site.
           </p>
         </div>
         
@@ -427,7 +738,6 @@ const AdminPinCard = ({
                   updatePinField(selectedPinIndex, "inactiveReason", e.target.value)
                 }
                 className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                required
               >
                 <option value="">Select a reason</option>
                 <option value="under_construction">Under Construction</option>
@@ -449,7 +759,6 @@ const AdminPinCard = ({
                   className="w-full border border-gray-200 rounded-xl p-3 mt-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   rows="2"
                   placeholder="Please specify the reason..."
-                  required
                 />
               )}
             </div>
@@ -459,11 +768,11 @@ const AdminPinCard = ({
         <div className="pt-4 flex justify-between">
           <button
             type="button"
-            onClick={() => handleDeletePin(pin._id)}
-            className="px-5 py-2.5 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600 transition-colors duration-200 flex items-center shadow-sm hover:shadow-md"
+            onClick={() => handleArchive(pin._id)}
+            className="px-5 py-2.5 bg-orange-500 text-white text-sm font-medium rounded-xl hover:bg-orange-600 transition-colors duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
           >
             <FontAwesomeIcon icon={faTrash} />
-            Delete
+            Archive
           </button>
 
           <button
@@ -476,43 +785,6 @@ const AdminPinCard = ({
         </div>
       </form>
       
-      {/* Inside Fort Santiago Modal */}
-      {showFortSantiagoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 border-2 border-green-200 max-w-md w-full mx-4 animate-fade-in">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Site Inside Fort Santiago
-                </h3>
-                <p className="text-sm text-gray-600 mb-2">
-                  This site has been marked as being located inside Fort Santiago.
-                </p>
-                <div className="bg-amber-50 border-l-4 border-amber-400 p-3 mb-4 rounded">
-                  <p className="text-sm text-amber-800 font-medium">
-                    ⚠️ Important: Fort Santiago requires an entrance fee. This information will be visible to tourists.
-                  </p>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setShowFortSantiagoModal(false)}
-                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Got it
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );

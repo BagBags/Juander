@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 const pinSchema = new mongoose.Schema(
   {
     siteName: { type: String, required: true },
-    siteDescription: { type: String },
+    siteDescription: { type: String }, // English description
+    siteDescriptionTagalog: { type: String }, // Tagalog description
     latitude: { type: Number, required: true },
     longitude: { type: Number, required: true },
     mediaUrl: { type: String },
@@ -18,7 +19,13 @@ const pinSchema = new mongoose.Schema(
     arLink: { type: String },
     glbUrl: { type: String },
     facadeUrl: { type: String, default: "" },
-    insideFortSantiago: { type: Boolean, default: false },
+    feeType: { 
+      type: String, 
+      enum: ["none", "fort_santiago", "custom_fee"], 
+      default: "none" 
+    },
+    feeAmount: { type: Number, default: null },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
     inactiveReason: { 
       type: String, 
@@ -26,6 +33,7 @@ const pinSchema = new mongoose.Schema(
       default: null 
     },
     inactiveReasonDetails: { type: String, default: "" },
+    isArchived: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
