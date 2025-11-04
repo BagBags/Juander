@@ -11,6 +11,7 @@ import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
 import ttsService from "../../../utils/textToSpeech";
 import { useTranslation } from "react-i18next";
+import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import "../../../App.css";
 
 // ✅ Axios instance with auth token
@@ -244,6 +245,9 @@ export default function TourMap() {
         showLegend={showLegend}
         setShowLegend={setShowLegend}
       />
+
+      {/* Floating Chatbot */}
+      <FloatingChatbot />
     </div>
   );
 }

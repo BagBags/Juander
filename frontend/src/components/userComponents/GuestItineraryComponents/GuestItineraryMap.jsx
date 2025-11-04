@@ -20,6 +20,7 @@ import MapControlButtons from "../HomepageComponents/MapControlButtons";
 import SitePreviewCard from "../HomepageComponents/SitePreviewCard";
 import SiteModalFullScreen from "../HomepageComponents/SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
+import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 
 export default function GuestItineraryMap() {
   const { itineraryId } = useParams();
@@ -33,7 +34,7 @@ export default function GuestItineraryMap() {
     zoom: 16,
   });
   const [userLocation, setUserLocation] = useState(null);
-  const [showGpsModal, setShowGpsModal] = useState(true);
+  const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
   const [showTransportPanel, setShowTransportPanel] = useState(false);
@@ -92,6 +93,48 @@ export default function GuestItineraryMap() {
       ? url
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
+
+  /** Check GPS permission on mount */
+  useEffect(() => {
+    const checkGpsPermission = async () => {
+      if (!navigator.geolocation) {
+        setGpsError("Geolocation is not supported by your browser");
+        setShowGpsModal(true);
+        return;
+      }
+
+      try {
+        // Try to get current position to check if GPS is accessible
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // GPS is accessible and working
+            setUserLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+            setShowGpsModal(false);
+          },
+          (error) => {
+            // GPS is not accessible or denied
+            if (error.code === error.PERMISSION_DENIED) {
+              setGpsError("Location access denied. Please enable location services.");
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+              setGpsError("Location information unavailable.");
+            } else if (error.code === error.TIMEOUT) {
+              setGpsError("Location request timed out.");
+            }
+            setShowGpsModal(true);
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } catch (err) {
+        console.error("Error checking GPS:", err);
+        setShowGpsModal(true);
+      }
+    };
+
+    checkGpsPermission();
+  }, []);
 
   /** Fetch mask */
   useEffect(() => {
@@ -683,6 +726,9 @@ export default function GuestItineraryMap() {
           simulateGoToNextSite={simulateGoToNextSite}
         />
       )}
+
+      {/* Floating Chatbot */}
+      <FloatingChatbot />
     </div>
   );
 }

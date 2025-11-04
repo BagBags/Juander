@@ -1,9 +1,10 @@
 import React, { useState, Suspense, lazy, useEffect } from "react";
-import { X, Volume2, Star, Info, Tag, Glasses } from "lucide-react";
+import { X, Volume2, Star, Info, Tag, Glasses, Send, Edit2, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
 import axios from "axios";
+import { useParams } from "react-router-dom";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
@@ -19,20 +20,27 @@ export default function SiteModalFullScreen({
   simulateGoToNextSite,
 }) {
   const { t } = useTranslation();
+  const { itineraryId } = useParams();
   const [showAR, setShowAR] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [userLanguage, setUserLanguage] = useState('english');
   const [showFeeModal, setShowFeeModal] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userReviews, setUserReviews] = useState([]);
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [reviewImages, setReviewImages] = useState([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
 
-  // Announce when modal opens
+  // Cancel any ongoing TTS when modal opens
   useEffect(() => {
     if (selectedPin) {
-      const siteName = selectedPin.title || selectedPin.siteName;
-      console.log("Selected Pin Data:", selectedPin);
-      console.log("Category:", selectedPin.category);
-      console.log("Fee Type:", selectedPin.feeType);
-      ttsService.speak(`${siteName}`);
+      // Cancel any ongoing TTS (like directions) when modal opens
+      ttsService.cancel();
     }
     
     // Fetch user language preference
@@ -61,6 +69,194 @@ export default function SiteModalFullScreen({
       ttsService.cancel();
     };
   }, []);
+
+  // Handler to manually play description (triggered by "Listen to Description" button)
+  const handlePlayDescription = () => {
+    if (selectedPin) {
+      const description = selectedPin.description || selectedPin.siteDescription || "";
+      if (description) {
+        // Temporarily enable TTS if it's disabled, then speak
+        const wasEnabled = ttsService.isEnabled;
+        if (!wasEnabled) {
+          ttsService.enable();
+        }
+        
+        // Get only the first paragraph for TTS
+        const firstParagraph = description.split("\n\n")[0].trim();
+        ttsService.speak(firstParagraph);
+        
+        // Restore previous TTS state after speaking
+        if (!wasEnabled) {
+          setTimeout(() => {
+            ttsService.disable();
+          }, firstParagraph.length * 50); // Estimate time based on text length
+        }
+      }
+    }
+  };
+
+  // Fetch user's reviews for this site
+  useEffect(() => {
+    const fetchUserReviews = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const userId = JSON.parse(localStorage.getItem("user"))?._id;
+        if (token && userId && selectedPin) {
+          const response = await axios.get(
+            `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/site/${selectedPin._id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const myReviews = response.data.filter(r => r.userId._id === userId);
+          setUserReviews(myReviews);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user reviews:", error);
+      }
+    };
+    fetchUserReviews();
+  }, [selectedPin]);
+
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + reviewImages.length > 5) {
+      alert("You can upload maximum 5 images");
+      return;
+    }
+
+    setReviewImages([...reviewImages, ...files]);
+    
+    // Create preview URLs
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    setImagePreviewUrls([...imagePreviewUrls, ...newPreviewUrls]);
+  };
+
+  const handleRemoveImage = (index) => {
+    const newImages = reviewImages.filter((_, i) => i !== index);
+    const newPreviews = imagePreviewUrls.filter((_, i) => i !== index);
+    
+    // Revoke the URL to free memory
+    URL.revokeObjectURL(imagePreviewUrls[index]);
+    
+    setReviewImages(newImages);
+    setImagePreviewUrls(newPreviews);
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    
+    if (rating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Upload images first if any
+      let uploadedImageUrls = [];
+      if (reviewImages.length > 0) {
+        const formData = new FormData();
+        reviewImages.forEach((image) => {
+          formData.append("photos", image);
+        });
+
+        const uploadResponse = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/upload-photos`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        uploadedImageUrls = uploadResponse.data.photos;
+      }
+
+      if (editingReviewId) {
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${editingReviewId}`,
+          {
+            rating: rating,
+            reviewText: reviewText.trim(),
+            photos: uploadedImageUrls,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        alert("Review updated successfully!");
+      } else {
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews`,
+          {
+            siteId: selectedPin._id,
+            itineraryId: itineraryId,
+            rating: rating,
+            reviewText: reviewText.trim(),
+            photos: uploadedImageUrls,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        alert("Review submitted successfully!");
+      }
+
+      // Reset form
+      setRating(0);
+      setReviewText("");
+      setReviewImages([]);
+      setImagePreviewUrls([]);
+      setShowReviewForm(false);
+      setEditingReviewId(null);
+      
+      // Refresh user reviews
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/site/${selectedPin._id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const userId = JSON.parse(localStorage.getItem("user"))?._id;
+      const myReviews = response.data.filter(r => r.userId._id === userId);
+      setUserReviews(myReviews);
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      alert(err.response?.data?.error || "Failed to submit review");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditReview = (review) => {
+    setRating(review.rating);
+    setReviewText(review.reviewText || "");
+    setEditingReviewId(review._id);
+    // Note: Existing images from review.photos would need to be handled separately
+    // For now, editing will allow adding new images only
+    setReviewImages([]);
+    setImagePreviewUrls([]);
+    setShowReviewForm(true);
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!confirm("Are you sure you want to delete this review?")) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${reviewId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Review deleted successfully!");
+      
+      // Refresh user reviews
+      setUserReviews(userReviews.filter(r => r._id !== reviewId));
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      alert("Failed to delete review");
+    }
+  };
 
   return (
     <div 
@@ -287,15 +483,9 @@ export default function SiteModalFullScreen({
 
             {/* Read Description Button - Modern Design */}
             <button
-              onClick={() => {
-                const siteName = selectedPin.title || selectedPin.siteName;
-                const description = selectedPin.description || "No description available";
-                ttsService.enable(); // Enable TTS
-                ttsService.speak(`${siteName}. ${description}`, { rate: 0.9 });
-              }}
-              className="mb-6 w-full   text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98"
+              onClick={handlePlayDescription}
+              className="mb-6 w-full text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98 bg-gradient-to-r from-[#f04e37] to-[#ff6b54]"
               aria-label="Read site description aloud"
-               style={{ color: '#f04e37' }}
             >
               <Volume2 className="w-5 h-5" />
               <span>Listen to Description</span>
@@ -380,6 +570,199 @@ export default function SiteModalFullScreen({
                 <span>Experience in AR Mode</span>
               </button>
             )}
+
+            {/* Manage Your Reviews Section */}
+            <div className="mb-8">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+                  <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <div className="bg-blue-500 p-1.5 rounded-lg">
+                      <Star className="w-4 h-4 text-white fill-white" />
+                    </div>
+                    <span>Your Review</span>
+                  </h4>
+                </div>
+
+                <div className="p-4">
+                  {/* User's existing reviews */}
+                  {userReviews.length > 0 && (
+                    <div className="mb-4 space-y-3">
+                      {userReviews.map((review) => (
+                        <div key={review._id} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`w-4 h-4 ${
+                                    star <= review.rating
+                                      ? "fill-yellow-400 text-yellow-400"
+                                      : "fill-gray-200 text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditReview(review)}
+                                className="text-blue-600 hover:text-blue-700 p-1"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteReview(review._id)}
+                                className="text-red-600 hover:text-red-700 p-1"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          {review.reviewText && (
+                            <p className="text-sm text-gray-700">{review.reviewText}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Write/Edit Review Button */}
+                  {!showReviewForm && userReviews.length === 0 && (
+                    <button
+                      onClick={() => setShowReviewForm(true)}
+                      className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
+                    >
+                      <Star className="w-4 h-4" />
+                      Write a Review
+                    </button>
+                  )}
+
+                  {/* Review Form */}
+                  {showReviewForm && (
+                    <form onSubmit={handleSubmitReview} className="space-y-3">
+                      {/* Rating */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Rating *
+                        </label>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setRating(star)}
+                              onMouseEnter={() => setHoverRating(star)}
+                              onMouseLeave={() => setHoverRating(0)}
+                              className="transition-transform hover:scale-110 active:scale-95"
+                            >
+                              <Star
+                                className={`w-8 h-8 ${
+                                  star <= (hoverRating || rating)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "fill-gray-200 text-gray-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Review Text */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Your Review (Optional)
+                        </label>
+                        <textarea
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          placeholder="Share your experience..."
+                          rows={4}
+                          className="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
+                          maxLength={500}
+                        />
+                        <p className="text-xs text-gray-500 mt-1 text-right">
+                          {reviewText.length}/500
+                        </p>
+                      </div>
+
+                      {/* Image Upload */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Photos (Optional, max 5)
+                        </label>
+                        
+                        {/* Image Previews */}
+                        {imagePreviewUrls.length > 0 && (
+                          <div className="grid grid-cols-3 gap-2 mb-2">
+                            {imagePreviewUrls.map((url, index) => (
+                              <div key={index} className="relative">
+                                <img
+                                  src={url}
+                                  alt={`Preview ${index + 1}`}
+                                  className="w-full h-20 object-cover rounded-lg border-2 border-gray-200"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveImage(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Upload Button */}
+                        {reviewImages.length < 5 && (
+                          <label className="cursor-pointer flex items-center justify-center w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                              </svg>
+                              <span>Add Photos ({reviewImages.length}/5)</span>
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleImageSelect}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowReviewForm(false);
+                            setRating(0);
+                            setReviewText("");
+                            setReviewImages([]);
+                            setImagePreviewUrls([]);
+                            setEditingReviewId(null);
+                          }}
+                          className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || rating === 0}
+                          className="flex-1 py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+                        >
+                          <Send className="w-4 h-4" />
+                          {isSubmitting ? "Submitting..." : editingReviewId ? "Update Review" : "Submit Review"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* User Reviews Section - Modern Compact Design */}
             <div className="mb-8">

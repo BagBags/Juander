@@ -175,8 +175,6 @@ export const announceArrival = (siteName) => {
 };
 
 export const announceDirectionStep = (instruction, stepNumber, totalSteps) => {
-  const stepText = getTranslation('tts_step');
-  const ofText = getTranslation('tts_of');
-  const text = `${stepText} ${stepNumber} ${ofText} ${totalSteps}. ${instruction}`;
-  ttsService.speak(text);
+  // Only read the instruction, not the step number
+  ttsService.speak(instruction);
 };

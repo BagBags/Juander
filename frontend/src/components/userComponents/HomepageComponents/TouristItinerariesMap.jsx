@@ -19,6 +19,7 @@ import MapControlButtons from "./MapControlButtons";
 import SitePreviewCard from "./SitePreviewCard";
 import SiteModalFullScreen from "./SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
+import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
@@ -32,7 +33,7 @@ export default function TouristItineraryMap() {
     zoom: 16,
   });
   const [userLocation, setUserLocation] = useState(null);
-  const [showGpsModal, setShowGpsModal] = useState(true);
+  const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
   const [showTransportPanel, setShowTransportPanel] = useState(false);
@@ -66,6 +67,19 @@ export default function TouristItineraryMap() {
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
+  // Handler to mark site as done (temporary)
+  const handleMarkAsDone = (siteId) => {
+    setVisitedSites((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(siteId)) {
+        newSet.delete(siteId); // Toggle off if already visited
+      } else {
+        newSet.add(siteId); // Mark as visited
+      }
+      return newSet;
+    });
+  };
+
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
     if (!url) return "";
@@ -74,6 +88,48 @@ export default function TouristItineraryMap() {
       ? url
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
+
+  /** Check GPS permission on mount */
+  useEffect(() => {
+    const checkGpsPermission = async () => {
+      if (!navigator.geolocation) {
+        setGpsError("Geolocation is not supported by your browser");
+        setShowGpsModal(true);
+        return;
+      }
+
+      try {
+        // Try to get current position to check if GPS is accessible
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            // GPS is accessible and working
+            setUserLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+            setShowGpsModal(false);
+          },
+          (error) => {
+            // GPS is not accessible or denied
+            if (error.code === error.PERMISSION_DENIED) {
+              setGpsError("Location access denied. Please enable location services.");
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+              setGpsError("Location information unavailable.");
+            } else if (error.code === error.TIMEOUT) {
+              setGpsError("Location request timed out.");
+            }
+            setShowGpsModal(true);
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } catch (err) {
+        console.error("Error checking GPS:", err);
+        setShowGpsModal(true);
+      }
+    };
+
+    checkGpsPermission();
+  }, []);
 
   /** Fetch mask */
   useEffect(() => {
@@ -138,6 +194,14 @@ export default function TouristItineraryMap() {
 
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
+
+  /** Auto-select first pin when pins are loaded (show preview card by default) */
+  useEffect(() => {
+    if (pins.length > 0 && !selectedPin && !manuallyDismissed) {
+      setSelectedPin(pins[0]);
+      setCurrentPinIndex(0);
+    }
+  }, [pins, selectedPin, manuallyDismissed]);
 
   /** Track user location (after consent) */
   useEffect(() => {
@@ -647,6 +711,8 @@ export default function TouristItineraryMap() {
                 setSelectedPin(null);
                 setManuallyDismissed(true);
               }}
+              onMarkAsDone={handleMarkAsDone}
+              isVisited={visitedSites.has(selectedPin._id)}
             />
           )}
 
@@ -669,6 +735,9 @@ export default function TouristItineraryMap() {
           )}
         </>
       )}
+
+      {/* Floating Chatbot */}
+      <FloatingChatbot />
     </div>
   );
 }

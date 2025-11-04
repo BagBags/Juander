@@ -23,12 +23,7 @@ export default function MapControlButtons({
   const handleTTSToggle = () => {
     const newState = ttsService.toggle();
     setIsTTSEnabled(newState);
-    
-    if (newState) {
-      setTimeout(() => {
-        ttsService.speak(t('tts_voiceEnabled'));
-      }, 100);
-    }
+    // Don't announce activation
   };
 
   return (
