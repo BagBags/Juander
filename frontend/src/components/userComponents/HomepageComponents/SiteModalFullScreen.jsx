@@ -69,7 +69,7 @@ export default function SiteModalFullScreen({
           <>
             {/* 3D Model Preview */}
             {selectedPin.glbUrl && selectedPin.glbUrl.endsWith(".glb") && (
-              <div className="mb-4 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                 <Suspense
                   fallback={
                     <div className="flex items-center justify-center h-full">
@@ -83,45 +83,27 @@ export default function SiteModalFullScreen({
             )}
 
             {/* Title */}
-            <h3 className="text-2xl font-bold text-gray-800 mb-3">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">
               {selectedPin.title || selectedPin.siteName}
             </h3>
 
-            {/* Read Description Button */}
-            <button
-              onClick={() => {
-                const siteName = selectedPin.title || selectedPin.siteName;
-                const description = selectedPin.description || "No description available";
-                ttsService.speak(`${siteName}. ${description}`, { rate: 0.9 });
-              }}
-              className="mb-3 w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-              aria-label="Read site description aloud"
-            >
-              <Volume2 className="w-4 h-4" />
-              Read Description Aloud
-            </button>
-
-            {/* Description */}
-            <p className="text-base leading-relaxed text-gray-700 mb-4">
-              {selectedPin.description}
-            </p>
-
             {/* Media Files Carousel */}
             {selectedPin.mediaFiles && selectedPin.mediaFiles.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-8">
                 <MediaCarousel mediaFiles={selectedPin.mediaFiles} />
               </div>
             )}
 
             {/* Fallback to old mediaUrl if mediaFiles not available */}
             {(!selectedPin.mediaFiles || selectedPin.mediaFiles.length === 0) && selectedPin.mediaUrl && (
-              <div className="mb-4">
+              <div className="mb-8">
                 {selectedPin.mediaType === "video" ? (
                   <video
                     src={selectedPin.mediaUrl}
                     className="w-full h-56 md:h-72 object-cover rounded-lg border border-gray-200"
                     muted
                     controls
+                    crossOrigin="anonymous"
                   />
                 ) : (
                   <img
@@ -133,6 +115,26 @@ export default function SiteModalFullScreen({
               </div>
             )}
 
+            {/* Read Description Button */}
+            <button
+              onClick={() => {
+                const siteName = selectedPin.title || selectedPin.siteName;
+                const description = selectedPin.description || "No description available";
+                ttsService.enable(); // Enable TTS
+                ttsService.speak(`${siteName}. ${description}`, { rate: 0.9 });
+              }}
+              className="mb-6 w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              aria-label="Read site description aloud"
+            >
+              <Volume2 className="w-4 h-4" />
+              Read Description Aloud
+            </button>
+
+            {/* Description */}
+            <p className="text-base leading-relaxed text-gray-700 mb-8">
+              {selectedPin.description}
+            </p>
+
             {/* AR Mode Button */}
             {selectedPin.arEnabled && selectedPin.arLink && (
               <button
@@ -140,13 +142,14 @@ export default function SiteModalFullScreen({
                   setShowAR(true);
                   ttsService.speak(t('tts_openingAR'));
                 }}
-                className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 text-base font-semibold rounded-lg shadow-md mb-4 transition-colors"
+                className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 text-base font-semibold rounded-lg shadow-md mb-8 transition-colors"
                 aria-label="View in AR Mode"
               >
                 🔍 View in AR Mode
               </button>
             )}
 
+<<<<<<< Updated upstream
 
             {/* Distance */}
             {distance !== null && (
@@ -158,8 +161,10 @@ export default function SiteModalFullScreen({
               </div>
             )}
 
+=======
+>>>>>>> Stashed changes
             {/* User Reviews Section */}
-            <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
+            <div className="mb-8 bg-gray-50 rounded-lg border border-gray-200 p-4">
               <h4 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-500" />
                 User Reviews

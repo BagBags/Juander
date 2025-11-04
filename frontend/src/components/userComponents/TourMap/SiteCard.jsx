@@ -90,7 +90,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
           <>
             {/* 3D Model Preview */}
             {pin.glbUrl && pin.glbUrl.endsWith(".glb") && (
-              <div className="mb-4 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                 <Suspense
                   fallback={
                     <div className="flex items-center justify-center h-full">
@@ -104,46 +104,27 @@ const SiteCard = ({ pin, onClose, distance }) => {
             )}
 
             {/* Title */}
-            <h3 className="text-2xl font-bold text-gray-800 mb-3">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">
               {pin.title}
             </h3>
 
-            {/* Read Description Button */}
-            <button
-              onClick={() => {
-                const description = pin.description || "No description available";
-                ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
-              }}
-              className="mb-3 w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-              aria-label="Read site description aloud"
-            >
-              <Volume2 className="w-4 h-4" />
-              Read Description Aloud
-            </button>
-
-            {/* Description */}
-            <div className="text-base leading-relaxed text-gray-700 mb-4 space-y-3">
-              {pin.description?.split('\n\n').map((paragraph, index) => (
-                <p key={index}>{paragraph.trim()}</p>
-              ))}
-            </div>
-
             {/* Media Files Carousel */}
             {pin.mediaFiles && pin.mediaFiles.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-8">
                 <MediaCarousel mediaFiles={pin.mediaFiles} />
               </div>
             )}
 
             {/* Fallback to old mediaUrl if mediaFiles not available */}
             {(!pin.mediaFiles || pin.mediaFiles.length === 0) && pin.mediaUrl && (
-              <div className="mb-4">
+              <div className="mb-8">
                 {pin.mediaType === "video" ? (
                   <video
                     src={pin.mediaUrl}
                     className="w-full h-56 md:h-72 object-cover rounded-lg border border-gray-200"
                     muted
                     controls
+                    crossOrigin="anonymous"
                   />
                 ) : (
                   <img
@@ -155,6 +136,27 @@ const SiteCard = ({ pin, onClose, distance }) => {
               </div>
             )}
 
+            {/* Read Description Button */}
+            <button
+              onClick={() => {
+                const description = pin.description || "No description available";
+                ttsService.enable(); // Enable TTS
+                ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
+              }}
+              className="mb-6 w-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              aria-label="Read site description aloud"
+            >
+              <Volume2 className="w-4 h-4" />
+              Read Description Aloud
+            </button>
+
+            {/* Description */}
+            <div className="text-base leading-relaxed text-gray-700 mb-8 space-y-3">
+              {pin.description?.split('\n\n').map((paragraph, index) => (
+                <p key={index}>{paragraph.trim()}</p>
+              ))}
+            </div>
+
             {/* AR Mode Button */}
             {pin.arEnabled && pin.arLink && (
               <button
@@ -162,12 +164,13 @@ const SiteCard = ({ pin, onClose, distance }) => {
                   setShowAR(true);
                   ttsService.speak("Opening AR Mode");
                 }}
-                className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 text-base font-semibold rounded-lg shadow-md mb-4 transition-colors"
+                className="w-full text-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 text-base font-semibold rounded-lg shadow-md mb-8 transition-colors"
                 aria-label="View in AR Mode"
               >
                 🔍 View in AR Mode
               </button>
             )}
+<<<<<<< Updated upstream
 
             {/* User Reviews Section */}
             <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
@@ -222,6 +225,8 @@ const SiteCard = ({ pin, onClose, distance }) => {
               )}
             </div>
 
+=======
+>>>>>>> Stashed changes
           </>
         )}
       </div>

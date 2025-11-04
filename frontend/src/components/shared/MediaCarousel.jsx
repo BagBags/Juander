@@ -101,6 +101,7 @@ const MediaCarousel = ({ mediaFiles = [], className = "" }) => {
                   controls
                   playsInline
                   muted
+                  crossOrigin="anonymous"
                 />
               ) : (
                 <img
