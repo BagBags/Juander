@@ -28,6 +28,7 @@ const visitedSiteRoute = require("./routes/visitedSiteRoute");
 const reviewRoute = require("./routes/reviewRoute");
 const tourRoute = require("./routes/tourRoute");
 const openaiRoute = require("./routes/openaiRoute");
+const itineraryProgressRoute = require("./routes/itineraryProgressRoute");
 
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
@@ -117,6 +118,7 @@ app.use("/api/photobooth/filters", photoboothFilterRoute);
 app.use("/api/visited-sites", visitedSiteRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/openai", openaiRoute);
+app.use("/api/itinerary-progress", itineraryProgressRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/uploads/profile",

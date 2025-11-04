@@ -76,8 +76,29 @@ export default function TouristItineraryMap() {
       } else {
         newSet.add(siteId); // Mark as visited
       }
+      saveProgress(currentPinIndex, newSet);
       return newSet;
     });
+  };
+
+  // Save progress to database
+  const saveProgress = async (pinIndex, visited, userPos = null) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return; // Guest users don't save progress
+      
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itinerary-progress/${itineraryId}`,
+        {
+          currentPinIndex: pinIndex,
+          visitedSites: Array.from(visited),
+          lastPosition: userPos || userLocation
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
   };
 
   // Utility to resolve relative URLs into absolute URLs
@@ -195,13 +216,50 @@ export default function TouristItineraryMap() {
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
 
-  /** Auto-select first pin when pins are loaded (show preview card by default) */
+  /** Load saved progress from database */
   useEffect(() => {
-    if (pins.length > 0 && !selectedPin && !manuallyDismissed) {
+    const loadProgress = async () => {
+      if (!itineraryId || pins.length === 0) return;
+      
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return; // Guest users don't have saved progress
+        
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itinerary-progress/${itineraryId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        const { currentPinIndex, visitedSites } = response.data;
+        
+        // Restore progress
+        if (currentPinIndex !== undefined && currentPinIndex < pins.length) {
+          setCurrentPinIndex(currentPinIndex);
+          setSelectedPin(pins[currentPinIndex]);
+        }
+        
+        if (visitedSites && visitedSites.length > 0) {
+          setVisitedSites(new Set(visitedSites));
+        }
+      } catch (error) {
+        console.error('Error loading progress:', error);
+        // If error, start from beginning
+        if (pins.length > 0 && !selectedPin) {
+          setSelectedPin(pins[0]);
+          setCurrentPinIndex(0);
+        }
+      }
+    };
+    
+    loadProgress();
+  }, [itineraryId, pins]);
+
+  /** Auto-select first pin when pins are loaded (show preview card by default) - only if no saved progress */
+  useEffect(() => {
+    if (pins.length > 0 && !selectedPin && !manuallyDismissed && currentPinIndex === 0) {
       setSelectedPin(pins[0]);
-      setCurrentPinIndex(0);
     }
-  }, [pins, selectedPin, manuallyDismissed]);
+  }, [pins, selectedPin, manuallyDismissed, currentPinIndex]);
 
   /** Track user location (after consent) */
   useEffect(() => {
@@ -543,6 +601,13 @@ export default function TouristItineraryMap() {
     setSelectedPin(nextPin);
     setManuallyDismissed(false); // Reset manual dismissal for new site
 
+    // Save progress to database
+    const updatedVisited = new Set(visitedSites);
+    if (justVisitedSiteId) {
+      updatedVisited.add(justVisitedSiteId);
+    }
+    saveProgress(nextIndex, updatedVisited);
+
     if (userLocation) buildRoute(userLocation, nextPin);
   };
 
@@ -648,13 +713,24 @@ export default function TouristItineraryMap() {
               if (userLocation) buildRoute(userLocation, pin);
             }}
           >
-            <MapPin
-              className={`w-6 h-6 cursor-pointer ${
+            <div className="relative flex flex-col items-center">
+              {/* Pin Icon */}
+              <MapPin
+                className={`w-6 h-6 cursor-pointer ${
+                  idx === currentPinIndex
+                    ? "text-blue-600 animate-pulse"
+                    : "text-red-500"
+                }`}
+              />
+              {/* Number Badge */}
+              <div className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg ${
                 idx === currentPinIndex
-                  ? "text-blue-600 animate-pulse"
-                  : "text-red-500"
-              }`}
-            />
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-red-500 border-2 border-red-500"
+              }`}>
+                {idx + 1}
+              </div>
+            </div>
           </Marker>
         ))}
 

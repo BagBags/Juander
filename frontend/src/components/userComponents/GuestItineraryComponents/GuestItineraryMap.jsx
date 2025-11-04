@@ -640,13 +640,24 @@ export default function GuestItineraryMap() {
               if (userLocation) buildRoute(userLocation, pin);
             }}
           >
-            <MapPin
-              className={`w-6 h-6 cursor-pointer ${
+            <div className="relative flex flex-col items-center">
+              {/* Pin Icon */}
+              <MapPin
+                className={`w-6 h-6 cursor-pointer ${
+                  idx === currentPinIndex
+                    ? "text-blue-600 animate-pulse"
+                    : "text-red-500"
+                }`}
+              />
+              {/* Number Badge */}
+              <div className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg ${
                 idx === currentPinIndex
-                  ? "text-blue-600 animate-pulse"
-                  : "text-red-500"
-              }`}
-            />
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-red-500 border-2 border-red-500"
+              }`}>
+                {idx + 1}
+              </div>
+            </div>
           </Marker>
         ))}
 
