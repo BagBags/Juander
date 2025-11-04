@@ -46,9 +46,12 @@ export default function AdminItineraryMain() {
   const ICON_SIZE = 20;
   const COVER_IMAGE_HEIGHT = 192;
 
-  const token = localStorage.getItem("token"); // Get admin token
-  const config = {
-    headers: { Authorization: `Bearer ${token}` },
+  // Helper function to get fresh config with token
+  const getConfig = () => {
+    const token = localStorage.getItem("token");
+    return {
+      headers: { Authorization: `Bearer ${token}` },
+    };
   };
 
   // Fetch pins
@@ -59,7 +62,7 @@ export default function AdminItineraryMain() {
           `${
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
           }/pins`,
-          config
+          getConfig()
         );
         setPins(res.data);
       } catch (err) {
@@ -81,7 +84,7 @@ export default function AdminItineraryMain() {
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries`,
-        config
+        getConfig()
       );
       setItineraries(res.data);
     } catch (err) {
@@ -95,7 +98,7 @@ export default function AdminItineraryMain() {
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/archived`,
-        config
+        getConfig()
       );
       setArchivedItineraries(res.data);
     } catch (err) {
@@ -162,6 +165,7 @@ export default function AdminItineraryMain() {
             const formData = new FormData();
             formData.append("image", imageFile);
 
+<<<<<<< HEAD
             const res = await axios.post(
               `${
                 import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -179,6 +183,19 @@ export default function AdminItineraryMain() {
           } else if (editingId) {
             const existing = itineraries.find((i) => i._id === editingId);
             imageUrl = existing?.imageUrl || "";
+=======
+        const token = localStorage.getItem("token");
+        const res = await axios.post(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/itineraries/upload`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+>>>>>>> 7aaf085654d4605a89f908c8df59d77fd9ebbc2e
           }
 
           const payload = {
@@ -208,6 +225,7 @@ export default function AdminItineraryMain() {
             );
           }
 
+<<<<<<< HEAD
           // Reset form
           setName("");
           setDescription("");
@@ -306,6 +324,103 @@ export default function AdminItineraryMain() {
         }
       },
     });
+=======
+      if (editingId) {
+        await axios.put(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/itineraries/${editingId}`,
+          payload,
+          getConfig()
+        );
+        alert("Itinerary updated!");
+      } else {
+        await axios.post(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/itineraries`,
+          payload,
+          getConfig()
+        );
+        alert("Itinerary saved!");
+      }
+
+      // Reset form
+      setName("");
+      setDescription("");
+      setDuration("");
+      setImageFile(null);
+      setImagePreview("");
+      setSelectedSites([]);
+      setEditingId(null);
+      fetchItineraries();
+    } catch (err) {
+      console.error("Failed to save itinerary:", err);
+      alert("Failed to save itinerary");
+    }
+  };
+  const handleArchive = async (id) => {
+    if (!confirm("Are you sure you want to archive this itinerary?")) return;
+
+    try {
+      await axios.put(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries/${id}/archive`,
+        {},
+        getConfig()
+      );
+      fetchItineraries();
+      fetchArchivedItineraries();
+      alert("Itinerary archived successfully!");
+    } catch (err) {
+      console.error("Failed to archive itinerary:", err);
+      alert("Failed to archive itinerary");
+    }
+  };
+
+  const handleRestore = async (id) => {
+    if (!confirm("Are you sure you want to restore this itinerary?")) return;
+
+    try {
+      await axios.put(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries/${id}/restore`,
+        {},
+        getConfig()
+      );
+      fetchItineraries();
+      fetchArchivedItineraries();
+      alert("Itinerary restored successfully!");
+    } catch (err) {
+      console.error("Failed to restore itinerary:", err);
+      alert("Failed to restore itinerary");
+    }
+  };
+
+  const handlePermanentDelete = async (id) => {
+    if (
+      !confirm(
+        "⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?"
+      )
+    )
+      return;
+
+    try {
+      await axios.delete(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries/${id}`,
+        getConfig()
+      );
+      fetchArchivedItineraries();
+      alert("Itinerary permanently deleted!");
+    } catch (err) {
+      console.error("Failed to delete itinerary:", err);
+      alert("Failed to delete itinerary");
+    }
+>>>>>>> 7aaf085654d4605a89f908c8df59d77fd9ebbc2e
   };
 
   const handleEdit = (itinerary) => {
