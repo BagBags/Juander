@@ -88,8 +88,16 @@ export default function AdminTourMapMain() {
   const [showGlbPreview, setShowGlbPreview] = useState(false);
   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
   
-  // Validation error for siteName
-  const [siteNameError, setSiteNameError] = useState("");
+  // Validation errors
+  const [errors, setErrors] = useState({
+    siteName: "",
+    coordinates: "",
+    description: "",
+    category: "",
+    facadeUrl: "",
+    mediaFiles: "",
+    glbUrl: "",
+  });
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
@@ -389,10 +397,59 @@ export default function AdminTourMapMain() {
     const pinName = pin.siteName || `Pin #${index + 1}`;
     
     // Validation
+    const newErrors = {};
+    
+    // 1. Site Name validation
     if (!pin.siteName || !pin.siteName.trim()) {
-      setSiteNameError("Site name is required");
+      newErrors.siteName = "Site name is required";
+    }
+    
+    // 2. Coordinates validation
+    if (!pin.latitude || !pin.longitude) {
+      newErrors.coordinates = "Coordinates (latitude and longitude) are required";
+    } else {
+      // Validate coordinate ranges
+      if (pin.latitude < -90 || pin.latitude > 90) {
+        newErrors.coordinates = "Latitude must be between -90 and 90";
+      }
+      if (pin.longitude < -180 || pin.longitude > 180) {
+        newErrors.coordinates = "Longitude must be between -180 and 180";
+      }
+    }
+    
+    // 3. Description validation
+    if (!pin.siteDescription || !pin.siteDescription.trim()) {
+      newErrors.description = "Site description (English) is required";
+    }
+    
+    // 4. Category validation
+    if (!pin.category) {
+      newErrors.category = "Category is required";
+    }
+    
+    // 5. Facade image validation
+    if (!pin.facadeUrl) {
+      newErrors.facadeUrl = "2D Facade image is required";
+    }
+    
+    // 6. Media files validation
+    if (!pin.mediaFiles || pin.mediaFiles.length === 0) {
+      newErrors.mediaFiles = "At least one media file (image/video) is required";
+    }
+    
+    // 7. 3D Model validation
+    if (!pin.glbUrl) {
+      newErrors.glbUrl = "3D Model (.glb) is required";
+    }
+    
+    // If there are validation errors, set them and stop
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    
+    // Clear errors if validation passes
+    setErrors({ siteName: "", coordinates: "", description: "", category: "", facadeUrl: "", mediaFiles: "", glbUrl: "" });
     
     setConfirmModal({
       isOpen: true,
@@ -419,7 +476,7 @@ export default function AdminTourMapMain() {
           setSelectedPin(null);
           setOriginalPinData(null);
           setIsAddingPin(false);
-          setSiteNameError(""); // Clear error
+          setErrors({ siteName: "", coordinates: "", description: "", category: "", facadeUrl: "", mediaFiles: "", glbUrl: "" }); // Clear errors
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
@@ -942,6 +999,8 @@ export default function AdminTourMapMain() {
               onClose={closePinCard}
               categories={categories}
               fetchCategories={fetchCategories}
+              errors={errors}
+              setErrors={setErrors}
             />
           </Suspense>
         )}

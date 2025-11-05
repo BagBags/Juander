@@ -413,7 +413,7 @@ export default function AdminItineraryMain() {
           <div>
             <input
               type="text"
-              placeholder="Itinerary Name"
+              placeholder="Itinerary Name *"
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -439,7 +439,7 @@ export default function AdminItineraryMain() {
                 setErrors({ ...errors, description: "" });
               }
             }}
-            placeholder="Description"
+            placeholder="Description *"
             className={`w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none ${
               errors.description ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""
             }`}
@@ -461,7 +461,7 @@ export default function AdminItineraryMain() {
                   setErrors({ ...errors, duration: "" });
                 }
               }}
-              placeholder="Duration (hours)"
+              placeholder="Duration (hours) *"
               className={`w-full p-3 border-2 rounded-lg focus:ring-2 outline-none text-gray-700 text-sm transition ${
                 errors.duration ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
               }`}

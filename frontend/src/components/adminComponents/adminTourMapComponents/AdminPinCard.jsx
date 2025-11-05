@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
-import { Lightbulb, Search, X } from "lucide-react";
+import { Lightbulb, Search, X, Info, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import axios from "axios";
 // Extract base URL from VITE_API_BASE_URL (remove /api suffix if present)
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
@@ -34,6 +34,8 @@ const AdminPinCard = ({
   onClose,
   categories = [],
   fetchCategories,
+  errors = {},
+  setErrors,
 }) => {
   if (!pin) return null;
 
@@ -173,30 +175,37 @@ const AdminPinCard = ({
         {/* Site Name */}
         <div>
           <label className="block text-base font-semibold text-gray-700 mb-2">
-            Site Name
+            Site Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={pin.siteName || ""}
-            onChange={(e) =>
-              updatePinField(selectedPinIndex, "siteName", e.target.value)
-            }
-            className="w-full border border-gray-300 rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            onChange={(e) => {
+              updatePinField(selectedPinIndex, "siteName", e.target.value);
+              if (errors.siteName && e.target.value.trim()) {
+                setErrors({ ...errors, siteName: "" });
+              }
+            }}
+            className={`w-full border-2 rounded-lg p-3 text-sm focus:ring-2 outline-none transition ${
+              errors.siteName ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-red-400 focus:ring-red-200"
+            }`}
             placeholder="Enter site name"
           />
+          {errors.siteName && (
+            <p className="text-red-500 text-xs mt-1">{errors.siteName}</p>
+          )}
         </div>
 
         {/* Category */}
         <div className="relative category-dropdown-container">
           <label className="block text-base font-semibold text-gray-700 mb-2">
-            Category
+            Category <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <div
-              className="w-full border border-gray-300 rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between"
-              style={{ borderColor: '#d1d5db' }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f04e37'}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+              className={`w-full border-2 rounded-lg p-3 text-sm transition-all duration-200 cursor-pointer bg-white flex items-center justify-between ${
+                errors.category ? "border-red-500" : "border-gray-300"
+              }`}
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
             >
               <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
@@ -204,6 +213,9 @@ const AdminPinCard = ({
               </span>
               <Search className="w-5 h-5 text-gray-400" />
             </div>
+            {errors.category && (
+              <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+            )}
             
             {showCategoryDropdown && (
               <div className="absolute z-50 w-full mt-2 bg-white border-2 rounded-xl shadow-lg max-h-64 overflow-hidden flex flex-col" style={{ borderColor: '#f9c5bd' }}>
@@ -248,6 +260,9 @@ const AdminPinCard = ({
                           updatePinField(selectedPinIndex, "category", cat._id);
                           setShowCategoryDropdown(false);
                           setCategorySearch('');
+                          if (errors.category) {
+                            setErrors({ ...errors, category: "" });
+                          }
                         }}
                       >
                         {cat.name}
@@ -288,7 +303,7 @@ const AdminPinCard = ({
         <div>
           <div className="flex items-center justify-between mb-3">
             <label className="block text-base font-semibold text-gray-700">
-              Site Description
+              Site Description <span className="text-red-500">*</span>
             </label>
             {/* Language Toggle Slider */}
             <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
@@ -343,11 +358,21 @@ const AdminPinCard = ({
                         </label>
                         <textarea
                           value={section}
-                          onChange={(e) => updateEnglishSection(index, e.target.value)}
-                          className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          onChange={(e) => {
+                            updateEnglishSection(index, e.target.value);
+                            if (errors.description && e.target.value.trim() && index === 0) {
+                              setErrors({ ...errors, description: "" });
+                            }
+                          }}
+                          className={`w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none ${
+                            errors.description && index === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""
+                          }`}
                           rows="4"
                           placeholder={`Enter English section ${index + 1}`}
                         />
+                        {errors.description && index === 0 && (
+                          <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+                        )}
                       </div>
                       {descriptionSections.length > 1 && (
                         <button
@@ -450,17 +475,24 @@ const AdminPinCard = ({
         {/* 2D Facade Landmark */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            2D Facade Image
+            2D Facade Image <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             <div className="relative">
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleFacadeUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleFacadeUpload(e, selectedPinIndex);
+                  if (errors.facadeUrl) {
+                    setErrors({ ...errors, facadeUrl: "" });
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors duration-200 ${
+                errors.facadeUrl ? "border-red-500" : "border-gray-300 hover:border-blue-400"
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -472,6 +504,9 @@ const AdminPinCard = ({
                 </p>
               </div>
             </div>
+            {errors.facadeUrl && (
+              <p className="text-red-500 text-xs mt-1">{errors.facadeUrl}</p>
+            )}
             {pin.facadeUrl && (
               <div className="w-full h-40 relative rounded-lg overflow-hidden border border-gray-200">
                 <img
@@ -493,7 +528,7 @@ const AdminPinCard = ({
         {/* Media Files Upload */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Media Files (Images/Videos)
+            Media Files (Images/Videos) <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             <div className="relative">
@@ -501,10 +536,17 @@ const AdminPinCard = ({
                 type="file"
                 accept="image/*,video/*"
                 multiple
-                onChange={(e) => handleMediaUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleMediaUpload(e, selectedPinIndex);
+                  if (errors.mediaFiles) {
+                    setErrors({ ...errors, mediaFiles: "" });
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors duration-200 ${
+                errors.mediaFiles ? "border-red-500" : "border-gray-300 hover:border-blue-400"
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -519,6 +561,9 @@ const AdminPinCard = ({
                 </p>
               </div>
             </div>
+            {errors.mediaFiles && (
+              <p className="text-red-500 text-xs mt-1">{errors.mediaFiles}</p>
+            )}
             
             {/* Media Files Preview */}
             {pin.mediaFiles && pin.mediaFiles.length > 0 && (
@@ -556,7 +601,7 @@ const AdminPinCard = ({
         {/* 3D Model Section */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            3D Model (.glb)
+            3D Model (.glb) <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             {/* File Upload */}
@@ -564,10 +609,17 @@ const AdminPinCard = ({
               <input
                 type="file"
                 accept=".glb"
-                onChange={(e) => handleGlbUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleGlbUpload(e, selectedPinIndex);
+                  if (errors.glbUrl) {
+                    setErrors({ ...errors, glbUrl: "" });
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors duration-200 ${
+                errors.glbUrl ? "border-red-500" : "border-gray-300 hover:border-blue-400"
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -577,6 +629,9 @@ const AdminPinCard = ({
                 </p>
               </div>
             </div>
+            {errors.glbUrl && (
+              <p className="text-red-500 text-xs mt-1">{errors.glbUrl}</p>
+            )}
             {/* Live 3D Model Preview */}
             {pin.glbUrl && (
               <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
@@ -764,6 +819,8 @@ const AdminPinCard = ({
             </div>
           )}
         </div>
+        
+        
         {/* Footer Buttons */}
         <div className="pt-4 flex justify-between">
           <button
