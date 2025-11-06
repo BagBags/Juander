@@ -79,12 +79,12 @@ define(['./workbox-3e1353d5'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "/index.html",
-    "revision": "0.tjj8566jv8"
+    "revision": "0.51vf3d29qo8"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/],
-    denylist: [/^\/api/, /^\/admin/, /^\/create-itinerary/, /^\/profile/, /^\/homepage/]
+    denylist: [/^\/api/]
   }));
   workbox.registerRoute(/^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i, new workbox.NetworkFirst({
     "cacheName": "guest-api-cache",
