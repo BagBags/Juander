@@ -154,6 +154,7 @@ export default function Photobooth() {
     if (!video) return;
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     // Get the actual displayed video dimensions (accounting for object-fit)
     const videoElement = document.querySelector('.webcam');
     const videoRect = videoElement.getBoundingClientRect();
@@ -223,6 +224,22 @@ export default function Photobooth() {
     ctx.scale(-1, 1);
     ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
 >>>>>>> Stashed changes
+=======
+    // Get actual video stream dimensions
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    
+    // Create canvas with video's actual dimensions to prevent stretching
+    const canvas = document.createElement("canvas");
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    const ctx = canvas.getContext("2d");
+
+    // Draw mirrored video at its native resolution
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
+>>>>>>> Stashed changes
     ctx.restore();
 
     // If filter is selected, draw it on top using the actual displayed overlay
@@ -255,13 +272,19 @@ export default function Photobooth() {
               const cameraRect = document.querySelector(".camera-view").getBoundingClientRect();
               
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
               // Calculate position relative to camera and scale to canvas dimensions
 =======
+=======
+>>>>>>> Stashed changes
               // Calculate scale factor between canvas and display
               const scaleX = canvas.width / cameraRect.width;
               const scaleY = canvas.height / cameraRect.height;
               
               // Calculate position relative to camera and scale to canvas
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
               const x = (rect.left - cameraRect.left) * scaleX;
               const y = (rect.top - cameraRect.top) * scaleY;
@@ -366,9 +389,14 @@ export default function Photobooth() {
             videoConstraints={{
               facingMode: "user",
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
               width: { ideal: window.innerWidth > 768 ? 1920 : 1280 },
               height: { ideal: window.innerWidth > 768 ? 1080 : 720 },
               aspectRatio: { ideal: videoDims.height / videoDims.width }
+=======
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+>>>>>>> Stashed changes
 =======
               width: { ideal: 1920 },
               height: { ideal: 1080 },
