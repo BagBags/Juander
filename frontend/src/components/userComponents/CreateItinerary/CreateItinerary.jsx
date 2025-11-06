@@ -6,6 +6,7 @@ import ttsService from "../../../utils/textToSpeech";
 import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
 import OnlineRequiredModal from "../../shared/OnlineRequiredModal";
+import ConfirmModal from "../../shared/ConfirmModal";
 import {
   FaCheck,
   FaPlus,
@@ -14,7 +15,7 @@ import {
   FaTrash,
   FaEdit,
 } from "react-icons/fa";
-import { Info } from "lucide-react";
+import { Info, X } from "lucide-react";
 
 function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -97,6 +98,7 @@ export default function CreateItineraryPage() {
   const [showFortModal, setShowFortModal] = useState(false);
   const [offlineMessage, setOfflineMessage] = useState("");
   const [hideFortModalPreference, setHideFortModalPreference] = useState(false);
+  const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -170,6 +172,28 @@ export default function CreateItineraryPage() {
     } catch (err) {
       console.error("Upload failed", err);
       alert("Image upload failed");
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    try {
+      // If there's an imageUrl, delete from server
+      if (imageUrl) {
+        await axios.delete(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/userItineraries/delete-image`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            data: { imageUrl }
+          }
+        );
+      }
+      setImageUrl("");
+      setShowDeleteImageModal(false);
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      alert("Failed to delete image");
     }
   };
 
@@ -329,6 +353,18 @@ export default function CreateItineraryPage() {
           onDontShowAgain={handleDontShowAgain}
         />
       )}
+      
+      {/* Delete Image Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteImageModal}
+        onClose={() => setShowDeleteImageModal(false)}
+        onConfirm={handleDeleteImage}
+        title="Delete Image?"
+        message="Are you sure you want to remove this image? This action cannot be undone."
+        confirmText="Delete Image"
+        type="danger"
+      />
+      
       {/* Global TTS Button */}
       <GlobalTTSButton />
 
@@ -425,11 +461,11 @@ export default function CreateItineraryPage() {
                           className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
                         />
                         <button
-                          onClick={() => setImageUrl("")}
-                          className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-red-600 shadow-lg transition font-bold opacity-0 group-hover:opacity-100"
+                          onClick={() => setShowDeleteImageModal(true)}
+                          className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-red-600 shadow-lg transition opacity-0 group-hover:opacity-100"
                           title="Remove image"
                         >
-                          ×
+                          <X size={20} />
                         </button>
                       </div>
                     ) : (

@@ -4,6 +4,7 @@ const Itinerary = require("../models/itineraryModel");
 const Log = require("../models/logModel"); // import Log model
 const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload"); // your Multer setup
+const { deleteFromS3 } = require("../middleware/upload");
 
 // Upload itinerary image (for both admin and user itineraries)
 router.post(
@@ -30,6 +31,30 @@ router.post(
     }
   }
 );
+
+// Delete itinerary image from S3
+router.delete("/delete-image", verifyToken, async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Image URL is required" });
+    }
+
+    // Delete from S3
+    const deleted = await deleteFromS3(imageUrl);
+
+    if (deleted) {
+      console.log("Image deleted successfully:", imageUrl);
+      res.status(200).json({ message: "Image deleted successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to delete image from S3" });
+    }
+  } catch (err) {
+    console.error("Error deleting image:", err);
+    res.status(500).json({ error: "Failed to delete image" });
+  }
+});
 
 // Helper to get admin/user name
 const getUserName = (user) =>
@@ -186,7 +211,7 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -230,7 +255,7 @@ router.put("/:id/archive", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -259,7 +284,7 @@ router.put("/:id/restore", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -288,7 +313,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });

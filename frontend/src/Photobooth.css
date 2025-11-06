@@ -37,6 +37,13 @@
   -webkit-transform: scaleX(-1);
 }
 
+/* Tablet and desktop: use contain to show full camera view */
+@media (min-width: 768px) {
+  .webcam {
+    object-fit: contain;
+  }
+}
+
 .loading-overlay {
   position: absolute;
   top: 0;

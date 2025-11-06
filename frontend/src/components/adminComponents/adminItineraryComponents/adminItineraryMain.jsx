@@ -8,6 +8,7 @@ import {
   Upload,
   Archive,
   RotateCcw,
+  X,
 } from "lucide-react";
 import ConfirmModal from "../../shared/ConfirmModal";
 
@@ -19,6 +20,7 @@ export default function AdminItineraryMain() {
   const [duration, setDuration] = useState(""); // Duration in hours
   const [imageFile, setImageFile] = useState(null); // <-- File state
   const [imagePreview, setImagePreview] = useState(""); // <-- Preview URL
+  const [imageUrl, setImageUrl] = useState(""); // <-- Store the actual image URL for deletion
   const [itineraries, setItineraries] = useState([]);
   const [archivedItineraries, setArchivedItineraries] = useState([]);
   const [editingId, setEditingId] = useState(null);
@@ -172,7 +174,7 @@ export default function AdminItineraryMain() {
               formData,
               {
                 headers: {
-                  Authorization: `Bearer ${token}`,
+                  ...getConfig().headers,
                   "Content-Type": "multipart/form-data",
                 },
               }
@@ -199,7 +201,7 @@ export default function AdminItineraryMain() {
                 import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
               }/itineraries/${editingId}`,
               payload,
-              config
+              getConfig()
             );
           } else {
             await axios.post(
@@ -207,7 +209,7 @@ export default function AdminItineraryMain() {
                 import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
               }/itineraries`,
               payload,
-              config
+              getConfig()
             );
           }
 
@@ -217,6 +219,7 @@ export default function AdminItineraryMain() {
           setDuration("");
           setImageFile(null);
           setImagePreview("");
+          setImageUrl("");
           setSelectedSites([]);
           setEditingId(null);
           fetchItineraries();
@@ -244,7 +247,7 @@ export default function AdminItineraryMain() {
               import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
             }/itineraries/${id}/archive`,
             {},
-            config
+            getConfig()
           );
           fetchItineraries();
           fetchArchivedItineraries();
@@ -272,7 +275,7 @@ export default function AdminItineraryMain() {
               import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
             }/itineraries/${id}/restore`,
             {},
-            config
+            getConfig()
           );
           fetchItineraries();
           fetchArchivedItineraries();
@@ -299,7 +302,7 @@ export default function AdminItineraryMain() {
             `${
               import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
             }/itineraries/${id}`,
-            config
+            getConfig()
           );
           fetchArchivedItineraries();
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
@@ -320,6 +323,7 @@ export default function AdminItineraryMain() {
 
     // Only set preview if imageUrl exists
     if (itinerary.imageUrl) {
+      setImageUrl(itinerary.imageUrl); // Store the actual URL
       setImagePreview(
         itinerary.imageUrl.startsWith("http")
           ? itinerary.imageUrl
@@ -329,6 +333,7 @@ export default function AdminItineraryMain() {
             }${itinerary.imageUrl}`
       ); // <-- prepend localhost if needed
     } else {
+      setImageUrl("");
       setImagePreview(""); // show placeholder
     }
 
@@ -340,6 +345,43 @@ export default function AdminItineraryMain() {
     );
     setSelectedSites(selected);
     setEditingId(itinerary._id);
+  };
+
+  const handleDeleteImage = () => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete Image?",
+      message: "Are you sure you want to remove this image? This action cannot be undone.",
+      confirmText: "Delete Image",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          // If editing an existing itinerary with an image URL, delete from server
+          if (editingId && imageUrl) {
+            await axios.delete(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/delete-image`,
+              {
+                ...getConfig(),
+                data: { imageUrl }
+              }
+            );
+          }
+          
+          // Clear local state
+          setImageFile(null);
+          setImagePreview("");
+          setImageUrl("");
+          setErrors({ ...errors, image: "" });
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to delete image:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   return (
@@ -365,18 +407,27 @@ export default function AdminItineraryMain() {
 
           {/* Cover Image Preview */}
           <div
-            className="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center"
+            className="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center relative"
             style={{ height: COVER_IMAGE_HEIGHT }}
           >
             {imagePreview ? (
-              <img
-                src={imagePreview}
-                alt="Itinerary Preview"
-                className="w-full h-full object-cover rounded-xl"
-                onError={(e) => {
-                  e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
-                }}
-              />
+              <>
+                <img
+                  src={imagePreview}
+                  alt="Itinerary Preview"
+                  className="w-full h-full object-cover rounded-xl"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
+                  }}
+                />
+                <button
+                  onClick={handleDeleteImage}
+                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition"
+                  title="Delete image"
+                >
+                  <X size={20} />
+                </button>
+              </>
             ) : (
               <span className="text-gray-400">Image Preview</span>
             )}
@@ -507,8 +558,10 @@ export default function AdminItineraryMain() {
                 setDuration("");
                 setImageFile(null);
                 setImagePreview("");
+                setImageUrl("");
                 setSelectedSites([]);
                 setEditingId(null);
+                setErrors({ name: "", description: "", duration: "", image: "", sites: "" });
               }}
               className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition"
             >

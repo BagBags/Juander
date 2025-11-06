@@ -568,32 +568,37 @@ const AdminPinCard = ({
             {/* Media Files Preview */}
             {pin.mediaFiles && pin.mediaFiles.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
-                {pin.mediaFiles.map((media, index) => (
-                  <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
-                    {media.type === "video" ? (
-                      <video
-                        src={`${BACKEND_URL}${media.url}`}
-                        className="w-full h-32 object-cover"
-                        controls
+                {pin.mediaFiles.map((media, index) => {
+                  // Check if URL is already absolute (starts with http:// or https://)
+                  const mediaUrl = media.url?.startsWith('http') ? media.url : `${BACKEND_URL}${media.url}`;
+                  
+                  return (
+                    <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
+                      {media.type === "video" ? (
+                        <video
+                          src={mediaUrl}
+                          className="w-full h-32 object-cover"
+                          controls
+                        >
+                          <track kind="captions" />
+                        </video>
+                      ) : (
+                        <img
+                          src={mediaUrl}
+                          alt={`Media ${index + 1}`}
+                          className="w-full h-32 object-cover"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedia(selectedPinIndex, index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow hover:bg-red-600 transition"
                       >
-                        <track kind="captions" />
-                      </video>
-                    ) : (
-                      <img
-                        src={`${BACKEND_URL}${media.url}`}
-                        alt={`Media ${index + 1}`}
-                        className="w-full h-32 object-cover"
-                      />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMedia(selectedPinIndex, index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow hover:bg-red-600 transition"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

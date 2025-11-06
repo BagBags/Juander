@@ -113,7 +113,8 @@ const SiteCard = ({ pin, onClose, distance }) => {
               src={pin.arLink}
               title="AR Mode"
               className="flex-1 w-full rounded-lg border border-gray-200"
-              allow="camera; gyroscope; accelerometer; fullscreen"
+              allow="camera *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; fullscreen *"
+              allowFullScreen
             />
             <button
               onClick={() => setShowAR(false)}

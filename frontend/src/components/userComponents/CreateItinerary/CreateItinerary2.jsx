@@ -10,6 +10,8 @@ import {
   FaTrash,
   FaEdit,
 } from "react-icons/fa";
+import { X } from "lucide-react";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function CreateItineraryPage() {
   const [selected, setSelected] = useState([]);
@@ -21,6 +23,7 @@ export default function CreateItineraryPage() {
   const [sites, setSites] = useState([]);
   const [descriptionToggles, setDescriptionToggles] = useState({});
   const [showMyItineraries, setShowMyItineraries] = useState(false);
+  const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -82,6 +85,26 @@ export default function CreateItineraryPage() {
     if (url.startsWith("http")) return url;
     // Otherwise, prepend localhost
     return `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${url}`;
+  };
+
+  const handleDeleteImage = async () => {
+    try {
+      // If there's an imageUrl, delete from server
+      if (imageUrl) {
+        await axios.delete(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/userItineraries/delete-image`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            data: { imageUrl }
+          }
+        );
+      }
+      setImageUrl("");
+      setShowDeleteImageModal(false);
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      alert("Failed to delete image");
+    }
   };
 
   const toggleSelection = (siteId) =>
@@ -157,6 +180,17 @@ export default function CreateItineraryPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f04e37] text-white scroll-smooth">
+      {/* Delete Image Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteImageModal}
+        onClose={() => setShowDeleteImageModal(false)}
+        onConfirm={handleDeleteImage}
+        title="Delete Image?"
+        message="Are you sure you want to remove this image? This action cannot be undone."
+        confirmText="Delete Image"
+        type="danger"
+      />
+      
       {/* === STICKY BACKHEADER === */}
       <div 
         className="sticky top-0 z-40 bg-[#f04e37]"
@@ -189,11 +223,20 @@ export default function CreateItineraryPage() {
                   />
                 </label>
                 {imageUrl && (
-                  <img
-                    src={getFullImageUrl(imageUrl)}
-                    alt="Itinerary Preview"
-                    className="w-full h-40 md:h-48 object-cover rounded-lg shadow-lg border-2 border-white"
-                  />
+                  <div className="relative group">
+                    <img
+                      src={getFullImageUrl(imageUrl)}
+                      alt="Itinerary Preview"
+                      className="w-full h-40 md:h-48 object-cover rounded-lg shadow-lg border-2 border-white"
+                    />
+                    <button
+                      onClick={() => setShowDeleteImageModal(true)}
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition opacity-0 group-hover:opacity-100"
+                      title="Delete image"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 )}
                 <input
                   type="text"

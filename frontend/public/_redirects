@@ -1,0 +1,3 @@
+# Redirect all routes to index.html for SPA routing
+# Except API calls which should go to backend
+/*    /index.html   200

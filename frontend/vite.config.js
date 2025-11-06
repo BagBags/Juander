@@ -161,17 +161,7 @@ export default defineConfig({
         ],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [
-          /^\/api/,
-          /^\/admin/,
-          /^\/create-itinerary/,
-          /^\/profile/,
-          /^\/homepage/,
-        ],
-        navigateFallbackAllowlist: [
-          /^\/guest-itinerary/,
-          /^\/$/,
-          /^\/login/,
-          /^\/signup/,
+          /^\/api/,  // Only block API calls
         ],
       },
       devOptions: {
