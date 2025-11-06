@@ -200,6 +200,11 @@ export default function Photobooth() {
               
               // Calculate position relative to camera and scale to canvas
 
+              // Calculate scale factor between canvas and display
+              const scaleX = canvas.width / cameraRect.width;
+              const scaleY = canvas.height / cameraRect.height;
+              
+              // Calculate position relative to camera and scale to canvas
               const x = (rect.left - cameraRect.left) * scaleX;
               const y = (rect.top - cameraRect.top) * scaleY;
               const width = rect.width * scaleX;

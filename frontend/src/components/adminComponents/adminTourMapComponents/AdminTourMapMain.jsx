@@ -1288,6 +1288,7 @@ export default function AdminTourMapMain() {
                               </h3>
                               <span
                                 className={`px-2 py-1 rounded-full text-xs font-semibold capitalize flex-shrink-0 ${
+                                className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
                                   pin.status === "inactive"
                                     ? "bg-blue-100 text-blue-700"
                                     : "bg-green-100 text-green-700"
@@ -1304,6 +1305,16 @@ export default function AdminTourMapMain() {
                             
                             {/* Badges at top */}
                             <div className="flex flex-wrap gap-2 mb-3 text-xs">
+                            <p className="text-sm text-gray-600 line-clamp-2 mb-3 min-h-[2.5rem]">
+                              {(() => {
+                                if (!pin.siteDescription) return "No description available";
+                                // Get first paragraph/section (split by double newline or first section)
+                                const firstSection = pin.siteDescription.split(/\n\n|\n\s*\n/)[0];
+                                return firstSection || pin.siteDescription;
+                              })()}
+                            </p>
+                            
+                            <div className="flex flex-wrap gap-2 mb-3 text-xs min-h-[1.75rem]">
                               {pin.arEnabled && (
                                 <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium flex items-center gap-1">
                                   <Sparkles className="w-3 h-3" />
