@@ -153,62 +153,6 @@ export default function Photobooth() {
     const video = webcamRef.current.video;
     if (!video) return;
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    // Get the actual displayed video dimensions (accounting for object-fit)
-    const videoElement = document.querySelector('.webcam');
-    const videoRect = videoElement.getBoundingClientRect();
-    
-    // Calculate the actual video dimensions considering object-fit
-    const videoAspect = video.videoWidth / video.videoHeight;
-    const displayAspect = videoRect.width / videoRect.height;
-    
-    let sourceWidth, sourceHeight, sourceX, sourceY;
-    let canvasWidth, canvasHeight;
-    
-    if (window.innerWidth < 768) {
-      // Mobile: object-fit: cover - video fills container, some parts cropped
-      if (videoAspect > displayAspect) {
-        // Video is wider - crop sides
-        sourceHeight = video.videoHeight;
-        sourceWidth = sourceHeight * displayAspect;
-        sourceX = (video.videoWidth - sourceWidth) / 2;
-        sourceY = 0;
-      } else {
-        // Video is taller - crop top/bottom
-        sourceWidth = video.videoWidth;
-        sourceHeight = sourceWidth / displayAspect;
-        sourceX = 0;
-        sourceY = (video.videoHeight - sourceHeight) / 2;
-      }
-      // Canvas matches the cropped source dimensions to maintain aspect ratio
-      canvasWidth = sourceWidth;
-      canvasHeight = sourceHeight;
-    } else {
-      // Tablet/Desktop: object-fit: contain - entire video visible
-      sourceX = 0;
-      sourceY = 0;
-      sourceWidth = video.videoWidth;
-      sourceHeight = video.videoHeight;
-      canvasWidth = video.videoWidth;
-      canvasHeight = video.videoHeight;
-    }
-
-    // Create canvas matching the actual video content dimensions
-    const canvas = document.createElement("canvas");
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    const ctx = canvas.getContext("2d");
-
-    // Draw mirrored video at native resolution (no stretching)
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(
-      video,
-      sourceX, sourceY, sourceWidth, sourceHeight,  // Source rectangle
-      -canvasWidth, 0, canvasWidth, canvasHeight  // Destination rectangle (1:1 mapping)
-    );
-=======
     // Get actual video stream dimensions
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
@@ -223,23 +167,6 @@ export default function Photobooth() {
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
->>>>>>> Stashed changes
-=======
-    // Get actual video stream dimensions
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    
-    // Create canvas with video's actual dimensions to prevent stretching
-    const canvas = document.createElement("canvas");
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
-    const ctx = canvas.getContext("2d");
-
-    // Draw mirrored video at its native resolution
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
->>>>>>> Stashed changes
     ctx.restore();
 
     // If filter is selected, draw it on top using the actual displayed overlay
@@ -249,10 +176,6 @@ export default function Photobooth() {
       if (overlayContainer) {
         // Get all overlay images that are currently displayed
         const overlayImages = overlayContainer.querySelectorAll("img");
-        
-        // Calculate scale factor between canvas and display
-        const scaleX = canvasWidth / videoRect.width;
-        const scaleY = canvasHeight / videoRect.height;
         
         overlayImages.forEach((img) => {
           try {
@@ -270,22 +193,13 @@ export default function Photobooth() {
               // For face-tracking overlays, calculate relative position
               const rect = parent.getBoundingClientRect();
               const cameraRect = document.querySelector(".camera-view").getBoundingClientRect();
-              
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-              // Calculate position relative to camera and scale to canvas dimensions
-=======
-=======
->>>>>>> Stashed changes
+
               // Calculate scale factor between canvas and display
               const scaleX = canvas.width / cameraRect.width;
               const scaleY = canvas.height / cameraRect.height;
               
               // Calculate position relative to camera and scale to canvas
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
               const x = (rect.left - cameraRect.left) * scaleX;
               const y = (rect.top - cameraRect.top) * scaleY;
               const width = rect.width * scaleX;
@@ -388,19 +302,8 @@ export default function Photobooth() {
             onUserMediaError={(err) => console.error("Webcam error:", err)}
             videoConstraints={{
               facingMode: "user",
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-              width: { ideal: window.innerWidth > 768 ? 1920 : 1280 },
-              height: { ideal: window.innerWidth > 768 ? 1080 : 720 },
-              aspectRatio: { ideal: videoDims.height / videoDims.width }
-=======
               width: { ideal: 1920 },
               height: { ideal: 1080 },
->>>>>>> Stashed changes
-=======
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
->>>>>>> Stashed changes
             }}
             screenshotFormat="image/jpeg"
             mirrored={true}

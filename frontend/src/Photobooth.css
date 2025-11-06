@@ -43,16 +43,6 @@
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-<<<<<<< Updated upstream
-}
-
-/* Tablet and desktop: use contain to show full camera view */
-@media (min-width: 768px) {
-  .webcam {
-    object-fit: contain;
-  }
-=======
->>>>>>> Stashed changes
 }
 
 .loading-overlay {
