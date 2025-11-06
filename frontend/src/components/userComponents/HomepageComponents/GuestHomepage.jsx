@@ -21,6 +21,15 @@ function GuestHomepageContent() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { startTour } = useTour();
+  const [bgLoaded, setBgLoaded] = React.useState(false);
+
+  // Preload background image
+  useEffect(() => {
+    const bgImage = new Image();
+    bgImage.src = '/JuanderBGWeb.svg';
+    bgImage.onload = () => setBgLoaded(true);
+    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
+  }, []);
 
   // Load guest language preference on mount
   useEffect(() => {
@@ -47,21 +56,32 @@ function GuestHomepageContent() {
   }, [startTour]);
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative"
-      style={{
-        backgroundImage: "url('/JuanderBGWeb.svg')",
-        backgroundColor: "#f04e37",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        touchAction: "none",
-        overscrollBehavior: "none",
-        WebkitOverscrollBehavior: "none",
-      }}
-    >
+    <>
+      {/* Loading Screen */}
+      {!bgLoaded && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
+          </div>
+        </div>
+      )}
+      
+      <div
+        className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative"
+        style={{
+          backgroundImage: "url('/JuanderBGWeb.svg')",
+          backgroundColor: "#d9d9d9",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          touchAction: "none",
+          overscrollBehavior: "none",
+          WebkitOverscrollBehavior: "none",
+        }}
+      >
         {/* Logo Header */}
         <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
@@ -123,5 +143,6 @@ function GuestHomepageContent() {
       {/* Global TTS Button */}
       <GlobalTTSButton />
     </div>
+    </>
   );
 }

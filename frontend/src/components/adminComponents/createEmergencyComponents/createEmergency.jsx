@@ -106,7 +106,7 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formEr
         )}
         <input
           type="text"
-          placeholder="Agency Name *"
+          placeholder="Agency Name"
           value={name}
           onChange={(e) => {
             setName(e.target.value);
@@ -142,7 +142,7 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formEr
             <div className="w-full">
               <input
                 type="text"
-                placeholder={`Contact Channel${idx > 0 ? " (Secondary)" : " *"}`}
+                placeholder={`Contact Channel${idx > 0 ? " (Secondary)" : ""}`}
                 value={channel.label}
                 onChange={(e) => {
                   handleChannelChange(idx, "label", e.target.value);
@@ -161,7 +161,7 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formEr
             <div className="w-full">
               <input
                 type="text"
-                placeholder="Contact Number/Link *"
+                placeholder="Contact Number/Link"
                 value={channel.number}
                 onChange={(e) => {
                   handleChannelChange(idx, "number", e.target.value);

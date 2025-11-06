@@ -11,7 +11,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
-import { CheckCircle2, XCircle, MapPin, Archive, RotateCcw, Trash2, Edit, MapPinned, Image, Sparkles, Camera, Layers, X, Plus, Check, Info, Crop, Save } from "lucide-react";
+import { CheckCircle2, XCircle, MapPin, Archive, RotateCcw, Trash2, Edit, MapPinned, Image, Sparkles, Camera, Layers, X, Plus, Check, Info, Crop, Save, Search, Filter } from "lucide-react";
 import ConfirmModal from "../../shared/ConfirmModal";
 import {
   faCropSimple,
@@ -88,16 +88,8 @@ export default function AdminTourMapMain() {
   const [showGlbPreview, setShowGlbPreview] = useState(false);
   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
   
-  // Validation errors
-  const [errors, setErrors] = useState({
-    siteName: "",
-    coordinates: "",
-    description: "",
-    category: "",
-    facadeUrl: "",
-    mediaFiles: "",
-    glbUrl: "",
-  });
+  // Validation error for siteName
+  const [siteNameError, setSiteNameError] = useState("");
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
@@ -105,6 +97,11 @@ export default function AdminTourMapMain() {
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [showPinsPanel, setShowPinsPanel] = useState(false);
   const [showCategoryPanel, setShowCategoryPanel] = useState(false);
+  
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all"); // "all", "active", "inactive"
+  const [filterCategory, setFilterCategory] = useState("all");
   const [categories, setCategories] = useState([]);
   const [categoryForm, setCategoryForm] = useState({ name: "" });
   const [editCategoryId, setEditCategoryId] = useState(null);
@@ -397,59 +394,10 @@ export default function AdminTourMapMain() {
     const pinName = pin.siteName || `Pin #${index + 1}`;
     
     // Validation
-    const newErrors = {};
-    
-    // 1. Site Name validation
     if (!pin.siteName || !pin.siteName.trim()) {
-      newErrors.siteName = "Site name is required";
-    }
-    
-    // 2. Coordinates validation
-    if (!pin.latitude || !pin.longitude) {
-      newErrors.coordinates = "Coordinates (latitude and longitude) are required";
-    } else {
-      // Validate coordinate ranges
-      if (pin.latitude < -90 || pin.latitude > 90) {
-        newErrors.coordinates = "Latitude must be between -90 and 90";
-      }
-      if (pin.longitude < -180 || pin.longitude > 180) {
-        newErrors.coordinates = "Longitude must be between -180 and 180";
-      }
-    }
-    
-    // 3. Description validation
-    if (!pin.siteDescription || !pin.siteDescription.trim()) {
-      newErrors.description = "Site description (English) is required";
-    }
-    
-    // 4. Category validation
-    if (!pin.category) {
-      newErrors.category = "Category is required";
-    }
-    
-    // 5. Facade image validation
-    if (!pin.facadeUrl) {
-      newErrors.facadeUrl = "2D Facade image is required";
-    }
-    
-    // 6. Media files validation
-    if (!pin.mediaFiles || pin.mediaFiles.length === 0) {
-      newErrors.mediaFiles = "At least one media file (image/video) is required";
-    }
-    
-    // 7. 3D Model validation
-    if (!pin.glbUrl) {
-      newErrors.glbUrl = "3D Model (.glb) is required";
-    }
-    
-    // If there are validation errors, set them and stop
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+      setSiteNameError("Site name is required");
       return;
     }
-    
-    // Clear errors if validation passes
-    setErrors({ siteName: "", coordinates: "", description: "", category: "", facadeUrl: "", mediaFiles: "", glbUrl: "" });
     
     setConfirmModal({
       isOpen: true,
@@ -476,7 +424,7 @@ export default function AdminTourMapMain() {
           setSelectedPin(null);
           setOriginalPinData(null);
           setIsAddingPin(false);
-          setErrors({ siteName: "", coordinates: "", description: "", category: "", facadeUrl: "", mediaFiles: "", glbUrl: "" }); // Clear errors
+          setSiteNameError(""); // Clear error
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
@@ -999,8 +947,6 @@ export default function AdminTourMapMain() {
               onClose={closePinCard}
               categories={categories}
               fetchCategories={fetchCategories}
-              errors={errors}
-              setErrors={setErrors}
             />
           </Suspense>
         )}
@@ -1176,43 +1122,139 @@ export default function AdminTourMapMain() {
                 </button>
               </div>
 
+              {/* Search and Filter Bar */}
+              <div className="p-5 pb-4 space-y-3">
+                <div className="flex gap-3">
+                  {/* Search Bar */}
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search by site name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none transition-all"
+                    />
+                  </div>
+                  
+                  {/* Status Filter */}
+                  <div className="relative">
+                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="pl-10 pr-8 py-2.5 border-2 border-gray-200 rounded-lg focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none transition-all appearance-none bg-white cursor-pointer"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  
+                  {/* Category Filter */}
+                  <div className="relative">
+                    <select
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
+                      className="px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none transition-all appearance-none bg-white cursor-pointer"
+                    >
+                      <option value="all">All Categories</option>
+                      {categories.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Tabs */}
-              <div className="flex gap-2 p-5 pb-3 border-b">
-                <button
-                  onClick={() => setActiveTab("active")}
-                  className={`flex-1 py-2.5 px-4 rounded-lg font-semibold transition ${
-                    activeTab === "active"
-                      ? "text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  style={activeTab === "active" ? { backgroundColor: '#f04e37' } : {}}
-                >
-                  Active Pins ({pins.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("archived")}
-                  className={`flex-1 py-2.5 px-4 rounded-lg font-semibold transition ${
-                    activeTab === "archived"
-                      ? "text-white shadow-md"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  style={activeTab === "archived" ? { backgroundColor: '#f04e37' } : {}}
-                >
-                  Archived ({archivedPins.length})
-                </button>
+              <div className="px-5 pb-4">
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+                  <button
+                    onClick={() => setActiveTab("active")}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      activeTab === "active"
+                        ? "bg-white text-[#f04e37] shadow-md"
+                        : "text-gray-600 hover:text-gray-800"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Active</span>
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                      activeTab === "active" 
+                        ? "bg-[#f04e37] text-white" 
+                        : "bg-gray-200 text-gray-600"
+                    }`}>
+                      {pins.length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("archived")}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
+                      activeTab === "archived"
+                        ? "bg-white text-[#f04e37] shadow-md"
+                        : "text-gray-600 hover:text-gray-800"
+                    }`}
+                  >
+                    <Archive className="w-4 h-4" />
+                    <span>Archived</span>
+                    <span className={`ml-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                      activeTab === "archived" 
+                        ? "bg-[#f04e37] text-white" 
+                        : "bg-gray-200 text-gray-600"
+                    }`}>
+                      {archivedPins.length}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* Pins Grid */}
               <div className="flex-1 overflow-y-auto p-5 min-h-[500px]">
                 {activeTab === "active" ? (
-                  pins.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20">
-                      <MapPin className="w-16 h-16 text-gray-300 mb-3" />
-                      <p className="text-gray-500 text-lg">No active pins</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {pins.map((pin, index) => (
+                  (() => {
+                    // Filter pins based on search and filters
+                    const filteredPins = pins.filter((pin) => {
+                      // Search filter
+                      const matchesSearch = pin.siteName?.toLowerCase().includes(searchQuery.toLowerCase());
+                      
+                      // Status filter
+                      const matchesStatus = filterStatus === "all" || 
+                        (filterStatus === "active" && (!pin.status || pin.status === "active")) ||
+                        (filterStatus === "inactive" && pin.status === "inactive");
+                      
+                      // Category filter
+                      const matchesCategory = filterCategory === "all" || pin.category === filterCategory;
+                      
+                      return matchesSearch && matchesStatus && matchesCategory;
+                    });
+                    
+                    return filteredPins.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20">
+                        <MapPin className="w-16 h-16 text-gray-300 mb-3" />
+                        <p className="text-gray-500 text-lg">
+                          {searchQuery || filterStatus !== "all" || filterCategory !== "all" 
+                            ? "No pins match your filters" 
+                            : "No active pins"}
+                        </p>
+                        {(searchQuery || filterStatus !== "all" || filterCategory !== "all") && (
+                          <button
+                            onClick={() => {
+                              setSearchQuery("");
+                              setFilterStatus("all");
+                              setFilterCategory("all");
+                            }}
+                            className="mt-3 px-4 py-2 bg-[#f04e37] text-white rounded-lg hover:bg-[#e03d2d] transition"
+                          >
+                            Clear Filters
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredPins.map((pin, index) => (
                         <div
                           key={pin._id || `pin-${index}`}
                           className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all flex flex-col h-[420px]"
@@ -1244,7 +1286,7 @@ export default function AdminTourMapMain() {
                                 {pin.siteName || `Pin #${index + 1}`}
                               </h3>
                               <span
-                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
                                   pin.status === "inactive"
                                     ? "bg-blue-100 text-blue-700"
                                     : "bg-green-100 text-green-700"
@@ -1260,7 +1302,12 @@ export default function AdminTourMapMain() {
                             </div>
                             
                             <p className="text-sm text-gray-600 line-clamp-2 mb-3 min-h-[2.5rem]">
-                              {pin.siteDescription || "No description available"}
+                              {(() => {
+                                if (!pin.siteDescription) return "No description available";
+                                // Get first paragraph/section (split by double newline or first section)
+                                const firstSection = pin.siteDescription.split(/\n\n|\n\s*\n/)[0];
+                                return firstSection || pin.siteDescription;
+                              })()}
                             </p>
                             
                             <div className="flex flex-wrap gap-2 mb-3 text-xs min-h-[1.75rem]">
@@ -1296,9 +1343,10 @@ export default function AdminTourMapMain() {
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )
+                        ))}
+                      </div>
+                    );
+                  })()
                 ) : (
                   archivedPins.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20">

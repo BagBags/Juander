@@ -5,7 +5,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
 import { MAPBOX_TOKEN, INTRAMUROS_BOUNDS } from "./mapConfig";
 import { useApi } from "./useApi";
-import { useUserLocation } from "./useUserLocation";
 import MapMarkers from "./MapMarkers";
 import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
@@ -38,15 +37,12 @@ export default function TourMap() {
   const mapRef = useRef(null);
   const [selectedPin, setSelectedPin] = useState(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW);
-  const [distance, setDistance] = useState(null);
-  const [route, setRoute] = useState(null);
   const [showLegend, setShowLegend] = useState(false);
   const [mapError, setMapError] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Custom hooks
   const { mask, inverseMask, pins } = useApi(api);
-  const userLocation = useUserLocation(setViewState);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -112,50 +108,21 @@ export default function TourMap() {
     return () => map.off("click", handleMapClick);
   }, [pins]);
 
-  // ------------------ Open pin + fetch route ------------------
+  // ------------------ Open pin ------------------
   const openPin = useCallback(
     (pinData) => {
       if (!pinData) return;
 
-      flyToPin(pinData, async () => {
+      flyToPin(pinData, () => {
         setSelectedPin(pinData);
-        setDistance(null);
-        setRoute(null);
-
-        if (!userLocation) return;
-
-        try {
-          const url =
-            `https://api.mapbox.com/directions/v5/mapbox/walking/` +
-            `${userLocation.longitude},${userLocation.latitude};` +
-            `${pinData.longitude},${pinData.latitude}` +
-            `?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
-
-          const resp = await fetch(url);
-          const data = await resp.json();
-
-          if (data.routes?.length) {
-            const routeData = data.routes[0];
-            setDistance(routeData.distance);
-            setRoute({
-              type: "Feature",
-              geometry: routeData.geometry,
-              properties: {},
-            });
-          }
-        } catch (err) {
-          console.error("❌ Directions fetch error:", err);
-        }
       });
     },
-    [userLocation]
+    []
   );
 
   // ------------------ Close card (reset view) ------------------
   const handleCloseCard = () => {
     setSelectedPin(null);
-    setDistance(null);
-    setRoute(null);
 
     const map = mapRef.current?.getMap?.();
     if (map) {
@@ -203,16 +170,22 @@ export default function TourMap() {
           const clampedLng = Math.max(minLng + padding, Math.min(maxLng - padding, evt.viewState.longitude));
           const clampedLat = Math.max(minLat + padding, Math.min(maxLat - padding, evt.viewState.latitude));
           
+          // Restrict pitch to prevent showing white background (max 60 degrees)
+          const clampedPitch = Math.min(60, Math.max(0, evt.viewState.pitch));
+          
           setViewState({
             ...evt.viewState,
             longitude: clampedLng,
             latitude: clampedLat,
+            pitch: clampedPitch,
           });
         }}
         mapStyle="mapbox://styles/mapbox/streets-v11"
         className="w-full h-full"
         maxZoom={20}
         minZoom={15.5}
+        minPitch={0}
+        maxPitch={60}
         renderWorldCopies={false}
         onError={(e) => {
           console.error('Map error:', e);
@@ -221,11 +194,6 @@ export default function TourMap() {
           }
         }}
       >
-        {/* User location marker */}
-        {userLocation && (
-          <MapMarkers.UserLocationMarker userLocation={userLocation} />
-        )}
-
         {/* Tour pins */}
         <MapMarkers.PinMarkers
           pins={pins}
@@ -234,13 +202,13 @@ export default function TourMap() {
         />
 
         {/* Map Layers */}
-        <MapLayers mask={mask} inverseMask={inverseMask} route={route} />
+        <MapLayers mask={mask} inverseMask={inverseMask} route={null} />
       </Map>
 
       {/* UI Overlays */}
       <MapOverlays
         selectedPin={selectedPin}
-        distance={distance}
+        distance={null}
         onCloseCard={handleCloseCard}
         showLegend={showLegend}
         setShowLegend={setShowLegend}

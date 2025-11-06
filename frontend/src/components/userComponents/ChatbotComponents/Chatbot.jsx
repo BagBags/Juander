@@ -15,13 +15,8 @@ export default function Chatbot() {
   const sessionId = useRef(uuidv4());
   const lastBotMessageRef = useRef("");
 
-  const [messages, setMessages] = useState([
-    {
-      role: "system",
-      content:
-        "Welcome! Ask me anything about Intramuros in English or Filipino.",
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [hasUserMessaged, setHasUserMessaged] = useState(false);
   const [input, setInput] = useState("");
   const [botEntries, setBotEntries] = useState([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
@@ -227,11 +222,19 @@ export default function Chatbot() {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isBotTyping) return;
+  const handleSend = async (quickQuestion = null) => {
+    const messageToSend = quickQuestion || input.trim();
+    if (!messageToSend || isBotTyping) return;
 
-    const userMessage = input.trim();
-    
+    // Mark that user has sent a message
+    if (!hasUserMessaged) {
+      setHasUserMessaged(true);
+    }
+
+    const userMessage = messageToSend;
+    if (!quickQuestion) {
+      setInput("");
+    }
     // Add user message and loading state
     setMessages((prev) => [
       ...prev,
@@ -591,6 +594,24 @@ IMPORTANT:
     }
   };
 
+  // Quick question suggestions
+  const quickQuestions = [
+    "What are the must-see places in Intramuros?",
+    "Tell me about Fort Santiago",
+    "What's the history of Intramuros?",
+    "Where can I eat in Intramuros?",
+    "How do I get to Manila Cathedral?",
+    "What are the entrance fees?",
+  ];
+
+  const handleQuickQuestion = (question) => {
+    setInput(question);
+    // Auto-send the question
+    setTimeout(() => {
+      handleSend(question);
+    }, 100);
+  };
+
   return (
     <div
       className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
@@ -598,72 +619,102 @@ IMPORTANT:
         paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",
       }}
     >
-      {/* TTS Toggle Button */}
-      <div className="flex justify-end mb-2">
-        <button
-          onClick={toggleTTS}
-          className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-            ttsEnabled
-              ? "bg-[#f04e37] text-white hover:bg-[#e03d2d]"
-              : "bg-gray-300 text-gray-600 hover:bg-gray-400"
-          }`}
-          title={ttsEnabled ? "Disable voice" : "Enable voice"}
-        >
-          <FontAwesomeIcon
-            icon={ttsEnabled ? faVolumeUp : faVolumeMute}
-            className="mr-1"
-          />
-          {ttsEnabled ? "Voice On" : "Voice Off"}
-        </button>
-      </div>
       <div className="flex-1 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm space-y-4">
-        {messages
-          .filter((m) => m.role !== "system")
-          .map((msg, i) => (
+        {messages.map((msg, i) => (
             <div
               key={i}
               className={`flex ${
                 msg.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <div className="flex items-end gap-2 max-w-[85%]">
+              <div className={`flex items-end gap-2 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Avatar for assistant messages */}
                 {msg.role === "assistant" && (
-                  <button
-                    onClick={() => speakMessage(msg.content, i)}
-                    disabled={msg.content === "__loading__"}
-                    className={`mb-1 p-1.5 rounded-full transition-all ${
-                      speakingMessageIndex === i
-                        ? "bg-[#f04e37] text-white animate-pulse"
-                        : "bg-gray-300 text-gray-600 hover:bg-gray-400"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    title="Speak message"
-                  >
-                    <FontAwesomeIcon icon={faVolumeUp} className="w-3 h-3" />
-                  </button>
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#f04e37] to-[#e03d2d] flex items-center justify-center shadow-md mb-1">
+                    <span className="text-white text-sm font-bold">J</span>
+                  </div>
                 )}
-                <div
-                  className={`px-4 py-2 rounded-2xl shadow-md transition-all duration-300 animate-fadeIn ${
-                    msg.role === "user"
-                      ? "bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none"
-                      : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none"
-                  }`}
-                  style={{ whiteSpace: "pre-wrap" }}
-                >
-                  {msg.content === "__loading__" ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-150" />
-                      <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-300" />
-                    </div>
-                  ) : (
-                    msg.content
+                
+                <div className={`relative ${msg.role === "user" ? "" : "flex-1"}`}>
+                  <div
+                    className={`px-4 py-2 rounded-2xl shadow-md transition-all duration-300 animate-fadeIn ${
+                      msg.role === "user"
+                        ? "bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none"
+                        : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none pr-10"
+                    }`}
+                    style={{ whiteSpace: "pre-wrap" }}
+                  >
+                    {msg.content === "__loading__" ? (
+                      <div className="flex items-center gap-1">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse" style={{ animationDelay: '0ms', animationDuration: '1.4s' }} />
+                          <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse" style={{ animationDelay: '200ms', animationDuration: '1.4s' }} />
+                          <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse" style={{ animationDelay: '400ms', animationDuration: '1.4s' }} />
+                        </div>
+                        <span className="text-xs text-gray-500 ml-1">Juan is typing</span>
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
+                  
+                  {/* Speaker button inside assistant bubble */}
+                  {msg.role === "assistant" && msg.content !== "__loading__" && (
+                    <button
+                      onClick={() => speakMessage(msg.content, i)}
+                      className={`absolute top-2 right-2 p-1 rounded-full transition-all ${
+                        speakingMessageIndex === i
+                          ? "bg-[#f04e37]/10 text-[#f04e37]"
+                          : "text-gray-400 hover:text-[#f04e37] hover:bg-gray-100/50"
+                      }`}
+                      title="Listen to message"
+                    >
+                      <FontAwesomeIcon icon={faVolumeUp} className="w-3 h-3" />
+                    </button>
                   )}
                 </div>
               </div>
             </div>
           ))}
+        
+        {/* Vertical Quick Questions - Show only if no user messages yet */}
+        {!hasUserMessaged && messages.length === 0 && (
+          <div className="space-y-3 animate-fadeIn">
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide px-2">Quick Questions:</p>
+            <div className="grid grid-cols-1 gap-2">
+              {quickQuestions.map((question, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleQuickQuestion(question)}
+                  className="text-left px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 hover:border-[#f04e37] hover:bg-[#fff5f3] transition-all duration-200 shadow-sm hover:shadow-md group"
+                >
+                  <span className="group-hover:text-[#f04e37] transition-colors">{question}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Horizontal Scrollable Quick Questions - Show only after user has messaged */}
+        {hasUserMessaged && (
+          <div className="mt-4 overflow-hidden">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {quickQuestions.map((question, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleQuickQuestion(question)}
+                  className="flex-shrink-0 px-4 py-2 bg-white border-2 border-gray-200 rounded-full text-xs text-gray-700 hover:border-[#f04e37] hover:bg-[#fff5f3] hover:text-[#f04e37] transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
+      
       <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md">
         <button
           onClick={toggleListening}

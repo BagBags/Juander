@@ -19,6 +19,7 @@ export default function Homepage() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [fromCache, setFromCache] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(true);
+  const [bgLoaded, setBgLoaded] = useState(false);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -36,6 +37,15 @@ export default function Homepage() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Preload background images
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640;
+    const bgImage = new Image();
+    bgImage.src = isMobile ? '/JuanderBGPhone.png' : '/JuanderBGWeb1.svg';
+    bgImage.onload = () => setBgLoaded(true);
+    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
   }, []);
 
   // Announce page load
@@ -83,6 +93,16 @@ export default function Homepage() {
 
   return (
     <TourProvider steps={homepageTourSteps} userRole="tourist">
+      {/* Loading Screen */}
+      {!bgLoaded && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
+          </div>
+        </div>
+      )}
+      
       <div
         className="
       min-h-screen bg-cover bg-no-repeat bg-center 
