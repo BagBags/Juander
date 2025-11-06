@@ -6,7 +6,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import { useTranslation } from "react-i18next";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
 import { WifiOff, X } from "lucide-react";
 import TourProvider from "../../TourComponents/TourProvider";
@@ -161,7 +160,6 @@ export default function Homepage() {
         <Button navigate={navigate} />
       </MainLayout>
         <FloatingChatbot />
-        <GlobalTTSButton />
       </div>
     </TourProvider>
   );

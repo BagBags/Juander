@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -124,7 +123,6 @@ export default function ProfilePage() {
       </div>
 
       {/* Global TTS Button */}
-      <GlobalTTSButton />
 
       <div className="w-full max-w-md relative z-10">
         {/* Profile Card */}

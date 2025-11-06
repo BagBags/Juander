@@ -3,7 +3,6 @@ import axios from "axios";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
 import OnlineRequiredModal from "../../shared/OnlineRequiredModal";
 import ConfirmModal from "../../shared/ConfirmModal";
@@ -366,7 +365,6 @@ export default function CreateItineraryPage() {
       />
       
       {/* Global TTS Button */}
-      <GlobalTTSButton />
 
       {/* === STICKY BACKHEADER === */}
       <div 

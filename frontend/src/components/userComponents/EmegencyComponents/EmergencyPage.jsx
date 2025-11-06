@@ -4,7 +4,6 @@ import Card from "./Card";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
 import { Phone, AlertCircle } from "lucide-react";
 
@@ -49,7 +48,6 @@ export default function EmergencyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Global TTS Button */}
-      <GlobalTTSButton />
 
       {/* Sticky Back Header */}
       <div 

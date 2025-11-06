@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import SideButtons from "../sideButtons";
 import { useTranslation } from "react-i18next";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
 import TourProvider, { useTour } from "../../TourComponents/TourProvider";
 import { guestTourSteps } from "../../TourComponents/tourSteps";
@@ -139,9 +138,6 @@ function GuestHomepageContent() {
 
       {/* Floating Chatbot (Juan Mascot) */}
       <FloatingChatbot />
-      
-      {/* Global TTS Button */}
-      <GlobalTTSButton />
     </div>
     </>
   );
