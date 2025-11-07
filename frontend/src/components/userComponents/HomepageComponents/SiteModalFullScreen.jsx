@@ -290,12 +290,14 @@ export default function SiteModalFullScreen({
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
           <div className="flex flex-col h-[70vh]">
-            <iframe
-              src={selectedPin.arLink}
-              title="AR Mode"
-              className="flex-1 w-full rounded-lg border border-gray-200"
-              allow="camera; gyroscope; accelerometer; fullscreen"
-            />
+            
+<iframe
+  src={selectedPin.arLink}
+  title="AR Mode"
+  className="flex-1 w-full rounded-lg border border-gray-200"
+  allow="camera; microphone; gyroscope; accelerometer; magnetometer; xr-spatial-tracking; fullscreen;"
+  allowFullScreen
+/>
             <button
               onClick={() => setShowAR(false)}
               className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
