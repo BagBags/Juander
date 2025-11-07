@@ -1,5 +1,5 @@
 // components/PhotoboothSlider.jsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Camera } from "lucide-react";
 
 export default function PhotoboothSlider({
@@ -11,6 +11,19 @@ export default function PhotoboothSlider({
   style,
 }) {
   const carouselRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // Responsive sizing
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  const filterSize = isMobile ? 60 : 70;
+  const captureSize = isMobile ? 70 : 80;
 
   useEffect(() => {
     const carousel = carouselRef.current;
@@ -73,7 +86,7 @@ export default function PhotoboothSlider({
       style={{
         position: "relative",
         width: "100%",
-        height: "70px",
+        height: `${filterSize + 20}px`,
         display: "flex",
         alignItems: "center",
         ...style,
@@ -91,22 +104,23 @@ export default function PhotoboothSlider({
           scrollbarWidth: "none",
           height: "100%",
           alignItems: "center",
-          paddingLeft: `calc(50% - 35px)`,
-          paddingRight: `calc(50% - 35px)`,
+          paddingLeft: `calc(50% - ${filterSize / 2}px)`,
+          paddingRight: `calc(50% - ${filterSize / 2}px)`,
         }}
+        className="hide-scrollbar"
       >
         {repeatedFilters.map((filter) => (
           <button
             key={filter.id}
             style={{
               flex: "0 0 auto",
-              width: "70px",
-              height: "70px",
-              margin: "0 10px",
+              width: `${filterSize}px`,
+              height: `${filterSize}px`,
+              margin: isMobile ? "0 6px" : "0 10px",
               borderRadius: "50%",
               border:
                 filter.id === selectedFilterId
-                  ? "3px solid #3498db"
+                  ? "3px solid #f04e37"
                   : "2px solid #ccc",
               scrollSnapAlign: "center",
               position: "relative",
@@ -116,6 +130,7 @@ export default function PhotoboothSlider({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              transition: "all 0.2s ease",
             }}
             onClick={() => {
               setSelectedFilterId(filter.id);
@@ -149,16 +164,16 @@ export default function PhotoboothSlider({
             <span
               style={{
                 position: "absolute",
-                bottom: "5px",
+                bottom: isMobile ? "3px" : "5px",
                 left: "50%",
                 transform: "translateX(-50%)",
-                fontSize: "10px",
+                fontSize: isMobile ? "8px" : "10px",
                 color: "#fff",
                 background: "rgba(0,0,0,0.7)",
-                padding: "2px 5px",
+                padding: isMobile ? "1px 3px" : "2px 5px",
                 borderRadius: "4px",
                 whiteSpace: "nowrap",
-                maxWidth: "60px",
+                maxWidth: isMobile ? "50px" : "60px",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
               }}
@@ -173,10 +188,12 @@ export default function PhotoboothSlider({
       <button
         onClick={onCapture}
         disabled={!webcamReady}
-        className="absolute left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white shadow-2xl hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+        className="absolute left-1/2 -translate-x-1/2 rounded-full border-4 border-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
         style={{
           pointerEvents: "auto",
           background: "transparent",
+          width: `${captureSize}px`,
+          height: `${captureSize}px`,
         }}
       >
         {/* Inner ring for depth */}

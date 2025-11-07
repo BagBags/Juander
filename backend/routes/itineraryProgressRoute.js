@@ -18,6 +18,7 @@ router.get('/:itineraryId', verifyToken, async (req, res) => {
       return res.json({
         currentPinIndex: 0,
         visitedSites: [],
+        skippedSites: [],
         lastPosition: null
       });
     }
@@ -34,7 +35,7 @@ router.post('/:itineraryId', verifyToken, async (req, res) => {
   try {
     const { itineraryId } = req.params;
     const userId = req.user.id;
-    const { currentPinIndex, visitedSites, lastPosition } = req.body;
+    const { currentPinIndex, visitedSites, skippedSites, lastPosition } = req.body;
 
     let progress = await ItineraryProgress.findOne({
       userId,
@@ -45,6 +46,7 @@ router.post('/:itineraryId', verifyToken, async (req, res) => {
       // Update existing progress
       progress.currentPinIndex = currentPinIndex;
       progress.visitedSites = visitedSites;
+      progress.skippedSites = skippedSites || [];
       progress.lastPosition = lastPosition;
       progress.lastUpdated = new Date();
       await progress.save();
@@ -55,6 +57,7 @@ router.post('/:itineraryId', verifyToken, async (req, res) => {
         itineraryId,
         currentPinIndex,
         visitedSites,
+        skippedSites: skippedSites || [],
         lastPosition
       });
       await progress.save();

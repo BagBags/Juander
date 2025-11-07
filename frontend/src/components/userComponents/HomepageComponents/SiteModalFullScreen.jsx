@@ -908,25 +908,6 @@ export default function SiteModalFullScreen({
                 </div>
               </div>
             </div>
-
-            {/* Next Stop Button - marks current site as visited and navigates to next */}
-            {currentPinIndex < pinsLength - 1 && (
-              <button
-                onClick={() => {
-                  // Mark current site as visited before navigating
-                  if (simulateGoToNextSite) {
-                    simulateGoToNextSite();
-                  } else {
-                    goToNextStop();
-                  }
-                  ttsService.speak(t('tts_navigatingNext'));
-                }}
-                className="w-full bg-[#f04e37] hover:bg-[#d9442f] text-white px-6 py-4 text-lg font-bold rounded-lg shadow-lg transition-all duration-200 active:scale-95"
-                aria-label="Mark as visited and go to next site"
-              >
-                Next →
-              </button>
-            )}
           </>
         )}
       </div>

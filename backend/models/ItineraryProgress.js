@@ -19,6 +19,10 @@ const itineraryProgressSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Site'
   }],
+  skippedSites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Site'
+  }],
   lastPosition: {
     latitude: Number,
     longitude: Number

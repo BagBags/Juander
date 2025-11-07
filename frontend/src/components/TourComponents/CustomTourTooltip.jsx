@@ -61,11 +61,13 @@ export default function CustomTourTooltip({
   return (
     <div
       {...tooltipProps}
-      className="relative bg-white rounded-2xl shadow-2xl w-[92vw] sm:w-auto max-w-sm md:max-w-md border border-gray-200/60 overflow-visible"
+      className="relative bg-white rounded-2xl shadow-2xl w-[90vw] sm:w-[400px] md:w-[450px] max-w-[calc(100vw-32px)] border border-gray-200/60"
       style={{
         padding: 0,
         ...tooltipProps.style,
         animation: 'fadeIn 0.3s ease-out',
+        maxHeight: 'calc(100vh - 120px)',
+        overflow: 'visible',
       }}
       ref={containerRef}
       role="dialog"
@@ -75,24 +77,26 @@ export default function CustomTourTooltip({
       tabIndex={-1}
       onKeyDown={handleKeyDown}
     >
-      {/* Floating persona avatar outside the modal */}
+      {/* Floating persona avatar - half body outside modal */}
       {avatarSrc && (
-        <img
-          src={avatarSrc}
-          alt="Tour guide"
-          aria-hidden="true"
-          className="absolute -top-16 sm:-top-24 left-1/2 -translate-x-1/2 h-20 sm:h-24 w-auto drop-shadow-2xl pointer-events-none z-30"
-        />
+        <div className="absolute -top-16 sm:-top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+          <img
+            src={avatarSrc}
+            alt="Tour guide"
+            aria-hidden="true"
+            className="h-20 sm:h-24 w-auto drop-shadow-2xl"
+          />
+        </div>
       )}
 
       {/* Header - Modern minimal with persona */}
-      <div className="px-6 pt-6 pb-3 flex items-center justify-between border-b border-gray-100 bg-white/95">
-        <h3 id={titleId} className="text-gray-900 font-semibold text-lg tracking-wide">
+      <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-between border-b border-gray-100 bg-white/95">
+        <h3 id={titleId} className="text-gray-900 font-semibold text-base sm:text-lg tracking-wide truncate pr-2">
           {step.title}
         </h3>
         <button
           {...closeProps}
-          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg p-1.5 transition-all duration-200"
+          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg p-1.5 transition-all duration-200 flex-shrink-0"
           aria-label="Close tour"
         >
           <X size={18} strokeWidth={2.5} />
@@ -107,13 +111,15 @@ export default function CustomTourTooltip({
         ></div>
       </div>
 
-      {/* Content */}
-      <div className="px-6 py-5">
+      {/* Scrollable content wrapper */}
+      <div style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}>
+        {/* Content */}
+        <div className="px-4 sm:px-6 py-4 sm:py-5">
         {/* Optional media support */}
         {step.media && (
           <div className="mb-3">
             {typeof step.media === "string" ? (
-              <img src={step.media} alt="Tour step media" className="w-full rounded-lg border border-gray-200/60" />
+              <img src={step.media} alt="Tour step media" className="w-full rounded-lg border border-gray-200/60 max-h-48 object-cover" />
             ) : (
               step.media
             )}
@@ -125,13 +131,13 @@ export default function CustomTourTooltip({
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 bg-white flex items-center gap-3">
-        {/* Left: dot progress */}
-        <div className="flex items-center gap-2">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white flex flex-col sm:flex-row items-center gap-3">
+        {/* Top row on mobile: dot progress */}
+        <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-1">
           {Array.from({ length: size }).map((_, i) => (
             <span
               key={i}
-              className={`inline-block h-2 w-2 rounded-full transition-colors duration-200 ${
+              className={`inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-colors duration-200 ${
                 i === index
                   ? 'bg-[#f04e37]'
                   : i < index
@@ -142,39 +148,43 @@ export default function CustomTourTooltip({
           ))}
         </div>
 
-        {/* Middle: back/skip */}
-        <div className="ml-auto mr-2 flex items-center gap-2">
+        {/* Bottom row on mobile: buttons */}
+        <div className="flex items-center justify-between w-full sm:w-auto gap-2 order-2 sm:order-2 sm:ml-auto">
+          {/* Back button */}
           {index > 0 && (
             <button
               {...backProps}
-              className="flex items-center gap-1 px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-sm transition-all duration-200"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
               aria-label="Go to previous step"
             >
-              <ChevronLeft size={16} />
-              <span>Back</span>
+              <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Back</span>
             </button>
           )}
+          
+          {/* Skip button */}
           {!isLastStep && (
             <button
               {...skipProps}
-              className="px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-sm transition-all duration-200"
+              className="px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
               aria-label="Skip the tour"
             >
               Skip
             </button>
           )}
+          
+          {/* Primary button */}
+          <button
+            {...primaryProps}
+            className="flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ml-auto"
+            aria-label={isLastStep ? "Finish tour" : "Go to next step"}
+            ref={primaryRef}
+          >
+            <span>{isLastStep ? "Get Started" : "Next"}</span>
+            {!isLastStep && <ChevronRight size={14} className="sm:w-4 sm:h-4" />}
+          </button>
         </div>
-
-        {/* Right: primary */}
-        <button
-          {...primaryProps}
-          className="ml-auto flex items-center gap-1.5 px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
-          aria-label={isLastStep ? "Finish tour" : "Go to next step"}
-          ref={primaryRef}
-        >
-          <span>{isLastStep ? "Get Started" : "Next"}</span>
-          {!isLastStep && <ChevronRight size={16} />}
-        </button>
+      </div>
       </div>
     </div>
   );

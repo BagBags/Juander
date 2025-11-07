@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, SkipForward, Clock } from "lucide-react";
 import { announceDirectionStep } from "../../../utils/textToSpeech";
 
 export default function DirectionsPanel({
@@ -10,6 +10,12 @@ export default function DirectionsPanel({
   distance,
   arrivalTime,
   transportMode,
+  isRouting,
+  onPrevSite,
+  onSkipSite,
+  onNextSite,
+  hasPrevSite,
+  hasNextSite,
 }) {
   const lastAnnouncedStep = useRef(-1);
   const announceTimeout = useRef(null);
@@ -97,32 +103,48 @@ export default function DirectionsPanel({
         </div>
       )}
 
-      {/* Navigation Controls */}
-      <div className="flex justify-between w-full">
+      {/* Site Navigation Controls */}
+      <div className="flex gap-2 w-full">
+        {/* Previous Site Button */}
         <button
-          onClick={() => setCurrentStepIndex((prev) => Math.max(prev - 1, 0))}
-          disabled={currentStepIndex === 0}
-          className={`px-3 py-1 rounded-md text-sm font-medium shadow flex items-center gap-1 ${
-            currentStepIndex === 0
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-[#f04e37] text-white hover:bg-[#d9442f]"
+          onClick={onPrevSite}
+          disabled={!hasPrevSite}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+            hasPrevSite
+              ? "bg-gray-200 text-gray-700 hover:bg-gray-300 active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          <ArrowLeft className="w-4 h-4" /> Prev
+          <ChevronLeft className="w-4 h-4" />
+          Prev Site
         </button>
 
+        {/* Skip Site Button */}
         <button
-          onClick={() =>
-            setCurrentStepIndex((prev) => Math.min(prev + 1, steps.length - 1))
-          }
-          disabled={currentStepIndex === steps.length - 1}
-          className={`px-3 py-1 rounded-md text-sm font-medium shadow flex items-center gap-1 ${
-            currentStepIndex === steps.length - 1
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-[#f04e37] text-white hover:bg-[#d9442f]"
+          onClick={onSkipSite}
+          disabled={!hasNextSite}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+            hasNextSite
+              ? "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          Next <ArrowRight className="w-4 h-4" />
+          <SkipForward className="w-4 h-4" />
+          Skip
+        </button>
+
+        {/* Next Site Button */}
+        <button
+          onClick={onNextSite}
+          disabled={!hasNextSite}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+            hasNextSite
+              ? "bg-[#f04e37] text-white hover:bg-[#d9442f] active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          }`}
+        >
+          Next Site
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
     </div>

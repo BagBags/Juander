@@ -62,7 +62,11 @@ export default function Photobooth() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`);
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
+          { timeout: 5000 } // Add timeout
+        );
+        
         if (res.data && res.data.length > 0) {
           const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
           const normalized = res.data.map((f) => {
@@ -74,13 +78,20 @@ export default function Photobooth() {
             
             return {
               ...f,
-              label: f.label || f.name, // ensure label exists
+              label: f.label || f.name,
               value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
-              image: imageUrl, // map imageUrl to image for slider
+              image: imageUrl,
+              // Ensure all required fields exist
+              id: f._id || f.id || f.value || `filter-${Date.now()}-${Math.random()}`,
             };
           });
-          setFilters([...baseFilters, ...normalized]);
+          
+          // Combine base filters with backend filters
+          const allFilters = [...baseFilters, ...normalized];
+          console.log("Loaded filters:", allFilters.length);
+          setFilters(allFilters);
         } else {
+          console.log("No backend filters, using base filters");
           setFilters(baseFilters);
         }
       } catch (err) {
@@ -88,6 +99,10 @@ export default function Photobooth() {
         setFilters(baseFilters);
       }
     };
+    
+    // Always start with base filters immediately
+    setFilters(baseFilters);
+    // Then try to load backend filters
     fetchFilters();
   }, []);
 

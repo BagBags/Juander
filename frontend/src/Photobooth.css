@@ -1,3 +1,13 @@
+/* Hide scrollbar for slider */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .photobooth-container {
   position: relative;
   width: 100%;

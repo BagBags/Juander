@@ -36,27 +36,97 @@
   animation: pulse-ring 2s infinite;
 }
 
-/* Smooth transitions for tour overlay */
-.react-joyride__overlay {
-  transition: opacity 0.3s ease-in-out;
-  /* Removed blur to keep spotlight content crisp */
-  backdrop-filter: none;
+/* Prevent body overflow during tour */
+body.react-joyride-active {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
-/* Ensure tour tooltip is above everything */
+html.react-joyride-active {
+  overflow: hidden !important;
+}
+
+/* Hide default beacon button and external navigation */
+.react-joyride__beacon {
+  display: none !important;
+}
+
+button[data-action="beacon"] {
+  display: none !important;
+}
+
+/* Hide any floating navigation arrows outside tooltip */
+.__floater__arrow {
+  display: none !important;
+}
+
+.react-joyride__spotlight + button,
+.react-joyride__spotlight ~ button {
+  display: none !important;
+}
+
+/* Hide default Joyride close button if it appears outside */
+button[aria-label*="Close"][data-test-id] {
+  display: none !important;
+}
+
+/* Overlay creates dark background - no fade animation */
+.react-joyride__overlay {
+  animation: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+}
+
+/* Prevent overlay from fading during step changes */
+.react-joyride__overlay[style*="opacity: 0"] {
+  opacity: 1 !important;
+}
+
+/* Spotlight with rounded corners */
+.react-joyride__spotlight {
+  border-radius: 20px !important;
+}
+
+/* Hide default Joyride tooltip wrapper */
 .react-joyride__tooltip {
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure custom tooltip is above everything */
+.react-joyride__tooltip > div {
   z-index: 10001 !important;
-  animation: fadeIn 0.5s ease-in-out;
-  background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 16px;
+}
+
+/* Floater positioning */
+.__floater {
+  max-width: 100vw !important;
+  filter: none !important;
+}
+
+.__floater__body {
+  max-width: 100% !important;
 }
 
 /* Mobile optimizations */
+@media (max-width: 768px) {
+  .react-joyride__tooltip {
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 80px) !important;
+  }
+  
+  .__floater {
+    padding: 12px !important;
+  }
+}
+
 @media (max-width: 640px) {
   .react-joyride__tooltip {
-    max-width: 90vw !important;
+    max-width: calc(100vw - 16px) !important;
   }
 }
 
