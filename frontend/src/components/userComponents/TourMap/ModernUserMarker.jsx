@@ -68,18 +68,18 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
             transformOrigin: "center center",
           }}
         >
-          {/* Seamless gradient V-shape wedge - single layer with cut top */}
+          {/* Trapezoid shape with flat bottom and gradient spread top */}
           <div
             className="absolute"
             style={{
-              width: "32px",
-              height: "56px",
-              background: "linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0))",
-              top: "-36px",
+              width: "40px",
+              height: "64px",
+              background: "linear-gradient(to top, rgba(59, 130, 246, 0.75), rgba(59, 130, 246, 0))",
+              top: "-56px",
               left: "50%",
               transform: "translateX(-50%)",
-              clipPath: "polygon(50% 100%, 15% 15%, 85% 15%)",
-              filter: "blur(1px)",
+              clipPath: "polygon(30% 100%, 35% 100%, 0% 0%, 100% 0%, 65% 100%, 70% 100%)",
+              filter: "blur(2px)",
             }}
           />
         </div>
