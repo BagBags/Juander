@@ -475,7 +475,7 @@ const AdminPinCard = ({
             {pin.facadeUrl && (
               <div className="w-full h-40 relative rounded-lg overflow-hidden border border-gray-200">
                 <img
-                  src={`${BACKEND_URL}${pin.facadeUrl}`}
+                  src={pin.facadeUrl.startsWith('http') ? pin.facadeUrl : `${BACKEND_URL}${pin.facadeUrl}`}
                   alt="Facade preview"
                   className="w-full h-full object-cover"
                 />
@@ -595,9 +595,9 @@ const AdminPinCard = ({
                         <ModelPreview
                           url={
                             pin.glbUrl
-                              ? `${BACKEND_URL}${
-                                  pin.glbUrl.startsWith("/") ? "" : "/"
-                                }${pin.glbUrl}`
+                              ? pin.glbUrl.startsWith('http') 
+                                ? pin.glbUrl 
+                                : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
                               : null
                           }
                         />
