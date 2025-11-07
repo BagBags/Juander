@@ -39,6 +39,7 @@ export default function TouristItineraryMap() {
   const locationUpdateThrottle = useRef(null);
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
+  const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
   const [showTransportPanel, setShowTransportPanel] = useState(false);
 
@@ -670,16 +671,32 @@ export default function TouristItineraryMap() {
         isOpen={showGpsModal}
         errorMessage={gpsError}
         onEnable={() => {
+          if (gpsPermissionDenied) {
+            // If permission was denied, show instructions to enable in settings
+            setGpsError(
+              "GPS permission was denied. Please enable location access in your browser/device settings, then refresh this page."
+            );
+            return;
+          }
+          
           if (navigator?.geolocation) {
             navigator.geolocation.getCurrentPosition(
               () => {
                 setGpsError("");
                 setShowGpsModal(false);
+                setGpsPermissionDenied(false);
               },
               (err) => {
-                setGpsError(
-                  "We couldn’t access your location. Please enable GPS in device settings or use Tour Map features from the homepage."
-                );
+                if (err.code === err.PERMISSION_DENIED) {
+                  setGpsPermissionDenied(true);
+                  setGpsError(
+                    "Location access denied. To use this feature, please enable location in your browser settings, then refresh the page."
+                  );
+                } else {
+                  setGpsError(
+                    "We couldn't access your location. Please enable GPS in device settings or use Tour Map features from the homepage."
+                  );
+                }
               },
               { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
             );
@@ -690,13 +707,11 @@ export default function TouristItineraryMap() {
           }
         }}
         onDecline={() => {
-          navigate("/");
+          // Navigate back to homepage without logging out
+          navigate("/", { replace: true });
         }}
       />
-
-      {!showGpsModal && (
-        <>
-      {/* Back Header */}
+      
       <div 
         className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-sm"
         style={{
@@ -859,8 +874,6 @@ export default function TouristItineraryMap() {
               simulateGoToNextSite={simulateGoToNextSite}
             />
           )}
-        </>
-      )}
 
       {/* Floating Chatbot */}
       <FloatingChatbot />

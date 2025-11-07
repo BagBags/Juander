@@ -6,7 +6,7 @@ import { Marker } from "react-map-gl";
  * Features:
  * - Blue dot with white border
  * - Pulse animation
- * - Heading indicator (rotates based on device compass)
+ * - Blue light beam as direction indicator (rotates based on device compass)
  * - Accuracy circle
  */
 export default function ModernUserMarker({ userLocation, heading = null }) {
@@ -14,7 +14,7 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
 
   // Listen to device orientation for heading
   useEffect(() => {
-    if (heading !== null) {
+    if (heading !== null && heading !== undefined) {
       setCurrentHeading(heading);
       return;
     }
@@ -59,7 +59,31 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
       latitude={userLocation.latitude}
       anchor="center"
     >
-      <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center justify-center w-16 h-16">
+        {/* Blue light beam (direction indicator) - rotates with heading */}
+        <div
+          className="absolute transition-transform duration-300 ease-out"
+          style={{
+            transform: `rotate(${currentHeading}deg)`,
+            transformOrigin: "center center",
+          }}
+        >
+          {/* Seamless gradient V-shape wedge - single layer with cut top */}
+          <div
+            className="absolute"
+            style={{
+              width: "32px",
+              height: "56px",
+              background: "linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0))",
+              top: "-36px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              clipPath: "polygon(50% 100%, 15% 15%, 85% 15%)",
+              filter: "blur(1px)",
+            }}
+          />
+        </div>
+        
         {/* Outer pulse ring */}
         <div className="absolute w-12 h-12 bg-blue-500/20 rounded-full animate-ping" />
         
@@ -67,19 +91,7 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
         <div className="absolute w-10 h-10 bg-blue-500/10 rounded-full border border-blue-500/30" />
         
         {/* Main blue dot with white border */}
-        <div className="relative w-5 h-5 bg-blue-600 rounded-full border-[3px] border-white shadow-lg z-10">
-          {/* Heading indicator (directional arrow) */}
-          <div
-            className="absolute top-1/2 left-1/2 w-0 h-0 transition-transform duration-300"
-            style={{
-              transform: `translate(-50%, -50%) rotate(${currentHeading}deg)`,
-              borderLeft: "4px solid transparent",
-              borderRight: "4px solid transparent",
-              borderBottom: "8px solid white",
-              marginTop: "-6px",
-            }}
-          />
-        </div>
+        <div className="relative w-5 h-5 bg-blue-600 rounded-full border-[3px] border-white shadow-lg z-10" />
       </div>
     </Marker>
   );
