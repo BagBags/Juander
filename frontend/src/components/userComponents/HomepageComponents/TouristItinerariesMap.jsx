@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Navigation, MapPin, Car, Bike, Footprints, User } from "lucide-react";
+import { optimizeRoute, getNextSite, calculateDistance } from "../../../utils/routeOptimizer";
 
 import {
   MAPBOX_TOKEN,
@@ -28,6 +29,7 @@ export default function TouristItineraryMap() {
   const navigate = useNavigate();
 
   const [pins, setPins] = useState([]);
+  const [optimizedPins, setOptimizedPins] = useState([]); // Optimized route order
   const [viewState, setViewState] = useState({
     latitude: 14.5896,
     longitude: 120.9747,
@@ -448,45 +450,44 @@ export default function TouristItineraryMap() {
     }
   }, [transportMode]);
 
-  /** Pick nearest site on load */
+  /** Optimize route when user location or pins change */
   useEffect(() => {
     if (userLocation && pins.length > 0) {
-      if (currentPinIndex === 0) {
-        const withDistances = pins.map((p, i) => {
-          const dx = p.latitude - userLocation.latitude;
-          const dy = p.longitude - userLocation.longitude;
-          return { ...p, index: i, dist: Math.sqrt(dx * dx + dy * dy) };
-        });
-
-        withDistances.sort((a, b) => a.dist - b.dist);
-        setCurrentPinIndex(withDistances[0].index);
-        // Don't auto-show preview card on initial load
-        // Let the proximity detection handle it
+      const optimized = optimizeRoute(userLocation, pins, visitedSites);
+      setOptimizedPins(optimized);
+      
+      // Set first unvisited site as current
+      const nextSite = getNextSite(optimized, visitedSites);
+      if (nextSite) {
+        const nextIndex = optimized.findIndex(p => p._id === nextSite._id);
+        if (nextIndex !== -1 && currentPinIndex === 0) {
+          setCurrentPinIndex(nextIndex);
+          setSelectedPin(nextSite);
+        }
       }
-
-      buildRoute(userLocation, pins[currentPinIndex]);
     }
-  }, [userLocation, pins, currentPinIndex]);
+  }, [userLocation, pins, visitedSites]);
+
+  /** Build route to current pin */
+  useEffect(() => {
+    if (userLocation && optimizedPins.length > 0 && optimizedPins[currentPinIndex]) {
+      buildRoute(userLocation, optimizedPins[currentPinIndex]);
+    }
+  }, [userLocation, optimizedPins, currentPinIndex]);
 
   /** Detect arrival to auto-show preview card */
   useEffect(() => {
-    if (!userLocation || pins.length === 0) return;
+    if (!userLocation || optimizedPins.length === 0) return;
 
     const radius = 50; // meters - show preview when within 50m
-    const EARTH_RADIUS = 6371000;
 
-    const pin = pins[currentPinIndex];
+    const pin = optimizedPins[currentPinIndex];
     if (!pin) return;
 
-    const dLat = ((pin.latitude - userLocation.latitude) * Math.PI) / 180;
-    const dLng = ((pin.longitude - userLocation.longitude) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((userLocation.latitude * Math.PI) / 180) *
-        Math.cos((pin.latitude * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = EARTH_RADIUS * c;
+    const distance = calculateDistance(userLocation, {
+      latitude: pin.latitude,
+      longitude: pin.longitude
+    });
 
     if (distance < radius) {
       setIsNearby(true);
@@ -498,7 +499,7 @@ export default function TouristItineraryMap() {
     } else {
       setIsNearby(false);
     }
-  }, [userLocation, currentPinIndex, pins, manuallyDismissed]);
+  }, [userLocation, currentPinIndex, optimizedPins, manuallyDismissed]);
 
   /** Update step index as user moves */
   useEffect(() => {
@@ -601,42 +602,27 @@ export default function TouristItineraryMap() {
     }
   }, [selectedPin]);
 
-  /** Go to next stop - follows itinerary order */
+  /** Go to next stop - follows optimized route order */
   const goToNextStop = (justVisitedSiteId = null) => {
-    if (!userLocation || pins.length === 0) return;
+    if (!userLocation || optimizedPins.length === 0) return;
 
     console.log('🔍 goToNextStop called');
     console.log('Current index:', currentPinIndex);
     console.log('Current visitedSites:', Array.from(visitedSites));
     console.log('Just visited site ID:', justVisitedSiteId);
 
-    // Find next unvisited site in itinerary order (after current index)
-    let nextPin = null;
-    let nextIndex = -1;
-
-    // First, try to find next unvisited site after current position
-    for (let i = currentPinIndex + 1; i < pins.length; i++) {
-      const pin = pins[i];
-      const isVisited = visitedSites.has(pin._id) || pin._id === justVisitedSiteId;
-      if (!isVisited) {
-        nextPin = pin;
-        nextIndex = i;
-        break;
-      }
+    // Update visited sites
+    const updatedVisited = new Set(visitedSites);
+    if (justVisitedSiteId) {
+      updatedVisited.add(justVisitedSiteId);
     }
 
-    // If no unvisited sites after current, wrap around and check from beginning
-    if (!nextPin) {
-      for (let i = 0; i < currentPinIndex; i++) {
-        const pin = pins[i];
-        const isVisited = visitedSites.has(pin._id) || pin._id === justVisitedSiteId;
-        if (!isVisited) {
-          nextPin = pin;
-          nextIndex = i;
-          break;
-        }
-      }
-    }
+    // Re-optimize route with updated visited sites
+    const reoptimized = optimizeRoute(userLocation, pins, updatedVisited);
+    setOptimizedPins(reoptimized);
+
+    // Get next unvisited site from optimized route
+    const nextPin = getNextSite(reoptimized, updatedVisited);
 
     if (!nextPin) {
       // No more sites left
@@ -648,18 +634,15 @@ export default function TouristItineraryMap() {
       return;
     }
 
-    console.log('✅ Next site (in order):', nextPin.siteName, 'at index', nextIndex);
+    const nextIndex = reoptimized.findIndex(p => p._id === nextPin._id);
+    console.log('✅ Next site (optimized):', nextPin.siteName, 'at index', nextIndex);
 
-    // Update current site to next in order
+    // Update current site to next in optimized order
     setCurrentPinIndex(nextIndex);
     setSelectedPin(nextPin);
     setManuallyDismissed(false); // Reset manual dismissal for new site
 
     // Save progress to database
-    const updatedVisited = new Set(visitedSites);
-    if (justVisitedSiteId) {
-      updatedVisited.add(justVisitedSiteId);
-    }
     saveProgress(nextIndex, updatedVisited);
 
     if (userLocation) buildRoute(userLocation, nextPin);
@@ -763,8 +746,10 @@ export default function TouristItineraryMap() {
           />
         )}
 
-        {/* Site markers */}
-        {pins.map((pin, idx) => (
+        {/* Site markers - numbered by optimized route */}
+        {optimizedPins.map((pin, idx) => {
+          const isVisited = visitedSites.has(pin._id);
+          return (
           <Marker
             key={pin._id}
             latitude={pin.latitude}
@@ -784,20 +769,24 @@ export default function TouristItineraryMap() {
                 className={`w-6 h-6 cursor-pointer ${
                   idx === currentPinIndex
                     ? "text-blue-600 animate-pulse"
+                    : isVisited
+                    ? "text-gray-400"
                     : "text-red-500"
                 }`}
               />
-              {/* Number Badge */}
+              {/* Number Badge - shows optimized order */}
               <div className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg ${
                 idx === currentPinIndex
                   ? "bg-blue-600 text-white"
+                  : isVisited
+                  ? "bg-gray-400 text-white"
                   : "bg-white text-red-500 border-2 border-red-500"
               }`}>
                 {idx + 1}
               </div>
             </div>
           </Marker>
-        ))}
+        )})}
 
         {/* Route */}
         {route && (
@@ -828,7 +817,7 @@ export default function TouristItineraryMap() {
             <MapControlButtons
               userLocation={userLocation}
               selectedPin={selectedPin}
-              pins={pins}
+              pins={optimizedPins}
               currentPinIndex={currentPinIndex}
               setViewState={setViewState}
               setSelectedPin={setSelectedPin}
@@ -867,7 +856,7 @@ export default function TouristItineraryMap() {
               }}
               distance={distance}
               currentPinIndex={currentPinIndex}
-              pinsLength={pins.length}
+              pinsLength={optimizedPins.length}
               goToNextStop={goToNextStop}
               siteReviews={siteReviews}
               reviewsLoading={reviewsLoading}
