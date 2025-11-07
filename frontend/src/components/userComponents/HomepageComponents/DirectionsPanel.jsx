@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { announceDirectionStep } from "../../../utils/textToSpeech";
 
@@ -11,12 +11,36 @@ export default function DirectionsPanel({
   arrivalTime,
   transportMode,
 }) {
-  // Announce direction changes
+  const lastAnnouncedStep = useRef(-1);
+  const announceTimeout = useRef(null);
+
+  // Announce direction changes with debouncing
   useEffect(() => {
     if (steps.length > 0 && steps[currentStepIndex]) {
-      const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
-      announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
+      // Only announce if step actually changed
+      if (currentStepIndex === lastAnnouncedStep.current) {
+        return;
+      }
+
+      // Clear any pending announcement
+      if (announceTimeout.current) {
+        clearTimeout(announceTimeout.current);
+      }
+
+      // Debounce announcements - wait 2 seconds before announcing
+      // This prevents rapid-fire announcements when location updates frequently
+      announceTimeout.current = setTimeout(() => {
+        const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
+        announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
+        lastAnnouncedStep.current = currentStepIndex;
+      }, 2000);
     }
+
+    return () => {
+      if (announceTimeout.current) {
+        clearTimeout(announceTimeout.current);
+      }
+    };
   }, [currentStepIndex, steps]);
 
   if (steps.length === 0) return null;

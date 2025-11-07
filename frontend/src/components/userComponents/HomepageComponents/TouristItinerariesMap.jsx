@@ -13,6 +13,7 @@ import {
 } from "../TourMap/mapConfig";
 
 // Import separated components
+import ModernUserMarker from "../TourMap/ModernUserMarker";
 import BackHeader from "../BackButton";
 import DirectionsPanel from "./DirectionsPanel";
 import MapControlButtons from "./MapControlButtons";
@@ -33,6 +34,9 @@ export default function TouristItineraryMap() {
     zoom: 16,
   });
   const [userLocation, setUserLocation] = useState(null);
+  const [userHeading, setUserHeading] = useState(0);
+  const lastLocationRef = useRef(null);
+  const locationUpdateThrottle = useRef(null);
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
@@ -261,19 +265,68 @@ export default function TouristItineraryMap() {
     }
   }, [pins, selectedPin, manuallyDismissed, currentPinIndex]);
 
-  /** Track user location (after consent) */
+  /** Track user location (after consent) - Optimized to prevent blinking */
   useEffect(() => {
     if (showGpsModal) return; // wait for user to enable
+    
     const id = navigator.geolocation.watchPosition(
       ({ coords }) => {
-        const loc = { latitude: coords.latitude, longitude: coords.longitude };
-        setUserLocation(loc);
-        setViewState((v) => ({ ...v, ...loc }));
+        const newLoc = { 
+          latitude: coords.latitude, 
+          longitude: coords.longitude,
+          heading: coords.heading // Get device heading if available
+        };
+        
+        // Only update if location changed significantly (> 5 meters)
+        if (lastLocationRef.current) {
+          const dx = newLoc.latitude - lastLocationRef.current.latitude;
+          const dy = newLoc.longitude - lastLocationRef.current.longitude;
+          const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
+          
+          if (distance < 5) {
+            // Update heading even if position hasn't changed much
+            if (coords.heading !== null && coords.heading !== undefined) {
+              setUserHeading(coords.heading);
+            }
+            return; // Don't update location, prevents blinking
+          }
+        }
+        
+        lastLocationRef.current = newLoc;
+        setUserLocation(newLoc);
+        
+        // Update heading
+        if (coords.heading !== null && coords.heading !== undefined) {
+          setUserHeading(coords.heading);
+        }
+        
+        // Throttle view state updates to prevent excessive map movements
+        if (locationUpdateThrottle.current) {
+          clearTimeout(locationUpdateThrottle.current);
+        }
+        
+        locationUpdateThrottle.current = setTimeout(() => {
+          setViewState((v) => ({ 
+            ...v, 
+            latitude: newLoc.latitude, 
+            longitude: newLoc.longitude 
+          }));
+        }, 1000); // Update view every 1 second max
       },
       (err) => console.error("GPS error:", err),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      { 
+        enableHighAccuracy: true, 
+        maximumAge: 1000, // Allow 1 second old positions
+        timeout: 10000 // Increase timeout to 10 seconds
+      }
     );
-    return () => navigator.geolocation.clearWatch(id);
+    
+    return () => {
+      navigator.geolocation.clearWatch(id);
+      if (locationUpdateThrottle.current) {
+        clearTimeout(locationUpdateThrottle.current);
+      }
+    };
   }, [showGpsModal]);
 
   /** Check if route stays within Intramuros bounds */
@@ -687,15 +740,12 @@ export default function TouristItineraryMap() {
           </Source>
         )}
 
-        {/* User marker */}
+        {/* User marker - Modern GPS style */}
         {userLocation && (
-          <Marker
-            latitude={userLocation.latitude}
-            longitude={userLocation.longitude}
-            anchor="bottom"
-          >
-            <Navigation className="text-blue-600 w-6 h-6" />
-          </Marker>
+          <ModernUserMarker 
+            userLocation={userLocation} 
+            heading={userHeading}
+          />
         )}
 
         {/* Site markers */}
