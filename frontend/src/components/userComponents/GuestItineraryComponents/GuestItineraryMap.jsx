@@ -796,6 +796,7 @@ export default function GuestItineraryMap() {
           siteReviews={siteReviews}
           reviewsLoading={reviewsLoading}
           simulateGoToNextSite={simulateGoToNextSite}
+          isGuestMode={true}
         />
       )}
 

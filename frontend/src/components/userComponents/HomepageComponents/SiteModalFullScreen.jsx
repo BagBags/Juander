@@ -18,6 +18,7 @@ export default function SiteModalFullScreen({
   siteReviews = [],
   reviewsLoading = false,
   simulateGoToNextSite,
+  isGuestMode = false,
 }) {
   const { t } = useTranslation();
   const { itineraryId } = useParams();
@@ -572,17 +573,18 @@ export default function SiteModalFullScreen({
             )}
 
             {/* Manage Your Reviews Section */}
-            <div className="mb-8">
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
-                  <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <div className="bg-blue-500 p-1.5 rounded-lg">
-                      <Star className="w-4 h-4 text-white fill-white" />
-                    </div>
-                    <span>Your Review</span>
-                  </h4>
-                </div>
+            {!isGuestMode && (
+              <div className="mb-8">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+                    <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <div className="bg-blue-500 p-1.5 rounded-lg">
+                        <Star className="w-4 h-4 text-white fill-white" />
+                      </div>
+                      <span>Your Review</span>
+                    </h4>
+                  </div>
 
                 <div className="p-4">
                   {/* User's existing reviews */}
@@ -603,20 +605,22 @@ export default function SiteModalFullScreen({
                                 />
                               ))}
                             </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleEditReview(review)}
-                                className="text-blue-600 hover:text-blue-700 p-1"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteReview(review._id)}
-                                className="text-red-600 hover:text-red-700 p-1"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
+                            {!isGuestMode && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEditReview(review)}
+                                  className="text-blue-600 hover:text-blue-700 p-1"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteReview(review._id)}
+                                  className="text-red-600 hover:text-red-700 p-1"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                           {review.reviewText && (
                             <p className="text-sm text-gray-700">{review.reviewText}</p>
@@ -627,7 +631,7 @@ export default function SiteModalFullScreen({
                   )}
 
                   {/* Write/Edit Review Button */}
-                  {!showReviewForm && userReviews.length === 0 && (
+                  {!isGuestMode && !showReviewForm && userReviews.length === 0 && (
                     <button
                       onClick={() => setShowReviewForm(true)}
                       className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
@@ -638,7 +642,7 @@ export default function SiteModalFullScreen({
                   )}
 
                   {/* Review Form */}
-                  {showReviewForm && (
+                  {!isGuestMode && showReviewForm && (
                     <form onSubmit={handleSubmitReview} className="space-y-3">
                       {/* Rating */}
                       <div>
@@ -763,6 +767,7 @@ export default function SiteModalFullScreen({
                 </div>
               </div>
             </div>
+            )}
 
             {/* User Reviews Section - Modern Compact Design */}
             <div className="mb-8">

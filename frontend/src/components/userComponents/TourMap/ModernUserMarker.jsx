@@ -62,7 +62,7 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
       <div className="relative flex items-center justify-center w-16 h-16">
         {/* Blue light beam (direction indicator) - rotates with heading */}
         <div
-          className="absolute transition-transform duration-300 ease-out"
+          className="absolute transition-transform duration-100 ease-linear"
           style={{
             transform: `rotate(${currentHeading}deg)`,
             transformOrigin: "center center",
