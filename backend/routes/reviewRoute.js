@@ -54,13 +54,8 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
       });
     }
 
-    const populated = await Review.findById(review._id)
-      .populate("userId", "firstName lastName email")
-      .populate("itineraryId", "name")
-      .populate("siteId", "siteName siteDescription mediaUrl");
-
-    // Automatically mark site as visited when review is created
-    if (!existingReview) {
+    // Automatically mark site as visited when review is created or updated
+    try {
       const existingVisit = await VisitedSite.findOne({
         userId,
         itineraryId,
@@ -73,8 +68,17 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
           itineraryId,
           siteId,
         });
+        console.log(`Site ${siteId} marked as visited for user ${userId}`);
       }
+    } catch (visitErr) {
+      console.error("Error marking site as visited:", visitErr);
+      // Continue even if visited site creation fails
     }
+
+    const populated = await Review.findById(review._id)
+      .populate("userId", "firstName lastName email")
+      .populate("itineraryId", "name")
+      .populate("siteId", "siteName siteDescription mediaUrl");
 
     res.status(existingReview ? 200 : 201).json({
       message: existingReview ? "Review updated successfully" : "Review created successfully",
