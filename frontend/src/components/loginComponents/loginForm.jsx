@@ -288,14 +288,17 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           {/* Google Login */}
-          <GoogleLogin
-            onSuccess={handleGoogleLoginSuccess}
-            onError={() => setError("Google login failed.")}
-            useOneTap
-            theme="outline" // or "filled_blue"
-            size="large" // "large" | "medium" | "small"
-            shape="rectangular" // or "pill"
-          />
+          <div className="w-full min-h-[44px]">
+            <GoogleLogin
+              onSuccess={handleGoogleLoginSuccess}
+              onError={() => setError("Google login failed.")}
+              useOneTap
+              theme="outline" // or "filled_blue"
+              size="large" // "large" | "medium" | "small"
+              shape="rectangular" // or "pill"
+              width="100%"
+            />
+          </div>
 
           {/* Guest Login */}
           <button

@@ -353,12 +353,14 @@ export default function SignupForm({ toggleForm }) {
       </div>
 
       {/* Google Login */}
-      <GoogleLogin
-        onSuccess={handleGoogleSignup}
-        onError={() => setErrors({ general: "Google sign-up error" })}
-        width="100%"
-        text="signup_with"
-      />
+      <div className="w-full min-h-[44px]">
+        <GoogleLogin
+          onSuccess={handleGoogleSignup}
+          onError={() => setErrors({ general: "Google sign-up error" })}
+          width="100%"
+          text="signup_with"
+        />
+      </div>
 
       <p className="text-xs text-center mt-4 text-gray-600">
         By signing up, you agree to our{" "}

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Review = require("../models/reviewModel");
+const VisitedSite = require("../models/visitedSiteModel");
 const { verifyToken } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
@@ -57,6 +58,23 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
       .populate("userId", "firstName lastName email")
       .populate("itineraryId", "name")
       .populate("siteId", "siteName siteDescription mediaUrl");
+
+    // Automatically mark site as visited when review is created
+    if (!existingReview) {
+      const existingVisit = await VisitedSite.findOne({
+        userId,
+        itineraryId,
+        siteId,
+      });
+
+      if (!existingVisit) {
+        await VisitedSite.create({
+          userId,
+          itineraryId,
+          siteId,
+        });
+      }
+    }
 
     res.status(existingReview ? 200 : 201).json({
       message: existingReview ? "Review updated successfully" : "Review created successfully",
