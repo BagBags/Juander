@@ -86,6 +86,9 @@ exports.archiveContact = async (req, res) => {
     await Log.create({
       adminName,
       action: `Archived emergency contact: "${contact.name}"`,
+      role: "admin",
+      targetType: "other",
+      targetId: contact._id,
     });
 
     res.status(200).json(contact);
@@ -115,6 +118,9 @@ exports.restoreContact = async (req, res) => {
     await Log.create({
       adminName,
       action: `Restored emergency contact: "${contact.name}"`,
+      role: "admin",
+      targetType: "other",
+      targetId: contact._id,
     });
 
     res.status(200).json(contact);
@@ -137,6 +143,9 @@ exports.deleteContact = async (req, res) => {
       await Log.create({
         adminName,
         action: `Permanently deleted emergency contact: "${deleted.name}"`,
+        role: "admin",
+        targetType: "other",
+        targetId: deleted._id,
       });
     }
 
@@ -171,6 +180,8 @@ exports.reorderContacts = async (req, res) => {
     await Log.create({
       adminName,
       action: `Reordered emergency contact agencies`,
+      role: "admin",
+      targetType: "other",
     });
 
     res.status(200).json(updatedContacts);

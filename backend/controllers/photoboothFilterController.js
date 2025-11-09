@@ -5,12 +5,18 @@ const path = require("path");
 const axios = require("axios");
 
 // --- Helper for logging actions ---
-const logAction = async (req, action) => {
+const logAction = async (req, action, targetId = null) => {
   try {
     const adminName = req.user
       ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
       : "Unknown Admin";
-    await Log.create({ adminName, action });
+    await Log.create({ 
+      adminName, 
+      action,
+      role: "admin",
+      targetType: "photobooth",
+      targetId: targetId,
+    });
   } catch (err) {
     console.error("❌ Failed to log action:", err);
   }
@@ -91,7 +97,7 @@ const createFilter = async (req, res) => {
     await newFilter.save();
     console.log("✅ Filter saved to database:", newFilter._id);
 
-    await logAction(req, `Created photobooth filter: "${newFilter.name}"`);
+    await logAction(req, `Created photobooth filter: "${newFilter.name}"`, newFilter._id);
 
     res.status(201).json(newFilter);
   } catch (err) {
@@ -143,7 +149,7 @@ const updateFilter = async (req, res) => {
       new: true,
     });
 
-    await logAction(req, `Updated photobooth filter: "${updated.name}"`);
+    await logAction(req, `Updated photobooth filter: "${updated.name}"`, updated._id);
 
     res.json(updated);
   } catch (err) {
@@ -164,7 +170,7 @@ const archiveFilter = async (req, res) => {
     
     if (!filter) return res.status(404).json({ message: "Filter not found" });
 
-    await logAction(req, `Archived photobooth filter: "${filter.name}"`);
+    await logAction(req, `Archived photobooth filter: "${filter.name}"`, filter._id);
 
     res.json({ message: "Filter archived successfully", filter });
   } catch (err) {
@@ -185,7 +191,7 @@ const restoreFilter = async (req, res) => {
     
     if (!filter) return res.status(404).json({ message: "Filter not found" });
 
-    await logAction(req, `Restored photobooth filter: "${filter.name}"`);
+    await logAction(req, `Restored photobooth filter: "${filter.name}"`, filter._id);
 
     res.json({ message: "Filter restored successfully", filter });
   } catch (err) {
@@ -228,7 +234,7 @@ const deleteFilter = async (req, res) => {
       }
     }
 
-    await logAction(req, `Permanently deleted photobooth filter: "${deleted.name}"`);
+    await logAction(req, `Permanently deleted photobooth filter: "${deleted.name}"`, deleted._id);
 
     res.json({ message: "Filter permanently deleted successfully" });
   } catch (err) {

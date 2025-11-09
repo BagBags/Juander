@@ -1,6 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -148,4 +149,62 @@ const upload = multer({
   }
 });
 
+// Helper function to delete files from local storage
+const deleteFile = (filePath) => {
+  try {
+    // Remove leading slash if present
+    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    const fullPath = path.join(__dirname, '..', cleanPath);
+    
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      console.log(`File deleted successfully: ${fullPath}`);
+      return true;
+    } else {
+      console.log(`File not found: ${fullPath}`);
+      return false;
+    }
+  } catch (err) {
+    console.error(`Error deleting file: ${filePath}`, err);
+    return false;
+  }
+};
+
+// Helper function to delete files from S3
+const deleteFromS3 = async (fileUrl) => {
+  try {
+    // Check if it's an S3 URL or local path
+    if (fileUrl.includes('s3.amazonaws.com') || fileUrl.includes('s3.ap-southeast-2.amazonaws.com')) {
+      // It's an S3 URL - extract the key
+      const urlParts = fileUrl.split('.com/');
+      const key = urlParts[1] || fileUrl;
+      
+      const s3Client = new S3Client({
+        region: process.env.AWS_REGION || 'ap-southeast-2',
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        },
+      });
+
+      const command = new DeleteObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME || 'juander-frontend',
+        Key: key,
+      });
+
+      await s3Client.send(command);
+      console.log(`File deleted from S3: ${key}`);
+      return true;
+    } else {
+      // It's a local file path - use local deletion
+      return deleteFile(fileUrl);
+    }
+  } catch (err) {
+    console.error(`Error deleting from S3: ${fileUrl}`, err);
+    return false;
+  }
+};
+
 module.exports = upload;
+module.exports.deleteFile = deleteFile;
+module.exports.deleteFromS3 = deleteFromS3;

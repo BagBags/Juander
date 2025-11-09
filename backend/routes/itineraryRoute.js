@@ -41,7 +41,7 @@ router.delete("/delete-image", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Image URL is required" });
     }
 
-    // Delete from S3
+    // Delete from S3 (or local storage as fallback)
     const deleted = await deleteFromS3(imageUrl);
 
     if (deleted) {
@@ -97,6 +97,9 @@ router.post("/", verifyToken, async (req, res) => {
     await Log.create({
       adminName: getUserName(req.user),
       action: `Created itinerary: "${itinerary.name}"`,
+      role: isAdminCreated ? "admin" : "tourist",
+      targetType: "itinerary",
+      targetId: itinerary._id,
     });
 
     res.status(201).json(itinerary);
@@ -236,6 +239,9 @@ router.put("/:id", verifyToken, async (req, res) => {
     await Log.create({
       adminName: getUserName(req.user),
       action: `Updated itinerary: "${itinerary.name}"`,
+      role: itinerary.isAdminCreated ? "admin" : "tourist",
+      targetType: "itinerary",
+      targetId: itinerary._id,
     });
 
     res.json(await itinerary.populate({
@@ -268,6 +274,9 @@ router.put("/:id/archive", verifyToken, async (req, res) => {
     await Log.create({
       adminName: getUserName(req.user),
       action: `Archived itinerary: "${itinerary.name}"`,
+      role: itinerary.isAdminCreated ? "admin" : "tourist",
+      targetType: "itinerary",
+      targetId: itinerary._id,
     });
 
     res.json({ message: "Itinerary archived successfully", itinerary });
@@ -297,6 +306,9 @@ router.put("/:id/restore", verifyToken, async (req, res) => {
     await Log.create({
       adminName: getUserName(req.user),
       action: `Restored itinerary: "${itinerary.name}"`,
+      role: itinerary.isAdminCreated ? "admin" : "tourist",
+      targetType: "itinerary",
+      targetId: itinerary._id,
     });
 
     res.json({ message: "Itinerary restored successfully", itinerary });
@@ -325,6 +337,9 @@ router.delete("/:id", verifyToken, async (req, res) => {
     await Log.create({
       adminName: getUserName(req.user),
       action: `Permanently deleted itinerary: "${itinerary.name}"`,
+      role: itinerary.isAdminCreated ? "admin" : "tourist",
+      targetType: "itinerary",
+      targetId: itinerary._id,
     });
 
     res.json({ message: "Itinerary permanently deleted" });

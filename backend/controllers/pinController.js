@@ -41,6 +41,7 @@ exports.createPin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Created pin: ${formatPinLabel(pin)}`,
+      role: "admin",
       targetType: "pin",
       targetId: pin._id,
     });
@@ -105,6 +106,7 @@ exports.updatePin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Updated pin: ${formatPinLabel(pin)}`,
+      role: "admin",
       targetType: "pin",
       targetId: pin._id,
     });
@@ -131,6 +133,7 @@ exports.deletePin = async (req, res) => {
       await Log.create({
         adminName,
         action: `Deleted pin: ${formatPinLabel(deleted)}`,
+        role: "admin",
         targetType: "pin",
         targetId: deleted._id,
       });
@@ -174,6 +177,7 @@ exports.archivePin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Archived pin: ${formatPinLabel(pin)}`,
+      role: "admin",
       targetType: "pin",
       targetId: pin._id,
     });
@@ -205,6 +209,7 @@ exports.restorePin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Restored pin: ${formatPinLabel(pin)}`,
+      role: "admin",
       targetType: "pin",
       targetId: pin._id,
     });

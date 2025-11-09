@@ -154,34 +154,13 @@ export default function SiteModalFullScreen({
     try {
       const token = localStorage.getItem("token");
       
-      // Upload images first if any
-      let uploadedImageUrls = [];
-      if (reviewImages.length > 0) {
-        const formData = new FormData();
-        reviewImages.forEach((image) => {
-          formData.append("photos", image);
-        });
-
-        const uploadResponse = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/upload-photos`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-        uploadedImageUrls = uploadResponse.data.photos;
-      }
-
       if (editingReviewId) {
+        // For editing, send as JSON (no file upload on edit)
         await axios.put(
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${editingReviewId}`,
           {
             rating: rating,
             reviewText: reviewText.trim(),
-            photos: uploadedImageUrls,
           },
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -189,17 +168,26 @@ export default function SiteModalFullScreen({
         );
         alert("Review updated successfully!");
       } else {
+        // For creating, send as FormData with photos
+        const formData = new FormData();
+        formData.append("siteId", selectedPin._id);
+        formData.append("itineraryId", itineraryId);
+        formData.append("rating", rating);
+        formData.append("reviewText", reviewText.trim());
+        
+        // Append photos if any
+        reviewImages.forEach((image) => {
+          formData.append("photos", image);
+        });
+
         await axios.post(
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews`,
+          formData,
           {
-            siteId: selectedPin._id,
-            itineraryId: itineraryId,
-            rating: rating,
-            reviewText: reviewText.trim(),
-            photos: uploadedImageUrls,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
           }
         );
         alert("Review submitted successfully!");

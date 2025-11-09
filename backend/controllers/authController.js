@@ -453,6 +453,8 @@ exports.uploadProfilePicture = async (req, res) => {
       adminName: userName,
       action: `Updated profile picture`,
       role: user.role || "tourist",
+      targetType: "user",
+      targetId: user._id,
     });
 
     res.json({
@@ -531,6 +533,8 @@ exports.saveAccount = async (req, res) => {
         adminName: newName,
         action: logAction,
         role: user.role || "tourist",
+        targetType: "user",
+        targetId: user._id,
       });
     }
 
@@ -578,6 +582,8 @@ exports.updateProfile = async (req, res) => {
       adminName: newName,
       action: logAction,
       role: user.role || "tourist",
+      targetType: "user",
+      targetId: user._id,
     });
 
     res.json(user);
@@ -632,6 +638,8 @@ exports.saveBirthday = async (req, res) => {
       adminName: userName,
       action: `Updated birthday`,
       role: user.role || "tourist",
+      targetType: "user",
+      targetId: user._id,
     });
 
     res.json({ message: "Birthday updated successfully", user });
@@ -662,6 +670,8 @@ exports.saveGender = async (req, res) => {
       adminName: userName,
       action: `Updated gender`,
       role: user.role || "tourist",
+      targetType: "user",
+      targetId: user._id,
     });
 
     res.json(user);
@@ -694,6 +704,8 @@ exports.saveCountry = async (req, res) => {
       adminName: userName,
       action: `Updated country`,
       role: user.role || "tourist",
+      targetType: "user",
+      targetId: user._id,
     });
 
     res.json({
@@ -733,6 +745,8 @@ exports.saveLanguage = async (req, res) => {
       adminName: userName,
       action: `Updated language preference`,
       role: user.role || "tourist",
+      targetType: "user",
+      targetId: user._id,
     });
 
     res.json({
@@ -810,12 +824,20 @@ exports.deactivateAccount = async (req, res) => {
     // Create log entry for account deactivation
     if (user.role === "admin") {
       await Log.create({
-        userId: userId,
-        userName: `${user.firstName} ${user.lastName}`,
-        userEmail: user.email,
+        adminName: `${user.firstName} ${user.lastName}`,
         action: "Account Deactivated",
-        details: `Admin account deactivated. Itineraries deleted: ${deletedItineraries.deletedCount}, Reviews deleted: ${deletedReviews.deletedCount}`,
-        timestamp: new Date(),
+        role: "admin",
+        targetType: "user",
+        targetId: userId,
+        details: {
+          userName: `${user.firstName} ${user.lastName}`,
+          userEmail: user.email,
+          previousData: {
+            itinerariesDeleted: deletedItineraries.deletedCount,
+            reviewsDeleted: deletedReviews.deletedCount,
+            deactivatedAt: new Date(),
+          },
+        },
       });
     }
 

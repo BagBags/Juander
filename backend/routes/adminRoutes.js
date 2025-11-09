@@ -60,6 +60,8 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
       adminName,
       action: `Changed role of ${updatedUser.firstName} ${updatedUser.lastName} to ${role}`,
       role: "admin",
+      targetType: "user",
+      targetId: updatedUser._id,
     });
 
     res.json(updatedUser);
