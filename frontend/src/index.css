@@ -29,11 +29,10 @@
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-    /* PWA: Respect safe areas on all edges */
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
+    /* IMPORTANT: Do NOT add safe-area padding to body */
+    /* Safe areas are handled by individual components (BackHeader, etc.) */
+    /* This prevents double-padding and layout issues */
+    
     /* Prevent overscroll bounce on iOS */
     overscroll-behavior-y: none;
     /* Smooth rendering */

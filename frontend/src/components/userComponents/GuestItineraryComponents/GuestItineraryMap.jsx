@@ -670,7 +670,7 @@ export default function GuestItineraryMap() {
   };
 
   return (
-    <div className="w-full h-screen relative">
+    <div className="w-full h-screen flex flex-col overflow-hidden">
       <GpsConsentModal
         isOpen={showGpsModal}
         errorMessage={gpsError}
@@ -715,19 +715,24 @@ export default function GuestItineraryMap() {
           navigate("/guest-homepage", { replace: true });
         }}
       />
-      {/* Back Header */}
-      <BackHeader title="Guest Itinerary Map" />
+      
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0">
+        <BackHeader title="Guest Itinerary Map" />
+      </div>
 
-      {!showGpsModal && (
-        <Map
-        {...viewState}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/streets-v11"
-        onMove={(evt) => setViewState(evt.viewState)}
-        maxBounds={INTRAMUROS_BOUNDS}
-        attributionControl={false}
-        className="w-full h-full"
-      >
+      {/* Map Container - Takes remaining height */}
+      <div className="flex-1 relative overflow-hidden">
+        {!showGpsModal && (
+          <Map
+            {...viewState}
+            mapboxAccessToken={MAPBOX_TOKEN}
+            mapStyle="mapbox://styles/mapbox/streets-v11"
+            onMove={(evt) => setViewState(evt.viewState)}
+            maxBounds={INTRAMUROS_BOUNDS}
+            attributionControl={false}
+            style={{ width: '100%', height: '100%' }}
+          >
         {/* Greyed out area */}
         {inverseMask && (
           <Source id="inverse-mask" type="geojson" data={inverseMask}>
@@ -798,12 +803,12 @@ export default function GuestItineraryMap() {
             />
           </Source>
         )}
-        </Map>
-      )}
+          </Map>
+        )}
 
-      {/* Directions Panel */}
-      {!showGpsModal && (
-        <DirectionsPanel
+        {/* Directions Panel */}
+        {!showGpsModal && (
+          <DirectionsPanel
         steps={steps}
         currentStepIndex={currentStepIndex}
         setCurrentStepIndex={setCurrentStepIndex}
@@ -812,12 +817,12 @@ export default function GuestItineraryMap() {
         arrivalTime={arrivalTime}
         transportMode={transportMode}
         isRouting={isRouting}
-        />
-      )}
+          />
+        )}
 
-      {/* Control Buttons */}
-      {!showGpsModal && !showFullModal && (
-        <MapControlButtons
+        {/* Control Buttons */}
+        {!showGpsModal && !showFullModal && (
+          <MapControlButtons
           userLocation={userLocation}
           selectedPin={selectedPin}
           pins={optimizedPins}
@@ -830,12 +835,12 @@ export default function GuestItineraryMap() {
           setShowTransportPanel={setShowTransportPanel}
           transportMode={transportMode}
           setTransportMode={setTransportMode}
-        />
-      )}
+          />
+        )}
 
-      {/* Site Preview Card */}
-      {(!showGpsModal && selectedPin && !showFullModal) && (
-        <SitePreviewCard
+        {/* Site Preview Card */}
+        {(!showGpsModal && selectedPin && !showFullModal) && (
+          <SitePreviewCard
           selectedPin={selectedPin}
           distance={distance}
           isNearby={isNearby}
@@ -844,12 +849,12 @@ export default function GuestItineraryMap() {
             setSelectedPin(null);
             setManuallyDismissed(true);
           }}
-        />
-      )}
+          />
+        )}
 
-      {/* Site Modal - Full Screen */}
-      {(!showGpsModal && selectedPin && showFullModal) && (
-        <SiteModalFullScreen
+        {/* Site Modal - Full Screen */}
+        {(!showGpsModal && selectedPin && showFullModal) && (
+          <SiteModalFullScreen
           selectedPin={selectedPin}
           onClose={() => {
             setShowFullModal(false);
@@ -863,19 +868,20 @@ export default function GuestItineraryMap() {
           reviewsLoading={reviewsLoading}
           simulateGoToNextSite={simulateGoToNextSite}
           isGuestMode={true}
-        />
-      )}
+          />
+        )}
 
-      {/* Floating Chatbot */}
-      <FloatingChatbot />
-      
-      {/* Hidden restart button for testing - can be removed or styled properly */}
-      {/* <button 
-        onClick={handleRestartItinerary}
-        className="absolute bottom-20 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
-      >
-        Restart Route
-      </button> */}
+        {/* Floating Chatbot */}
+        <FloatingChatbot />
+        
+        {/* Hidden restart button for testing - can be removed or styled properly */}
+        {/* <button 
+          onClick={handleRestartItinerary}
+          className="absolute bottom-20 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
+        >
+          Restart Route
+        </button> */}
+      </div>
     </div>
   );
 }

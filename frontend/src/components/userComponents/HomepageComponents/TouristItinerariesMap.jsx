@@ -852,7 +852,7 @@ export default function TouristItineraryMap() {
   };
 
   return (
-    <div className="w-full h-screen relative">
+    <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Resume/Restart Modal */}
       <ResumeItineraryModal
         isOpen={showResumeModal}
@@ -913,17 +913,22 @@ export default function TouristItineraryMap() {
         }}
       />
       
-      <BackHeader title="Tourist Itinerary Map" />
+      {/* Header - Fixed at top */}
+      <div className="flex-shrink-0">
+        <BackHeader title="Tourist Itinerary Map" />
+      </div>
 
-      <Map
-        {...viewState}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/streets-v11"
-        onMove={(evt) => setViewState(evt.viewState)}
-        maxBounds={INTRAMUROS_BOUNDS}
-        attributionControl={false}
-        className="w-full h-full"
-      >
+      {/* Map Container - Takes remaining height */}
+      <div className="flex-1 relative overflow-hidden">
+        <Map
+          {...viewState}
+          mapboxAccessToken={MAPBOX_TOKEN}
+          mapStyle="mapbox://styles/mapbox/streets-v11"
+          onMove={(evt) => setViewState(evt.viewState)}
+          maxBounds={INTRAMUROS_BOUNDS}
+          attributionControl={false}
+          style={{ width: '100%', height: '100%' }}
+        >
         {/* Greyed out area */}
         {inverseMask && (
           <Source id="inverse-mask" type="geojson" data={inverseMask}>
@@ -998,10 +1003,10 @@ export default function TouristItineraryMap() {
             />
           </Source>
         )}
-          </Map>
+        </Map>
 
-          {/* Directions Panel */}
-          <DirectionsPanel
+        {/* Directions Panel */}
+        <DirectionsPanel
             steps={steps}
             currentStepIndex={currentStepIndex}
             setCurrentStepIndex={setCurrentStepIndex}
@@ -1015,11 +1020,11 @@ export default function TouristItineraryMap() {
             onNextSite={handleNextSite}
             hasPrevSite={currentPinIndex > 0}
             hasNextSite={currentPinIndex < optimizedPins.length - 1}
-          />
+        />
 
-          {/* Control Buttons */}
-          {!showFullModal && (
-            <MapControlButtons
+        {/* Control Buttons */}
+        {!showFullModal && (
+          <MapControlButtons
               userLocation={userLocation}
               selectedPin={selectedPin}
               pins={optimizedPins}
@@ -1032,12 +1037,12 @@ export default function TouristItineraryMap() {
               setShowTransportPanel={setShowTransportPanel}
               transportMode={transportMode}
               setTransportMode={setTransportMode}
-            />
-          )}
+          />
+        )}
 
-          {/* Site Preview Card */}
-          {selectedPin && !showFullModal && (
-            <SitePreviewCard
+        {/* Site Preview Card */}
+        {selectedPin && !showFullModal && (
+          <SitePreviewCard
               selectedPin={selectedPin}
               distance={distance}
               isNearby={isNearby}
@@ -1048,12 +1053,12 @@ export default function TouristItineraryMap() {
               }}
               onMarkAsDone={handleMarkAsDone}
               isVisited={visitedSites.has(selectedPin._id)}
-            />
-          )}
+          />
+        )}
 
-          {/* Site Modal - Full Screen */}
-          {selectedPin && showFullModal && (
-            <SiteModalFullScreen
+        {/* Site Modal - Full Screen */}
+        {selectedPin && showFullModal && (
+          <SiteModalFullScreen
               selectedPin={selectedPin}
               onClose={() => {
                 setShowFullModal(false);
@@ -1066,11 +1071,12 @@ export default function TouristItineraryMap() {
               siteReviews={siteReviews}
               reviewsLoading={reviewsLoading}
               simulateGoToNextSite={simulateGoToNextSite}
-            />
-          )}
+          />
+        )}
 
-      {/* Floating Chatbot */}
-      <FloatingChatbot />
+        {/* Floating Chatbot */}
+        <FloatingChatbot />
+      </div>
     </div>
   );
 }

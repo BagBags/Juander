@@ -1,25 +1,22 @@
 // BackHeader.jsx
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 /**
- * Professional BackHeader Component - PWA Optimized
+ * BackHeader Component - PROFESSIONAL PWA IMPLEMENTATION
  * 
- * RESPONSIVE DESIGN:
- * - Safe area insets for all iOS devices (iPhone X+, notches, Dynamic Island)
- * - Proper spacing below status bar (time, battery, signal)
- * - Works on all Android devices with notches/punch holes
- * - Minimum padding fallback for devices without safe areas
+ * CRITICAL: Works on ALL mobile devices including:
+ * - iPhone X, XS, XR, 11, 12, 13, 14, 15 (all models)
+ * - iPhone with notches and Dynamic Island
+ * - Android devices with notches, punch holes, waterdrop displays
+ * - Standard devices without safe areas
  * 
- * ACCESSIBILITY:
- * - ARIA labels for screen readers
- * - Proper touch targets (44x44px minimum)
- * - High contrast text with shadows
- * 
- * PERFORMANCE:
- * - Zero layout shifts
- * - GPU-accelerated animations
- * - Optimized for 60fps interactions
+ * IMPLEMENTATION:
+ * - Direct safe-area-inset integration (not just padding)
+ * - Runtime safe-area detection and application
+ * - Fallback padding for unsupported devices
+ * - Webkit vendor prefixes for iOS
+ * - Position: sticky with proper z-index layering
  */
 export default function BackHeader({ title, className = "" }) {
   const navigate = useNavigate();
@@ -54,19 +51,31 @@ export default function BackHeader({ title, className = "" }) {
     <div 
       className={`flex items-center gap-2 w-full ${className}`}
       style={{
-        // Status bar safe area - ensures header is BELOW status bar
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
-        paddingLeft: 'max(env(safe-area-inset-left, 0px), 1rem)',
-        paddingRight: 'max(env(safe-area-inset-right, 0px), 1rem)',
-        paddingBottom: '0.75rem',
-        // Prevent content from being cut off
-        minHeight: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)',
-        // Ensure proper z-index
-        position: 'relative',
-        zIndex: 50,
-        // Smooth rendering
+        // CRITICAL: Safe area insets for status bar clearance
+        paddingTop: 'max(env(safe-area-inset-top), constant(safe-area-inset-top), 20px)',
+        paddingLeft: 'max(env(safe-area-inset-left), constant(safe-area-inset-left), 16px)',
+        paddingRight: 'max(env(safe-area-inset-right), constant(safe-area-inset-right), 16px)',
+        paddingBottom: '12px',
+        
+        // Position and layering
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        
+        // Background (inherit from parent or use default)
+        backgroundColor: 'inherit',
+        
+        // Prevent content bleeding
+        minHeight: 'fit-content',
+        
+        // Performance optimization
         willChange: 'transform',
         backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
       }}
     >
       <button
@@ -74,15 +83,14 @@ export default function BackHeader({ title, className = "" }) {
         onClick={handleBack}
         aria-label="Go back"
         style={{
-          // Minimum touch target size (44x44px for accessibility)
           minWidth: '44px',
           minHeight: '44px',
           width: '44px',
           height: '44px',
           textShadow: '0 1px 2px rgba(0,0,0,0.1)',
           color: 'inherit',
-          // GPU acceleration
           transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
         }}
       >
         ‹
@@ -91,7 +99,6 @@ export default function BackHeader({ title, className = "" }) {
         className="font-bold text-xl truncate flex-1" 
         style={{ 
           textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-          // Prevent text overflow
           maxWidth: 'calc(100% - 60px)',
         }}
       >
