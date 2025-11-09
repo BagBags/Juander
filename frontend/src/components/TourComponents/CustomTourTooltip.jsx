@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { X, ChevronRight, ChevronLeft } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 
 export default function CustomTourTooltip({
   continuous,
@@ -90,17 +90,10 @@ export default function CustomTourTooltip({
       )}
 
       {/* Header - Modern minimal with persona */}
-      <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-between border-b border-gray-100 bg-white/95">
-        <h3 id={titleId} className="text-gray-900 font-semibold text-base sm:text-lg tracking-wide truncate pr-2">
+      <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-center border-b border-gray-100 bg-white/95">
+        <h3 id={titleId} className="text-gray-900 font-semibold text-base sm:text-lg tracking-wide truncate">
           {step.title}
         </h3>
-        <button
-          {...closeProps}
-          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg p-1.5 transition-all duration-200 flex-shrink-0"
-          aria-label="Close tour"
-        >
-          <X size={18} strokeWidth={2.5} />
-        </button>
       </div>
 
       {/* Progress Bar */}

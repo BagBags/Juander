@@ -126,6 +126,21 @@ export default function AdminReviewsMain() {
             }
           );
           
+          // Log the action
+          try {
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`,
+              {
+                action: `Deleted review for ${review.siteId?.siteName || "Unknown Site"} by ${review.userId?.firstName || "Unknown"} ${review.userId?.lastName || "User"}`,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (logErr) {
+            console.error("Error logging action:", logErr);
+          }
+          
           setReviews((prev) => prev.filter((r) => r._id !== review._id));
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {

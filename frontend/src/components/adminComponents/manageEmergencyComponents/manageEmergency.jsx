@@ -14,6 +14,7 @@ export default function ManageEmergency() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
+  const [formKey, setFormKey] = useState(0); // Force form remount
   
   // Validation errors for CreateEmergency form
   const [formErrors, setFormErrors] = useState({});
@@ -64,6 +65,8 @@ export default function ManageEmergency() {
 
   const handleAddAgency = () => {
     setSelectedAgency(null);
+    setFormErrors({}); // Clear any existing errors
+    setFormKey(prev => prev + 1); // Force form remount
     setShowForm(true);
   };
 
@@ -132,6 +135,24 @@ export default function ManageEmergency() {
           fetchHotlines();
           fetchArchivedHotlines();
           setFormErrors({}); // Clear errors
+          
+          // Log the action
+          try {
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`,
+              {
+                action: selectedAgency 
+                  ? `Updated emergency hotline: ${agencyName}`
+                  : `Added new emergency hotline: ${agencyName}`,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (logErr) {
+            console.error("Error logging action:", logErr);
+          }
+          
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error("Error saving agency:", err);
@@ -144,10 +165,14 @@ export default function ManageEmergency() {
   const handleCancel = () => {
     setShowForm(false);
     setSelectedAgency(null);
+    setFormErrors({}); // Clear form errors
+    setFormKey(prev => prev + 1); // Force form remount on next open
   };
 
   const handleEdit = (agency) => {
     setSelectedAgency(agency);
+    setFormErrors({}); // Clear any existing errors
+    setFormKey(prev => prev + 1); // Force form remount
     setShowForm(true);
   };
 
@@ -167,6 +192,23 @@ export default function ManageEmergency() {
           });
           fetchHotlines();
           fetchArchivedHotlines();
+          
+          // Log the action
+          try {
+            const hotline = hotlines.find(h => h._id === id);
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`,
+              {
+                action: `Archived emergency hotline: ${hotline?.name || "Unknown"}`,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (logErr) {
+            console.error("Error logging action:", logErr);
+          }
+          
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error("Error archiving agency:", err);
@@ -192,6 +234,23 @@ export default function ManageEmergency() {
           });
           fetchHotlines();
           fetchArchivedHotlines();
+          
+          // Log the action
+          try {
+            const hotline = archivedHotlines.find(h => h._id === id);
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`,
+              {
+                action: `Restored emergency hotline: ${hotline?.name || "Unknown"}`,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (logErr) {
+            console.error("Error logging action:", logErr);
+          }
+          
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error("Error restoring agency:", err);
@@ -216,6 +275,23 @@ export default function ManageEmergency() {
             headers: { Authorization: `Bearer ${token}` },
           });
           fetchArchivedHotlines();
+          
+          // Log the action
+          try {
+            const hotline = archivedHotlines.find(h => h._id === id);
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`,
+              {
+                action: `Permanently deleted emergency hotline: ${hotline?.name || "Unknown"}`,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (logErr) {
+            console.error("Error logging action:", logErr);
+          }
+          
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error("Error deleting agency:", err);
@@ -502,6 +578,7 @@ export default function ManageEmergency() {
               </h2>
               {showForm ? (
                 <CreateEmergency
+                  key={`form-${formKey}-${selectedAgency?._id || 'new'}`}
                   onSave={handleSaveAgency}
                   onCancel={handleCancel}
                   agencyToEdit={selectedAgency}

@@ -29,7 +29,7 @@ export default function SitePreviewCard({
     <div 
       className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto z-40 animate-slide-down"
       style={{
-        top: "calc(env(safe-area-inset-top) + 16px)",
+        top: "calc(env(safe-area-inset-top) + 72px)",
       }}
     >
       <div className="bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">

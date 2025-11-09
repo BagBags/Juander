@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Marker } from "react-map-gl";
 
 /**
  * Modern User Location Marker - Google Maps Style
+ * Optimized for fast rotation performance
  * Features:
  * - Blue dot with white border
  * - Pulse animation
@@ -11,22 +12,59 @@ import { Marker } from "react-map-gl";
  */
 export default function ModernUserMarker({ userLocation, heading = null }) {
   const [currentHeading, setCurrentHeading] = useState(heading || 0);
+  const beamRef = useRef(null);
+  const lastUpdateRef = useRef(0);
+  const animationFrameRef = useRef(null);
 
   // Listen to device orientation for heading
   useEffect(() => {
     if (heading !== null && heading !== undefined) {
       setCurrentHeading(heading);
+      // Directly update DOM for instant rotation
+      if (beamRef.current) {
+        beamRef.current.style.transform = `rotate(${heading}deg)`;
+      }
       return;
     }
 
     // Try to get device orientation (compass heading)
     const handleOrientation = (event) => {
-      if (event.webkitCompassHeading) {
+      const now = Date.now();
+      
+      // Throttle to max 60fps (16.67ms between updates)
+      if (now - lastUpdateRef.current < 16) {
+        return;
+      }
+      
+      let newHeading = null;
+      
+      if (event.webkitCompassHeading !== undefined) {
         // iOS
-        setCurrentHeading(event.webkitCompassHeading);
+        newHeading = event.webkitCompassHeading;
       } else if (event.alpha !== null) {
         // Android - alpha is the compass heading
-        setCurrentHeading(360 - event.alpha);
+        newHeading = 360 - event.alpha;
+      }
+      
+      if (newHeading !== null && beamRef.current) {
+        lastUpdateRef.current = now;
+        
+        // Cancel any pending animation frame
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+        
+        // Use requestAnimationFrame for smooth 60fps updates
+        animationFrameRef.current = requestAnimationFrame(() => {
+          if (beamRef.current) {
+            // Direct DOM manipulation for instant rotation without React re-render
+            beamRef.current.style.transform = `rotate(${newHeading}deg)`;
+          }
+          // Update state less frequently (every 100ms) for other components that might need it
+          if (now - lastUpdateRef.current > 100) {
+            setCurrentHeading(newHeading);
+          }
+        });
       }
     };
 
@@ -35,17 +73,20 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
       DeviceOrientationEvent.requestPermission()
         .then((response) => {
           if (response === "granted") {
-            window.addEventListener("deviceorientation", handleOrientation);
+            window.addEventListener("deviceorientation", handleOrientation, { passive: true });
           }
         })
         .catch(console.error);
     } else {
       // Non-iOS or older iOS
-      window.addEventListener("deviceorientationabsolute", handleOrientation);
-      window.addEventListener("deviceorientation", handleOrientation);
+      window.addEventListener("deviceorientationabsolute", handleOrientation, { passive: true });
+      window.addEventListener("deviceorientation", handleOrientation, { passive: true });
     }
 
     return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
       window.removeEventListener("deviceorientationabsolute", handleOrientation);
       window.removeEventListener("deviceorientation", handleOrientation);
     };
@@ -62,10 +103,12 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
       <div className="relative flex items-center justify-center w-16 h-16">
         {/* Blue light beam (direction indicator) - rotates with heading */}
         <div
-          className="absolute transition-transform duration-100 ease-linear"
+          ref={beamRef}
+          className="absolute"
           style={{
             transform: `rotate(${currentHeading}deg)`,
             transformOrigin: "center center",
+            willChange: "transform",
           }}
         >
           {/* Trapezoid shape with flat bottom and gradient spread top */}

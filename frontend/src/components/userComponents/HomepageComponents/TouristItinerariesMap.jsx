@@ -22,7 +22,6 @@ import SitePreviewCard from "./SitePreviewCard";
 import SiteModalFullScreen from "./SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
-import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 
 export default function TouristItineraryMap() {
@@ -46,7 +45,6 @@ export default function TouristItineraryMap() {
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [savedProgress, setSavedProgress] = useState(null);
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [itineraryName, setItineraryName] = useState("");
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
   const [showTransportPanel, setShowTransportPanel] = useState(false);
@@ -329,9 +327,7 @@ export default function TouristItineraryMap() {
         const allCompleted = visitedSites && visitedSites.length === optimizedPins.length;
         
         if (allCompleted) {
-          // Show completion modal if all sites visited
-          setShowCompletionModal(true);
-          // Still set to first site for when they restart
+          // All sites visited - set to first site for restart
           if (optimizedPins.length > 0) {
             const firstPin = optimizedPins[0];
             setSelectedPin(firstPin);
@@ -420,18 +416,7 @@ export default function TouristItineraryMap() {
     setShowResumeModal(false);
   };
 
-  // Check if all sites are visited (completion)
-  useEffect(() => {
-    if (optimizedPins.length > 0 && visitedSites.size === optimizedPins.length) {
-      setShowCompletionModal(true);
-    }
-  }, [visitedSites.size, optimizedPins.length]);
-
-  // Handle completion restart
-  const handleCompletionRestart = async () => {
-    await handleRestartProgress();
-    setShowCompletionModal(false);
-  };
+  // Check if all sites are visited (completion) - removed modal display
 
   /** Auto-select first pin when pins are loaded (show preview card by default) - only if no saved progress */
   useEffect(() => {
@@ -844,15 +829,6 @@ export default function TouristItineraryMap() {
             ? optimizedPins[savedProgress.currentPinIndex]?.siteName || optimizedPins[savedProgress.currentPinIndex]?.title
             : null
         }
-      />
-
-      {/* Completion Modal */}
-      <ItineraryCompletionModal
-        isOpen={showCompletionModal}
-        onRestart={handleCompletionRestart}
-        onClose={() => setShowCompletionModal(false)}
-        itineraryName={itineraryName}
-        totalSites={optimizedPins.length}
       />
 
       <GpsConsentModal
