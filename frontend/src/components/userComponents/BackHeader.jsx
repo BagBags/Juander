@@ -51,21 +51,15 @@ export default function BackHeader({ title, className = "" }) {
     <div 
       className={`flex items-center gap-2 w-full ${className}`}
       style={{
-        // CRITICAL: Safe area insets for status bar clearance
+        // CRITICAL: Safe area insets for status bar clearance on ALL devices
         paddingTop: 'max(env(safe-area-inset-top), constant(safe-area-inset-top), 20px)',
         paddingLeft: 'max(env(safe-area-inset-left), constant(safe-area-inset-left), 16px)',
         paddingRight: 'max(env(safe-area-inset-right), constant(safe-area-inset-right), 16px)',
         paddingBottom: '12px',
         
-        // Position and layering
-        position: 'sticky',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        
-        // Background (inherit from parent or use default)
-        backgroundColor: 'inherit',
+        // Position (relative to avoid breaking other page layouts)
+        position: 'relative',
+        zIndex: 50,
         
         // Prevent content bleeding
         minHeight: 'fit-content',
