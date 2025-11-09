@@ -2,6 +2,7 @@ const PhotoboothFilter = require("../models/photoboothFilterModel");
 const Log = require("../models/logModel");
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios");
 
 // --- Helper for logging actions ---
 const logAction = async (req, action) => {

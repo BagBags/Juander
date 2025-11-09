@@ -54,26 +54,36 @@ export default function Photobooth() {
         
         if (res.data && res.data.length > 0) {
           const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+          console.log("Backend URL:", BACKEND_URL);
+          console.log("Raw filters from backend:", res.data);
+          
           const normalized = res.data.map((f) => {
-            // Resolve image URL
-            let imageUrl = f.imageUrl || f.image;
+            // Resolve image URL - check both possible field names
+            let imageUrl = f.image || f.imageUrl;
+            
+            console.log("Processing filter:", f.name, "| Original image:", imageUrl);
+            
+            // Just use the S3 URL directly - CORS should be configured on S3 bucket
             if (imageUrl && !imageUrl.startsWith('http')) {
               imageUrl = `${BACKEND_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
             }
+            
+            console.log("Resolved image URL:", imageUrl);
             
             return {
               ...f,
               label: f.label || f.name,
               value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
               image: imageUrl,
-              // Ensure all required fields exist
+              category: f.category || 'general',
               id: f._id || f.id || f.value || `filter-${Date.now()}-${Math.random()}`,
             };
           });
           
           // Combine base filters with backend filters
           const allFilters = [...baseFilters, ...normalized];
-          console.log("Loaded filters:", allFilters.length);
+          console.log("Total filters loaded:", allFilters.length);
+          console.log("All filters:", allFilters);
           setFilters(allFilters);
         } else {
           console.log("No backend filters, using base filters");
@@ -120,12 +130,16 @@ export default function Photobooth() {
   // ✅ Face detection loop
   useEffect(() => {
     if (model && webcamReady && webcamRef.current) {
+      console.log("Starting face detection loop...");
       const cleanup = setupFaceDetection(
         model,
         webcamRef,
         (faces) => {
           if (!isDragging) {
             setFaces(faces);
+            if (faces.length > 0) {
+              console.log("Faces detected and set:", faces.length);
+            }
           }
         },
         isDragging

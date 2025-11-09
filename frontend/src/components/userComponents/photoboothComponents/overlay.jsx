@@ -47,8 +47,12 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
   const getDisplayCoords = (x, y) => {
     if (!overlayRef.current) return { x, y };
     const rect = overlayRef.current.getBoundingClientRect();
+    
+    // Use actual container dimensions, not videoDims
+    // This ensures coordinates work on any screen size
     const scaleX = rect.width / videoDims.width;
     const scaleY = rect.height / videoDims.height;
+    
     return {
       x: x * scaleX,
       y: y * scaleY,
@@ -112,6 +116,7 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
     return smoothed;
   };
 
+
   return (
     <div
       ref={overlayRef}
@@ -123,12 +128,14 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
         height: "100%",
         pointerEvents: "none",
         overflow: "hidden",
-        zIndex: 9999, // make sure it's on top
+        zIndex: 9999,
       }}
     >
       {faces.map((face, idx) => {
         const lm = face.keypoints;
-        if (!lm || lm.length < 264) return null;
+        if (!lm || lm.length < 264) {
+          return null;
+        }
 
         const leftEye = lm[33];
         const rightEye = lm[263];
