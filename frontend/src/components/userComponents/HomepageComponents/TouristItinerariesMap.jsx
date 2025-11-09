@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -105,13 +105,17 @@ export default function TouristItineraryMap() {
       const token = localStorage.getItem('token');
       if (!token) return; // Guest users don't save progress
       
+      // Save optimized pin order (site IDs) to preserve numbering
+      const optimizedOrder = optimizedPins.map(pin => pin._id);
+      
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itinerary-progress/${itineraryId}`,
         {
           currentPinIndex: pinIndex,
           visitedSites: Array.from(visited),
           skippedSites: Array.from(skipped || new Set()),
-          lastPosition: userPos || userLocation
+          lastPosition: userPos || userLocation,
+          optimizedOrder: optimizedOrder // Save the pin order
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -121,7 +125,7 @@ export default function TouristItineraryMap() {
   };
 
   // Skip current site and move to next
-  const handleSkipSite = () => {
+  const handleSkipSite = useCallback(() => {
     if (!activePin) return;
     
     const newSkipped = new Set(skippedSites);
@@ -140,10 +144,10 @@ export default function TouristItineraryMap() {
       }
       saveProgress(nextIndex, visitedSites, newSkipped);
     }
-  };
+  }, [activePin, currentPinIndex, optimizedPins, skippedSites, userLocation, visitedSites]);
 
   // Go to previous site
-  const handlePrevSite = () => {
+  const handlePrevSite = useCallback(() => {
     const prevIndex = currentPinIndex - 1;
     if (prevIndex >= 0) {
       setCurrentPinIndex(prevIndex);
@@ -155,10 +159,10 @@ export default function TouristItineraryMap() {
       }
       saveProgress(prevIndex, visitedSites, skippedSites);
     }
-  };
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, skippedSites]);
 
   // Go to next site (marks current as visited)
-  const handleNextSite = async () => {
+  const handleNextSite = useCallback(async () => {
     // Mark current site as visited before moving to next
     const currentPin = optimizedPins[currentPinIndex];
     const updatedVisited = new Set(visitedSites);
@@ -181,7 +185,7 @@ export default function TouristItineraryMap() {
       }
       saveProgress(nextIndex, updatedVisited, skippedSites);
     }
-  };
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, skippedSites]);
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -302,18 +306,30 @@ export default function TouristItineraryMap() {
   /** Load saved progress from database */
   useEffect(() => {
     const loadProgress = async () => {
-      if (!itineraryId || optimizedPins.length === 0) return;
+      if (!itineraryId || pins.length === 0) return;
       
       try {
         const token = localStorage.getItem('token');
-        if (!token) return; // Guest users don't have saved progress
+        if (!token) {
+          // No saved progress for guest users, run optimization
+          if (userLocation && optimizedPins.length === 0) {
+            const optimized = optimizeRoute(userLocation, pins, new Set());
+            setOptimizedPins(optimized);
+            if (optimized.length > 0) {
+              setCurrentPinIndex(0);
+              setSelectedPin(optimized[0]);
+              setActivePin(optimized[0]);
+            }
+          }
+          return;
+        }
         
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itinerary-progress/${itineraryId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         
-        const { currentPinIndex, visitedSites, skippedSites } = response.data;
+        const { currentPinIndex, visitedSites, skippedSites, optimizedOrder } = response.data;
         
         // Restore visited and skipped sites first
         if (visitedSites && visitedSites.length > 0) {
@@ -323,49 +339,75 @@ export default function TouristItineraryMap() {
           setSkippedSites(new Set(skippedSites));
         }
         
-        // Check if all sites are completed
-        const allCompleted = visitedSites && visitedSites.length === optimizedPins.length;
-        
-        if (allCompleted) {
-          // All sites visited - set to first site for restart
-          if (optimizedPins.length > 0) {
-            const firstPin = optimizedPins[0];
-            setSelectedPin(firstPin);
-            setActivePin(firstPin);
-            setCurrentPinIndex(0);
-          }
-        } else {
-          // Check if there's meaningful progress (not just starting)
-          const hasProgress = currentPinIndex > 0 || (visitedSites && visitedSites.length > 0) || (skippedSites && skippedSites.length > 0);
+        // Restore optimized pin order if available
+        if (optimizedOrder && optimizedOrder.length > 0) {
+          // Reconstruct optimized pins from saved order
+          const restoredPins = optimizedOrder
+            .map(siteId => pins.find(p => p._id === siteId))
+            .filter(Boolean); // Remove any null values
           
-          if (hasProgress) {
-            // Save progress data and show resume modal
-            setSavedProgress(response.data);
-            setShowResumeModal(true);
-          } else {
-            // No progress, start fresh
-            if (optimizedPins.length > 0) {
-              const firstPin = optimizedPins[0];
+          setOptimizedPins(restoredPins);
+          console.log('✅ Restored optimized pin order from saved progress');
+          
+          // Check if all sites are completed
+          const allCompleted = visitedSites && visitedSites.length === restoredPins.length;
+          
+          if (allCompleted) {
+            // All sites visited - set to first site for restart
+            if (restoredPins.length > 0) {
+              const firstPin = restoredPins[0];
               setSelectedPin(firstPin);
               setActivePin(firstPin);
               setCurrentPinIndex(0);
+            }
+          } else {
+            // Check if there's meaningful progress (not just starting)
+            const hasProgress = currentPinIndex > 0 || (visitedSites && visitedSites.length > 0) || (skippedSites && skippedSites.length > 0);
+            
+            if (hasProgress) {
+              // Save progress data and show resume modal
+              setSavedProgress(response.data);
+              setShowResumeModal(true);
+            } else {
+              // No progress, start fresh
+              if (restoredPins.length > 0) {
+                const firstPin = restoredPins[0];
+                setSelectedPin(firstPin);
+                setActivePin(firstPin);
+                setCurrentPinIndex(0);
+              }
+            }
+          }
+        } else {
+          // No saved order, run optimization (first time)
+          if (userLocation) {
+            const optimized = optimizeRoute(userLocation, pins, new Set(visitedSites || []));
+            setOptimizedPins(optimized);
+            if (optimized.length > 0) {
+              setCurrentPinIndex(0);
+              setSelectedPin(optimized[0]);
+              setActivePin(optimized[0]);
             }
           }
         }
       } catch (error) {
         console.error('Error loading progress:', error);
-        // If error, start from beginning
-        if (optimizedPins.length > 0 && !selectedPin) {
-          const firstPin = optimizedPins[0];
-          setSelectedPin(firstPin);
-          setActivePin(firstPin);
-          setCurrentPinIndex(0);
+        // If error, run optimization from scratch
+        if (userLocation && optimizedPins.length === 0) {
+          const optimized = optimizeRoute(userLocation, pins, new Set());
+          setOptimizedPins(optimized);
+          if (optimized.length > 0 && !selectedPin) {
+            const firstPin = optimized[0];
+            setSelectedPin(firstPin);
+            setActivePin(firstPin);
+            setCurrentPinIndex(0);
+          }
         }
       }
     };
     
     loadProgress();
-  }, [itineraryId, optimizedPins.length]);
+  }, [itineraryId, pins.length, userLocation]);
 
   // Handle resume from saved progress
   const handleResumeProgress = () => {
@@ -373,7 +415,7 @@ export default function TouristItineraryMap() {
     
     const { currentPinIndex, visitedSites, skippedSites } = savedProgress;
     
-    // Restore progress
+    // Restore progress (optimized order already restored in loadProgress)
     if (currentPinIndex !== undefined && currentPinIndex < optimizedPins.length) {
       setCurrentPinIndex(currentPinIndex);
       const resumePin = optimizedPins[currentPinIndex];
@@ -394,23 +436,29 @@ export default function TouristItineraryMap() {
     }
     
     setShowResumeModal(false);
+    console.log('✅ Resumed with preserved pin order');
   };
 
-  // Handle restart (go back to first site, keep visited marks)
+  // Handle restart (go back to first site, re-run optimization)
   const handleRestartProgress = async () => {
-    // Reset position to first site
-    setCurrentPinIndex(0);
-    
-    if (optimizedPins.length > 0) {
-      const firstPin = optimizedPins[0];
-      setSelectedPin(firstPin);
-      setActivePin(firstPin);
-      if (userLocation) {
-        buildRoute(userLocation, firstPin);
+    // Re-run optimization from user's current location
+    if (userLocation && pins.length > 0) {
+      const optimized = optimizeRoute(userLocation, pins, visitedSites);
+      setOptimizedPins(optimized);
+      
+      // Reset to first site
+      setCurrentPinIndex(0);
+      if (optimized.length > 0) {
+        const firstPin = optimized[0];
+        setSelectedPin(firstPin);
+        setActivePin(firstPin);
+        if (userLocation) {
+          buildRoute(userLocation, firstPin);
+        }
+        // Save progress with new optimized order
+        await saveProgress(0, visitedSites, skippedSites);
+        console.log('✅ Restart: Re-optimized route and reset to first site');
       }
-      // Save progress with current visited sites (don't clear them)
-      await saveProgress(0, visitedSites, skippedSites);
-      console.log('✅ Restart: Position reset to first site, keeping', visitedSites.size, 'visited sites');
     }
     
     setShowResumeModal(false);
@@ -613,21 +661,8 @@ export default function TouristItineraryMap() {
     }
   }, [transportMode]);
 
-  /** Optimize route when user location or pins change - ONLY ONCE */
-  useEffect(() => {
-    if (userLocation && pins.length > 0 && optimizedPins.length === 0) {
-      // Only optimize once when first loading - don't re-optimize when sites are visited
-      const optimized = optimizeRoute(userLocation, pins, new Set());
-      setOptimizedPins(optimized);
-      
-      // Set first site as current
-      if (optimized.length > 0 && currentPinIndex === 0) {
-        setCurrentPinIndex(0);
-        setSelectedPin(optimized[0]);
-        setActivePin(optimized[0]);
-      }
-    }
-  }, [userLocation, pins.length]);
+  /** Optimize route when user location or pins change - ONLY if no saved order */
+  // This effect is now handled in loadProgress useEffect to prevent re-optimization
 
   /** Build route to current pin */
   useEffect(() => {
@@ -690,7 +725,8 @@ export default function TouristItineraryMap() {
       }
     });
 
-    setCurrentStepIndex(closestIdx);
+    // Only update if step actually changed to prevent unnecessary rerenders and TTS rapid-fire
+    setCurrentStepIndex((prevIdx) => prevIdx === closestIdx ? prevIdx : closestIdx);
   }, [userLocation, steps]);
 
   /** Mark site as visited */

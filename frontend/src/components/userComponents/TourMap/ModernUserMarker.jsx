@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { Marker } from "react-map-gl";
 
 /**
@@ -9,8 +9,10 @@ import { Marker } from "react-map-gl";
  * - Pulse animation
  * - Blue light beam as direction indicator (rotates based on device compass)
  * - Accuracy circle
+ * 
+ * Memoized to prevent unnecessary rerenders when parent updates
  */
-export default function ModernUserMarker({ userLocation, heading = null }) {
+const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading = null }) {
   const [currentHeading, setCurrentHeading] = useState(heading || 0);
   const beamRef = useRef(null);
   const lastUpdateRef = useRef(0);
@@ -138,4 +140,6 @@ export default function ModernUserMarker({ userLocation, heading = null }) {
       </div>
     </Marker>
   );
-}
+});
+
+export default ModernUserMarker;

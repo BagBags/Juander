@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { MapPin, WifiOff } from "lucide-react";
+import { WifiOff } from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
 import { optimizeRoute, getNextSite, calculateDistance } from "../../../utils/routeOptimizer";
 
@@ -31,6 +31,7 @@ export default function GuestItineraryMap() {
 
   const [pins, setPins] = useState([]);
   const [optimizedPins, setOptimizedPins] = useState([]); // Optimized route order
+  const [hasLoadedProgress, setHasLoadedProgress] = useState(false); // Track if we've loaded saved progress
   const [viewState, setViewState] = useState({
     latitude: 14.5896,
     longitude: 120.9747,
@@ -205,6 +206,82 @@ export default function GuestItineraryMap() {
 
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
+
+  /** Load saved progress from sessionStorage */
+  useEffect(() => {
+    if (!itineraryId || pins.length === 0 || hasLoadedProgress) return;
+    
+    try {
+      // Load saved optimized order
+      const orderKey = `guest_optimized_order_${itineraryId}`;
+      const savedOrder = sessionStorage.getItem(orderKey);
+      
+      if (savedOrder) {
+        const optimizedOrder = JSON.parse(savedOrder);
+        // Reconstruct optimized pins from saved order
+        const restoredPins = optimizedOrder
+          .map(siteId => pins.find(p => p._id === siteId))
+          .filter(Boolean);
+        
+        if (restoredPins.length > 0) {
+          setOptimizedPins(restoredPins);
+          console.log('✅ Restored optimized pin order from sessionStorage');
+          
+          // Load visited sites
+          const visitedKey = `guest_visited_${itineraryId}`;
+          const savedVisited = sessionStorage.getItem(visitedKey);
+          if (savedVisited) {
+            const visitedIds = JSON.parse(savedVisited);
+            setVisitedSites(new Set(visitedIds));
+          }
+          
+          // Set first unvisited site as current
+          const nextSite = getNextSite(restoredPins, visitedSites);
+          if (nextSite) {
+            const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
+            if (nextIndex !== -1) {
+              setCurrentPinIndex(nextIndex);
+              setSelectedPin(nextSite);
+            }
+          }
+          
+          setHasLoadedProgress(true);
+          return;
+        }
+      }
+      
+      // No saved order, will run optimization in next useEffect
+      setHasLoadedProgress(true);
+    } catch (error) {
+      console.error('Error loading saved progress:', error);
+      setHasLoadedProgress(true);
+    }
+  }, [itineraryId, pins.length, hasLoadedProgress]);
+
+  /** Optimize route when user location or pins change - ONLY if no saved order */
+  useEffect(() => {
+    if (userLocation && pins.length > 0 && optimizedPins.length === 0 && hasLoadedProgress) {
+      // Only optimize if we don't have a saved order
+      const optimized = optimizeRoute(userLocation, pins, visitedSites);
+      setOptimizedPins(optimized);
+      
+      // Save optimized order to sessionStorage
+      const orderKey = `guest_optimized_order_${itineraryId}`;
+      const optimizedOrder = optimized.map(pin => pin._id);
+      sessionStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
+      console.log('✅ Created and saved new optimized route');
+      
+      // Set first unvisited site as current
+      const nextSite = getNextSite(optimized, visitedSites);
+      if (nextSite) {
+        const nextIndex = optimized.findIndex(p => p._id === nextSite._id);
+        if (nextIndex !== -1) {
+          setCurrentPinIndex(nextIndex);
+          setSelectedPin(nextSite);
+        }
+      }
+    }
+  }, [userLocation, pins.length, optimizedPins.length, hasLoadedProgress]);
 
   /** Track user location (after consent) - Optimized to prevent blinking */
   useEffect(() => {
@@ -386,24 +463,6 @@ export default function GuestItineraryMap() {
     }
   }, [transportMode]);
 
-  /** Optimize route when user location or pins change */
-  useEffect(() => {
-    if (userLocation && pins.length > 0) {
-      const optimized = optimizeRoute(userLocation, pins, visitedSites);
-      setOptimizedPins(optimized);
-      
-      // Set first unvisited site as current
-      const nextSite = getNextSite(optimized, visitedSites);
-      if (nextSite) {
-        const nextIndex = optimized.findIndex(p => p._id === nextSite._id);
-        if (nextIndex !== -1 && currentPinIndex === 0) {
-          setCurrentPinIndex(nextIndex);
-          setSelectedPin(nextSite);
-        }
-      }
-    }
-  }, [userLocation, pins, visitedSites]);
-
   /** Build route to current pin */
   useEffect(() => {
     if (userLocation && optimizedPins.length > 0 && optimizedPins[currentPinIndex]) {
@@ -456,7 +515,8 @@ export default function GuestItineraryMap() {
       }
     });
 
-    setCurrentStepIndex(closestIdx);
+    // Only update if step actually changed to prevent unnecessary rerenders and TTS rapid-fire
+    setCurrentStepIndex((prevIdx) => prevIdx === closestIdx ? prevIdx : closestIdx);
   }, [userLocation, steps]);
 
   /** Mark site as visited - Guest users store in sessionStorage */
@@ -478,6 +538,32 @@ export default function GuestItineraryMap() {
     } catch (err) {
       console.error("Error marking site as visited:", err);
     }
+  };
+
+  /** Clear saved progress and restart - Guest mode */
+  const handleRestartItinerary = () => {
+    if (!userLocation || pins.length === 0) return;
+    
+    // Re-run optimization from current location
+    const optimized = optimizeRoute(userLocation, pins, visitedSites);
+    setOptimizedPins(optimized);
+    
+    // Save new optimized order
+    const orderKey = `guest_optimized_order_${itineraryId}`;
+    const optimizedOrder = optimized.map(pin => pin._id);
+    sessionStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
+    
+    // Reset to first site
+    setCurrentPinIndex(0);
+    if (optimized.length > 0) {
+      const firstPin = optimized[0];
+      setSelectedPin(firstPin);
+      if (userLocation) {
+        buildRoute(userLocation, firstPin);
+      }
+    }
+    
+    console.log('✅ Restart: Re-optimized route for guest user');
   };
 
   /** Fetch reviews for current site */
@@ -538,7 +624,7 @@ export default function GuestItineraryMap() {
     }
   }, [selectedPin]);
 
-  /** Go to next stop - follows optimized route order */
+  /** Go to next stop - follows optimized route order (no re-optimization) */
   const goToNextStop = (justVisitedSiteId = null) => {
     if (!userLocation || optimizedPins.length === 0) return;
 
@@ -551,14 +637,15 @@ export default function GuestItineraryMap() {
     const updatedVisited = new Set(visitedSites);
     if (justVisitedSiteId) {
       updatedVisited.add(justVisitedSiteId);
+      setVisitedSites(updatedVisited);
+      
+      // Save to sessionStorage
+      const visitedKey = `guest_visited_${itineraryId}`;
+      sessionStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
     }
 
-    // Re-optimize route with updated visited sites
-    const reoptimized = optimizeRoute(userLocation, pins, updatedVisited);
-    setOptimizedPins(reoptimized);
-
-    // Get next unvisited site from optimized route
-    const nextPin = getNextSite(reoptimized, updatedVisited);
+    // Get next unvisited site from existing optimized route (don't re-optimize)
+    const nextPin = getNextSite(optimizedPins, updatedVisited);
 
     if (!nextPin) {
       // No more sites left
@@ -570,10 +657,10 @@ export default function GuestItineraryMap() {
       return;
     }
 
-    const nextIndex = reoptimized.findIndex(p => p._id === nextPin._id);
-    console.log('✅ Next site (optimized):', nextPin.siteName, 'at index', nextIndex);
+    const nextIndex = optimizedPins.findIndex(p => p._id === nextPin._id);
+    console.log('✅ Next site:', nextPin.siteName, 'at index', nextIndex);
 
-    // Update current site to next in optimized order
+    // Update current site to next in original optimized order
     setCurrentPinIndex(nextIndex);
     setSelectedPin(nextPin);
     setManuallyDismissed(false); // Reset manual dismissal for new site
@@ -687,27 +774,15 @@ export default function GuestItineraryMap() {
               if (userLocation) buildRoute(userLocation, pin);
             }}
           >
-            <div className="relative flex flex-col items-center">
-              {/* Pin Icon */}
-              <MapPin
-                className={`w-6 h-6 cursor-pointer ${
-                  idx === currentPinIndex
-                    ? "text-blue-600 animate-pulse"
-                    : isVisited
-                    ? "text-gray-400"
-                    : "text-red-500"
-                }`}
-              />
-              {/* Number Badge - shows optimized order */}
-              <div className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg ${
-                idx === currentPinIndex
-                  ? "bg-blue-600 text-white"
-                  : isVisited
-                  ? "bg-gray-400 text-white"
-                  : "bg-white text-red-500 border-2 border-red-500"
-              }`}>
-                {idx + 1}
-              </div>
+            {/* Number Badge - shows optimized order (never changes) */}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg cursor-pointer transition-all ${
+              idx === currentPinIndex
+                ? "bg-blue-600 text-white animate-pulse scale-110"
+                : isVisited
+                ? "bg-green-500 text-white"
+                : "bg-red-500 text-white"
+            }`}>
+              {idx + 1}
             </div>
           </Marker>
         )})}
@@ -792,6 +867,14 @@ export default function GuestItineraryMap() {
 
       {/* Floating Chatbot */}
       <FloatingChatbot />
+      
+      {/* Hidden restart button for testing - can be removed or styled properly */}
+      {/* <button 
+        onClick={handleRestartItinerary}
+        className="absolute bottom-20 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
+      >
+        Restart Route
+      </button> */}
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, memo } from "react";
 import { ChevronLeft, ChevronRight, SkipForward, Clock } from "lucide-react";
 import { announceDirectionStep } from "../../../utils/textToSpeech";
 
-export default function DirectionsPanel({
+const DirectionsPanel = memo(function DirectionsPanel({
   steps,
   currentStepIndex,
   setCurrentStepIndex,
@@ -18,9 +18,8 @@ export default function DirectionsPanel({
   hasNextSite,
 }) {
   const lastAnnouncedStep = useRef(-1);
-  const announceTimeout = useRef(null);
 
-  // Announce direction changes with debouncing
+  // Announce direction changes immediately when step updates
   useEffect(() => {
     if (steps.length > 0 && steps[currentStepIndex]) {
       // Only announce if step actually changed
@@ -28,25 +27,11 @@ export default function DirectionsPanel({
         return;
       }
 
-      // Clear any pending announcement
-      if (announceTimeout.current) {
-        clearTimeout(announceTimeout.current);
-      }
-
-      // Debounce announcements - wait 2 seconds before announcing
-      // This prevents rapid-fire announcements when location updates frequently
-      announceTimeout.current = setTimeout(() => {
-        const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
-        announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
-        lastAnnouncedStep.current = currentStepIndex;
-      }, 2000);
+      // Announce immediately when step changes
+      const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
+      announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
+      lastAnnouncedStep.current = currentStepIndex;
     }
-
-    return () => {
-      if (announceTimeout.current) {
-        clearTimeout(announceTimeout.current);
-      }
-    };
   }, [currentStepIndex, steps]);
 
   if (steps.length === 0) return null;
@@ -149,4 +134,6 @@ export default function DirectionsPanel({
       </div>
     </div>
   );
-}
+});
+
+export default DirectionsPanel;
