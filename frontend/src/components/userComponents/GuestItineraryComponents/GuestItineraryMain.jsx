@@ -95,10 +95,10 @@ export default function GuestItineraryMain() {
         </div>
       )}
       
-      {/* Admin itineraries - Horizontal Carousel */}
+      {/* Suggested itineraries - Horizontal Carousel */}
       <div className="w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8">
         <h2 className="text-2xl font-bold text-white mb-4 text-center">
-          Admin Itineraries
+          Suggested Itineraries
         </h2>
         {adminItineraries.length ? (
           <div className="relative max-w-4xl mx-auto w-full">
@@ -179,7 +179,7 @@ export default function GuestItineraryMain() {
           </div>
         ) : (
           <p className="text-white opacity-80 text-center">
-            No admin itineraries available
+            No suggested itineraries available
           </p>
         )}
       </div>

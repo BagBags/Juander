@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Review = require("../models/reviewModel");
 const VisitedSite = require("../models/visitedSiteModel");
+const Log = require("../models/logModel");
 const { verifyToken } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 
@@ -79,6 +80,29 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
       .populate("userId", "firstName lastName email")
       .populate("itineraryId", "name")
       .populate("siteId", "siteName siteDescription mediaUrl");
+
+    // Log the review creation/update
+    try {
+      await Log.create({
+        adminName: `${populated.userId.firstName} ${populated.userId.lastName}`,
+        action: existingReview ? "Updated review" : "Created review",
+        role: "tourist",
+        targetType: "review",
+        targetId: review._id,
+        details: {
+          userName: `${populated.userId.firstName} ${populated.userId.lastName}`,
+          userEmail: populated.userId.email,
+          siteName: populated.siteId.siteName,
+          itineraryName: populated.itineraryId.name,
+          rating: rating,
+          reviewText: reviewText || "",
+          photos: photoPaths,
+        },
+      });
+    } catch (logErr) {
+      console.error("Error creating log:", logErr);
+      // Continue even if logging fails
+    }
 
     res.status(existingReview ? 200 : 201).json({
       message: existingReview ? "Review updated successfully" : "Review created successfully",
@@ -275,10 +299,40 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const userId = req.user.id;
     const { id } = req.params;
 
-    const review = await Review.findOne({ _id: id, userId });
+    const review = await Review.findOne({ _id: id, userId })
+      .populate("userId", "firstName lastName email")
+      .populate("itineraryId", "name")
+      .populate("siteId", "siteName siteDescription");
 
     if (!review) {
       return res.status(404).json({ error: "Review not found" });
+    }
+
+    // Log the deletion before deleting
+    try {
+      await Log.create({
+        adminName: `${review.userId.firstName} ${review.userId.lastName}`,
+        action: "Deleted own review",
+        role: "tourist",
+        targetType: "review",
+        targetId: review._id,
+        details: {
+          userName: `${review.userId.firstName} ${review.userId.lastName}`,
+          userEmail: review.userId.email,
+          siteName: review.siteId.siteName,
+          itineraryName: review.itineraryId.name,
+          rating: review.rating,
+          reviewText: review.reviewText,
+          photos: review.photos,
+          previousData: {
+            deletedAt: new Date(),
+            reviewId: review._id,
+          },
+        },
+      });
+    } catch (logErr) {
+      console.error("Error creating log:", logErr);
+      // Continue even if logging fails
     }
 
     await Review.findByIdAndDelete(id);
@@ -302,10 +356,41 @@ router.delete("/admin/:id", verifyToken, async (req, res) => {
 
     const { id } = req.params;
 
-    const review = await Review.findById(id);
+    const review = await Review.findById(id)
+      .populate("userId", "firstName lastName email")
+      .populate("itineraryId", "name")
+      .populate("siteId", "siteName siteDescription");
 
     if (!review) {
       return res.status(404).json({ error: "Review not found" });
+    }
+
+    // Log the deletion before deleting
+    try {
+      await Log.create({
+        adminName: `${req.user.firstName} ${req.user.lastName}`,
+        action: "Deleted review (Admin)",
+        role: "admin",
+        targetType: "review",
+        targetId: review._id,
+        details: {
+          userName: `${review.userId.firstName} ${review.userId.lastName}`,
+          userEmail: review.userId.email,
+          siteName: review.siteId.siteName,
+          itineraryName: review.itineraryId.name,
+          rating: review.rating,
+          reviewText: review.reviewText,
+          photos: review.photos,
+          previousData: {
+            deletedAt: new Date(),
+            reviewId: review._id,
+            deletedBy: `${req.user.firstName} ${req.user.lastName}`,
+          },
+        },
+      });
+    } catch (logErr) {
+      console.error("Error creating log:", logErr);
+      // Continue even if logging fails
     }
 
     await Review.findByIdAndDelete(id);

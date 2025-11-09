@@ -15,7 +15,6 @@ import { baseFilters } from "./basefilter";
 import { loadFaceModel } from "./model";
 import { setupFaceDetection } from "./facedetect";
 import Overlays from "./overlay";
-import BackHeader from "../BackButton";
 import "../../../Photobooth.css";
 
 export default function Photobooth() {
@@ -40,23 +39,9 @@ export default function Photobooth() {
     height: window.innerHeight,
   });
 
-  // ✅ Handle window resize for responsive border assets
-  useEffect(() => {
-    const handleResize = () => {
-      setVideoDims({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
+  // Note: videoDims is now set from the actual video stream in handleWebcamLoad
+  // We don't use window dimensions anymore because face detection coordinates
+  // are in video stream space, not window space
 
   // ✅ Load filters from backend (fallback to baseFilters)
   useEffect(() => {
@@ -120,11 +105,16 @@ export default function Photobooth() {
 
   // ✅ Load face model
   useEffect(() => {
+    console.log("Starting to load face detection model...");
     loadFaceModel()
       .then((loadedModel) => {
+        console.log("Face model loaded successfully:", loadedModel);
         setModel(loadedModel);
       })
-      .catch((err) => console.error("Failed to load face model:", err));
+      .catch((err) => {
+        console.error("Failed to load face model:", err);
+        alert("Failed to load face detection model. Please refresh the page.");
+      });
   }, []);
 
   // ✅ Face detection loop
@@ -146,9 +136,34 @@ export default function Photobooth() {
 
   const handleWebcamLoad = useCallback(() => {
     setWebcamReady(true);
-    // Store video element reference
+    // Store video element reference and update dimensions
     if (webcamRef.current && webcamRef.current.video) {
-      setVideoElement(webcamRef.current.video);
+      const video = webcamRef.current.video;
+      setVideoElement(video);
+      
+      // Use actual video stream dimensions for face detection coordinates
+      const updateVideoDims = () => {
+        if (video.videoWidth && video.videoHeight) {
+          const dims = {
+            width: video.videoWidth,
+            height: video.videoHeight
+          };
+          setVideoDims(dims);
+          console.log("✅ Video stream dimensions updated:", dims);
+        } else {
+          console.log("⚠️ Video dimensions not ready yet, retrying...");
+          // Retry after a short delay
+          setTimeout(updateVideoDims, 100);
+        }
+      };
+      
+      // Try multiple times to ensure we get the dimensions
+      updateVideoDims();
+      video.addEventListener('loadedmetadata', updateVideoDims);
+      video.addEventListener('playing', updateVideoDims);
+      
+      // Also retry after a delay as fallback
+      setTimeout(updateVideoDims, 500);
     }
   }, []);
 
@@ -256,7 +271,11 @@ export default function Photobooth() {
       setShowPreview(true);
     } catch (error) {
       console.error("Canvas error:", error);
-      alert("Unable to capture photo. Please try again.");
+      if (error.name === 'SecurityError') {
+        alert("Unable to capture photo with this filter due to CORS restrictions. The filter will display but cannot be saved in photos. Please use base filters or configure S3 CORS properly.");
+      } else {
+        alert("Unable to capture photo. Please try again.");
+      }
     }
   }, [selectedMeta]);
 
@@ -283,14 +302,60 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
-        {/* ✅ Back button */}
-        <BackHeader title="Photo Booth" />
+        {/* ✅ Back button + refresh - Transparent background */}
+        <div 
+          className="absolute top-0 left-0 w-full z-[200]"
+          style={{
+            paddingTop: "max(env(safe-area-inset-top), 16px)",
+            paddingBottom: "12px",
+            paddingLeft: "16px",
+            paddingRight: "16px"
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <button
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40 active:bg-black/50 transition-all duration-200 cursor-pointer"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = '/';
+                }
+              }}
+              aria-label="Go back"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="white" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button
+              className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white text-2xl hover:bg-black/40 transition-all active:scale-90"
+              onClick={() => window.location.reload()}
+              title="Refresh"
+              aria-label="Refresh camera"
+            >
+              ↻
+            </button>
+          </div>
+        </div>
 
         <div className="camera-view" style={{ display: showPreview ? 'none' : 'block' }}>
           <Webcam
             ref={webcamRef}
             audio={false}
             className="webcam"
+            width={videoDims.width}
+            height={videoDims.height}
             onUserMedia={handleWebcamLoad}
             onUserMediaError={(err) => console.error("Webcam error:", err)}
             videoConstraints={{

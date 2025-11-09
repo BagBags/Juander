@@ -299,6 +299,17 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
                   src={selectedMeta.image}
                   alt="overlay"
                   crossOrigin="anonymous"
+                  onError={(e) => {
+                    console.error("Failed to load filter image:", selectedMeta.image);
+                    // Try loading without CORS as fallback
+                    if (e.target.crossOrigin) {
+                      console.log("Retrying without CORS...");
+                      e.target.crossOrigin = null;
+                      e.target.src = selectedMeta.image;
+                    } else {
+                      e.target.style.display = 'none';
+                    }
+                  }}
                   style={{
                     width: "100%",
                     height: "100%",

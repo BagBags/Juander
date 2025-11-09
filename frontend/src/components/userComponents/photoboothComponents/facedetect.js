@@ -1,75 +1,105 @@
-export async function detectFaces(model, videoElement) {
-  if (!model) {
-    // console.log("Face detection: Model not loaded");
+export async function detectFaces(models, videoElement) {
+  if (!models || !models.faceMesh) {
     return [];
   }
   if (!videoElement) {
-    // console.log("Face detection: Video element not available");
     return [];
   }
   if (videoElement.readyState !== 4) {
-    console
-      .log
-      //   `Face detection: Video not ready (readyState: ${videoElement.readyState})`
-      ();
     return [];
   }
 
   try {
-    console.log("Starting face detection...");
-    const startTime = performance.now();
-    const predictions = await model.estimateFaces(videoElement);
-    const duration = performance.now() - startTime;
-
-    console.log(`Face detection completed in ${duration.toFixed(1)}ms`);
-    console.log(`Found ${predictions.length} faces`);
-
-    // if (predictions.length > 0) {
-    //   console.log("First face details:", {
-    //     topLeft: predictions[0].topLeft,
-    //     bottomRight: predictions[0].bottomRight,
-    //     probability: predictions[0].probability,
-    //     landmarks: predictions[0].landmarks
-    //       ? predictions[0].landmarks.length
-    //       : 0,
-    //   });
-    // }
-
+    // Use BlazeFace for detection first (more reliable)
+    if (models.blazeface) {
+      const blazeDetections = await models.blazeface.estimateFaces(videoElement, false);
+      
+      if (blazeDetections.length > 0) {
+        // If BlazeFace found faces, use FaceMesh for landmarks
+        const predictions = await models.faceMesh.estimateFaces(videoElement, {
+          flipHorizontal: false
+        });
+        
+        if (predictions.length > 0) {
+          return predictions;
+        }
+        
+        // If FaceMesh fails but BlazeFace succeeded, create fake landmarks from BlazeFace
+        console.log("BlazeFace detected", blazeDetections.length, "faces, creating landmarks");
+        return blazeDetections.map(face => ({
+          keypoints: createKeypointsFromBoundingBox(face),
+          box: face.topLeft ? {
+            xMin: face.topLeft[0],
+            yMin: face.topLeft[1],
+            xMax: face.bottomRight[0],
+            yMax: face.bottomRight[1],
+            width: face.bottomRight[0] - face.topLeft[0],
+            height: face.bottomRight[1] - face.topLeft[1]
+          } : null
+        }));
+      }
+    }
+    
+    // Fallback to FaceMesh only
+    const predictions = await models.faceMesh.estimateFaces(videoElement, {
+      flipHorizontal: false
+    });
+    
     return predictions;
-  // eslint-disable-next-line no-unused-vars
   } catch (error) {
-    // console.error("Face detection failed:", error);
+    console.error("Face detection error:", error);
     return [];
   }
 }
 
+// Helper to create 468 keypoints from bounding box (MediaPipeFaceMesh format)
+function createKeypointsFromBoundingBox(face) {
+  if (!face.topLeft || !face.bottomRight) return [];
+  
+  const [x1, y1] = face.topLeft;
+  const [x2, y2] = face.bottomRight;
+  const width = x2 - x1;
+  const height = y2 - y1;
+  const centerX = x1 + width / 2;
+  const centerY = y1 + height / 2;
+  
+  // Create 468 keypoints array (MediaPipeFaceMesh standard)
+  const keypoints = new Array(468);
+  
+  // Fill with dummy points (centered)
+  for (let i = 0; i < 468; i++) {
+    keypoints[i] = { x: centerX, y: centerY, z: 0 };
+  }
+  
+  // Set key landmark points that overlay.jsx uses
+  keypoints[4] = { x: centerX, y: centerY + height * 0.1, z: 0 }; // noseTip
+  keypoints[10] = { x: centerX, y: y1, z: 0 }; // forehead
+  keypoints[33] = { x: centerX - width * 0.2, y: centerY - height * 0.1, z: 0 }; // leftEye
+  keypoints[152] = { x: centerX, y: y2, z: 0 }; // chin
+  keypoints[234] = { x: x1, y: centerY, z: 0 }; // rightEar
+  keypoints[263] = { x: centerX + width * 0.2, y: centerY - height * 0.1, z: 0 }; // rightEye
+  keypoints[454] = { x: x2, y: centerY, z: 0 }; // leftEar
+  
+  return keypoints;
+}
+
 export function setupFaceDetection(model, webcamRef, setFaces) {
-  //   console.log("Setting up face detection...");
   let rafId;
   let active = true;
 
   async function detectLoop() {
-    if (!active) {
-      //   console.log("Detection loop stopped");
-      return;
-    }
+    if (!active) return;
     if (!model) {
-      //   console.log("Waiting for model to load...");
       rafId = requestAnimationFrame(detectLoop);
       return;
     }
 
     const video = webcamRef.current?.video;
     if (!video) {
-      //   console.log("Waiting for video element...");
       rafId = requestAnimationFrame(detectLoop);
       return;
     }
     if (video.readyState !== 4) {
-      console
-        .log
-        // `Waiting for video to be ready (current readyState: ${video.readyState})`
-        ();
       rafId = requestAnimationFrame(detectLoop);
       return;
     }
@@ -77,15 +107,8 @@ export function setupFaceDetection(model, webcamRef, setFaces) {
     try {
       const predictions = await detectFaces(model, video);
       setFaces(predictions);
-
-      // Log frame rate periodically
-      if (Math.random() < 0.05) {
-        // Sample ~5% of frames to avoid spam
-        // console.log(`Current detection frame rate: ${getFrameRate()}fps`);
-      }
-    // eslint-disable-next-line no-unused-vars
     } catch (error) {
-      //   console.error("Detection loop error:", error);
+      console.error("Detection loop error:", error);
     } finally {
       if (active) {
         rafId = requestAnimationFrame(detectLoop);
@@ -93,46 +116,21 @@ export function setupFaceDetection(model, webcamRef, setFaces) {
     }
   }
 
-  // Frame rate calculation
-  //   let lastTime = performance.now();
-  //   let frameCount = 0;
-  //   let fps = 0;
-
-  //   function getFrameRate() {
-  //     frameCount++;
-  //     const now = performance.now();
-  //     const delta = now - lastTime;
-
-  //     if (delta >= 1000) {
-  //       fps = Math.round((frameCount * 1000) / delta);
-  //       frameCount = 0;
-  //       lastTime = now;
-  //     }
-  //     return fps;
-  //   }
-
   // Start detection
   const video = webcamRef.current?.video;
   if (video) {
-    // console.log(`Video element found, readyState: ${video.readyState}`);
     if (video.readyState >= 3) {
-      //   console.log("Video has enough data, starting detection");
       detectLoop();
     } else {
-      //   console.log("Waiting for video data to load...");
       const onLoaded = () => {
-        // console.log("Video data loaded, starting detection");
         video.removeEventListener("loadeddata", onLoaded);
         detectLoop();
       };
       video.addEventListener("loadeddata", onLoaded);
     }
-  } else {
-    console.warn("Video element not found in webcamRef");
   }
 
   return () => {
-    // console.log("Cleaning up face detection");
     active = false;
     cancelAnimationFrame(rafId);
   };

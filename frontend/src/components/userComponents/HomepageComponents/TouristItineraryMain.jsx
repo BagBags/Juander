@@ -290,10 +290,10 @@ export default function TouristItineraryMain() {
         sites={feeSites}
       />
 
-      {/* Admin Itineraries - Horizontal Carousel */}
+      {/* Suggested Itineraries - Horizontal Carousel */}
       <div className="w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8">
         <h2 className="text-2xl font-bold text-white mb-4 text-center">
-          Admin Itineraries
+          Suggested Itineraries
         </h2>
         {itineraries.admin.length ? (
           <div className="relative max-w-4xl mx-auto w-full">

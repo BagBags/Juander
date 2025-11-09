@@ -1,22 +1,23 @@
 // utils/model.js
 import * as tf from "@tensorflow/tfjs";
 import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
+import * as blazeface from "@tensorflow-models/blazeface";
 
 let modelPromise = null;
 let cachedDetector = null;
+let cachedBlazeFace = null;
 
 /**
- * Loads and warms up the face mesh model with fast settings.
- * Uses caching and progress tracking for user feedback.
- * Optimized for quick loading and efficient memory usage.
+ * Loads BlazeFace + FaceMesh models
+ * BlazeFace is more reliable for detection, FaceMesh provides detailed landmarks
  * @param {function} onProgress - Optional progress callback (0-100)
- * @returns {Promise<object>} Loaded face detector
+ * @returns {Promise<object>} Loaded models
  */
 export async function loadFaceModel(onProgress) {
-  // Return cached detector if available
-  if (cachedDetector) {
+  // Return cached models if available
+  if (cachedDetector && cachedBlazeFace) {
     if (onProgress) onProgress(100);
-    return Promise.resolve(cachedDetector);
+    return Promise.resolve({ faceMesh: cachedDetector, blazeface: cachedBlazeFace });
   }
   
   if (modelPromise) return modelPromise;
@@ -53,33 +54,32 @@ export async function loadFaceModel(onProgress) {
         }, 100);
       }
 
-      // Load model with optimized settings
+      // Load BlazeFace first (faster and more reliable)
+      console.log("Loading BlazeFace model...");
+      const blazefaceModel = await blazeface.load();
+      console.log("BlazeFace loaded successfully");
+      cachedBlazeFace = blazefaceModel;
+
+      // Load FaceMesh for detailed landmarks
+      console.log("Creating FaceMesh detector...");
       const detector = await faceLandmarksDetection.createDetector(
         faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
         {
           runtime: "tfjs",
-          maxFaces: 1,
+          maxFaces: 2,
           refineLandmarks: false,
-          shouldLoadIrisModel: false, // Skip iris for faster loading
+          shouldLoadIrisModel: false,
         }
       );
-
-      // Warm-up with smaller dummy input for faster initialization
-      try {
-        const dummyInput = tf.zeros([1, 64, 64, 3]);
-        await detector.estimateFaces(dummyInput);
-        dummyInput.dispose();
-      } catch (warmErr) {
-        console.warn("Model warm-up skipped:", warmErr.message);
-      }
+      console.log("FaceMesh loaded successfully");
 
       isDone = true;
       if (timer) clearInterval(timer);
       if (onProgress) onProgress(100);
 
-      // Cache the detector
+      // Cache both models
       cachedDetector = detector;
-      resolve(detector);
+      resolve({ faceMesh: detector, blazeface: blazefaceModel });
     } catch (err) {
       isDone = true;
       if (timer) clearInterval(timer);

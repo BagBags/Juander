@@ -29,6 +29,7 @@ const reviewRoute = require("./routes/reviewRoute");
 const tourRoute = require("./routes/tourRoute");
 const openaiRoute = require("./routes/openaiRoute");
 const itineraryProgressRoute = require("./routes/itineraryProgressRoute");
+const logRoute = require("./routes/logRoute");
 
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
@@ -119,6 +120,7 @@ app.use("/api/visited-sites", visitedSiteRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/openai", openaiRoute);
 app.use("/api/itinerary-progress", itineraryProgressRoute);
+app.use("/api/logs", logRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/uploads/profile",

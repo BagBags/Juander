@@ -30,7 +30,7 @@ export default function LoginPage() {
         {/* Right Side (scrolls internally if content is taller) */}
         <div className="flex flex-col items-center px-4 sm:px-6 md:px-8 lg:px-10 py-3 sm:py-8 md:py-10 h-full overflow-y-auto">
           {/* Mobile Logo (visible only on small screens) */}
-          <div className="block md:hidden mb-6">
+          <div className="block md:hidden mb-6 mt-4">
             <img
               src="/Logo2.png"
               alt="Mobile Logo"
@@ -38,7 +38,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="text-center relative mb-6">
+          <div className="text-center relative mb-6 mt-2">
             <img
               src="/salakot.svg"
               alt="Salakot"
@@ -50,7 +50,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form Container */}
-          <div className="w-full max-w-[90%] sm:max-w-sm md:max-w-md flex flex-col justify-center mt-[-40px] relative">
+          <div className="w-full max-w-[90%] sm:max-w-sm md:max-w-md flex flex-col justify-center mt-2 relative">
             <AnimatePresence mode="wait">
               {isLogin ? (
                 <motion.div
