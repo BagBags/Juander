@@ -1,43 +1,78 @@
 // components/userComponents/MapOverlays.jsx
 import React from "react";
-import BackHeader from "../BackHeader";
+import { createPortal } from "react-dom";
 import SiteCard from "./SiteCard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faInfo } from "@fortawesome/free-solid-svg-icons";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLegend }) => {
-  return (
-    <>
-      {/* Header with Legend Button */}
-      <div 
-        className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-md"
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const backHeader = (
+    <div 
+      className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
+      style={{
+        height: '56px',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        pointerEvents: 'auto'
+      }}
+    >
+      <button
+        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
+        onClick={() => {
+          if (location.key !== "default") {
+            navigate(-1);
+          } else {
+            navigate("/");
+          }
+        }}
+        aria-label="Go back"
         style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          color: 'inherit'
         }}
       >
-        <div className="flex items-center justify-between gap-3">
-          <BackHeader title={<span className="text-black">Tour Map</span>} className="flex-1" />
-          
-          {/* Legend Button - aligned to the right */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log('Legend button clicked, current state:', showLegend);
-              setShowLegend((prev) => !prev);
-            }}
-            title="Map Legend"
-            aria-label="Toggle map legend"
-            className={`p-2.5 rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer ${
-              showLegend ? "bg-blue-50 text-blue-600" : "bg-white text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            <FontAwesomeIcon icon={faInfo} className="text-lg" />
-          </button>
-        </div>
-      </div>
+        ‹
+      </button>
+      <h1 
+        className="font-bold text-xl truncate"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          margin: 0,
+          padding: 0
+        }}
+      >
+        Tour Map
+      </h1>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Back Header - Rendered via Portal */}
+      {createPortal(backHeader, document.body)}
+
+      {/* Legend Button - positioned separately */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('Legend button clicked, current state:', showLegend);
+          setShowLegend((prev) => !prev);
+        }}
+        title="Map Legend"
+        aria-label="Toggle map legend"
+        className={`absolute top-4 right-4 z-30 p-2.5 rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer ${
+          showLegend ? "bg-blue-50 text-blue-600" : "bg-white text-gray-700 hover:bg-gray-100"
+        }`}
+      >
+        <FontAwesomeIcon icon={faInfo} className="text-lg" />
+      </button>
       
       {/* Legend Panel */}
       {showLegend && (

@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Account() {
+  const navigate = useNavigate();
+  
   const [user, setUser] = useState({
     firstName: "",
     lastName: "",
@@ -27,6 +30,11 @@ export default function Account() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  
+  // Deactivation states
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [deactivating, setDeactivating] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -252,6 +260,37 @@ export default function Account() {
       setOtpMessage(err.response?.data?.message || "Failed to update profile");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (confirmationText !== "DELETE") {
+      alert("Please type DELETE to confirm account deactivation");
+      return;
+    }
+
+    setDeactivating(true);
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/deactivate-account`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { confirmationText },
+        }
+      );
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("admin");
+      
+      // Redirect to home
+      alert("Your admin account has been successfully deactivated. A log entry has been created. All your itineraries and reviews have been deleted.");
+      navigate("/");
+    } catch (err) {
+      console.error("Deactivation error:", err);
+      alert(err.response?.data?.message || "Failed to deactivate account");
+    } finally {
+      setDeactivating(false);
     }
   };
 
@@ -534,8 +573,103 @@ export default function Account() {
           </form>
         </div>
 
+        {/* Deactivate Account Section */}
+        <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-800 mb-2 text-base">
+                Deactivate Admin Account
+              </h3>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                Permanently delete your admin account and all associated data. This action cannot be undone.
+                A log entry will be created before deletion. All your itineraries and reviews will be permanently deleted, but existing system logs will be preserved.
+              </p>
+              <button
+                onClick={() => setShowDeactivateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
+                <Trash2 size={18} />
+                Deactivate Account
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Deactivation Confirmation Modal */}
+        {showDeactivateModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+                <h2 className="text-xl font-bold text-gray-800">
+                  Confirm Admin Account Deactivation
+                </h2>
+              </div>
+
+              <div className="mb-6 space-y-3">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  This action will permanently delete:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 ml-2">
+                  <li>Your admin account and profile</li>
+                  <li>All your itineraries</li>
+                  <li>All your reviews</li>
+                  <li>All associated data</li>
+                </ul>
+                <p className="text-sm font-semibold text-blue-600 mt-4">
+                  Note: A log entry will be created and existing system logs will be preserved.
+                </p>
+                <p className="text-sm font-semibold text-red-600">
+                  This action cannot be undone!
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type <span className="font-bold text-red-600">DELETE</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={confirmationText}
+                  onChange={(e) => setConfirmationText(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  disabled={deactivating}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setConfirmationText("");
+                  }}
+                  disabled={deactivating}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeactivateAccount}
+                  disabled={confirmationText !== "DELETE" || deactivating}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deactivating ? "Deactivating..." : "Deactivate"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
-          ©2025 Intramuros Administration
+          2025 Intramuros Administration
         </p>
       </div>
     </motion.div>

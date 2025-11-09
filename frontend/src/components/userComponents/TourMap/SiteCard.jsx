@@ -79,7 +79,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-gradient-to-b from-gray-50 to-white overflow-y-auto"
+      className="absolute inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white overflow-y-auto"
       style={{
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",

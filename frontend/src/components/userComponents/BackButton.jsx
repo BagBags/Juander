@@ -1,15 +1,38 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 
+/**
+ * Standardized BackHeader component - EXACTLY matches Profile page design
+ * - Uses React Portal to render at document root, isolated from parent CSS
+ * - Single angle quotation mark ‹ with gap-2 spacing
+ * - Button wrapper with hover effect
+ * - White background with bottom border
+ * - Identical to Profile page BackHeader
+ */
 export default function BackHeader({ title }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  return (
-    <div className="sticky top-0 z-20 pt-3 sm:pt-4 pb-2 px-3 sm:px-4 flex items-center border-gray-200 bg-white/95 backdrop-blur-sm">
+  // Extract plain text from title if it's wrapped in React elements
+  const plainTitle = typeof title === 'string' ? title : 
+                     (title?.props?.children || title || "Back");
+
+  const headerContent = (
+    <div 
+      className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
+      style={{
+        height: '56px',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        pointerEvents: 'auto'
+      }}
+    >
       <button
-        className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 cursor-pointer -ml-2"
+        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
         onClick={() => {
           if (location.key !== "default") {
             navigate(-1);
@@ -18,16 +41,26 @@ export default function BackHeader({ title }) {
           }
         }}
         aria-label="Go back"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          color: 'inherit'
+        }}
       >
-        <ChevronLeft 
-          size={24} 
-          className="text-black sm:w-7 sm:h-7" 
-          strokeWidth={2.5}
-        />
+        ‹
       </button>
-      <h1 className="ml-1 sm:ml-2 font-bold text-lg sm:text-xl md:text-2xl truncate">
-        {title || "Back"}
+      <h1 
+        className="font-bold text-xl truncate"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          margin: 0,
+          padding: 0
+        }}
+      >
+        {plainTitle}
       </h1>
     </div>
   );
+
+  // Render using Portal to document body to avoid parent CSS interference
+  return createPortal(headerContent, document.body);
 }

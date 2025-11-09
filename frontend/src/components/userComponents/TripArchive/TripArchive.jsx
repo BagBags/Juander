@@ -1,10 +1,43 @@
 import React, { useState, useEffect } from "react";
 import MainLayout from "../MainLayout";
 import { FaStar } from "react-icons/fa";
-import BackHeader from "../BackButton"; // ✅ import BackHeader
+import BackHeader from "../BackButton";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { Camera, X, MapPin, Calendar, Star as StarIcon } from "lucide-react";
+import { Camera, X, MapPin, Calendar, Star as StarIcon, Filter, BookOpen } from "lucide-react";
+
+// Reusable Site Card Component
+const SiteCard = ({ site, resolveUrl, children }) => {
+  return (
+    <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full min-w-0">
+      <div className="relative h-48 overflow-hidden">
+        <img
+          src={
+            site.siteId?.mediaFiles?.find(m => m.type === "image")?.url
+              ? resolveUrl(site.siteId.mediaFiles.find(m => m.type === "image").url)
+              : site.siteId?.mediaUrl
+                ? resolveUrl(site.siteId.mediaUrl)
+                : "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80"
+          }
+          alt={site.siteId?.siteName || "Site"}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          onError={(e) => {
+            e.currentTarget.src = "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80";
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <h3 className="text-xl font-bold text-white drop-shadow-lg">
+            {site.siteId?.siteName || "Unknown Site"}
+          </h3>
+        </div>
+      </div>
+      <div className="p-5">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 export default function TripArchivesPage() {
   const [visitedSites, setVisitedSites] = useState([]);
@@ -19,6 +52,9 @@ export default function TripArchivesPage() {
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
   const [showAllArchives, setShowAllArchives] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [selectedItineraryFilter, setSelectedItineraryFilter] = useState("all");
+  const [selectedReviewItineraryFilter, setSelectedReviewItineraryFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("places"); // "places" or "reviews"
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -274,6 +310,17 @@ export default function TripArchivesPage() {
   };
 
   return (
+    <>
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col items-center text-sm relative">
       {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -282,95 +329,150 @@ export default function TripArchivesPage() {
       </div>
 
       {/* ✅ Sticky back header (matching profile layout) */}
-      <div 
-        className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md shadow-sm"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
-        }}
-      >
-        <BackHeader title="Trip Archives" />
-      </div>
+      <BackHeader title="Trip Archives" />
 
       <MainLayout includeSideButtons={false}>
-        <div className="w-full max-w-4xl relative z-10">
+        <div className="w-full relative z-10">
           {/* Page content */}
-          <div className="mt-4">
-            {/* Trip Archives Header */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#f04e37] to-orange-600 rounded-full shadow-lg mb-4">
-                <MapPin className="w-8 h-8 text-white" strokeWidth={2.5} />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Trip Archives</h2>
-              <p className="text-gray-600 text-sm">Your journey through Intramuros</p>
+          <div className="mt-20 px-4">
+            {/* Icon Tab Navigation */}
+            <div className="flex justify-center items-center gap-8 mb-8">
+              {/* Places Tab */}
+              <button
+                onClick={() => setActiveTab("places")}
+                className="group relative transition-all duration-300"
+              >
+                <div
+                  className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
+                    activeTab === "places"
+                      ? "bg-gradient-to-br from-[#f04e37] to-orange-600 shadow-lg"
+                      : "bg-gray-200 hover:bg-gray-300 opacity-60 hover:opacity-80"
+                  }`}
+                >
+                  <MapPin
+                    className={`absolute inset-0 m-auto w-10 h-10 transition-all duration-300 ${
+                      activeTab === "places" ? "text-white" : "text-gray-600"
+                    }`}
+                    strokeWidth={2.5}
+                  />
+                </div>
+                <p
+                  className={`mt-2 text-sm font-semibold transition-all duration-300 ${
+                    activeTab === "places" ? "text-[#f04e37]" : "text-gray-500"
+                  }`}
+                >
+                  Places
+                </p>
+              </button>
+
+              {/* Reviews Tab */}
+              <button
+                onClick={() => setActiveTab("reviews")}
+                className="group relative transition-all duration-300"
+              >
+                <div
+                  className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
+                    activeTab === "reviews"
+                      ? "bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg"
+                      : "bg-gray-200 hover:bg-gray-300 opacity-60 hover:opacity-80"
+                  }`}
+                >
+                  <StarIcon
+                    className={`absolute inset-0 m-auto w-10 h-10 transition-all duration-300 ${
+                      activeTab === "reviews" ? "text-white" : "text-gray-600"
+                    }`}
+                    strokeWidth={2.5}
+                  />
+                </div>
+                <p
+                  className={`mt-2 text-sm font-semibold transition-all duration-300 ${
+                    activeTab === "reviews" ? "text-yellow-600" : "text-gray-500"
+                  }`}
+                >
+                  Reviews
+                </p>
+              </button>
             </div>
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 border-4 border-[#f04e37]/30 border-t-[#f04e37] rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-600 text-lg">Loading visited sites...</p>
-              </div>
-            ) : visitedSites.length === 0 ? (
-              <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-3xl border border-gray-200">
-                <MapPin className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-lg">No visited sites yet. Start exploring!</p>
-              </div>
-            ) : (
-              <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(showAllArchives ? visitedSites : visitedSites.slice(0, 4)).map((site, index) => (
-                  <div
-                    key={index}
-                    className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02]"
-                  >
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={
-                          site.siteId?.mediaFiles?.find(m => m.type === "image")?.url
-                            ? resolveUrl(site.siteId.mediaFiles.find(m => m.type === "image").url)
-                            : site.siteId?.mediaUrl
-                              ? resolveUrl(site.siteId.mediaUrl)
-                              : "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80"
-                        }
-                        alt={site.siteId?.siteName || "Site"}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        onError={(e) => {
-                          e.currentTarget.src = "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=400&q=80";
-                        }}
-                      />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                            {site.siteId?.siteName || "Unknown Site"}
-                          </h3>
-                        </div>
-                      </div>
-                    <div className="p-5">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                        <Calendar className="w-4 h-4 text-[#f04e37]" />
-                        <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
-                      </div>
-                      <div className="text-sm text-gray-600 line-clamp-2 space-y-1">
-                        {site.siteId?.siteDescription ? (
-                          site.siteId.siteDescription.split('\n\n').map((paragraph, index) => (
-                            <p key={index}>{paragraph.trim()}</p>
-                          ))
-                        ) : (
-                          <p>No description available</p>
-                        )}
-                      </div>
-                    </div>
+
+            {/* Page Title */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                {activeTab === "places" ? "Places you visited" : "Your Reviews"}
+              </h2>
+              <p className="text-gray-600 text-sm">
+                {activeTab === "places" 
+                  ? "Your journey through Intramuros" 
+                  : "Share your experiences with others"}
+              </p>
+            </div>
+            
+            <>
+            {/* Places Tab Content */}
+            {activeTab === "places" && (
+                <div 
+                  className="px-7"
+                  style={{
+                    animation: "fadeIn 0.3s ease-out"
+                  }}
+                >
+                  {/* Section Header with Filter */}
+                  <div className="mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
+                      <h3 className="text-xl font-bold text-gray-800">Filter by itinerary</h3>
+                      <div className="relative w-full sm:w-auto">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    <select
+                      value={selectedItineraryFilter}
+                      onChange={(e) => setSelectedItineraryFilter(e.target.value)}
+                      className="w-full sm:w-auto pl-10 pr-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-medium text-sm text-gray-700 shadow-sm hover:border-[#f04e37] focus:outline-none focus:ring-2 focus:ring-[#f04e37] transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="all">All Itineraries</option>
+                      {[...new Set(visitedSites.map(s => s.itineraryId?._id))].map(itinId => {
+                        const itin = visitedSites.find(s => s.itineraryId?._id === itinId)?.itineraryId;
+                        return (
+                          <option key={itinId} value={itinId}>
+                            {itin?.name || "Unknown Itinerary"}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-6 w-full">
+                {(showAllArchives 
+                  ? visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter)
+                  : visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).slice(0, 4)
+                ).map((site, index) => (
+                  <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <BookOpen className="w-4 h-4 text-[#f04e37]" />
+                      <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                      <Calendar className="w-3 h-3 text-gray-400" />
+                      <span>Visited: {new Date(site.visitedAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-sm text-gray-600 line-clamp-2 space-y-1">
+                      {site.siteId?.siteDescription ? (
+                        site.siteId.siteDescription.split('\n\n').map((paragraph, idx) => (
+                          <p key={idx}>{paragraph.trim()}</p>
+                        ))
+                      ) : (
+                        <p>No description available</p>
+                      )}
+                    </div>
+                  </SiteCard>
                 ))}
               </div>
               
               {/* Show More/Less Button */}
-              {visitedSites.length > 4 && (
+              {visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).length > 4 && (
                 <div className="flex justify-center mt-8">
                   <button
                     onClick={() => setShowAllArchives(!showAllArchives)}
-                    className="px-8 py-3 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                    className="px-8 py-3 bg-[#f04e37] hover:bg-[#d63b2a] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                   >
                     {showAllArchives ? (
                       <>
@@ -381,7 +483,7 @@ export default function TripArchivesPage() {
                       </>
                     ) : (
                       <>
-                        <span>Show More ({visitedSites.length - 4} more)</span>
+                        <span>Show More ({Math.max(0, visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).length - 4)} more)</span>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
@@ -390,33 +492,47 @@ export default function TripArchivesPage() {
                   </button>
                 </div>
               )}
-              </>
+              </div>
             )}
 
-            {/* Manage Reviews */}
-            <div className="text-center mt-16 mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-lg mb-4">
-                <StarIcon className="w-8 h-8 text-white" strokeWidth={2.5} />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Manage Reviews</h2>
-              <p className="text-gray-600 text-sm">Share your experiences with others</p>
-            </div>
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-16 h-16 border-4 border-[#f04e37]/30 border-t-[#f04e37] rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-600 text-lg">Loading reviews...</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-6">
-                {visitedSites.length === 0 ? (
-                  <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-3xl border border-gray-200">
-                    <StarIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">Visit sites to leave reviews!</p>
+              {/* Reviews Tab Content */}
+              {activeTab === "reviews" && (
+                <div 
+                  className="px-4"
+                  style={{
+                    animation: "fadeIn 0.3s ease-out"
+                  }}
+                >
+                  {/* Section Header with Filter */}
+                  <div className="mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
+                      <h3 className="text-xl font-bold text-gray-800">Filter by itinerary</h3>
+                      <div className="relative w-full sm:w-auto">
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        <select
+                          value={selectedReviewItineraryFilter}
+                          onChange={(e) => setSelectedReviewItineraryFilter(e.target.value)}
+                          className="w-full sm:w-auto pl-10 pr-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-medium text-sm text-gray-700 shadow-sm hover:border-[#f04e37] focus:outline-none focus:ring-2 focus:ring-[#f04e37] transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="all">All Itineraries</option>
+                          {[...new Set(visitedSites.map(s => s.itineraryId?._id))].map(itinId => {
+                            const itin = visitedSites.find(s => s.itineraryId?._id === itinId)?.itineraryId;
+                            return (
+                              <option key={itinId} value={itinId}>
+                                {itin?.name || "Unknown Itinerary"}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    {/* Show visited sites for review */}
-                    {(showAllReviews ? visitedSites : visitedSites.slice(0, 4)).map((site, index) => {
+                  
+                  <div className="grid grid-cols-1 gap-6 w-full">
+                    {(showAllReviews 
+                      ? visitedSites.filter(s => selectedReviewItineraryFilter === "all" || s.itineraryId?._id === selectedReviewItineraryFilter)
+                      : visitedSites.filter(s => selectedReviewItineraryFilter === "all" || s.itineraryId?._id === selectedReviewItineraryFilter).slice(0, 4)
+                    ).map((site, index) => {
                       const existingReview = reviews.find(
                         (r) =>
                           r.siteId?._id === site.siteId?._id &&
@@ -424,90 +540,69 @@ export default function TripArchivesPage() {
                       );
 
                       return (
-                        <div
-                          key={index}
-                          className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 flex gap-5 items-start w-full border border-gray-100 group"
-                        >
-                          <div className="relative flex-shrink-0">
-                            <div className="absolute inset-0 bg-[#f04e37]/10 rounded-2xl blur-md"></div>
-                            <img
-                              src={
-                                site.siteId?.mediaFiles?.find(m => m.type === "image")?.url
-                                  ? resolveUrl(site.siteId.mediaFiles.find(m => m.type === "image").url)
-                                  : site.siteId?.mediaUrl
-                                    ? resolveUrl(site.siteId.mediaUrl)
-                                    : "https://images.unsplash.com/photo-1549640376-1957636d1ab0?w=400&q=80"
-                              }
-                              alt={site.siteId?.siteName || "Site"}
-                              className="w-24 h-24 rounded-2xl object-cover border-2 border-white shadow-md relative"
-                              onError={(e) => {
-                                e.currentTarget.src = "https://images.unsplash.com/photo-1549640376-1957636d1ab0?w=400&q=80";
-                              }}
-                            />
+                        <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                            <BookOpen className="w-4 h-4 text-[#f04e37]" />
+                            <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
                           </div>
-                          <div className="flex-1 text-left">
-                            <h3 className="font-bold text-lg text-gray-800 group-hover:text-[#f04e37] transition-colors">
-                              {site.siteId?.siteName || "Unknown Site"}
-                            </h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>Visited: {new Date(site.visitedAt).toLocaleDateString()}</span>
-                            </div>
-                            {existingReview ? (
-                              <>
-                                <div className="flex items-center gap-1 my-1">
-                                  {renderStars(existingReview.rating)}
-                                </div>
-                                <p className="text-sm text-gray-600 line-clamp-3 mt-2">
-                                  {existingReview.reviewText || "No review text"}
-                                </p>
-                                {/* Display review photos */}
-                                {existingReview.photos && existingReview.photos.length > 0 && (
-                                  <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-                                    {existingReview.photos.map((photo, idx) => (
-                                      <img
-                                        key={idx}
-                                        src={resolveUrl(photo)}
-                                        alt={`Review photo ${idx + 1}`}
-                                        className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm hover:scale-110 transition-transform"
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                                <div className="flex gap-3 mt-4">
-                                  <button
-                                    onClick={() => handleOpenReviewModal(site)}
-                                    className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
-                                  >
-                                    Edit Review
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteReview(existingReview._id)}
-                                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
-                                  >
-                                    Delete Review
-                                  </button>
-                                </div>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => handleOpenReviewModal(site)}
-                                className="mt-3 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
-                              >
-                                Write Review
-                              </button>
-                            )}
+                          <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span>Visited: {new Date(site.visitedAt).toLocaleDateString()}</span>
                           </div>
-                        </div>
+                          {existingReview ? (
+                            <>
+                              <div className="flex items-center gap-1 mb-2">
+                                {renderStars(existingReview.rating)}
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-3 mb-3">
+                                {existingReview.reviewText || "No review text"}
+                              </p>
+                              {existingReview.photos && existingReview.photos.length > 0 && (
+                                <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                                  {existingReview.photos.map((photo, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={resolveUrl(photo)}
+                                      alt={`Review photo ${idx + 1}`}
+                                      className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm hover:scale-110 transition-transform"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleOpenReviewModal(site)}
+                                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                >
+                                  Edit Review
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteReview(existingReview._id)}
+                                  className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                >
+                                  Delete Review
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenReviewModal(site)}
+                              className="w-full bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                            >
+                              Write Review
+                            </button>
+                          )}
+                        </SiteCard>
                       );
                     })}
+                    </div>
                     
                     {/* Show More/Less Button for Reviews */}
-                    {visitedSites.length > 4 && (
-                      <div className="flex justify-center mt-8 w-full">
+                    {visitedSites.filter(s => selectedReviewItineraryFilter === "all" || s.itineraryId?._id === selectedReviewItineraryFilter).length > 4 && (
+                      <div className="flex justify-center mt-8">
                         <button
                           onClick={() => setShowAllReviews(!showAllReviews)}
-                          className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                          className="px-8 py-3 bg-[#f04e37] hover:bg-[#d63b2a] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                         >
                           {showAllReviews ? (
                             <>
@@ -518,7 +613,7 @@ export default function TripArchivesPage() {
                             </>
                           ) : (
                             <>
-                              <span>Show More ({visitedSites.length - 4} more)</span>
+                              <span>Show More ({Math.max(0, visitedSites.filter(s => selectedReviewItineraryFilter === "all" || s.itineraryId?._id === selectedReviewItineraryFilter).length - 4)} more)</span>
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                               </svg>
@@ -527,10 +622,9 @@ export default function TripArchivesPage() {
                         </button>
                       </div>
                     )}
-                  </>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </>
           </div>
         </div>
       </MainLayout>
@@ -642,9 +736,10 @@ export default function TripArchivesPage() {
 
       <div className="mt-auto py-8 text-center relative z-10">
         <p className="text-xs text-gray-400">
-          © 2025 Intramuros Administration. All rights reserved.
+          2025 Intramuros Administration. All rights reserved.
         </p>
       </div>
     </div>
+    </>
   );
 }

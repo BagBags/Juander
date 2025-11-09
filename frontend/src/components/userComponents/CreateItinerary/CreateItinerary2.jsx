@@ -192,17 +192,7 @@ export default function CreateItineraryPage() {
       />
       
       {/* === STICKY BACKHEADER === */}
-      <div 
-        className="sticky top-0 z-40 bg-[#f04e37]"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
-        }}
-      >
-        <BackHeader title="Create Itinerary" className="text-white" />
-      </div>
+      <BackHeader title="Create Itinerary" />
 
       <MainLayout includeSideButtons={false}>
         <div className="flex flex-1 px-2 scroll-smooth">

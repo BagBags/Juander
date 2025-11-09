@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 export default function Account() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [user, setUser] = useState({
     firstName: "",
@@ -30,6 +32,11 @@ export default function Account() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  
+  // Deactivation states
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [deactivating, setDeactivating] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -257,6 +264,37 @@ export default function Account() {
     }
   };
 
+  const handleDeactivateAccount = async () => {
+    if (confirmationText !== "DELETE") {
+      alert("Please type DELETE to confirm account deactivation");
+      return;
+    }
+
+    setDeactivating(true);
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/deactivate-account`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { confirmationText },
+        }
+      );
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      
+      // Redirect to home
+      alert("Your account has been successfully deactivated. All your itineraries and reviews have been deleted.");
+      navigate("/");
+    } catch (err) {
+      console.error("Deactivation error:", err);
+      alert(err.response?.data?.message || "Failed to deactivate account");
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ x: "100%", opacity: 0 }}
@@ -281,7 +319,7 @@ export default function Account() {
                 name="firstName"
                 value={user.firstName}
                 onChange={handleChange}
-                placeholder={t("firstNamePlaceholder")}
+                placeholder="Enter your first name"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.firstName
                     ? "border-red-400 focus:ring-red-500"
@@ -303,7 +341,7 @@ export default function Account() {
                 name="lastName"
                 value={user.lastName}
                 onChange={handleChange}
-                placeholder={t("lastNamePlaceholder")}
+                placeholder="Enter your last name"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.lastName
                     ? "border-red-400 focus:ring-red-500"
@@ -326,7 +364,7 @@ export default function Account() {
                 type="email"
                 value={user.email}
                 onChange={handleChange}
-                placeholder={t("emailPlaceholder")}
+                placeholder="your.email@example.com"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.email
                     ? "border-red-400 focus:ring-red-500"
@@ -440,7 +478,7 @@ export default function Account() {
                         type={showPassword ? "text" : "password"}
                         value={user.password}
                         onChange={handleChange}
-                        placeholder={t("newPasswordPlaceholder")}
+                        placeholder="Enter new password"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
                           errors.password
                             ? "border-red-400 focus:ring-red-500"
@@ -484,7 +522,7 @@ export default function Account() {
                         type={showConfirm ? "text" : "password"}
                         value={user.confirmPassword}
                         onChange={handleChange}
-                        placeholder={t("confirmNewPasswordPlaceholder")}
+                        placeholder="Re-enter new password"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
                           errors.confirmPassword
                             ? "border-red-400 focus:ring-red-500"
@@ -533,6 +571,98 @@ export default function Account() {
             </button>
           </form>
         </div>
+
+        {/* Deactivate Account Section */}
+        <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-800 mb-2 text-base">
+                Deactivate Account
+              </h3>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                Permanently delete your account and all associated data. This action cannot be undone.
+                All your itineraries and reviews will be permanently deleted.
+              </p>
+              <button
+                onClick={() => setShowDeactivateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
+                <Trash2 size={18} />
+                Deactivate Account
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Deactivation Confirmation Modal */}
+        {showDeactivateModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+                <h2 className="text-xl font-bold text-gray-800">
+                  Confirm Account Deactivation
+                </h2>
+              </div>
+
+              <div className="mb-6 space-y-3">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  This action will permanently delete:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 ml-2">
+                  <li>Your account and profile</li>
+                  <li>All your itineraries</li>
+                  <li>All your reviews</li>
+                  <li>All associated data</li>
+                </ul>
+                <p className="text-sm font-semibold text-red-600 mt-4">
+                  This action cannot be undone!
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type <span className="font-bold text-red-600">DELETE</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={confirmationText}
+                  onChange={(e) => setConfirmationText(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  disabled={deactivating}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setConfirmationText("");
+                  }}
+                  disabled={deactivating}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeactivateAccount}
+                  disabled={confirmationText !== "DELETE" || deactivating}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deactivating ? "Deactivating..." : "Deactivate"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
           ©2025 Intramuros Administration

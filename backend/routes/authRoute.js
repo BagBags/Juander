@@ -349,4 +349,7 @@ router.post(
 // Complete Profile Route
 router.post("/complete-profile", verifyToken, authController.completeProfile);
 
+// Deactivate Account Route
+router.delete("/deactivate-account", verifyToken, authController.deactivateAccount);
+
 module.exports = router;

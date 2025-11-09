@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars, FaCamera } from "react-icons/fa";
 import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
-import { IoChevronForwardSharp } from "react-icons/io5";
+import { IoChevronForwardSharp, IoSettingsSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -12,11 +12,19 @@ import { UserContext } from "../../../contexts/UserContext";
 export default function AdminProfile() {
   const { currentAdmin, setCurrentAdmin } = useContext(UserContext);
   const [previewImage, setPreviewImage] = useState(null);
+  const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
 
+  // Load admin from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem("admin");
-    if (stored) setCurrentAdmin(JSON.parse(stored));
+    const loadAdmin = () => {
+      const stored = localStorage.getItem("admin");
+      if (stored) setCurrentAdmin(JSON.parse(stored));
+    };
+
+    loadAdmin();
+    window.addEventListener("storage", loadAdmin);
+    return () => window.removeEventListener("storage", loadAdmin);
   }, []);
 
   const options = [
@@ -33,6 +41,7 @@ export default function AdminProfile() {
       to: "/AdminProfile/Country",
     },
     { icon: <MdLanguage />, label: "Language", to: "/AdminProfile/Language" },
+    { icon: <IoSettingsSharp />, label: "Settings", to: "/AdminProfile/Settings" },
   ];
 
   const handleFileChange = async (e) => {

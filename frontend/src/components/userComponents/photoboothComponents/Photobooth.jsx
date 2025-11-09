@@ -283,30 +283,8 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
-        {/* ✅ Back button + refresh - Blurred transparent background */}
-        <div 
-          className="absolute top-0 left-0 w-full z-[200] bg-black/30 backdrop-blur-md"
-          style={{
-            paddingTop: "max(env(safe-area-inset-top), 16px)",
-            paddingBottom: "12px",
-            paddingLeft: "16px",
-            paddingRight: "16px"
-          }}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 text-white">
-              <BackHeader className="flex-1" />
-            </div>
-            <button
-              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-2xl hover:bg-white/30 transition-all active:scale-90"
-              onClick={() => window.location.reload()}
-              title="Refresh"
-              aria-label="Refresh camera"
-            >
-              ↻
-            </button>
-          </div>
-        </div>
+        {/* ✅ Back button */}
+        <BackHeader title="Photo Booth" />
 
         <div className="camera-view" style={{ display: showPreview ? 'none' : 'block' }}>
           <Webcam

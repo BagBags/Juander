@@ -77,12 +77,20 @@ export default function Homepage() {
         // Cache user data
         localStorage.setItem('cached_user', JSON.stringify(res.data));
       } catch (err) {
-        console.error("Error fetching user:", err);
+        // Only log non-401 errors (401 is expected when token expires)
+        if (err.response?.status !== 401) {
+          console.error("Error fetching user:", err);
+        }
+        
         // Try cache on error
         const cachedUser = localStorage.getItem('cached_user');
         if (cachedUser) {
           setCurrentUser(JSON.parse(cachedUser));
           setFromCache(true);
+        } else if (err.response?.status === 401) {
+          // Token expired or invalid, clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
       }
     };

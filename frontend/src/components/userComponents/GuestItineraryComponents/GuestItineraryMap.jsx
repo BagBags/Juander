@@ -628,17 +628,7 @@ export default function GuestItineraryMap() {
         }}
       />
       {/* Back Header */}
-      <div 
-        className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-sm"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
-        }}
-      >
-        <BackHeader title={<span className="text-black">Guest Itinerary Map</span>} />
-      </div>
+      <BackHeader title="Guest Itinerary Map" />
 
       {!showGpsModal && (
         <Map

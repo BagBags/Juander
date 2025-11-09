@@ -50,20 +50,10 @@ export default function EmergencyPage() {
       {/* Global TTS Button */}
 
       {/* Sticky Back Header */}
-      <div 
-        className="sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
-        }}
-      >
-        <BackHeader title={<span className="text-white">Emergency Hotlines</span>} className="text-white" />
-      </div>
+      <BackHeader title="Emergency Hotlines" />
 
       <MainLayout includeSideButtons={false}>
-        <div className="w-full max-w-4xl mx-auto px-4 py-8">
+        <div className="w-full max-w-4xl mx-auto px-4 pt-20 pb-8">
           {/* Hero Section */}
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-2xl mb-4 animate-pulse">

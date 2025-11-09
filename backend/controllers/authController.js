@@ -778,3 +778,59 @@ exports.completeProfile = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// Deactivate Account
+exports.deactivateAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { confirmationText } = req.body;
+
+    // Verify confirmation text
+    if (confirmationText !== "DELETE") {
+      return res.status(400).json({ 
+        message: "Invalid confirmation. Please type DELETE to confirm." 
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Import models
+    const Itinerary = require("../models/itineraryModel");
+    const Review = require("../models/reviewModel");
+
+    // Delete user's itineraries
+    const deletedItineraries = await Itinerary.deleteMany({ userId });
+    
+    // Delete user's reviews
+    const deletedReviews = await Review.deleteMany({ userId });
+
+    // Create log entry for account deactivation
+    if (user.role === "admin") {
+      await Log.create({
+        userId: userId,
+        userName: `${user.firstName} ${user.lastName}`,
+        userEmail: user.email,
+        action: "Account Deactivated",
+        details: `Admin account deactivated. Itineraries deleted: ${deletedItineraries.deletedCount}, Reviews deleted: ${deletedReviews.deletedCount}`,
+        timestamp: new Date(),
+      });
+    }
+
+    // Delete the user account
+    await User.findByIdAndDelete(userId);
+
+    res.json({
+      message: "Account successfully deactivated",
+      deletedData: {
+        itineraries: deletedItineraries.deletedCount,
+        reviews: deletedReviews.deletedCount,
+      },
+    });
+  } catch (err) {
+    console.error("Error deactivating account:", err);
+    res.status(500).json({ message: "Server error during account deactivation" });
+  }
+};
