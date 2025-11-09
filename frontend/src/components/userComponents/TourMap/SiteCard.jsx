@@ -210,17 +210,33 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         </p>
                         {pin.feeAmount ? (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
-                            <p className="text-sm font-semibold text-gray-800">
-                              Fort Santiago Entrance Fee: <span className="text-[#f04e37]">₱{pin.feeAmount}</span>
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              Purchase tickets at the Fort Santiago entrance.
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Fort Santiago Entrance Fee:
+                              </p>
+                              <span className="text-[#f04e37] font-bold text-lg">₱{pin.feeAmount}</span>
+                            </div>
+                            {pin.feeAmountDiscounted && (
+                              <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
+                                <p className="text-xs font-medium text-gray-700">
+                                  Student/PWD/Senior Citizen:
+                                </p>
+                                <span className="text-green-600 font-bold text-base">₱{pin.feeAmountDiscounted}</span>
+                              </div>
+                            )}
+                            <div className="bg-white/60 p-2 rounded-md mt-2">
+                              <p className="text-xs text-gray-700 font-medium">
+                                Payment will be upon entrance at the gate. This will give you access to all sites within Fort Santiago.
+                              </p>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700 mb-2">
                               Please check the current entrance fee at the Fort Santiago entrance.
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Payment at the gate will give you access to all sites within Fort Santiago.
                             </p>
                           </div>
                         )}
@@ -232,9 +248,20 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         </p>
                         {pin.feeAmount ? (
                           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
-                            <p className="text-sm font-semibold text-gray-800">
-                              Entrance Fee: <span className="text-blue-700">₱{pin.feeAmount}</span>
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Entrance Fee:
+                              </p>
+                              <span className="text-blue-700 font-bold text-lg">₱{pin.feeAmount}</span>
+                            </div>
+                            {pin.feeAmountDiscounted && (
+                              <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
+                                <p className="text-xs font-medium text-gray-700">
+                                  Student/PWD/Senior Citizen:
+                                </p>
+                                <span className="text-green-600 font-bold text-base">₱{pin.feeAmountDiscounted}</span>
+                              </div>
+                            )}
                             <p className="text-xs text-gray-600 mt-1">
                               Please have the fee ready when visiting this site.
                             </p>

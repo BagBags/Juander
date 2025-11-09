@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { ChevronLeft, ChevronRight, Info, MapPin, DollarSign } from "lucide-react";
 
-function FortSantiagoModal({ isOpen, onClose, feeAmount }) {
+function FortSantiagoModal({ isOpen, onClose, feeAmount, feeAmountDiscounted }) {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -27,11 +27,20 @@ function FortSantiagoModal({ isOpen, onClose, feeAmount }) {
                 Please be advised that an entrance fee is required to access Fort Santiago.
               </p>
               {feeAmount && (
-                <p className="text-sm text-gray-800 mt-2 font-semibold">
-                  Entrance Fee: ₱{feeAmount}
-                </p>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">Regular Price:</span>
+                    <span className="text-[#f04e37] font-bold text-lg">₱{feeAmount}</span>
+                  </div>
+                  {feeAmountDiscounted && (
+                    <div className="flex items-center justify-between bg-white/70 p-2 rounded-md">
+                      <span className="text-xs text-gray-700">Student/PWD/Senior:</span>
+                      <span className="text-green-600 font-bold text-base">₱{feeAmountDiscounted}</span>
+                    </div>
+                  )}
+                </div>
               )}
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-2">
                 {feeAmount
                   ? "You will need to purchase tickets at the Fort Santiago entrance."
                   : "Please check the current entrance fee at the Fort Santiago entrance."}
@@ -78,12 +87,20 @@ function CustomFeeModal({ isOpen, onClose, sites }) {
                   <p className="text-gray-800 text-sm font-semibold">
                     {site.siteName}
                   </p>
-                  {site.feeAmount && (
-                    <p className="text-sm text-blue-700 mt-1">
-                      Entrance Fee: ₱{site.feeAmount}
-                    </p>
-                  )}
-                  {!site.feeAmount && (
+                  {site.feeAmount ? (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-700">Regular:</span>
+                        <span className="text-blue-700 font-bold text-sm">₱{site.feeAmount}</span>
+                      </div>
+                      {site.feeAmountDiscounted && (
+                        <div className="flex items-center justify-between bg-white/70 p-1.5 rounded-md">
+                          <span className="text-xs text-gray-700">Student/PWD/Senior:</span>
+                          <span className="text-green-600 font-bold text-xs">₱{site.feeAmountDiscounted}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
                     <p className="text-xs text-gray-600 mt-1">
                       Entrance fee required - Please check on-site for current rates.
                     </p>
@@ -120,6 +137,7 @@ export default function TouristItineraryMain() {
   const [inactiveSites, setInactiveSites] = useState([]);
   const [feeSites, setFeeSites] = useState([]);
   const [fortFeeAmount, setFortFeeAmount] = useState(null);
+  const [fortFeeAmountDiscounted, setFortFeeAmountDiscounted] = useState(null);
 
   // Carousel states for admin itineraries
   const [adminIndex, setAdminIndex] = useState(0);
@@ -283,6 +301,7 @@ export default function TouristItineraryMain() {
         isOpen={showFortModal} 
         onClose={proceedToTour} 
         feeAmount={fortFeeAmount}
+        feeAmountDiscounted={fortFeeAmountDiscounted}
       />
       <CustomFeeModal 
         isOpen={showCustomFeeModal} 

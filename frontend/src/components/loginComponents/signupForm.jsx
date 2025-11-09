@@ -199,10 +199,13 @@ export default function SignupForm({ toggleForm }) {
         <form onSubmit={handleFormSubmit} className="space-y-3">
           <div className="flex gap-2">
             <div className="w-1/2">
+              <label htmlFor="signup-firstname" className="sr-only">First Name</label>
               <input
+                id="signup-firstname"
                 type="text"
                 name="firstName"
                 placeholder="First Name"
+                aria-label="First Name"
                 value={form.firstName}
                 onChange={handleChange}
                 className={`w-full p-3 rounded-lg border ${
@@ -215,10 +218,13 @@ export default function SignupForm({ toggleForm }) {
             </div>
 
             <div className="w-1/2">
+              <label htmlFor="signup-lastname" className="sr-only">Last Name</label>
               <input
+                id="signup-lastname"
                 type="text"
                 name="lastName"
                 placeholder="Last Name"
+                aria-label="Last Name"
                 value={form.lastName}
                 onChange={handleChange}
                 className={`w-full p-3 rounded-lg border ${
@@ -232,10 +238,13 @@ export default function SignupForm({ toggleForm }) {
           </div>
 
           <div>
+            <label htmlFor="signup-email" className="sr-only">Email Address</label>
             <input
+              id="signup-email"
               type="email"
               name="email"
               placeholder="Email"
+              aria-label="Email Address"
               value={form.email}
               onChange={handleChange}
               className={`w-full p-3 rounded-lg border ${
@@ -249,10 +258,13 @@ export default function SignupForm({ toggleForm }) {
 
           {/* Password with toggle */}
           <div className="relative">
+            <label htmlFor="signup-password" className="sr-only">Password</label>
             <input
+              id="signup-password"
               type={showPassword ? "text" : "password"}
               name="password"
               placeholder="Password"
+              aria-label="Password"
               value={form.password}
               onChange={handleChange}
               className={`w-full p-3 rounded-lg border ${
@@ -262,6 +274,7 @@ export default function SignupForm({ toggleForm }) {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -273,10 +286,13 @@ export default function SignupForm({ toggleForm }) {
 
           {/* Confirm Password with toggle */}
           <div className="relative">
+            <label htmlFor="signup-confirm-password" className="sr-only">Confirm Password</label>
             <input
+              id="signup-confirm-password"
               type={showConfirmPassword ? "text" : "password"}
               name="confirmPassword"
               placeholder="Retype Password"
+              aria-label="Confirm Password"
               value={form.confirmPassword}
               onChange={handleChange}
               className={`w-full p-3 rounded-lg border ${
@@ -286,6 +302,7 @@ export default function SignupForm({ toggleForm }) {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -317,6 +334,7 @@ export default function SignupForm({ toggleForm }) {
                 key={i}
                 type="text"
                 maxLength="1"
+                aria-label={`OTP digit ${i + 1} of ${otpLength}`}
                 className="w-10 h-10 border rounded text-center text-lg"
                 value={otp[i] || ""}
                 onChange={(e) => handleOtpChange(e.target.value, i)}
@@ -353,13 +371,18 @@ export default function SignupForm({ toggleForm }) {
       </div>
 
       {/* Google Login */}
-      <div className="w-full min-h-[44px]">
-        <GoogleLogin
-          onSuccess={handleGoogleSignup}
-          onError={() => setErrors({ general: "Google sign-up error" })}
-          width="100%"
-          text="signup_with"
-        />
+      <div className="w-full h-[44px] overflow-hidden">
+        <div className="w-full h-[44px]" style={{ minWidth: '100%', minHeight: '44px' }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSignup}
+            onError={() => setErrors({ general: "Google sign-up error" })}
+            width="100%"
+            text="signup_with"
+            theme="outline"
+            size="large"
+            shape="rectangular"
+          />
+        </div>
       </div>
 
       <p className="text-xs text-center mt-4 text-gray-600">

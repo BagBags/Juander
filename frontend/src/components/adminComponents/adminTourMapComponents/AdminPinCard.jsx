@@ -713,26 +713,55 @@ const AdminPinCard = ({
           
           {/* Fee Amount Input - Show only when Fort Santiago or Custom Fee is selected */}
           {(pin.feeType === "fort_santiago" || pin.feeType === "custom_fee") && (
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {pin.feeType === "fort_santiago" ? "Fort Santiago Entrance Fee (₱)" : "Custom Entrance Fee (₱)"}
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={pin.feeAmount || ""}
-                onChange={(e) => {
-                  const value = e.target.value === "" ? null : Number(e.target.value);
-                  updatePinField(selectedPinIndex, "feeAmount", value);
-                }}
-                className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="Enter fee amount (optional)"
-              />
-              <p className="text-xs text-gray-500 mt-1">
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Regular Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={pin.feeAmount || ""}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? null : Number(e.target.value);
+                      updatePinField(selectedPinIndex, "feeAmount", value);
+                    }}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter regular price"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Discounted Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={pin.feeAmountDiscounted || ""}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? null : Number(e.target.value);
+                      updatePinField(selectedPinIndex, "feeAmountDiscounted", value);
+                    }}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700 font-medium mb-1">
+                  Discounted Price Information
+                </p>
+                <p className="text-xs text-blue-600">
+                  Discounted price applies to Students, PWD (Persons with Disabilities), and Senior Citizens. Leave blank if no discount is available.
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">
                 {pin.feeType === "fort_santiago" 
-                  ? "Leave empty to use the default Fort Santiago entrance fee message" 
-                  : "Specify the entrance fee amount for this site"}
+                  ? "Leave prices empty to use the default Fort Santiago entrance fee message" 
+                  : "Specify the entrance fee amounts for this site"}
               </p>
             </div>
           )}

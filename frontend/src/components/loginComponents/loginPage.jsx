@@ -18,6 +18,9 @@ export default function LoginPage() {
     >
       {/* Main Two-Column Container */}
       <div className="w-full max-w-5xl h-full bg-white rounded-2xl shadow-xl grid grid-cols-1 md:grid-cols-2 border border-gray-100 overflow-hidden">
+        {/* Hidden h1 for accessibility */}
+        <h1 className="sr-only">Juander - Login or Sign Up</h1>
+        
         {/* Left Side (fixed area, does not move) */}
         <div className="hidden md:flex items-center justify-center h-full p-6">
           <img

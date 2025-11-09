@@ -235,19 +235,27 @@ export default function LoginForm({ toggleForm }) {
       {!showForgot ? (
         <>
           {/* Email */}
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <div>
+            <label htmlFor="login-email" className="sr-only">Email Address</label>
+            <input
+              id="login-email"
+              type="email"
+              placeholder="Email"
+              aria-label="Email Address"
+              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
           {/* Password with reveal toggle */}
           <div className="relative w-full">
+            <label htmlFor="login-password" className="sr-only">Password</label>
             <input
+              id="login-password"
               type={showPassword ? "text" : "password"}
               placeholder="Password"
+              aria-label="Password"
               className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -255,6 +263,7 @@ export default function LoginForm({ toggleForm }) {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -290,16 +299,18 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           {/* Google Login */}
-          <div className="w-full min-h-[44px]">
-            <GoogleLogin
-              onSuccess={handleGoogleLoginSuccess}
-              onError={() => setError("Google login failed.")}
-              useOneTap
-              theme="outline" // or "filled_blue"
-              size="large" // "large" | "medium" | "small"
-              shape="rectangular" // or "pill"
-              width="100%"
-            />
+          <div className="w-full h-[44px] overflow-hidden">
+            <div className="w-full h-[44px]" style={{ minWidth: '100%', minHeight: '44px' }}>
+              <GoogleLogin
+                onSuccess={handleGoogleLoginSuccess}
+                onError={() => setError("Google login failed.")}
+                useOneTap
+                theme="outline"
+                size="large"
+                shape="rectangular"
+                width="100%"
+              />
+            </div>
           </div>
 
           {/* Guest Login */}
@@ -340,9 +351,12 @@ export default function LoginForm({ toggleForm }) {
           {/* Step 1: Request OTP */}
           {step === 1 && (
             <>
+              <label htmlFor="forgot-email" className="sr-only">Email Address for Password Reset</label>
               <input
+                id="forgot-email"
                 type="email"
                 placeholder="Enter your email"
+                aria-label="Email Address for Password Reset"
                 className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -368,6 +382,7 @@ export default function LoginForm({ toggleForm }) {
                     key={i}
                     type="text"
                     maxLength="1"
+                    aria-label={`OTP digit ${i + 1} of ${otpLength}`}
                     className="w-10 h-10 border rounded text-center text-lg"
                     value={otp[i] || ""}
                     onChange={(e) => handleOtpChange(e.target.value, i)}
@@ -382,9 +397,12 @@ export default function LoginForm({ toggleForm }) {
 
               {/* New password */}
               <div className="relative w-full mt-4">
+                <label htmlFor="new-password" className="sr-only">New Password</label>
                 <input
+                  id="new-password"
                   type={showNewPassword ? "text" : "password"}
                   placeholder="New Password"
+                  aria-label="New Password"
                   className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -392,6 +410,7 @@ export default function LoginForm({ toggleForm }) {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
+                  aria-label={showNewPassword ? "Hide new password" : "Show new password"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
                   {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}

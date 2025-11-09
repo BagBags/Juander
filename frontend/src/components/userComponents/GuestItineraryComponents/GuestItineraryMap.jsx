@@ -196,6 +196,7 @@ export default function GuestItineraryMap() {
           category: s.category || null,
           feeType: s.feeType || "none",
           feeAmount: s.feeAmount || null,
+          feeAmountDiscounted: s.feeAmountDiscounted || null,
         }));
 
         setPins(normalized);
