@@ -99,8 +99,9 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    // Import clearAuth at the top of the file
+    const { clearAuth } = require("../../../utils/authStorage");
+    clearAuth();
     navigate("/");
   };
 

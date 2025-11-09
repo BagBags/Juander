@@ -3,7 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import i18n from "/src/i18n.js"; // 👈 import i18n
+import i18n from "/src/i18n.js";
+import { saveAuth, clearAuth } from "../../utils/authStorage";
 
 export default function LoginForm({ toggleForm }) {
   const navigate = useNavigate();
@@ -97,13 +98,14 @@ export default function LoginForm({ toggleForm }) {
 
       const { user, token } = res.data;
       localStorage.removeItem("guest");
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("token", token);
+      
+      // Use secure auth storage
+      saveAuth(token, user);
 
       // 👇 Save & apply language
       if (user.language) {
         i18n.changeLanguage(user.language);
-        localStorage.setItem("language", user.language); // 👈 keep consistent
+        localStorage.setItem("language", user.language);
       }
 
       // Check if profile is completed
