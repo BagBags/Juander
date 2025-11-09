@@ -685,17 +685,8 @@ const AdminPinCard = ({
               </span>
             </label>
           </div>
-          <input
-            type="text"
-            value={pin.arLink || ""}
-            onChange={(e) =>
-              updatePinField(selectedPinIndex, "arLink", e.target.value)
-            }
-            className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            placeholder="https://example.com/ar-link"
-          />
           <p className="text-xs text-gray-500 mt-2">
-            This link will only be visible to tourists if enabled.
+            Enable AR experience for this site. Tourists will be able to scan a QR code to access AR features.
           </p>
         </div>
         

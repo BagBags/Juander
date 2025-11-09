@@ -5,6 +5,7 @@ import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+import QRScanner from "../QRScannerSimple";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
@@ -23,6 +24,7 @@ export default function SiteModalFullScreen({
   const { t } = useTranslation();
   const { itineraryId } = useParams();
   const [showAR, setShowAR] = useState(false);
+  const [scannedArUrl, setScannedArUrl] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [userLanguage, setUserLanguage] = useState('english');
@@ -277,21 +279,38 @@ export default function SiteModalFullScreen({
       <div className="px-5 py-6 pb-20 max-w-3xl mx-auto">
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
-          <div className="flex flex-col h-[70vh]">
-            
-<iframe
-  src={selectedPin.arLink}
-  title="AR Mode"
-  className="flex-1 w-full rounded-lg border border-gray-200"
-  allow="camera; microphone; gyroscope; accelerometer; magnetometer; xr-spatial-tracking; fullscreen;"
-  allowFullScreen
-/>
-            <button
-              onClick={() => setShowAR(false)}
-              className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
-            >
-              Exit AR Mode
-            </button>
+          <div className="h-[70vh] rounded-xl overflow-hidden">
+            {scannedArUrl ? (
+              <div className="flex flex-col h-full">
+                <iframe
+                  src={scannedArUrl}
+                  title="AR Experience"
+                  className="flex-1 w-full"
+                  allow="camera; microphone; gyroscope; accelerometer; magnetometer; xr-spatial-tracking; fullscreen;"
+                  allowFullScreen
+                />
+                <button
+                  onClick={() => {
+                    setShowAR(false);
+                    setScannedArUrl(null);
+                  }}
+                  className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
+                >
+                  Exit AR Experience
+                </button>
+              </div>
+            ) : (
+              <QRScanner
+                onScanSuccess={(url) => {
+                  setScannedArUrl(url);
+                  ttsService.speak(t('tts_qrScanned') || "QR Code scanned successfully");
+                }}
+                onClose={() => {
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                }}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -572,7 +591,7 @@ export default function SiteModalFullScreen({
             </div>
 
             {/* AR Mode Button - Modern Design */}
-            {selectedPin.arEnabled && selectedPin.arLink && (
+            {selectedPin.arEnabled && (
               <button
                 onClick={() => {
                   setShowAR(true);
@@ -582,10 +601,10 @@ export default function SiteModalFullScreen({
                 style={{ background: 'linear-gradient(to right, #f04e37, #d9442f)' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d9442f, #c23d2a)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f04e37, #d9442f)'}
-                aria-label="View in AR Mode"
+                aria-label="Scan QR Code for AR"
               >
                 <Glasses className="w-5 h-5" />
-                <span>Experience in AR Mode</span>
+                <span>Scan QR Code for AR</span>
               </button>
             )}
 

@@ -1,14 +1,9 @@
 import React from "react";
-import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 
 /**
- * Standardized BackHeader component - EXACTLY matches Profile page design
- * - Uses React Portal to render at document root, isolated from parent CSS
- * - Single angle quotation mark ‹ with gap-2 spacing
- * - Button wrapper with hover effect
- * - White background with bottom border
- * - Identical to Profile page BackHeader
+ * Standardized BackHeader component - matches Profile page design
+ * Should be wrapped in a container with safe-area padding
  */
 export default function BackHeader({ title }) {
   const navigate = useNavigate();
@@ -18,19 +13,8 @@ export default function BackHeader({ title }) {
   const plainTitle = typeof title === 'string' ? title : 
                      (title?.props?.children || title || "Back");
 
-  const headerContent = (
-    <div 
-      className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
-      style={{
-        height: '56px',
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        pointerEvents: 'auto'
-      }}
-    >
+  return (
+    <div className="flex items-center gap-2">
       <button
         className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
         onClick={() => {
@@ -60,7 +44,4 @@ export default function BackHeader({ title }) {
       </h1>
     </div>
   );
-
-  // Render using Portal to document body to avoid parent CSS interference
-  return createPortal(headerContent, document.body);
 }
