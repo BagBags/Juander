@@ -1,44 +1,62 @@
-import React, { useState, useEffect, useRef, memo } from "react";
+import React, { useEffect, useRef, memo } from "react";
 import { Marker } from "react-map-gl";
-import { Compass } from "lucide-react";
 
 /**
  * Modern User Location Marker - Google Maps Style
- * Optimized for fast rotation performance
- * Features:
- * - Blue dot with white border
- * - Pulse animation
- * - Blue light beam as direction indicator (rotates based on device compass)
- * - Accuracy circle
- * - iOS permission button for compass access
+ * PERFORMANCE OPTIMIZED:
+ * - Zero React re-renders for rotation
+ * - Direct DOM manipulation via CSS transforms
+ * - GPU-accelerated with will-change and transform3d
+ * - Smooth 60fps rotation with requestAnimationFrame
+ * - Instant response to device orientation changes
  * 
- * Memoized to prevent unnecessary rerenders when parent updates
+ * Features:
+ * - Blue dot with white border and pulse animation
+ * - Blue light beam direction indicator (rotates with device compass)
+ * - Works on iOS (webkitCompassHeading) and Android (alpha + screen rotation)
+ * - Accuracy circle visualization
  */
 const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading = null }) {
-  const [currentHeading, setCurrentHeading] = useState(heading || 0);
-  const [needsPermission, setNeedsPermission] = useState(false);
-  const [permissionGranted, setPermissionGranted] = useState(false);
   const beamRef = useRef(null);
-  const lastUpdateRef = useRef(0);
-  const animationFrameRef = useRef(null);
+  const rafRef = useRef(null);
+  const lastHeadingRef = useRef(0);
   const screenOrientationRef = useRef(0);
+  const smoothHeadingRef = useRef(0);
+  const targetHeadingRef = useRef(0);
 
-  // Request iOS permission
-  const requestOrientationPermission = async () => {
-    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-      try {
-        const response = await DeviceOrientationEvent.requestPermission();
-        if (response === "granted") {
-          setPermissionGranted(true);
-          setNeedsPermission(false);
-        }
-      } catch (error) {
-        console.error("Error requesting device orientation permission:", error);
-      }
+  // Smooth interpolation for heading changes
+  const smoothRotate = () => {
+    if (!beamRef.current) return;
+    
+    const diff = targetHeadingRef.current - smoothHeadingRef.current;
+    
+    // Normalize to shortest rotation path (-180 to 180)
+    let normalizedDiff = ((diff + 180) % 360) - 180;
+    if (normalizedDiff < -180) normalizedDiff += 360;
+    
+    // Smooth interpolation (adjust 0.3 for faster/slower response)
+    smoothHeadingRef.current += normalizedDiff * 0.3;
+    
+    // Normalize to 0-360
+    if (smoothHeadingRef.current < 0) smoothHeadingRef.current += 360;
+    if (smoothHeadingRef.current >= 360) smoothHeadingRef.current -= 360;
+    
+    // Apply rotation with GPU acceleration
+    beamRef.current.style.transform = `rotate(${smoothHeadingRef.current}deg) translateZ(0)`;
+    
+    // Continue animation loop
+    rafRef.current = requestAnimationFrame(smoothRotate);
+  };
+
+  // Update target heading (no re-render, just update ref)
+  const updateHeading = (newHeading) => {
+    if (newHeading !== null && newHeading !== undefined && !isNaN(newHeading)) {
+      targetHeadingRef.current = newHeading;
+      lastHeadingRef.current = Date.now();
     }
   };
 
-  // Track screen orientation for Android
+  // Track screen orientation for Android compass adjustment
   useEffect(() => {
     const updateScreenOrientation = () => {
       if (window.screen?.orientation?.angle !== undefined) {
@@ -56,102 +74,78 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
     };
   }, []);
 
-  // Listen to device orientation for heading
+  // Start smooth rotation animation loop
   useEffect(() => {
-    // If parent provides heading (from GPS), use that
-    if (heading !== null && heading !== undefined && heading >= 0) {
-      setCurrentHeading(heading);
-      if (beamRef.current) {
-        beamRef.current.style.transform = `rotate(${heading}deg)`;
+    // Initialize smooth heading
+    smoothHeadingRef.current = heading || 0;
+    targetHeadingRef.current = heading || 0;
+    
+    // Start animation loop
+    rafRef.current = requestAnimationFrame(smoothRotate);
+    
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
       }
+    };
+  }, []);
+
+  // Listen to device orientation for compass heading
+  useEffect(() => {
+    // If parent provides GPS heading, use it
+    if (heading !== null && heading !== undefined && heading >= 0) {
+      updateHeading(heading);
       return;
     }
 
-    // Try to get device orientation (compass heading)
+    // Device orientation handler - OPTIMIZED for instant response
     const handleOrientation = (event) => {
-      const now = Date.now();
-      
-      // Throttle to max 60fps (16.67ms between updates)
-      if (now - lastUpdateRef.current < 16) {
-        return;
-      }
-      
       let newHeading = null;
       
-      // iOS: webkitCompassHeading is already a compass heading (0 = North)
+      // iOS: webkitCompassHeading (0° = North, already calibrated)
       if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
         newHeading = event.webkitCompassHeading;
       } 
-      // Android: Convert alpha to compass heading
+      // Android: alpha (needs screen rotation adjustment)
       else if (event.alpha !== null && event.alpha !== undefined) {
-        // Alpha: 0-360 degrees, where 0 is North when device is flat
-        // Need to adjust for screen orientation
-        let compassHeading = event.alpha;
-        
-        // Adjust for screen rotation
         const screenAngle = screenOrientationRef.current || 0;
+        let adjustedAlpha = event.alpha;
         
-        // Portrait: 0°, Landscape Right: 90°, Landscape Left: -90° or 270°
-        if (screenAngle === 90) {
-          // Landscape right
-          compassHeading = (event.alpha + 90) % 360;
-        } else if (screenAngle === -90 || screenAngle === 270) {
-          // Landscape left
-          compassHeading = (event.alpha - 90 + 360) % 360;
-        } else if (screenAngle === 180) {
-          // Upside down
-          compassHeading = (event.alpha + 180) % 360;
+        // Adjust for screen orientation
+        switch (screenAngle) {
+          case 90:  // Landscape right
+            adjustedAlpha = (event.alpha + 90) % 360;
+            break;
+          case -90: // Landscape left
+          case 270:
+            adjustedAlpha = (event.alpha - 90 + 360) % 360;
+            break;
+          case 180: // Upside down
+            adjustedAlpha = (event.alpha + 180) % 360;
+            break;
+          default: // Portrait (0°)
+            adjustedAlpha = event.alpha;
         }
         
-        // Convert to compass heading (0 = North, clockwise)
-        newHeading = (360 - compassHeading) % 360;
+        // Convert to compass heading (0° = North, clockwise)
+        newHeading = (360 - adjustedAlpha) % 360;
       }
       
-      if (newHeading !== null && beamRef.current) {
-        lastUpdateRef.current = now;
-        
-        // Cancel any pending animation frame
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-        }
-        
-        // Use requestAnimationFrame for smooth 60fps updates
-        animationFrameRef.current = requestAnimationFrame(() => {
-          if (beamRef.current) {
-            // Direct DOM manipulation for instant rotation without React re-render
-            beamRef.current.style.transform = `rotate(${newHeading}deg)`;
-          }
-          // Update state less frequently (every 100ms) for other components that might need it
-          if (now - lastUpdateRef.current > 100) {
-            setCurrentHeading(newHeading);
-          }
-        });
+      // Update heading (no re-render, just ref update)
+      if (newHeading !== null) {
+        updateHeading(newHeading);
       }
     };
 
-    // Check if we need permission (iOS 13+)
-    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-      // iOS - show permission button
-      if (!permissionGranted) {
-        setNeedsPermission(true);
-        return;
-      }
-      // Permission granted, add listener
-      window.addEventListener("deviceorientation", handleOrientation, { passive: true });
-    } else {
-      // Non-iOS or older iOS - directly add listeners
-      window.addEventListener("deviceorientationabsolute", handleOrientation, { passive: true });
-      window.addEventListener("deviceorientation", handleOrientation, { passive: true });
-    }
+    // Add event listeners (no permission check here, handled by MapControlButtons)
+    window.addEventListener("deviceorientationabsolute", handleOrientation, { passive: true });
+    window.addEventListener("deviceorientation", handleOrientation, { passive: true });
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
       window.removeEventListener("deviceorientationabsolute", handleOrientation);
       window.removeEventListener("deviceorientation", handleOrientation);
     };
-  }, [heading, permissionGranted]);
+  }, [heading]);
 
   if (!userLocation) return null;
 
@@ -162,28 +156,31 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
       anchor="center"
     >
       <div className="relative flex items-center justify-center w-16 h-16">
-        {/* Blue light beam (direction indicator) - rotates with heading */}
+        {/* Blue light beam - GPU accelerated rotation */}
         <div
           ref={beamRef}
           className="absolute"
           style={{
-            transform: `rotate(${currentHeading}deg)`,
+            transform: "rotate(0deg) translateZ(0)",
             transformOrigin: "center center",
             willChange: "transform",
+            backfaceVisibility: "hidden",
+            perspective: 1000,
           }}
         >
-          {/* Trapezoid shape with flat bottom and gradient spread top */}
+          {/* Trapezoid beam shape */}
           <div
             className="absolute"
             style={{
               width: "40px",
               height: "64px",
-              background: "linear-gradient(to top, rgba(59, 130, 246, 0.75), rgba(59, 130, 246, 0))",
+              background: "linear-gradient(to top, rgba(59, 130, 246, 0.8), rgba(59, 130, 246, 0))",
               top: "-56px",
               left: "50%",
-              transform: "translateX(-50%)",
+              transform: "translateX(-50%) translateZ(0)",
               clipPath: "polygon(30% 100%, 35% 100%, 0% 0%, 100% 0%, 65% 100%, 70% 100%)",
               filter: "blur(2px)",
+              backfaceVisibility: "hidden",
             }}
           />
         </div>
