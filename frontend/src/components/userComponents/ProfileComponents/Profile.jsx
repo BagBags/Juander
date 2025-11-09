@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
+import { clearAuth } from "../../../utils/authStorage";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -99,8 +100,6 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    // Import clearAuth at the top of the file
-    const { clearAuth } = require("../../../utils/authStorage");
     clearAuth();
     navigate("/");
   };

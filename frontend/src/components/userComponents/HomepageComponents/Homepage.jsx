@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from "react";
-import LogoHeader from "./logoHeader";
-import MainLayout from "../MainLayout";
-import Button from "./Button";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import { WifiOff, X } from "lucide-react";
-import TourProvider from "../../TourComponents/TourProvider";
-import { homepageTourSteps } from "../../TourComponents/tourSteps";
+import ModernLoader from "../../shared/ModernLoader";
+
+// Lazy load heavy components
+const LogoHeader = lazy(() => import("./logoHeader"));
+const MainLayout = lazy(() => import("../MainLayout"));
+const Button = lazy(() => import("./Button"));
+const FloatingChatbot = lazy(() => import("../ChatbotComponents/FloatingChatbot"));
+const TourProvider = lazy(() => import("../../TourComponents/TourProvider"));
+const { homepageTourSteps } = await import("../../TourComponents/tourSteps");
 
 export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
@@ -19,6 +22,8 @@ export default function Homepage() {
   const [fromCache, setFromCache] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(true);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -38,13 +43,63 @@ export default function Homepage() {
     };
   }, []);
 
-  // Preload background images
+  // Optimized preloading with progress tracking
   useEffect(() => {
-    const isMobile = window.innerWidth < 640;
-    const bgImage = new Image();
-    bgImage.src = isMobile ? '/JuanderBGPhone.png' : '/JuanderBGWeb1.svg';
-    bgImage.onload = () => setBgLoaded(true);
-    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
+    let mounted = true;
+    const loadResources = async () => {
+      try {
+        // Step 1: Load background image (40%)
+        setLoadingProgress(10);
+        const isMobile = window.innerWidth < 640;
+        const bgImage = new Image();
+        bgImage.src = isMobile ? '/JuanderBGPhone.png' : '/JuanderBGWeb1.svg';
+        
+        await new Promise((resolve) => {
+          bgImage.onload = resolve;
+          bgImage.onerror = resolve;
+        });
+        
+        if (!mounted) return;
+        setBgLoaded(true);
+        setLoadingProgress(40);
+
+        // Step 2: Preload logo (60%)
+        const logo = new Image();
+        logo.src = '/icons/logo.png';
+        await new Promise((resolve) => {
+          logo.onload = resolve;
+          logo.onerror = resolve;
+        });
+        
+        if (!mounted) return;
+        setLoadingProgress(60);
+
+        // Step 3: Wait for critical components (80%)
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (!mounted) return;
+        setLoadingProgress(80);
+
+        // Step 4: Final preparations (100%)
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!mounted) return;
+        setLoadingProgress(100);
+        
+        // Small delay before showing content for smooth transition
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (!mounted) return;
+        setComponentsLoaded(true);
+      } catch (error) {
+        console.error('Error loading resources:', error);
+        if (mounted) {
+          setBgLoaded(true);
+          setComponentsLoaded(true);
+          setLoadingProgress(100);
+        }
+      }
+    };
+
+    loadResources();
+    return () => { mounted = false; };
   }, []);
 
   // Announce page load
@@ -98,17 +153,14 @@ export default function Homepage() {
     fetchUser();
   }, []);
 
+  // Don't render anything until all components are loaded
+  if (!componentsLoaded) {
+    return <ModernLoader progress={loadingProgress} />;
+  }
+
   return (
-    <TourProvider steps={homepageTourSteps} userRole="tourist">
-      {/* Loading Screen */}
-      {!bgLoaded && (
-        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
-          </div>
-        </div>
-      )}
+    <Suspense fallback={<ModernLoader progress={loadingProgress} />}>
+      <TourProvider steps={homepageTourSteps} userRole="tourist">
       
       <div
         className="
@@ -169,6 +221,7 @@ export default function Homepage() {
       </MainLayout>
         <FloatingChatbot />
       </div>
-    </TourProvider>
+      </TourProvider>
+    </Suspense>
   );
 }

@@ -82,14 +82,19 @@ export default function TouristItineraryMap() {
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
-  // Handler to mark site as done (temporary)
-  const handleMarkAsDone = (siteId) => {
+  // Handler to mark site as done (permanent)
+  const handleMarkAsDone = async (siteId) => {
+    const pin = optimizedPins.find(p => p._id === siteId);
+    if (!pin) return;
+    
     setVisitedSites((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(siteId)) {
         newSet.delete(siteId); // Toggle off if already visited
       } else {
         newSet.add(siteId); // Mark as visited
+        // Save to permanent visited-sites record (for Trip Archives)
+        markSiteAsVisited(pin);
       }
       saveProgress(currentPinIndex, newSet, skippedSites);
       return newSet;
@@ -155,13 +160,16 @@ export default function TouristItineraryMap() {
   };
 
   // Go to next site (marks current as visited)
-  const handleNextSite = () => {
+  const handleNextSite = async () => {
     // Mark current site as visited before moving to next
     const currentPin = optimizedPins[currentPinIndex];
     const updatedVisited = new Set(visitedSites);
     if (currentPin && !updatedVisited.has(currentPin._id)) {
       updatedVisited.add(currentPin._id);
       setVisitedSites(updatedVisited);
+      
+      // Save to permanent visited-sites record (for Trip Archives)
+      await markSiteAsVisited(currentPin);
     }
 
     const nextIndex = currentPinIndex + 1;

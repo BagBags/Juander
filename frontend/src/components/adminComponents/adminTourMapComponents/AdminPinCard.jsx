@@ -34,6 +34,8 @@ const AdminPinCard = ({
   onClose,
   categories = [],
   fetchCategories,
+  validationErrors = {},
+  setValidationErrors,
 }) => {
   if (!pin) return null;
 
@@ -173,34 +175,46 @@ const AdminPinCard = ({
         {/* Site Name */}
         <div>
           <label className="block text-base font-semibold text-gray-700 mb-2">
-            Site Name
+            Site Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={pin.siteName || ""}
-            onChange={(e) =>
-              updatePinField(selectedPinIndex, "siteName", e.target.value)
-            }
-            className="w-full border border-gray-300 rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            onChange={(e) => {
+              updatePinField(selectedPinIndex, "siteName", e.target.value);
+              if (setValidationErrors) {
+                setValidationErrors(prev => ({ ...prev, siteName: "" }));
+              }
+            }}
+            className={`w-full border rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+              validationErrors.siteName ? 'border-red-500' : 'border-gray-300'
+            }`}
             placeholder="Enter site name"
           />
+          {validationErrors.siteName && (
+            <p className="text-red-500 text-sm mt-1">
+              {validationErrors.siteName}
+            </p>
+          )}
         </div>
 
         {/* Category */}
         <div className="relative category-dropdown-container">
           <label className="block text-base font-semibold text-gray-700 mb-2">
-            Category
+            Category <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <div
-              className="w-full border border-gray-300 rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between"
+              className={`w-full border rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between ${
+                validationErrors.category ? 'border-red-500' : 'border-gray-300'
+              }`}
               style={{ borderColor: '#d1d5db' }}
               onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f04e37'}
               onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
             >
               <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
-                {selectedCategory ? selectedCategory.name : "Select a category"}
+                {selectedCategory ? selectedCategory.name : "Choose Category"}
               </span>
               <Search className="w-5 h-5 text-gray-400" />
             </div>
@@ -224,18 +238,6 @@ const AdminPinCard = ({
                 </div>
                 
                 <div className="overflow-y-auto max-h-48">
-                  {/* None option */}
-                  <div
-                    className="px-4 py-2.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-600 border-b border-gray-100"
-                    onClick={() => {
-                      updatePinField(selectedPinIndex, "category", null);
-                      setShowCategoryDropdown(false);
-                      setCategorySearch('');
-                    }}
-                  >
-                    <span className="italic">None</span>
-                  </div>
-                  
                   {filteredCategories.length > 0 ? (
                     filteredCategories.map((cat) => (
                       <div
@@ -246,6 +248,9 @@ const AdminPinCard = ({
                         onMouseLeave={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
                         onClick={() => {
                           updatePinField(selectedPinIndex, "category", cat._id);
+                          if (setValidationErrors) {
+                            setValidationErrors(prev => ({ ...prev, category: "" }));
+                          }
                           setShowCategoryDropdown(false);
                           setCategorySearch('');
                         }}
@@ -270,17 +275,10 @@ const AdminPinCard = ({
               </div>
             )}
           </div>
-          
-          {selectedCategory && (
-            <button
-              type="button"
-              onClick={() => {
-                updatePinField(selectedPinIndex, "category", null);
-              }}
-              className="absolute right-12 top-[46px] text-gray-400 hover:text-red-500 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {validationErrors.category && (
+            <p className="text-red-500 text-sm mt-1">
+              {validationErrors.category}
+            </p>
           )}
         </div>
 
@@ -288,7 +286,7 @@ const AdminPinCard = ({
         <div>
           <div className="flex items-center justify-between mb-3">
             <label className="block text-base font-semibold text-gray-700">
-              Site Description
+              Site Description <span className="text-red-500">*</span>
             </label>
             {/* Language Toggle Slider */}
             <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
@@ -446,21 +444,33 @@ const AdminPinCard = ({
               Tagalog: {(pin.siteDescriptionTagalog || '').trim() ? `${tagalogSections.length} sections` : 'Empty'}
             </div>
           </div>
+          {validationErrors.siteDescription && (
+            <p className="text-red-500 text-sm mt-2">
+              {validationErrors.siteDescription}
+            </p>
+          )}
         </div>
         {/* 2D Facade Landmark */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            2D Facade Image
+            2D Facade Image <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             <div className="relative">
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleFacadeUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleFacadeUpload(e, selectedPinIndex);
+                  if (setValidationErrors) {
+                    setValidationErrors(prev => ({ ...prev, facadeUrl: "" }));
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200 ${
+                validationErrors.facadeUrl ? 'border-red-500' : 'border-gray-300'
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -488,12 +498,17 @@ const AdminPinCard = ({
                 </button>
               </div>
             )}
+            {validationErrors.facadeUrl && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.facadeUrl}
+              </p>
+            )}
           </div>
         </div>
         {/* Media Files Upload */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Media Files (Images/Videos)
+            Media Files (Images/Videos) <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             <div className="relative">
@@ -501,10 +516,17 @@ const AdminPinCard = ({
                 type="file"
                 accept="image/*,video/*"
                 multiple
-                onChange={(e) => handleMediaUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleMediaUpload(e, selectedPinIndex);
+                  if (setValidationErrors) {
+                    setValidationErrors(prev => ({ ...prev, mediaFiles: "" }));
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200 ${
+                validationErrors.mediaFiles ? 'border-red-500' : 'border-gray-300'
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -555,6 +577,11 @@ const AdminPinCard = ({
                   );
                 })}
               </div>
+            )}
+            {validationErrors.mediaFiles && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.mediaFiles}
+              </p>
             )}
           </div>
         </div>
@@ -765,6 +792,11 @@ const AdminPinCard = ({
                   rows="2"
                   placeholder="Please specify the reason..."
                 />
+              )}
+              {validationErrors.inactiveReasonDetails && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.inactiveReasonDetails}
+                </p>
               )}
             </div>
           )}

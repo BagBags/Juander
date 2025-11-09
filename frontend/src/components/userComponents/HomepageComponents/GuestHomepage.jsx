@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import LogoHeader from "./logoHeader";
 import { useNavigate } from "react-router-dom";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import TourProvider, { useTour } from "../../TourComponents/TourProvider";
 import { guestTourSteps } from "../../TourComponents/tourSteps";
+import ModernLoader from "../../shared/ModernLoader";
 
 export default function GuestHomepage() {
   return (
@@ -20,14 +21,60 @@ function GuestHomepageContent() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { startTour } = useTour();
-  const [bgLoaded, setBgLoaded] = React.useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Preload background image
+  // Optimized preloading with progress tracking
   useEffect(() => {
-    const bgImage = new Image();
-    bgImage.src = '/JuanderBGWeb.svg';
-    bgImage.onload = () => setBgLoaded(true);
-    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
+    let mounted = true;
+    const loadResources = async () => {
+      try {
+        // Step 1: Load background (50%)
+        setLoadingProgress(10);
+        const bgImage = new Image();
+        bgImage.src = '/JuanderBGWeb.svg';
+        
+        await new Promise((resolve) => {
+          bgImage.onload = resolve;
+          bgImage.onerror = resolve;
+        });
+        
+        if (!mounted) return;
+        setBgLoaded(true);
+        setLoadingProgress(50);
+
+        // Step 2: Preload logo (80%)
+        const logo = new Image();
+        logo.src = '/icons/logo.png';
+        await new Promise((resolve) => {
+          logo.onload = resolve;
+          logo.onerror = resolve;
+        });
+        
+        if (!mounted) return;
+        setLoadingProgress(80);
+
+        // Step 3: Final preparations (100%)
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (!mounted) return;
+        setLoadingProgress(100);
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!mounted) return;
+        setComponentsLoaded(true);
+      } catch (error) {
+        console.error('Error loading resources:', error);
+        if (mounted) {
+          setBgLoaded(true);
+          setComponentsLoaded(true);
+          setLoadingProgress(100);
+        }
+      }
+    };
+
+    loadResources();
+    return () => { mounted = false; };
   }, []);
 
   // Load guest language preference on mount
@@ -54,17 +101,13 @@ function GuestHomepageContent() {
     }
   }, [startTour]);
 
+  // Don't render until components are loaded
+  if (!componentsLoaded) {
+    return <ModernLoader progress={loadingProgress} />;
+  }
+
   return (
     <>
-      {/* Loading Screen */}
-      {!bgLoaded && (
-        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
-          </div>
-        </div>
-      )}
       
       <div
         className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative"

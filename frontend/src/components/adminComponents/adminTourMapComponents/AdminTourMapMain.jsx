@@ -88,8 +88,16 @@ export default function AdminTourMapMain() {
   const [showGlbPreview, setShowGlbPreview] = useState(false);
   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
   
-  // Validation error for siteName
-  const [siteNameError, setSiteNameError] = useState("");
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState({
+    siteName: "",
+    siteDescription: "",
+    category: "",
+    latitude: "",
+    longitude: "",
+    facadeUrl: "",
+    mediaFiles: "",
+  });
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
@@ -394,8 +402,49 @@ export default function AdminTourMapMain() {
     const pinName = pin.siteName || `Pin #${index + 1}`;
     
     // Validation
+    const errors = {};
+    
     if (!pin.siteName || !pin.siteName.trim()) {
-      setSiteNameError("Site name is required");
+      errors.siteName = "Site name is required";
+    }
+    
+    if (!pin.siteDescription || !pin.siteDescription.trim()) {
+      errors.siteDescription = "Site description is required";
+    }
+    
+    if (!pin.category) {
+      errors.category = "Category is required";
+    }
+    
+    if (!pin.latitude || isNaN(parseFloat(pin.latitude))) {
+      errors.latitude = "Valid latitude is required";
+    } else {
+      const lat = parseFloat(pin.latitude);
+      if (lat < -90 || lat > 90) {
+        errors.latitude = "Latitude must be between -90 and 90";
+      }
+    }
+    
+    if (!pin.longitude || isNaN(parseFloat(pin.longitude))) {
+      errors.longitude = "Valid longitude is required";
+    } else {
+      const lng = parseFloat(pin.longitude);
+      if (lng < -180 || lng > 180) {
+        errors.longitude = "Longitude must be between -180 and 180";
+      }
+    }
+    
+    if (!pin.facadeUrl || !pin.facadeUrl.trim()) {
+      errors.facadeUrl = "2D Facade image is required";
+    }
+    
+    if (!pin.mediaFiles || pin.mediaFiles.length === 0) {
+      errors.mediaFiles = "At least 1 media file is required";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      notify("error", "Please fill in all required fields");
       return;
     }
     
@@ -424,7 +473,7 @@ export default function AdminTourMapMain() {
           setSelectedPin(null);
           setOriginalPinData(null);
           setIsAddingPin(false);
-          setSiteNameError(""); // Clear error
+          setValidationErrors({}); // Clear all errors
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
@@ -884,6 +933,13 @@ export default function AdminTourMapMain() {
               onDragEnd={async (event) => {
                 const { lng, lat } = event.lngLat;
 
+                // Validate if new position is inside Intramuros mask
+                if (!isInsideMask(lng, lat)) {
+                  notify("error", "Pin must be placed within Intramuros bounds");
+                  // Revert to original position
+                  return;
+                }
+
                 // Update local state immediately
                 updatePinField(index, "latitude", lat);
                 updatePinField(index, "longitude", lng);
@@ -947,6 +1003,8 @@ export default function AdminTourMapMain() {
               onClose={closePinCard}
               categories={categories}
               fetchCategories={fetchCategories}
+              validationErrors={validationErrors}
+              setValidationErrors={setValidationErrors}
             />
           </Suspense>
         )}
