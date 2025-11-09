@@ -156,63 +156,48 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
   if (!userLocation) return null;
 
   return (
-    <>
-      <Marker
-        longitude={userLocation.longitude}
-        latitude={userLocation.latitude}
-        anchor="center"
-      >
-        <div className="relative flex items-center justify-center w-16 h-16">
-          {/* Blue light beam (direction indicator) - rotates with heading */}
+    <Marker
+      longitude={userLocation.longitude}
+      latitude={userLocation.latitude}
+      anchor="center"
+    >
+      <div className="relative flex items-center justify-center w-16 h-16">
+        {/* Blue light beam (direction indicator) - rotates with heading */}
+        <div
+          ref={beamRef}
+          className="absolute"
+          style={{
+            transform: `rotate(${currentHeading}deg)`,
+            transformOrigin: "center center",
+            willChange: "transform",
+          }}
+        >
+          {/* Trapezoid shape with flat bottom and gradient spread top */}
           <div
-            ref={beamRef}
             className="absolute"
             style={{
-              transform: `rotate(${currentHeading}deg)`,
-              transformOrigin: "center center",
-              willChange: "transform",
+              width: "40px",
+              height: "64px",
+              background: "linear-gradient(to top, rgba(59, 130, 246, 0.75), rgba(59, 130, 246, 0))",
+              top: "-56px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              clipPath: "polygon(30% 100%, 35% 100%, 0% 0%, 100% 0%, 65% 100%, 70% 100%)",
+              filter: "blur(2px)",
             }}
-          >
-            {/* Trapezoid shape with flat bottom and gradient spread top */}
-            <div
-              className="absolute"
-              style={{
-                width: "40px",
-                height: "64px",
-                background: "linear-gradient(to top, rgba(59, 130, 246, 0.75), rgba(59, 130, 246, 0))",
-                top: "-56px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                clipPath: "polygon(30% 100%, 35% 100%, 0% 0%, 100% 0%, 65% 100%, 70% 100%)",
-                filter: "blur(2px)",
-              }}
-            />
-          </div>
-          
-          {/* Outer pulse ring */}
-          <div className="absolute w-12 h-12 bg-blue-500/20 rounded-full animate-ping" />
-          
-          {/* Accuracy circle */}
-          <div className="absolute w-10 h-10 bg-blue-500/10 rounded-full border border-blue-500/30" />
-          
-          {/* Main blue dot with white border */}
-          <div className="relative w-5 h-5 bg-blue-600 rounded-full border-[3px] border-white shadow-lg z-10" />
+          />
         </div>
-      </Marker>
-      
-      {/* iOS Permission Button - Fixed at bottom */}
-      {needsPermission && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
-          <button
-            onClick={requestOrientationPermission}
-            className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all active:scale-95"
-          >
-            <Compass className="w-5 h-5" />
-            <span className="text-sm font-medium">Enable Compass</span>
-          </button>
-        </div>
-      )}
-    </>
+        
+        {/* Outer pulse ring */}
+        <div className="absolute w-12 h-12 bg-blue-500/20 rounded-full animate-ping" />
+        
+        {/* Accuracy circle */}
+        <div className="absolute w-10 h-10 bg-blue-500/10 rounded-full border border-blue-500/30" />
+        
+        {/* Main blue dot with white border */}
+        <div className="relative w-5 h-5 bg-blue-600 rounded-full border-[3px] border-white shadow-lg z-10" />
+      </div>
+    </Marker>
   );
 });
 

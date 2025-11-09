@@ -40,7 +40,14 @@ export default function BackHeader({ title, className = "" }) {
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div 
+      className={`flex items-center gap-2 ${className}`}
+      style={{
+        paddingTop: 'max(env(safe-area-inset-top), 0.5rem)',
+        paddingLeft: 'max(env(safe-area-inset-left), 0.5rem)',
+        paddingRight: 'max(env(safe-area-inset-right), 0.5rem)',
+      }}
+    >
       <button
         className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
         onClick={handleBack}
