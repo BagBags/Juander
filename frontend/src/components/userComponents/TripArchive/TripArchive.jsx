@@ -57,6 +57,7 @@ export default function TripArchivesPage() {
   const [selectedReviewItineraryFilter, setSelectedReviewItineraryFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("places"); // "places" or "reviews"
   const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
+  const [expandedItineraries, setExpandedItineraries] = useState({}); // Track which itinerary names are expanded
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -330,9 +331,10 @@ export default function TripArchivesPage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
       </div>
 
-      {/* ✅ Sticky back header (matching profile layout) */}
+      <MainLayout includeSideButtons={false}>
+      {/* ✅ Sticky back header (matching profile layout) - Full width */}
       <div 
-        className="sticky top-0 z-20 bg-white border-b border-gray-200"
+        className="sticky top-0 z-20 bg-white border-b border-gray-200 -mx-4 md:-mx-0"
         style={{
           paddingTop: "max(env(safe-area-inset-top), 16px)",
           paddingBottom: "8px",
@@ -342,8 +344,6 @@ export default function TripArchivesPage() {
       >
         <BackHeader title="Trip Archives" />
       </div>
-
-      <MainLayout includeSideButtons={false}>
         <div className="w-full relative z-10">
           {/* Page content */}
           <div className="px-4 pt-6">
@@ -458,9 +458,24 @@ export default function TripArchivesPage() {
                   : visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).slice(0, 4)
                 ).map((site, index) => (
                   <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                      <BookOpen className="w-4 h-4 text-[#f04e37]" />
-                      <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
+                    <div className="mb-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0">
+                        <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
+                        <span className={expandedItineraries[`place-${index}`] ? "" : "truncate"}>
+                          {site.itineraryId?.name || "Unknown Itinerary"}
+                        </span>
+                      </div>
+                      {(site.itineraryId?.name?.length > 30) && (
+                        <button
+                          onClick={() => setExpandedItineraries(prev => ({
+                            ...prev,
+                            [`place-${index}`]: !prev[`place-${index}`]
+                          }))}
+                          className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
+                        >
+                          {expandedItineraries[`place-${index}`] ? "See less" : "See more"}
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                       <Calendar className="w-3 h-3 text-gray-400" />
@@ -553,9 +568,24 @@ export default function TripArchivesPage() {
 
                       return (
                         <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                            <BookOpen className="w-4 h-4 text-[#f04e37]" />
-                            <span>{site.itineraryId?.name || "Unknown Itinerary"}</span>
+                          <div className="mb-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0">
+                              <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
+                              <span className={expandedItineraries[`review-${index}`] ? "" : "truncate"}>
+                                {site.itineraryId?.name || "Unknown Itinerary"}
+                              </span>
+                            </div>
+                            {(site.itineraryId?.name?.length > 30) && (
+                              <button
+                                onClick={() => setExpandedItineraries(prev => ({
+                                  ...prev,
+                                  [`review-${index}`]: !prev[`review-${index}`]
+                                }))}
+                                className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
+                              >
+                                {expandedItineraries[`review-${index}`] ? "See less" : "See more"}
+                              </button>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                             <Calendar className="w-3 h-3 text-gray-400" />

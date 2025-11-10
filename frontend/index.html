@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     
+    <!-- Content Security Policy for Mapbox and Workers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://accounts.google.com https://www.gstatic.com blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://d3des4qdhz53rp.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://accounts.google.com wss:; frame-src https://accounts.google.com;" />
+    
     <!-- DEVELOPMENT: Prevent ALL caching -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -56,10 +59,22 @@
     
     <div id="root"></div>
 
-    <!-- AGGRESSIVE SERVICE WORKER CLEANUP - RUNS BEFORE ANYTHING ELSE -->
+    <!-- CONDITIONAL SERVICE WORKER CLEANUP - Only in dev mode -->
     <script>
       (function() {
         'use strict';
+        
+        // Only run cleanup if explicitly in development mode (not in PWA/production)
+        var isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        if (!isDevelopment) {
+          console.log('[PWA MODE] Skipping service worker cleanup - allowing PWA to function');
+          var indicator = document.getElementById('cleanup-indicator');
+          if (indicator) {
+            indicator.style.display = 'none';
+          }
+          return;
+        }
         
         console.log('[CLEANUP] Starting aggressive service worker cleanup...');
         

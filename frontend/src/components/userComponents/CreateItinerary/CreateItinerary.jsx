@@ -376,7 +376,7 @@ export default function CreateItineraryPage() {
           paddingRight: "16px"
         }}
       >
-        <BackHeader title="Itinerary Manager" />
+        <BackHeader title="Itinerary Manager" className="text-white" />
       </div>
 
       {/* === TAB NAVIGATION === */}

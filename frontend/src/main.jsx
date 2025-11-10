@@ -5,9 +5,13 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import App from "./App.jsx";
 
-// FORCE UNREGISTER ALL SERVICE WORKERS - DEVELOPMENT MODE
+// CONDITIONAL SERVICE WORKER CLEANUP - Only in development mode
 // This runs BEFORE React renders to ensure clean state
-if ('serviceWorker' in navigator) {
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+if (isDevelopment && 'serviceWorker' in navigator) {
+  console.log('[DEV] Running in development mode - cleaning up service workers');
+  
   // Unregister all service workers
   navigator.serviceWorker.getRegistrations().then(registrations => {
     const unregisterPromises = registrations.map(registration => {
@@ -36,11 +40,13 @@ if ('serviceWorker' in navigator) {
     console.error('[DEV] Error cleaning up:', err);
   });
   
-  // Prevent any new service worker registration
+  // Prevent any new service worker registration in dev mode
   navigator.serviceWorker.register = () => {
     console.log('[DEV] Service worker registration blocked');
     return Promise.reject(new Error('Service worker disabled in development'));
   };
+} else if (!isDevelopment) {
+  console.log('[PWA MODE] Running in production/PWA mode - service workers enabled');
 }
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;

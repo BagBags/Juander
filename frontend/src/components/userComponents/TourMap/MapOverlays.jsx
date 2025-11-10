@@ -67,7 +67,7 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
         }}
         title="Map Legend"
         aria-label="Toggle map legend"
-        className="absolute top-20 right-4 z-30 p-2.5 rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+        className="absolute top-28 right-4 z-30 p-2.5 rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
         style={{
           backgroundColor: showLegend ? '#eff6ff' : 'white',
           color: showLegend ? '#2563eb' : '#374151'
@@ -78,7 +78,7 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
       
       {/* Legend Panel */}
       {showLegend && (
-        <div className="absolute top-32 right-4 z-40 bg-white rounded-lg shadow-lg w-52 p-4 text-gray-800 animate-fadeIn pointer-events-auto">
+        <div className="absolute top-40 right-4 z-40 bg-white rounded-lg shadow-lg w-52 p-4 text-gray-800 animate-fadeIn pointer-events-auto">
           <h4 className="font-semibold mb-3 text-lg border-b pb-1">
             Map Legend
           </h4>

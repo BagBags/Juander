@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
 
 export default function GuestSettings() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [showFortModal, setShowFortModal] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
@@ -52,17 +54,15 @@ export default function GuestSettings() {
       setSuccessMessage(
         "Tutorial reset! Returning to guest homepage to replay it."
       );
+      // Use navigate instead of window.location.href to avoid PWA navigation issues
       setTimeout(() => {
-        window.location.href = "/GuestHomepage";
+        navigate("/GuestHomepage");
       }, 1500);
     } catch (err) {
       console.error("Error setting replay flag:", err);
       setSuccessMessage("Failed to reset tutorial. Please try again.");
-    } finally {
       setTourLoading(false);
     }
-
-    setTimeout(() => setSuccessMessage(""), 5000);
   };
 
   return (

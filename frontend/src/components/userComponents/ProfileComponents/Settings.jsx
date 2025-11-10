@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
 import axios from "axios";
 import { resetTour } from "../../../utils/tourApi";
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [showFortModal, setShowFortModal] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
@@ -65,21 +67,17 @@ export default function Settings() {
     setTourLoading(true);
     try {
       await resetTour();
-      setSuccessMessage("Tutorial reset! Return to the homepage to replay it.");
+      setSuccessMessage("Tutorial reset! Redirecting to homepage...");
       
-      // Redirect to homepage after a short delay
+      // Use navigate instead of window.location.href to avoid PWA auth issues
       setTimeout(() => {
-        window.location.href = "/Homepage";
-      }, 2000);
+        navigate("/Homepage");
+      }, 1500);
     } catch (err) {
       console.error("Error resetting tour:", err);
       setSuccessMessage("Failed to reset tutorial. Please try again.");
-    } finally {
       setTourLoading(false);
     }
-
-    // Clear success message after 5 seconds
-    setTimeout(() => setSuccessMessage(""), 5000);
   };
 
   return (

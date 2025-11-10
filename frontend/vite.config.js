@@ -46,6 +46,9 @@ export default defineConfig({
         // Ensure all JS chunks are cached (including lazy-loaded ones)
         globDirectory: 'dist',
         cleanupOutdatedCaches: true,
+        // Skip waiting to activate new service worker immediately
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           // Guest API calls - Public endpoints only (pins, reviews)
           {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -15,7 +16,6 @@ import {
 
 // Import separated components
 import ModernUserMarker from "../TourMap/ModernUserMarker";
-import BackHeader from "../BackButton";
 import DirectionsPanel from "./DirectionsPanel";
 import MapControlButtons from "./MapControlButtons";
 import SitePreviewCard from "./SitePreviewCard";
@@ -929,10 +929,50 @@ export default function TouristItineraryMap() {
         }}
       />
       
-      {/* Header - Fixed at top */}
-      <div className="flex-shrink-0">
-        <BackHeader title="Tourist Itinerary Map" />
-      </div>
+      {/* Header - Rendered via Portal */}
+      {createPortal(
+        <div 
+          className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
+          style={{
+            paddingTop: 'max(env(safe-area-inset-top), 16px)',
+            paddingBottom: '8px',
+            paddingLeft: '16px',
+            paddingRight: '16px',
+            pointerEvents: 'auto'
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
+              onClick={() => {
+                if (location.key !== "default") {
+                  navigate(-1);
+                } else {
+                  navigate("/");
+                }
+              }}
+              aria-label="Go back"
+              style={{
+                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                color: 'inherit'
+              }}
+            >
+              ‹
+            </button>
+            <h1 
+              className="font-bold text-xl truncate"
+              style={{
+                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                margin: 0,
+                padding: 0
+              }}
+            >
+              Tourist Itinerary Map
+            </h1>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Map Container - Takes remaining height */}
       <div className="flex-1 relative overflow-hidden">
