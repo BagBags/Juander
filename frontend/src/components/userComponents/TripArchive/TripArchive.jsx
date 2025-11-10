@@ -331,12 +331,22 @@ export default function TripArchivesPage() {
       </div>
 
       {/* ✅ Sticky back header (matching profile layout) */}
-      <BackHeader title="Trip Archives" />
+      <div 
+        className="sticky top-0 z-20 bg-white border-b border-gray-200"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
+        <BackHeader title="Trip Archives" />
+      </div>
 
       <MainLayout includeSideButtons={false}>
         <div className="w-full relative z-10">
           {/* Page content */}
-          <div className="mt-20 px-4">
+          <div className="px-4 pt-6">
             {/* Icon Tab Navigation */}
             <div className="flex justify-center items-center gap-8 mb-8">
               {/* Places Tab */}

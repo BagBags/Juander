@@ -1,13 +1,19 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
-import { Volume2, X, Star, Info, Tag, Glasses } from "lucide-react";
+import React, { Suspense, useState, useEffect, lazy } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
+import { X, MapPin, Clock, DollarSign, Glasses, ChevronDown, ChevronUp, Tag, Info, Volume2, Star } from "lucide-react";
 import ttsService from "../../../utils/textToSpeech";
-import MediaCarousel from "../../shared/MediaCarousel";
+import { useTranslation } from "react-i18next";
+import { FaStar } from "react-icons/fa";
+import QRScanner from "../QRScannerSimple";
 import axios from "axios";
+import MediaCarousel from "../../shared/MediaCarousel";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
 const SiteCard = ({ pin, onClose, distance }) => {
   const [showAR, setShowAR] = useState(false);
+  const [scannedArUrl, setScannedArUrl] = useState(null);
   const [siteReviews, setSiteReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -120,20 +126,38 @@ const SiteCard = ({ pin, onClose, distance }) => {
 
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
-          <div className="flex flex-col h-[70vh]">
-            <iframe
-              src={pin.arLink}
-              title="AR Mode"
-              className="flex-1 w-full rounded-lg border border-gray-200"
-              allow="camera *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; fullscreen *"
-              allowFullScreen
-            />
-            <button
-              onClick={() => setShowAR(false)}
-              className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
-            >
-              Exit AR Mode
-            </button>
+          <div className="h-[70vh] rounded-xl overflow-hidden">
+            {scannedArUrl ? (
+              <div className="flex flex-col h-full">
+                <iframe
+                  src={scannedArUrl}
+                  title="AR Experience"
+                  className="flex-1 w-full"
+                  allow="camera *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; fullscreen *"
+                  allowFullScreen
+                />
+                <button
+                  onClick={() => {
+                    setShowAR(false);
+                    setScannedArUrl(null);
+                  }}
+                  className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
+                >
+                  Exit AR Experience
+                </button>
+              </div>
+            ) : (
+              <QRScanner
+                onScanSuccess={(url) => {
+                  setScannedArUrl(url);
+                  ttsService.speak("QR Code scanned successfully");
+                }}
+                onClose={() => {
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                }}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -428,20 +452,20 @@ const SiteCard = ({ pin, onClose, distance }) => {
             </div>
 
             {/* AR Mode Button - Modern Design */}
-            {pin.arEnabled && pin.arLink && (
+            {pin.arEnabled && (
               <button
                 onClick={() => {
                   setShowAR(true);
-                  ttsService.speak("Opening AR Mode");
+                  ttsService.speak("Opening AR Scanner");
                 }}
                 className="w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(to right, #f04e37, #d9442f)' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d9442f, #c23d2a)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f04e37, #d9442f)'}
-                aria-label="View in AR Mode"
+                aria-label="Scan QR Code for AR"
               >
                 <Glasses className="w-5 h-5" />
-                <span>Experience in AR Mode</span>
+                <span>Scan QR Code for AR</span>
               </button>
             )}
 
