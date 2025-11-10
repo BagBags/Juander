@@ -10,9 +10,9 @@ export default function GuestSettings() {
   const [loading, setLoading] = useState(false);
   const [tourLoading, setTourLoading] = useState(false);
 
-  // Load guest preference from sessionStorage
+  // Load guest preference from localStorage
   useEffect(() => {
-    const stored = sessionStorage.getItem("guestHideFortSantiagoModal");
+    const stored = localStorage.getItem("guestHideFortSantiagoModal");
     // stored === "true" means hide; we invert for showFortModal
     setShowFortModal(!(stored === "true"));
   }, []);
@@ -24,7 +24,7 @@ export default function GuestSettings() {
 
     try {
       // Persist guest preference locally (no backend in guest mode)
-      sessionStorage.setItem(
+      localStorage.setItem(
         "guestHideFortSantiagoModal",
         (!newValue).toString()
       );
@@ -48,7 +48,7 @@ export default function GuestSettings() {
     setTourLoading(true);
     try {
       // Set a flag for GuestHomepage to auto-start the tour
-      sessionStorage.setItem("guestReplayTutorial", "true");
+      localStorage.setItem("guestReplayTutorial", "true");
       setSuccessMessage(
         "Tutorial reset! Returning to guest homepage to replay it."
       );

@@ -3,6 +3,24 @@ const router = express.Router();
 const Log = require("../models/logModel");
 const { verifyToken } = require("../middleware/authMiddleware");
 
+// Helper function to delete logs older than 30 days
+const deleteOldLogs = async () => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const result = await Log.deleteMany({
+      createdAt: { $lt: thirtyDaysAgo }
+    });
+    
+    if (result.deletedCount > 0) {
+      console.log(`Deleted ${result.deletedCount} logs older than 30 days`);
+    }
+  } catch (err) {
+    console.error("Error deleting old logs:", err);
+  }
+};
+
 // @route   GET /api/logs
 // @desc    Get all logs (admin only)
 // @access  Private (Admin)
@@ -12,6 +30,9 @@ router.get("/", verifyToken, async (req, res) => {
     if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
       return res.status(403).json({ error: "Access denied. Admin only." });
     }
+
+    // Delete logs older than 30 days before fetching
+    await deleteOldLogs();
 
     const { targetType, limit = 100 } = req.query;
 

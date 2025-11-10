@@ -25,35 +25,15 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
     // Process uploaded photos
     const photoPaths = req.files ? req.files.map(file => `/uploads/reviews/${file.filename}`) : [];
 
-    // Check if review already exists
-    const existingReview = await Review.findOne({
+    // Always create new review (allow multiple reviews per user per site)
+    const review = await Review.create({
       userId,
       itineraryId,
       siteId,
+      rating,
+      reviewText: reviewText || "",
+      photos: photoPaths,
     });
-
-    let review;
-
-    if (existingReview) {
-      // Update existing review
-      existingReview.rating = rating;
-      existingReview.reviewText = reviewText || "";
-      // If new photos are uploaded, replace old photos, otherwise keep existing
-      if (photoPaths.length > 0) {
-        existingReview.photos = photoPaths;
-      }
-      review = await existingReview.save();
-    } else {
-      // Create new review
-      review = await Review.create({
-        userId,
-        itineraryId,
-        siteId,
-        rating,
-        reviewText: reviewText || "",
-        photos: photoPaths,
-      });
-    }
 
     // Automatically mark site as visited when review is created or updated
     try {
@@ -81,11 +61,11 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
       .populate("itineraryId", "name")
       .populate("siteId", "siteName siteDescription mediaUrl");
 
-    // Log the review creation/update
+    // Log the review creation
     try {
       await Log.create({
         adminName: `${populated.userId.firstName} ${populated.userId.lastName}`,
-        action: existingReview ? "Updated review" : "Created review",
+        action: "Created review",
         role: "tourist",
         targetType: "review",
         targetId: review._id,
@@ -104,8 +84,8 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
       // Continue even if logging fails
     }
 
-    res.status(existingReview ? 200 : 201).json({
-      message: existingReview ? "Review updated successfully" : "Review created successfully",
+    res.status(201).json({
+      message: "Review created successfully",
       review: populated,
     });
   } catch (err) {

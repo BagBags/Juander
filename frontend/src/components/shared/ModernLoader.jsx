@@ -23,22 +23,18 @@ export default function ModernLoader({ progress = 0 }) {
     <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
       <div className="flex flex-col items-center gap-6 px-4">
         {/* Logo - No opacity changes */}
-        <div>
+        <div className="w-32 h-32 rounded-full overflow-hidden bg-white">
           <img 
-            src="/icons/logo.png" 
+            src="/juan/JuanLoader.gif" 
             alt="Juander Logo" 
-            className="w-32 h-32 object-contain"
+            className="w-full h-full object-cover"
+            style={{ mixBlendMode: 'multiply' }}
           />
         </div>
 
         {/* Loading Text */}
-        <p className="text-gray-800 text-lg font-light tracking-wide">
-          Loading Juander
-          <span className="inline-block ml-1">
-            <span className="animate-pulse" style={{ animationDelay: '0ms' }}>.</span>
-            <span className="animate-pulse" style={{ animationDelay: '200ms' }}>.</span>
-            <span className="animate-pulse" style={{ animationDelay: '400ms' }}>.</span>
-          </span>
+        <p className="text-gray-800 text-xl font-bold tracking-wide uppercase" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+          Loading...
         </p>
 
         {/* Progress Bar with Percentage */}

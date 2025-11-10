@@ -5,6 +5,7 @@ import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+import NotificationModal from "../../shared/NotificationModal";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
@@ -19,6 +20,7 @@ export default function SiteModalFullScreen({
   reviewsLoading = false,
   simulateGoToNextSite,
   isGuestMode = false,
+  onReviewSubmitted,
 }) {
   const { t } = useTranslation();
   const { itineraryId } = useParams();
@@ -32,6 +34,7 @@ export default function SiteModalFullScreen({
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
   const [userReviews, setUserReviews] = useState([]);
   const [editingReviewId, setEditingReviewId] = useState(null);
   const [reviewImages, setReviewImages] = useState([]);
@@ -107,7 +110,8 @@ export default function SiteModalFullScreen({
             `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/site/${selectedPin._id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const myReviews = response.data.filter(r => r.userId._id === userId);
+          const reviewsData = response.data.reviews || response.data;
+          const myReviews = reviewsData.filter(r => r.userId._id === userId);
           setUserReviews(myReviews);
         }
       } catch (error) {
@@ -120,7 +124,7 @@ export default function SiteModalFullScreen({
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
     if (files.length + reviewImages.length > 5) {
-      alert("You can upload maximum 5 images");
+      setNotification({ isOpen: true, title: "Upload Limit", message: "You can upload maximum 5 images", type: "warning" });
       return;
     }
 
@@ -146,7 +150,7 @@ export default function SiteModalFullScreen({
     e.preventDefault();
     
     if (rating === 0) {
-      alert("Please select a rating");
+      setNotification({ isOpen: true, title: "Rating Required", message: "Please select a rating", type: "warning" });
       return;
     }
 
@@ -166,7 +170,7 @@ export default function SiteModalFullScreen({
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        alert("Review updated successfully!");
+        setNotification({ isOpen: true, title: "Success", message: "Review updated successfully!", type: "success" });
       } else {
         // For creating, send as FormData with photos
         const formData = new FormData();
@@ -190,7 +194,7 @@ export default function SiteModalFullScreen({
             },
           }
         );
-        alert("Review submitted successfully!");
+        setNotification({ isOpen: true, title: "Success", message: "Review submitted successfully!", type: "success" });
       }
 
       // Reset form
@@ -207,11 +211,17 @@ export default function SiteModalFullScreen({
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const userId = JSON.parse(localStorage.getItem("user"))?._id;
-      const myReviews = response.data.filter(r => r.userId._id === userId);
+      const reviewsData = response.data.reviews || response.data;
+      const myReviews = reviewsData.filter(r => r.userId._id === userId);
       setUserReviews(myReviews);
+      
+      // Refresh parent component's reviews
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
     } catch (err) {
       console.error("Error submitting review:", err);
-      alert(err.response?.data?.error || "Failed to submit review");
+      setNotification({ isOpen: true, title: "Error", message: err.response?.data?.error || "Failed to submit review", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -237,13 +247,13 @@ export default function SiteModalFullScreen({
         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${reviewId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Review deleted successfully!");
+      setNotification({ isOpen: true, title: "Success", message: "Review deleted successfully!", type: "success" });
       
       // Refresh user reviews
       setUserReviews(userReviews.filter(r => r._id !== reviewId));
     } catch (err) {
       console.error("Error deleting review:", err);
-      alert("Failed to delete review");
+      setNotification({ isOpen: true, title: "Error", message: "Failed to delete review", type: "error" });
     }
   };
 
@@ -928,6 +938,15 @@ export default function SiteModalFullScreen({
           </>
         )}
       </div>
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
+      />
     </div>
   );
 }

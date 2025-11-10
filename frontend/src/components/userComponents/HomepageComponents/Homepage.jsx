@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
-import { WifiOff, X } from "lucide-react";
+import { WifiOff, X, Compass } from "lucide-react";
 import ModernLoader from "../../shared/ModernLoader";
 
 // Lazy load heavy components
@@ -18,21 +18,49 @@ export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isOffline, setIsOffline] = useState(false); // Default to ONLINE for development
   const [fromCache, setFromCache] = useState(false);
-  const [showOfflineBanner, setShowOfflineBanner] = useState(true);
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false); // Hide by default
   const [bgLoaded, setBgLoaded] = useState(false);
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Monitor online/offline status
+  // Monitor online/offline status - IMPROVED detection
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false);
-      // Refetch data when back online
-      window.location.reload();
+    // Test actual connectivity instead of just navigator.onLine
+    const checkConnectivity = async () => {
+      try {
+        // Try to fetch backend health endpoint
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        await fetch('http://192.168.100.10:5000/health', {
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        
+        clearTimeout(timeoutId);
+        setIsOffline(false);
+        setShowOfflineBanner(false);
+      } catch (error) {
+        // Only set offline if backend is truly unreachable
+        console.warn('[Connectivity] Backend check failed:', error.message);
+        setIsOffline(true);
+        setShowOfflineBanner(true);
+      }
     };
-    const handleOffline = () => setIsOffline(true);
+
+    // Check connectivity on mount
+    checkConnectivity();
+
+    // Listen to browser events as backup
+    const handleOnline = () => {
+      checkConnectivity();
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      setShowOfflineBanner(true);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -46,60 +74,77 @@ export default function Homepage() {
   // Optimized preloading with progress tracking
   useEffect(() => {
     let mounted = true;
+    let progressLocked = false; // Prevent progress from going backwards
+    
+    const updateProgress = (value) => {
+      if (!progressLocked && mounted) {
+        setLoadingProgress(prev => Math.max(prev, value)); // Never go backwards
+      }
+    };
+    
     const loadResources = async () => {
       try {
-        // Step 1: Load background image (40%)
-        setLoadingProgress(10);
+        // Step 1: Initial load (20%)
+        updateProgress(20);
+        
+        // Step 2: Load background image (50%)
         const isMobile = window.innerWidth < 640;
         const bgImage = new Image();
-        bgImage.src = isMobile ? '/JuanderBGPhone.png' : '/JuanderBGWeb1.svg';
+        bgImage.src = isMobile ? '/icons/BGEnhanced4.png' : '/JuanderBGWeb1.svg';
         
         await new Promise((resolve) => {
           bgImage.onload = resolve;
           bgImage.onerror = resolve;
+          setTimeout(resolve, 2000); // Timeout fallback
         });
         
         if (!mounted) return;
         setBgLoaded(true);
-        setLoadingProgress(40);
+        updateProgress(50);
 
-        // Step 2: Preload logo (60%)
+        // Step 3: Preload logo (70%)
         const logo = new Image();
         logo.src = '/icons/logo.png';
         await new Promise((resolve) => {
           logo.onload = resolve;
           logo.onerror = resolve;
+          setTimeout(resolve, 1000); // Timeout fallback
         });
         
         if (!mounted) return;
-        setLoadingProgress(60);
+        updateProgress(70);
 
-        // Step 3: Wait for critical components (80%)
-        await new Promise(resolve => setTimeout(resolve, 300));
-        if (!mounted) return;
-        setLoadingProgress(80);
-
-        // Step 4: Final preparations (100%)
+        // Step 4: Wait for critical components (85%)
         await new Promise(resolve => setTimeout(resolve, 200));
         if (!mounted) return;
-        setLoadingProgress(100);
+        updateProgress(85);
+
+        // Step 5: Final preparations (100%)
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (!mounted) return;
+        updateProgress(100);
+        progressLocked = true; // Lock at 100%
         
-        // Small delay before showing content for smooth transition
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Small delay before showing content
+        await new Promise(resolve => setTimeout(resolve, 200));
         if (!mounted) return;
         setComponentsLoaded(true);
       } catch (error) {
         console.error('Error loading resources:', error);
         if (mounted) {
           setBgLoaded(true);
+          updateProgress(100);
+          progressLocked = true;
           setComponentsLoaded(true);
-          setLoadingProgress(100);
         }
       }
     };
 
     loadResources();
-    return () => { mounted = false; };
+    return () => { 
+      mounted = false;
+      progressLocked = true; // Prevent any updates after unmount
+    };
   }, []);
 
   // Announce page load
@@ -114,38 +159,36 @@ export default function Homepage() {
       if (!token) return;
 
       try {
-        // Check if offline
-        if (!navigator.onLine) {
-          // Try to load from cache
+        // Always try to fetch from backend - don't check navigator.onLine
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://192.168.100.10:5000/api";
+        const res = await fetch(`${apiUrl}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const userData = await res.json();
+          setCurrentUser(userData);
+          localStorage.setItem('cached_user', JSON.stringify(userData));
+          setFromCache(false);
+        } else if (res.status === 401) {
+          // Token expired
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        } else {
+          // Other error - try cache
           const cachedUser = localStorage.getItem('cached_user');
           if (cachedUser) {
             setCurrentUser(JSON.parse(cachedUser));
             setFromCache(true);
           }
-          return;
         }
-
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setCurrentUser(res.data);
-        // Cache user data
-        localStorage.setItem('cached_user', JSON.stringify(res.data));
       } catch (err) {
-        // Only log non-401 errors (401 is expected when token expires)
-        if (err.response?.status !== 401) {
-          console.error("Error fetching user:", err);
-        }
-        
-        // Try cache on error
+        console.error("[Homepage] Error fetching user:", err);
+        // Network error - try cache
         const cachedUser = localStorage.getItem('cached_user');
         if (cachedUser) {
           setCurrentUser(JSON.parse(cachedUser));
           setFromCache(true);
-        } else if (err.response?.status === 401) {
-          // Token expired or invalid, clear it
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
         }
       }
     };
@@ -167,7 +210,7 @@ export default function Homepage() {
       min-h-screen bg-cover bg-no-repeat bg-center 
       flex flex-col items-center justify-start 
       overflow-hidden relative
-      bg-[url('/JuanderBGPhone.png')] 
+      bg-[url('/icons/BGEnhanced4.png')] 
       sm:bg-[url('/JuanderBGWeb1.svg')]
     "
         style={{
@@ -180,39 +223,27 @@ export default function Homepage() {
           WebkitOverscrollBehavior: "none",
         }}
       >
-      {/* Offline Indicator */}
-      {isOffline && showOfflineBanner && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-4 py-3 shadow-lg">
-          <div className="flex items-center justify-center gap-2 relative">
-            <WifiOff className="w-5 h-5" />
-            <span className="font-semibold">
-              You're offline - Some features may be limited
-            </span>
-            <button
-              onClick={() => setShowOfflineBanner(false)}
-              className="absolute right-0 hover:bg-red-700 rounded p-1 transition-colors"
-              aria-label="Close banner"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Logo Header */}
-      <div className={`w-full flex justify-center px-4 ${isOffline && showOfflineBanner ? 'mt-20' : 'mt-2'}`}>
+      <div className="w-full flex justify-center px-4 mt-6">
         <LogoHeader />
       </div>
 
-      {/* Title */}
-      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10 px-4">
-        <h5
-          className="text-[38px] sm:text-[56px] md:text-[68px] 
-             font-poppins font-extrabold tracking-tight leading-[1.1] 
-             text-[#f5f5dc] drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
+      {/* Title with modern, clean styling */}
+      <div className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6">
+        <h1
+          className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
+             font-bold tracking-tight leading-[1.1] 
+             text-white
+             drop-shadow-[0_2px_20px_rgba(0,0,0,0.3)]
+             mb-3"
         >
           {t("homepageTitle")}
-        </h5>
+        </h1>
+        <p className="text-sm sm:text-base md:text-lg text-white/95 font-normal
+           drop-shadow-[0_2px_12px_rgba(0,0,0,0.25)]
+           max-w-sm mx-auto">
+          Discover the historic walled city
+        </p>
       </div>
 
       {/* Buttons */}

@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { Compass } from "lucide-react";
 
 export default function Button({ navigate }) {
   const { t } = useTranslation();
@@ -19,13 +20,22 @@ export default function Button({ navigate }) {
       onClick={handleClick}
       className="fixed bottom-16 lg:fixed lg:bottom-16
     left-1/2 -translate-x-1/2
-    bg-white text-black font-semibold shadow-md rounded-2xl
-    w-40 sm:w-44 lg:w-52
-    h-12 sm:h-14 lg:h-14
-    text-sm sm:text-base lg:text-lg
-    hover:bg-gray-100 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gray-300 
-    transition-all duration-200 ease-in-out z-40"
+    bg-white/95 backdrop-blur-md
+    text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl
+    w-48 sm:w-52 lg:w-56
+    h-14 sm:h-16 lg:h-16
+    text-lg sm:text-xl lg:text-xl
+    hover:bg-[#f04e37]
+    hover:text-white
+    hover:shadow-[0_8px_32px_rgba(240,78,55,0.4)]
+    hover:-translate-y-0.5
+    active:translate-y-0
+    focus:outline-none 
+    transition-all duration-300 ease-out
+    border border-white/50
+    flex items-center justify-center gap-2 z-40"
     >
+      <Compass className="w-5 h-5" />
       {/* Label for Mobile/Tablet */}
       <span className="block lg:hidden">{t("startTour")}</span>
       {/* Label for Desktop */}

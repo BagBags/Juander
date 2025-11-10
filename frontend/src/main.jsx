@@ -1,37 +1,58 @@
 // main.jsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { registerSW } from "virtual:pwa-register";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import App from "./App.jsx";
 
-// Register service worker with update notification
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    if (confirm("New content available. Reload to update?")) {
-      updateSW(true);
+// FORCE UNREGISTER ALL SERVICE WORKERS - DEVELOPMENT MODE
+// This runs BEFORE React renders to ensure clean state
+if ('serviceWorker' in navigator) {
+  // Unregister all service workers
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    const unregisterPromises = registrations.map(registration => {
+      console.log('[DEV] Unregistering service worker:', registration.scope);
+      return registration.unregister();
+    });
+    
+    return Promise.all(unregisterPromises);
+  }).then(() => {
+    console.log('[DEV] All service workers unregistered');
+    
+    // Clear all caches
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            console.log('[DEV] Deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        console.log('[DEV] All caches cleared');
+      });
     }
-  },
-  onOfflineReady() {
-    console.log("✅ App ready to work offline");
-  },
-  onRegistered(registration) {
-    console.log("✅ Service Worker registered");
-    // Check for updates every hour
-    setInterval(() => {
-      registration?.update();
-    }, 60 * 60 * 1000);
-  },
-  onRegisterError(error) {
-    console.error("❌ Service Worker registration failed:", error);
-  },
-});
+  }).catch(err => {
+    console.error('[DEV] Error cleaning up:', err);
+  });
+  
+  // Prevent any new service worker registration
+  navigator.serviceWorker.register = () => {
+    console.log('[DEV] Service worker registration blocked');
+    return Promise.reject(new Error('Service worker disabled in development'));
+  };
+}
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-console.log("Client ID from .env:", clientId); // ← This should log the correct string
+// DEBUG: Log all environment variables
+console.log("=== ENVIRONMENT VARIABLES ===");
+console.log("VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
+console.log("VITE_FRONTEND_URL:", import.meta.env.VITE_FRONTEND_URL);
+console.log("VITE_GOOGLE_CLIENT_ID:", clientId);
+console.log("MODE:", import.meta.env.MODE);
+console.log("DEV:", import.meta.env.DEV);
+console.log("============================");
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

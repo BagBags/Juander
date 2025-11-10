@@ -317,15 +317,13 @@ export default function LoginForm({ toggleForm }) {
           <button
             type="button"
             onClick={() => {
-              // Use sessionStorage for guest users
-              sessionStorage.setItem("guest", "true");
-              sessionStorage.setItem("guestLanguage", "en"); // Set English as default for guests
-              sessionStorage.removeItem("token");
-              sessionStorage.removeItem("user");
-              // Clear localStorage guest data if any
-              localStorage.removeItem("guest");
+              // Use localStorage for guest users to persist across tabs/windows
+              localStorage.setItem("guest", "true");
+              localStorage.setItem("guestLanguage", "en"); // Set English as default for guests
               localStorage.removeItem("token");
               localStorage.removeItem("user");
+              // Clear sessionStorage
+              sessionStorage.clear();
               // Set language to English immediately
               i18n.changeLanguage("en");
               navigate("/GuestHomepage", { replace: true });

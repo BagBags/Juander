@@ -12,6 +12,9 @@ export default function AuthPersistence({ children }) {
   const location = useLocation();
 
   useEffect(() => {
+    // Check if user is in guest mode
+    const isGuest = localStorage.getItem('guest') === 'true';
+    
     // Check and restore authentication on mount
     const token = getToken();
     const user = getUser();
@@ -32,12 +35,22 @@ export default function AuthPersistence({ children }) {
           navigate('/Homepage');
         }
       }
+    } else if (isGuest) {
+      console.log('✅ Guest mode active - session persisted');
+      
+      // If guest is on login page, redirect to guest homepage
+      if (location.pathname === '/' || location.pathname === '/login') {
+        navigate('/GuestHomepage');
+      }
     } else {
       console.log('❌ No valid session found');
       
-      // Only redirect to login if on protected routes
+      // Only redirect to login if on protected routes (not guest routes)
       const publicRoutes = ['/', '/login', '/signup', '/forgot-password'];
-      if (!publicRoutes.includes(location.pathname)) {
+      const guestRoutes = ['/GuestHomepage', '/GuestItinerary', '/GuestItineraryMap', '/TourMap', '/Chatbot', '/Emergency', '/Photobooth', '/GuestProfile'];
+      const isGuestRoute = guestRoutes.some(route => location.pathname.startsWith(route));
+      
+      if (!publicRoutes.includes(location.pathname) && !isGuestRoute) {
         clearAuth();
         navigate('/');
       }
@@ -73,14 +86,21 @@ export default function AuthPersistence({ children }) {
       if (document.visibilityState === 'visible') {
         const token = getToken();
         const user = getUser();
+        const isGuest = localStorage.getItem('guest') === 'true';
         
         if (token && user) {
           console.log('✅ App resumed - session still valid');
           extendTokenExpiry();
+        } else if (isGuest) {
+          console.log('✅ App resumed - guest mode active');
+          // Guest mode is still active, no need to redirect
         } else {
           console.log('❌ App resumed - session lost');
           const publicRoutes = ['/', '/login', '/signup', '/forgot-password'];
-          if (!publicRoutes.includes(location.pathname)) {
+          const guestRoutes = ['/GuestHomepage', '/GuestItinerary', '/GuestItineraryMap', '/TourMap', '/Chatbot', '/Emergency', '/Photobooth', '/GuestProfile'];
+          const isGuestRoute = guestRoutes.some(route => location.pathname.startsWith(route));
+          
+          if (!publicRoutes.includes(location.pathname) && !isGuestRoute) {
             clearAuth();
             navigate('/');
           }

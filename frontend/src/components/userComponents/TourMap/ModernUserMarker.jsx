@@ -2,39 +2,105 @@ import React, { useEffect, useRef, memo } from "react";
 import { Marker } from "react-map-gl";
 
 /**
- * Modern User Location Marker - PROFESSIONAL PWA IMPLEMENTATION
+ * Modern User Location Marker - GOOGLE MAPS STYLE IMPLEMENTATION
  * 
  * ARCHITECTURE:
  * - Zero React re-renders (pure DOM manipulation)
- * - INSTANT rotation (no interpolation lag)
+ * - SMOOTH real-time rotation with interpolation (like Google Maps)
  * - Continuous operation even when PWA is backgrounded
- * - GPU-accelerated transforms
+ * - GPU-accelerated transforms with CSS transitions
  * - Page Visibility API integration
+ * - 60fps performance with requestAnimationFrame
  * 
  * COMPASS SUPPORT:
  * - iOS: webkitCompassHeading (native compass API)
  * - Android: DeviceOrientationEvent.alpha with screen rotation compensation
  * - GPS: coords.heading fallback when device is moving
+ * 
+ * SMOOTHING:
+ * - Heading smoothing algorithm to prevent jitter
+ * - Interpolation for fluid rotation
+ * - No beam removal/reattachment (stays persistent)
  */
 const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading = null }) {
   const beamRef = useRef(null);
   const currentHeadingRef = useRef(0);
+  const targetHeadingRef = useRef(0);
   const screenOrientationRef = useRef(0);
   const isPageVisibleRef = useRef(true);
+  const animationFrameRef = useRef(null);
+  const lastUpdateTimeRef = useRef(Date.now());
 
-  // INSTANT rotation - no interpolation, no lag
-  const rotateBeam = (heading) => {
-    if (!beamRef.current || heading === null || heading === undefined || isNaN(heading)) return;
+  // Normalize heading to 0-360
+  const normalizeHeading = (heading) => {
+    let normalized = heading % 360;
+    if (normalized < 0) normalized += 360;
+    return normalized;
+  };
+
+  // Calculate shortest rotation path (prevents 359° -> 1° spinning)
+  const getShortestRotation = (from, to) => {
+    let diff = to - from;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return diff;
+  };
+
+  // SMOOTH rotation with interpolation (Google Maps style)
+  const smoothRotateBeam = () => {
+    if (!beamRef.current) return;
     
-    // Normalize heading to 0-360
-    let normalizedHeading = heading % 360;
-    if (normalizedHeading < 0) normalizedHeading += 360;
+    const now = Date.now();
+    const deltaTime = (now - lastUpdateTimeRef.current) / 1000; // seconds
+    lastUpdateTimeRef.current = now;
     
-    // Store current heading
-    currentHeadingRef.current = normalizedHeading;
+    const current = currentHeadingRef.current;
+    const target = targetHeadingRef.current;
     
-    // INSTANT GPU-accelerated rotation
-    beamRef.current.style.transform = `rotate(${normalizedHeading}deg) translateZ(0)`;
+    // Calculate shortest rotation path
+    const diff = getShortestRotation(current, target);
+    
+    // Smooth interpolation (adjust speed for responsiveness)
+    // Higher value = faster rotation, lower = smoother
+    const rotationSpeed = 8; // degrees per frame at 60fps
+    const maxRotation = rotationSpeed * deltaTime * 60; // scale by frame time
+    
+    let newHeading;
+    if (Math.abs(diff) < 0.5) {
+      // Close enough, snap to target
+      newHeading = target;
+    } else {
+      // Interpolate smoothly
+      const step = Math.sign(diff) * Math.min(Math.abs(diff), maxRotation);
+      newHeading = normalizeHeading(current + step);
+    }
+    
+    // Update current heading
+    currentHeadingRef.current = newHeading;
+    
+    // Apply GPU-accelerated rotation with smooth transition
+    beamRef.current.style.transform = `rotate(${newHeading}deg) translateZ(0)`;
+    
+    // Continue animation if not at target
+    if (Math.abs(diff) >= 0.5) {
+      animationFrameRef.current = requestAnimationFrame(smoothRotateBeam);
+    }
+  };
+
+  // Update target heading and start smooth rotation
+  const setTargetHeading = (heading) => {
+    if (heading === null || heading === undefined || isNaN(heading)) return;
+    
+    const normalized = normalizeHeading(heading);
+    targetHeadingRef.current = normalized;
+    
+    // Cancel existing animation
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    // Start smooth rotation
+    animationFrameRef.current = requestAnimationFrame(smoothRotateBeam);
   };
 
   // Track screen orientation for Android compass adjustment
@@ -68,12 +134,18 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
     };
   }, []);
 
-  // Device orientation listener - INSTANT response
+  // Respond to heading prop changes immediately
   useEffect(() => {
-    // Priority 1: GPS heading (when moving)
     if (heading !== null && heading !== undefined && heading >= 0) {
-      rotateBeam(heading);
-      return;
+      setTargetHeading(heading);
+    }
+  }, [heading]);
+
+  // Device orientation listener - SMOOTH real-time response
+  useEffect(() => {
+    // Only use device orientation if no GPS heading available
+    if (heading !== null && heading !== undefined && heading >= 0) {
+      return; // GPS heading takes priority
     }
 
     // Priority 2: Device compass heading
@@ -103,9 +175,9 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
         compassHeading = (360 - adjustedAlpha) % 360;
       }
       
-      // INSTANT rotation
+      // SMOOTH rotation with interpolation
       if (compassHeading !== null) {
-        rotateBeam(compassHeading);
+        setTargetHeading(compassHeading);
       }
     };
 
@@ -116,8 +188,13 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
     return () => {
       window.removeEventListener("deviceorientationabsolute", handleOrientation);
       window.removeEventListener("deviceorientation", handleOrientation);
+      
+      // Cleanup animation frame
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
-  }, [heading]);
+  }, [heading]); // Re-run when heading changes to switch between GPS and compass
 
   if (!userLocation) return null;
 
@@ -128,13 +205,14 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
       anchor="center"
     >
       <div className="relative flex items-center justify-center w-16 h-16">
-        {/* Direction Beam - INSTANT GPU-accelerated rotation */}
+        {/* Direction Beam - SMOOTH GPU-accelerated rotation (Google Maps style) */}
         <div
           ref={beamRef}
           className="absolute pointer-events-none"
           style={{
             transform: "rotate(0deg) translateZ(0)",
             transformOrigin: "center center",
+            transition: "transform 0.1s cubic-bezier(0.4, 0.0, 0.2, 1)", // Smooth CSS transition
             willChange: "transform",
             backfaceVisibility: "hidden",
             WebkitBackfaceVisibility: "hidden",
@@ -173,6 +251,27 @@ const ModernUserMarker = memo(function ModernUserMarker({ userLocation, heading 
       </div>
     </Marker>
   );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Returns TRUE to SKIP re-render, FALSE to allow re-render
+  
+  // Always allow re-render if heading changed (for rotation)
+  if (prevProps.heading !== nextProps.heading) {
+    return false; // Allow re-render for heading updates
+  }
+  
+  // Check location changes
+  if (!prevProps.userLocation || !nextProps.userLocation) {
+    return prevProps.userLocation === nextProps.userLocation;
+  }
+  
+  // Calculate distance between old and new location
+  const latDiff = Math.abs(nextProps.userLocation.latitude - prevProps.userLocation.latitude);
+  const lngDiff = Math.abs(nextProps.userLocation.longitude - prevProps.userLocation.longitude);
+  const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000; // meters
+  
+  // Skip re-render if location hasn't moved significantly
+  return distance < 5;
 });
 
 export default ModernUserMarker;

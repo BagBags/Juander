@@ -81,6 +81,7 @@ export default function FloatingChatbot() {
             className={`absolute floating-chatbot ${
               isOpen ? "pointer-events-none" : "pointer-events-auto"
             }`}
+            initial={{ x: position.x, y: position.y }}
             animate={{ x: position.x, y: position.y }}
             transition={
               wasDragged.current
@@ -92,7 +93,7 @@ export default function FloatingChatbot() {
               className={`drag-handle flex items-center justify-center cursor-grab active:cursor-grabbing
                 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32
                 transition-transform duration-300 ease-in-out
-                ${isOpen ? "rotate-[45deg] scale-75" : "rotate-[30deg] scale-90"}`}
+                ${isOpen ? "rotate-0 scale-100" : "rotate-[30deg] scale-90"}`}
               onClick={handleToggle}
               onTouchStart={(e) => {
                 const touch = e.touches[0];
@@ -119,7 +120,7 @@ export default function FloatingChatbot() {
               }}
             >
               <img
-                src={isOpen ? "/icons/juan_close.svg" : "/icons/juan_open.svg"}
+                src="/icons/juan_open.svg"
                 alt="Juan"
                 className="w-full h-full object-contain pointer-events-none"
               />

@@ -15,8 +15,35 @@ export default function Chatbot() {
   const sessionId = useRef(uuidv4());
   const lastBotMessageRef = useRef("");
 
-  const [messages, setMessages] = useState([]);
-  const [hasUserMessaged, setHasUserMessaged] = useState(false);
+  const [messages, setMessages] = useState(() => {
+    // Load saved messages from localStorage with expiry check
+    const saved = localStorage.getItem('chatbotMessages');
+    const savedTimestamp = localStorage.getItem('chatbotMessagesTimestamp');
+    
+    if (saved && savedTimestamp) {
+      const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+      const now = Date.now();
+      const timestamp = parseInt(savedTimestamp, 10);
+      
+      // Check if data is older than 3 days
+      if (now - timestamp > threeDaysInMs) {
+        // Clear expired data
+        localStorage.removeItem('chatbotMessages');
+        localStorage.removeItem('chatbotMessagesTimestamp');
+        localStorage.removeItem('chatbotHasUserMessaged');
+        return [];
+      }
+      
+      return JSON.parse(saved);
+    }
+    
+    return [];
+  });
+  const [hasUserMessaged, setHasUserMessaged] = useState(() => {
+    // Load saved state from localStorage
+    const saved = localStorage.getItem('chatbotHasUserMessaged');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [input, setInput] = useState("");
   const [botEntries, setBotEntries] = useState([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
@@ -24,6 +51,19 @@ export default function Chatbot() {
   const [speakingMessageIndex, setSpeakingMessageIndex] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+
+  // Save messages to localStorage whenever they change with timestamp
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chatbotMessages', JSON.stringify(messages));
+      localStorage.setItem('chatbotMessagesTimestamp', Date.now().toString());
+    }
+  }, [messages]);
+
+  // Save hasUserMessaged state to localStorage
+  useEffect(() => {
+    localStorage.setItem('chatbotHasUserMessaged', JSON.stringify(hasUserMessaged));
+  }, [hasUserMessaged]);
 
   // Auto-scroll
   useEffect(() => {

@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
+import fs from "fs";
+import path from "path";
 
 export default defineConfig({
   base: '', // Empty string for relative paths
@@ -165,7 +167,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true, // Enable in development for testing
+        enabled: false, // Disable in development to avoid offline cache issues
         type: 'module',
       },
     }),
@@ -197,6 +199,9 @@ export default defineConfig({
     },
   },
   server: {
+    host: 'localhost',
+    port: 5173,
+    cors: true,
     proxy: {
       "/api": {
         target: "http://localhost:5000",

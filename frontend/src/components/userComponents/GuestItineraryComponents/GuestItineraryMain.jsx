@@ -188,6 +188,8 @@ export default function GuestItineraryMain() {
 }
 
 function ItineraryCard({ itinerary, navigate }) {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
+  
   // Resolve image URL (prepend localhost if needed)
   const getImageUrl = (url) => {
     if (!url || url.trim() === "") return null;
@@ -200,44 +202,61 @@ function ItineraryCard({ itinerary, navigate }) {
 
   return (
     <div
-      className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
-      onClick={() =>
-        navigate(`/GuestItineraryMap/${itinerary._id}`, {
-          state: { itinerary },
-        })
-      }
+      className="bg-white rounded-3xl shadow-lg overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
     >
-      {imageSrc ? (
-        <img
-          src={imageSrc}
-          alt={itinerary.name}
-          className="w-full h-48 object-cover flex-shrink-0"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-            e.currentTarget.nextElementSibling.style.display = 'flex';
-          }}
-        />
-      ) : null}
-      
-      {/* Placeholder for missing images */}
-      <div 
-        className="w-full h-48 bg-gradient-to-br from-orange-50 to-red-50 flex flex-col items-center justify-center flex-shrink-0 border-b-2 border-[#f04e37]/10"
-        style={{ display: imageSrc ? 'none' : 'flex' }}
+      <div
+        className="cursor-pointer"
+        onClick={() =>
+          navigate(`/GuestItineraryMap/${itinerary._id}`, {
+            state: { itinerary },
+          })
+        }
       >
-        <div className="relative">
-          <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
-          <MapPin className="w-20 h-20 text-[#f04e37] relative animate-pulse" strokeWidth={1.5} />
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={itinerary.name}
+            className="w-full h-48 object-cover flex-shrink-0"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        
+        {/* Placeholder for missing images */}
+        <div 
+          className="w-full h-48 bg-gradient-to-br from-orange-50 to-red-50 flex flex-col items-center justify-center flex-shrink-0 border-b-2 border-[#f04e37]/10"
+          style={{ display: imageSrc ? 'none' : 'flex' }}
+        >
+          <div className="relative">
+            <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
+            <MapPin className="w-20 h-20 text-[#f04e37] relative animate-pulse" strokeWidth={1.5} />
+          </div>
+          <p className="text-[#f04e37]/60 text-sm font-medium mt-3">Itinerary Image</p>
         </div>
-        <p className="text-[#f04e37]/60 text-sm font-medium mt-3">Itinerary Image</p>
       </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
         <h2 className="text-xl font-semibold text-red-600 mb-2 flex-shrink-0">
           {itinerary.name}
         </h2>
-        <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-shrink-0">
-          {itinerary.description}
-        </p>
+        <div className="flex-shrink-0 mb-3">
+          <p className={`text-gray-600 text-sm ${isDescriptionExpanded ? '' : 'line-clamp-2'}`}>
+            {itinerary.description}
+          </p>
+          {itinerary.description && itinerary.description.length > 100 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
+              className="text-[#f04e37] text-xs font-semibold mt-1 hover:underline focus:outline-none"
+            >
+              {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+            </button>
+          )}
+        </div>
         {itinerary.sites?.length > 0 ? (
           <div className="text-gray-700 text-sm flex-1 overflow-hidden flex flex-col">
             <span className="font-semibold flex-shrink-0">Sites:</span>

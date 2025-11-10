@@ -1,5 +1,5 @@
 // components/adminComponents/AdminPinCard.jsx
-import React, { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect, Component } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Canvas } from "@react-three/fiber";
@@ -10,6 +10,29 @@ import axios from "axios";
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
   : "http://localhost:5000";
+
+// Error Boundary for 3D Model
+class ModelErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.log('3D model failed to load in pin card, skipping:', error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Don't render anything on error
+    }
+    return this.props.children;
+  }
+}
 
 // 3D Model Preview Component
 const ModelPreview = ({ url }) => {
@@ -621,21 +644,22 @@ const AdminPinCard = ({
             </div>
             {/* Live 3D Model Preview */}
             {pin.glbUrl && (
-              <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
-                <Canvas>
-                  <Suspense fallback={null}>
-                    <ambientLight intensity={1.2} />
-                    <directionalLight position={[10, 10, 10]} intensity={1.5} />
-                    <directionalLight position={[-5, 5, -5]} intensity={0.5} />
-                    <Bounds fit clip observe margin={0.8}>
-                      <Center>
-                        <ModelPreview
-                          url={
-                            pin.glbUrl
-                              ? pin.glbUrl.startsWith('http') 
-                                ? pin.glbUrl 
-                                : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
-                              : null
+              <ModelErrorBoundary>
+                <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
+                  <Canvas>
+                    <Suspense fallback={null}>
+                      <ambientLight intensity={1.2} />
+                      <directionalLight position={[10, 10, 10]} intensity={1.5} />
+                      <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+                      <Bounds fit clip observe margin={0.8}>
+                        <Center>
+                          <ModelPreview
+                            url={
+                              pin.glbUrl
+                                ? pin.glbUrl.startsWith('http') 
+                                  ? pin.glbUrl 
+                                  : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
+                                : null
                           }
                         />
                       </Center>
@@ -655,6 +679,7 @@ const AdminPinCard = ({
                   Remove
                 </button>
               </div>
+              </ModelErrorBoundary>
             )}
           </div>
         </div>

@@ -501,13 +501,9 @@ export default function Account() {
                           <Eye size={18} />
                         )}
                       </button>
-                      {errors.password ? (
+                      {errors.password && (
                         <p className="text-xs text-red-600 mt-1">
                           {errors.password}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {t("passwordHint")}
                         </p>
                       )}
                     </div>

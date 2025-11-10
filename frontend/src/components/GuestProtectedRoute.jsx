@@ -2,10 +2,10 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 export default function GuestProtectedRoute() {
-  // Check both localStorage (for regular users) and sessionStorage (for guests)
-  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-  const userData = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || "null");
-  const isGuest = sessionStorage.getItem("guest") === "true";
+  // Check localStorage for both regular users and guests
+  const token = localStorage.getItem("token");
+  const userData = JSON.parse(localStorage.getItem("user") || "null");
+  const isGuest = localStorage.getItem("guest") === "true";
 
   // If logged in as tourist, redirect to tourist homepage
   if (token && userData?.role === "tourist") {

@@ -5,6 +5,7 @@ import BackHeader from "../BackButton";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Camera, X, MapPin, Calendar, Star as StarIcon, Filter, BookOpen } from "lucide-react";
+import NotificationModal from "../../shared/NotificationModal";
 
 // Reusable Site Card Component
 const SiteCard = ({ site, resolveUrl, children }) => {
@@ -55,6 +56,7 @@ export default function TripArchivesPage() {
   const [selectedItineraryFilter, setSelectedItineraryFilter] = useState("all");
   const [selectedReviewItineraryFilter, setSelectedReviewItineraryFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("places"); // "places" or "reviews"
+  const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -176,7 +178,7 @@ export default function TripArchivesPage() {
 
   const handleSubmitReview = async () => {
     if (!selectedSite || rating === 0) {
-      alert("Please select a rating");
+      setNotification({ isOpen: true, title: "Rating Required", message: "Please select a rating", type: "warning" });
       return;
     }
 
@@ -210,7 +212,7 @@ export default function TripArchivesPage() {
           }
           warningMessage += ". Please revise your review.";
           
-          alert(warningMessage);
+          setNotification({ isOpen: true, title: "Content Warning", message: warningMessage, type: "warning" });
           console.log("Flagged categories:", result.categories);
           return;
         }
@@ -224,7 +226,7 @@ export default function TripArchivesPage() {
         );
         
         if (containsProfanity) {
-          alert("⚠️ Your review contains inappropriate content. Please revise it.");
+          setNotification({ isOpen: true, title: "Inappropriate Content", message: "Your review contains inappropriate content. Please revise it.", type: "warning" });
           return;
         }
         
@@ -234,7 +236,7 @@ export default function TripArchivesPage() {
             err.response.data && 
             err.response.data.details === "Too Many Requests") {
           
-          alert("We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.");
+          setNotification({ isOpen: true, title: "High Traffic", message: "We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.", type: "info" });
           console.log("OpenAI rate limit reached, proceeding with submission after profanity check");
         } else {
           // For other errors, warn user but allow submission after profanity check
@@ -284,10 +286,10 @@ export default function TripArchivesPage() {
       setReviewPhotos([]);
       setPhotoPreviewUrls([]);
       
-      alert(response.data.message);
+      setNotification({ isOpen: true, title: "Success", message: response.data.message, type: "success" });
     } catch (err) {
       console.error("Error submitting review:", err);
-      alert("Failed to submit review");
+      setNotification({ isOpen: true, title: "Error", message: "Failed to submit review", type: "error" });
     }
   };
 
@@ -302,10 +304,10 @@ export default function TripArchivesPage() {
       // Remove review from state
       setReviews(reviews.filter((r) => r._id !== reviewId));
       
-      alert("Review deleted successfully");
+      setNotification({ isOpen: true, title: "Success", message: "Review deleted successfully", type: "success" });
     } catch (err) {
       console.error("Error deleting review:", err);
-      alert("Failed to delete review");
+      setNotification({ isOpen: true, title: "Error", message: "Failed to delete review", type: "error" });
     }
   };
 
@@ -739,6 +741,15 @@ export default function TripArchivesPage() {
           2025 Intramuros Administration. All rights reserved.
         </p>
       </div>
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
+      />
     </div>
     </>
   );

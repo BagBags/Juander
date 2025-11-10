@@ -20,6 +20,16 @@ const SiteCard = ({ pin, onClose, distance }) => {
     const fetchUserLanguage = async () => {
       try {
         const token = localStorage.getItem('token');
+        const isGuest = localStorage.getItem('guest') === 'true';
+        
+        // Check for guest language first
+        if (isGuest) {
+          const guestLang = localStorage.getItem('guestLanguage') || 'en';
+          setUserLanguage(guestLang === 'tl' ? 'tagalog' : 'english');
+          return;
+        }
+        
+        // For logged-in users, fetch from backend
         if (token) {
           const response = await axios.get(
             `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/user`,
@@ -27,6 +37,8 @@ const SiteCard = ({ pin, onClose, distance }) => {
           );
           const language = response.data.language || 'english';
           setUserLanguage(language.toLowerCase());
+        } else {
+          setUserLanguage('english');
         }
       } catch (error) {
         console.error('Failed to fetch user language:', error);
@@ -332,7 +344,14 @@ const SiteCard = ({ pin, onClose, distance }) => {
             {/* Read Description Button - Modern Design */}
             <button
               onClick={() => {
-                const description = pin.description || "No description available";
+                let description = '';
+                if (userLanguage === 'tagalog' && pin.siteDescriptionTagalog) {
+                  description = pin.siteDescriptionTagalog;
+                } else if (userLanguage === 'english' && pin.siteDescription) {
+                  description = pin.siteDescription;
+                } else {
+                  description = pin.description || pin.siteDescription || pin.siteDescriptionTagalog || "No description available";
+                }
                 ttsService.enable(); // Enable TTS
                 ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
               }}

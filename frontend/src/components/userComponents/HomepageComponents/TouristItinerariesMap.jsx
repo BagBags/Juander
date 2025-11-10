@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -38,8 +38,10 @@ export default function TouristItineraryMap() {
   });
   const [userLocation, setUserLocation] = useState(null);
   const [userHeading, setUserHeading] = useState(0);
+  const userHeadingRef = useRef(0); // Ref for heading to prevent re-renders
   const lastLocationRef = useRef(null);
   const locationUpdateThrottle = useRef(null);
+  const headingUpdateThrottle = useRef(null);
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
@@ -190,7 +192,7 @@ export default function TouristItineraryMap() {
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
     if (!url) return "";
-    const BACKEND_URL = "http://localhost:5000";
+    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://192.168.100.10:5000";
     return url.startsWith("http")
       ? url
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
@@ -269,30 +271,30 @@ export default function TouristItineraryMap() {
           config
         );
 
-        const sites = (res.data.sites || []).filter(
-          (s) => s.latitude && s.longitude
-        );
-
-        const normalized = sites.map((s) => ({
-          ...s,
-          title: s.siteName || s.title || "Site",
-          siteName: s.siteName || s.title || "Site",
-          description: s.siteDescription || s.description || "",
-          mediaType: s.mediaType || "image",
-          mediaUrl: resolveUrl(s.mediaUrl),
-          mediaFiles: s.mediaFiles?.map((media) => ({
-            url: resolveUrl(media.url),
-            type: media.type,
-          })) || [],
-          glbUrl: resolveUrl(s.glbUrl),
-          arEnabled: s.arEnabled === true,
-          arLink: s.arLink || "",
-          status: s.status || "active",
-          category: s.category || null,
-          feeType: s.feeType || "none",
-          feeAmount: s.feeAmount || null,
-          feeAmountDiscounted: s.feeAmountDiscounted || null,
-        }));
+        const normalized = res.data.sites
+          .filter((s) => s.status === "active") // Only include active sites
+          .map((s) => ({
+            _id: s._id,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            title: s.siteName || s.title || "Site",
+            siteName: s.siteName || s.title || "Site",
+            description: s.siteDescription || s.description || "",
+            mediaType: s.mediaType || "image",
+            mediaUrl: resolveUrl(s.mediaUrl),
+            mediaFiles: s.mediaFiles?.map((media) => ({
+              url: resolveUrl(media.url),
+              type: media.type,
+            })) || [],
+            glbUrl: resolveUrl(s.glbUrl),
+            arEnabled: s.arEnabled === true,
+            arLink: s.arLink || "",
+            status: s.status || "active",
+            category: s.category || null,
+            feeType: s.feeType || "none",
+            feeAmount: s.feeAmount || null,
+            feeAmountDiscounted: s.feeAmountDiscounted || null,
+          }));
 
         setPins(normalized);
         setItineraryName(res.data.name || "Itinerary");
@@ -474,7 +476,7 @@ export default function TouristItineraryMap() {
     }
   }, [pins, selectedPin, manuallyDismissed, currentPinIndex]);
 
-  /** Track user location (after consent) - Optimized to prevent blinking */
+  /** Track user location (after consent) - Optimized for smooth heading updates */
   useEffect(() => {
     if (showGpsModal) return; // wait for user to enable
     
@@ -486,28 +488,34 @@ export default function TouristItineraryMap() {
           heading: coords.heading // Get device heading if available
         };
         
-        // Only update if location changed significantly (> 5 meters)
+        // ALWAYS update heading immediately for smooth rotation (like Google Maps)
+        // Use throttled updates to prevent excessive re-renders
+        if (coords.heading !== null && coords.heading !== undefined && coords.heading >= 0) {
+          userHeadingRef.current = coords.heading;
+          
+          // Throttle state updates to max 10 per second (100ms)
+          if (headingUpdateThrottle.current) {
+            clearTimeout(headingUpdateThrottle.current);
+          }
+          
+          headingUpdateThrottle.current = setTimeout(() => {
+            setUserHeading(coords.heading);
+          }, 100);
+        }
+        
+        // Only update location if changed significantly (> 5 meters)
         if (lastLocationRef.current) {
           const dx = newLoc.latitude - lastLocationRef.current.latitude;
           const dy = newLoc.longitude - lastLocationRef.current.longitude;
           const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
           
           if (distance < 5) {
-            // Update heading even if position hasn't changed much
-            if (coords.heading !== null && coords.heading !== undefined) {
-              setUserHeading(coords.heading);
-            }
-            return; // Don't update location, prevents blinking
+            return; // Don't update location, prevents marker blinking
           }
         }
         
         lastLocationRef.current = newLoc;
         setUserLocation(newLoc);
-        
-        // Update heading
-        if (coords.heading !== null && coords.heading !== undefined) {
-          setUserHeading(coords.heading);
-        }
         
         // Throttle view state updates to prevent excessive map movements
         if (locationUpdateThrottle.current) {
@@ -525,7 +533,7 @@ export default function TouristItineraryMap() {
       (err) => console.error("GPS error:", err),
       { 
         enableHighAccuracy: true, 
-        maximumAge: 1000, // Allow 1 second old positions
+        maximumAge: 0, // Always get fresh heading data for smooth rotation
         timeout: 10000 // Increase timeout to 10 seconds
       }
     );
@@ -534,6 +542,9 @@ export default function TouristItineraryMap() {
       navigator.geolocation.clearWatch(id);
       if (locationUpdateThrottle.current) {
         clearTimeout(locationUpdateThrottle.current);
+      }
+      if (headingUpdateThrottle.current) {
+        clearTimeout(headingUpdateThrottle.current);
       }
     };
   }, [showGpsModal]);
@@ -851,6 +862,11 @@ export default function TouristItineraryMap() {
     if (userLocation) buildRoute(userLocation, nextPin);
   };
 
+  // Memoize onMove handler to prevent unnecessary re-renders
+  const handleMapMove = useCallback((evt) => {
+    setViewState(evt.viewState);
+  }, []);
+
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Resume/Restart Modal */}
@@ -924,7 +940,7 @@ export default function TouristItineraryMap() {
           {...viewState}
           mapboxAccessToken={MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/streets-v11"
-          onMove={(evt) => setViewState(evt.viewState)}
+          onMove={handleMapMove}
           maxBounds={INTRAMUROS_BOUNDS}
           attributionControl={false}
           style={{ width: '100%', height: '100%' }}
@@ -951,7 +967,7 @@ export default function TouristItineraryMap() {
           </Source>
         )}
 
-        {/* User marker - Modern GPS style */}
+        {/* User marker - Modern GPS style - Memoized to prevent map re-renders */}
         {userLocation && (
           <ModernUserMarker 
             userLocation={userLocation} 
@@ -1071,6 +1087,7 @@ export default function TouristItineraryMap() {
               siteReviews={siteReviews}
               reviewsLoading={reviewsLoading}
               simulateGoToNextSite={simulateGoToNextSite}
+              onReviewSubmitted={() => fetchSiteReviews(selectedPin._id)}
           />
         )}
 

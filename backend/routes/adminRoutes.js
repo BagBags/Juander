@@ -71,9 +71,56 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
   }
 });
 
+// POST create log entry
+router.post("/logs", verifyAdmin, async (req, res) => {
+  try {
+    const { action, targetType, targetId } = req.body;
+    
+    if (!action) {
+      return res.status(400).json({ message: "Action is required" });
+    }
+
+    const adminName = `${req.user.firstName} ${req.user.lastName || ""}`.trim();
+    
+    const log = await Log.create({
+      adminName,
+      action,
+      role: req.user.role || "admin",
+      targetType: targetType || "other",
+      targetId: targetId || null,
+    });
+
+    res.status(201).json(log);
+  } catch (error) {
+    console.error("Error creating log:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Helper function to delete logs older than 30 days
+const deleteOldLogs = async () => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const result = await Log.deleteMany({
+      createdAt: { $lt: thirtyDaysAgo }
+    });
+    
+    if (result.deletedCount > 0) {
+      console.log(`Deleted ${result.deletedCount} logs older than 30 days`);
+    }
+  } catch (err) {
+    console.error("Error deleting old logs:", err);
+  }
+};
+
 // GET logs (all actions - admin and user)
 router.get("/logs", verifyAdmin, async (req, res) => {
   try {
+    // Delete logs older than 30 days before fetching
+    await deleteOldLogs();
+    
     const logs = await Log.find().sort({ createdAt: -1 });
     res.json(logs);
   } catch (error) {

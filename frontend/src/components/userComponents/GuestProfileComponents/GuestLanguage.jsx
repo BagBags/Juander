@@ -13,9 +13,9 @@ export default function GuestLanguage() {
 
   const [selected, setSelected] = useState("");
 
-  // Load saved language on mount from sessionStorage
+  // Load saved language on mount from localStorage
   useEffect(() => {
-    const savedLang = sessionStorage.getItem("guestLanguage");
+    const savedLang = localStorage.getItem("guestLanguage");
     if (savedLang) {
       setSelected(savedLang);
       i18n.changeLanguage(savedLang);
@@ -27,8 +27,8 @@ export default function GuestLanguage() {
 
   const handleSave = () => {
     if (!selected) return;
-    // Use sessionStorage for guest users
-    sessionStorage.setItem("guestLanguage", selected);
+    // Use localStorage for guest users to persist across tabs
+    localStorage.setItem("guestLanguage", selected);
     // Change language immediately in frontend using i18n
     i18n.changeLanguage(selected);
     alert(`Language set to ${selected === "en" ? "English" : "Tagalog"}`);

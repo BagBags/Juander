@@ -8,6 +8,7 @@ export default function AdminLogMain() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState("all");
+  const [sortOrder, setSortOrder] = useState("latest");
   const [selectedLog, setSelectedLog] = useState(null);
   const logsPerPage = 10;
 
@@ -65,18 +66,24 @@ export default function AdminLogMain() {
     return colors[type] || colors.other;
   };
 
-  // Filter logs based on search and type
-  const filteredLogs = logs.filter((log) => {
-    const matchesSearch =
-      log.adminName.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase()) ||
-      (log.details?.reviewText || "").toLowerCase().includes(search.toLowerCase()) ||
-      (log.details?.siteName || "").toLowerCase().includes(search.toLowerCase());
-    
-    const matchesType = filterType === "all" || log.targetType === filterType;
-    
-    return matchesSearch && matchesType;
-  });
+  // Filter and sort logs based on search, type, and sort order
+  const filteredLogs = logs
+    .filter((log) => {
+      const matchesSearch =
+        log.adminName.toLowerCase().includes(search.toLowerCase()) ||
+        log.action.toLowerCase().includes(search.toLowerCase()) ||
+        (log.details?.reviewText || "").toLowerCase().includes(search.toLowerCase()) ||
+        (log.details?.siteName || "").toLowerCase().includes(search.toLowerCase());
+      
+      const matchesType = filterType === "all" || log.targetType === filterType;
+      
+      return matchesSearch && matchesType;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return sortOrder === "latest" ? dateB - dateA : dateA - dateB;
+    });
 
   // Pagination
   const indexOfLastLog = currentPage * logsPerPage;
@@ -107,6 +114,17 @@ export default function AdminLogMain() {
           />
         </div>
         <select
+          value={sortOrder}
+          onChange={(e) => {
+            setSortOrder(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#f04e37] focus:outline-none"
+        >
+          <option value="latest">Latest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
+        <select
           value={filterType}
           onChange={(e) => {
             setFilterType(e.target.value);
@@ -120,6 +138,7 @@ export default function AdminLogMain() {
           <option value="itinerary">Itineraries</option>
           <option value="pin">Pins</option>
           <option value="user">Users</option>
+          <option value="other">Other</option>
         </select>
       </div>
 
@@ -145,7 +164,11 @@ export default function AdminLogMain() {
               <tbody className="divide-y divide-gray-100">
                 {currentLogs.map((log, idx) => (
                   <tr key={log._id} className="bg-white hover:bg-gray-50">
-                    <td className="px-6 py-3">{indexOfFirstLog + idx + 1}</td>
+                    <td className="px-6 py-3">
+                      #{sortOrder === "latest" 
+                        ? filteredLogs.length - (indexOfFirstLog + idx)
+                        : indexOfFirstLog + idx + 1}
+                    </td>
                     <td className="px-6 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTargetTypeBadge(log.targetType)}`}>
                         {log.targetType}

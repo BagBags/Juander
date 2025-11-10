@@ -1,5 +1,5 @@
 // AdminTourMapMain.jsx
-import React, { useState, useRef, useEffect, Suspense } from "react";
+import React, { useState, useRef, useEffect, Suspense, Component } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -37,6 +37,29 @@ const ManualAddModal = React.lazy(() =>
 const ThreeDModelPreview = React.lazy(() =>
   import("../adminTourMapComponents/ThreeDModelPreview")
 );
+
+// Error Boundary for 3D Model
+class ModelErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.log('3D model preview failed, skipping:', error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Don't render anything on error
+    }
+    return this.props.children;
+  }
+}
 
 // ---------- Axios instance ----------
 const api = axios.create({
@@ -870,17 +893,20 @@ export default function AdminTourMapMain() {
             </div>
           </div>
         )}
+        
         {/* 3D Model Preview */}
-        {showGlbPreview && (
-          <Suspense
-            fallback={
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
-                Loading 3D preview…
-              </div>
-            }
-          >
-            <ThreeDModelPreview url={currentGlbUrl} />
-          </Suspense>
+        {currentGlbUrl && (
+          <ModelErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
+                  Loading 3D preview…
+                </div>
+              }
+            >
+              <ThreeDModelPreview url={currentGlbUrl} />
+            </Suspense>
+          </ModelErrorBoundary>
         )}
 
         {/* Map */}
@@ -1270,7 +1296,7 @@ export default function AdminTourMapMain() {
               </div>
 
               {/* Pins Grid */}
-              <div className="flex-1 overflow-y-auto p-5 min-h-[500px]">
+              <div className="flex-1 overflow-y-auto p-5 pb-[140px] min-h-[500px]">
                 {activeTab === "active" ? (
                   (() => {
                     // Filter pins based on search and filters
@@ -1388,7 +1414,11 @@ export default function AdminTourMapMain() {
                             {/* Buttons - Original Design */}
                             <div className="flex gap-2 mt-auto">
                               <button
-                                onClick={() => { setShowPinsPanel(false); openPinCard(index); }}
+                                onClick={() => { 
+                                  setShowPinsPanel(false); 
+                                  const actualIndex = pins.findIndex(p => p._id === pin._id);
+                                  openPinCard(actualIndex); 
+                                }}
                                 className="flex-1 flex items-center justify-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-sm py-2 px-3 rounded-lg transition font-semibold shadow-sm"
                               >
                                 <Edit size={16} />
