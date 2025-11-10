@@ -10,7 +10,7 @@ import NotificationModal from "../../shared/NotificationModal";
 // Reusable Site Card Component
 const SiteCard = ({ site, resolveUrl, children }) => {
   return (
-    <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full min-w-0">
+    <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full" style={{ minWidth: 0, maxWidth: '100%' }}>
       <div className="relative h-48 overflow-hidden">
         <img
           src={
@@ -33,7 +33,7 @@ const SiteCard = ({ site, resolveUrl, children }) => {
           </h3>
         </div>
       </div>
-      <div className="p-5">
+      <div className="p-5" style={{ overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
         {children}
       </div>
     </div>
@@ -58,6 +58,7 @@ export default function TripArchivesPage() {
   const [activeTab, setActiveTab] = useState("places"); // "places" or "reviews"
   const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
   const [expandedItineraries, setExpandedItineraries] = useState({}); // Track which itinerary names are expanded
+  const [expandedDescriptions, setExpandedDescriptions] = useState({}); // Track which descriptions are expanded
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -458,10 +459,20 @@ export default function TripArchivesPage() {
                   : visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).slice(0, 4)
                 ).map((site, index) => (
                   <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
-                    <div className="mb-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0">
+                    <div className="mb-2" style={{ overflow: 'hidden', width: '100%' }}>
+                      <div className="flex items-center gap-2 text-sm text-gray-600" style={{ minWidth: 0, width: '100%' }}>
                         <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
-                        <span className={expandedItineraries[`place-${index}`] ? "" : "truncate"}>
+                        <span 
+                          className={expandedItineraries[`place-${index}`] ? "break-words" : "truncate"}
+                          style={{ 
+                            overflow: expandedItineraries[`place-${index}`] ? 'visible' : 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: expandedItineraries[`place-${index}`] ? 'normal' : 'nowrap',
+                            wordBreak: expandedItineraries[`place-${index}`] ? 'break-word' : 'normal',
+                            minWidth: 0,
+                            maxWidth: '100%'
+                          }}
+                        >
                           {site.itineraryId?.name || "Unknown Itinerary"}
                         </span>
                       </div>
@@ -481,13 +492,29 @@ export default function TripArchivesPage() {
                       <Calendar className="w-3 h-3 text-gray-400" />
                       <span>Visited: {new Date(site.visitedAt).toLocaleDateString()}</span>
                     </div>
-                    <div className="text-sm text-gray-600 line-clamp-2 space-y-1">
-                      {site.siteId?.siteDescription ? (
-                        site.siteId.siteDescription.split('\n\n').map((paragraph, idx) => (
-                          <p key={idx}>{paragraph.trim()}</p>
-                        ))
-                      ) : (
-                        <p>No description available</p>
+                    <div>
+                      <div 
+                        className={`text-sm text-gray-600 space-y-1 ${expandedDescriptions[`place-desc-${index}`] ? '' : 'line-clamp-2'}`} 
+                        style={{ overflow: 'hidden', width: '100%', wordBreak: 'break-word' }}
+                      >
+                        {site.siteId?.siteDescription ? (
+                          site.siteId.siteDescription.split('\n\n').map((paragraph, idx) => (
+                            <p key={idx} style={{ overflow: 'hidden', textOverflow: 'ellipsis', wordBreak: 'break-word' }}>{paragraph.trim()}</p>
+                          ))
+                        ) : (
+                          <p>No description available</p>
+                        )}
+                      </div>
+                      {site.siteId?.siteDescription && site.siteId.siteDescription.length > 150 && (
+                        <button
+                          onClick={() => setExpandedDescriptions(prev => ({
+                            ...prev,
+                            [`place-desc-${index}`]: !prev[`place-desc-${index}`]
+                          }))}
+                          className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
+                        >
+                          {expandedDescriptions[`place-desc-${index}`] ? "See less" : "See more"}
+                        </button>
                       )}
                     </div>
                   </SiteCard>
@@ -568,10 +595,20 @@ export default function TripArchivesPage() {
 
                       return (
                         <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
-                          <div className="mb-2">
-                            <div className="flex items-center gap-2 text-sm text-gray-600 min-w-0">
+                          <div className="mb-2" style={{ overflow: 'hidden', width: '100%' }}>
+                            <div className="flex items-center gap-2 text-sm text-gray-600" style={{ minWidth: 0, width: '100%' }}>
                               <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
-                              <span className={expandedItineraries[`review-${index}`] ? "" : "truncate"}>
+                              <span 
+                                className={expandedItineraries[`review-${index}`] ? "break-words" : "truncate"}
+                                style={{ 
+                                  overflow: expandedItineraries[`review-${index}`] ? 'visible' : 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: expandedItineraries[`review-${index}`] ? 'normal' : 'nowrap',
+                                  wordBreak: expandedItineraries[`review-${index}`] ? 'break-word' : 'normal',
+                                  minWidth: 0,
+                                  maxWidth: '100%'
+                                }}
+                              >
                                 {site.itineraryId?.name || "Unknown Itinerary"}
                               </span>
                             </div>
@@ -596,9 +633,25 @@ export default function TripArchivesPage() {
                               <div className="flex items-center gap-1 mb-2">
                                 {renderStars(existingReview.rating)}
                               </div>
-                              <p className="text-sm text-gray-600 line-clamp-3 mb-3">
-                                {existingReview.reviewText || "No review text"}
-                              </p>
+                              <div className="mb-3">
+                                <p 
+                                  className={`text-sm text-gray-600 ${expandedDescriptions[`review-desc-${index}`] ? '' : 'line-clamp-3'}`}
+                                  style={{ overflow: 'hidden', width: '100%', wordBreak: 'break-word' }}
+                                >
+                                  {existingReview.reviewText || "No review text"}
+                                </p>
+                                {existingReview.reviewText && existingReview.reviewText.length > 150 && (
+                                  <button
+                                    onClick={() => setExpandedDescriptions(prev => ({
+                                      ...prev,
+                                      [`review-desc-${index}`]: !prev[`review-desc-${index}`]
+                                    }))}
+                                    className="text-xs text-[#f04e37] hover:text-orange-600 mt-1 font-medium"
+                                  >
+                                    {expandedDescriptions[`review-desc-${index}`] ? "See less" : "See more"}
+                                  </button>
+                                )}
+                              </div>
                               {existingReview.photos && existingReview.photos.length > 0 && (
                                 <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
                                   {existingReview.photos.map((photo, idx) => (
