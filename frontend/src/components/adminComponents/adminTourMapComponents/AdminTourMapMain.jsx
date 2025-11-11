@@ -435,7 +435,9 @@ export default function AdminTourMapMain() {
       errors.siteDescription = "Site description is required";
     }
     
-    if (!pin.category || !pin.category.trim()) {
+    // Handle both populated category (object) and category ID (string)
+    const categoryValue = typeof pin.category === 'object' ? pin.category?._id : pin.category;
+    if (!categoryValue) {
       errors.category = "Category is required";
     }
     
@@ -485,10 +487,19 @@ export default function AdminTourMapMain() {
           let saved;
           if (pin._id) {
             const { _id, ...payload } = pin;
+            // Ensure category is sent as ID only, not the populated object
+            if (payload.category && typeof payload.category === 'object') {
+              payload.category = payload.category._id;
+            }
             const res = await api.put(`/pins/${_id}`, payload);
             saved = res.data;
           } else {
-            const res = await api.post("/pins", pin);
+            // Ensure category is sent as ID only, not the populated object
+            const pinData = { ...pin };
+            if (pinData.category && typeof pinData.category === 'object') {
+              pinData.category = pinData.category._id;
+            }
+            const res = await api.post("/pins", pinData);
             saved = res.data;
           }
           setPins((prev) => prev.map((p, i) => (i === index ? saved : p)));
