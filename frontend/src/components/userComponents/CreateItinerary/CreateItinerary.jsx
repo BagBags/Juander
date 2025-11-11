@@ -574,7 +574,7 @@ export default function CreateItineraryPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4" style={{ touchAction: 'pan-y pinch-zoom' }}>
                     {userItineraries.map((itinerary, idx) => (
                       <ItineraryCard
                         key={itinerary._id}
@@ -644,7 +644,9 @@ function SmoothScrollSiteList({
         scrollBehavior: "smooth",
         scrollSnapType: "y mandatory", // Enable vertical scroll snapping
         scrollPaddingTop: "calc(50% - 200px)", // Center items in viewport (adjusted for card height)
-        scrollPaddingBottom: "calc(50% - 200px)"
+        scrollPaddingBottom: "calc(50% - 200px)",
+        overflowX: "hidden", // Prevent horizontal scrolling
+        touchAction: "pan-y pinch-zoom" // Only allow vertical panning and pinch zoom
       }}
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4" style={{ paddingBottom: "300px" }}>
@@ -789,6 +791,7 @@ function SiteCard({
         opacity: isMobile ? cardStyle.opacity : 1,
         transform: isMobile ? cardStyle.transform : "scale(1)",
         scrollSnapAlign: "center", // Snap to center of viewport
+        touchAction: "pan-y pinch-zoom" // Only allow vertical panning
       }}
     >
       <div className="relative mb-3 overflow-hidden rounded-xl group">
@@ -878,7 +881,7 @@ function ItineraryCard({
     setDescExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   return (
-    <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden" style={{ touchAction: 'pan-y pinch-zoom' }}>
       {/* Horizontal Layout */}
       <div className="flex flex-col md:flex-row">
         {/* Image Section */}

@@ -435,7 +435,7 @@ export default function AdminTourMapMain() {
       errors.siteDescription = "Site description is required";
     }
     
-    if (!pin.category) {
+    if (!pin.category || !pin.category.trim()) {
       errors.category = "Category is required";
     }
     

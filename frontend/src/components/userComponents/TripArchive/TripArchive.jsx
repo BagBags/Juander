@@ -10,7 +10,7 @@ import NotificationModal from "../../shared/NotificationModal";
 // Reusable Site Card Component
 const SiteCard = ({ site, resolveUrl, children }) => {
   return (
-    <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full" style={{ minWidth: 0, maxWidth: '100%' }}>
+    <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full" style={{ minWidth: 0, maxWidth: '100%', touchAction: 'pan-y pinch-zoom' }}>
       <div className="relative h-48 overflow-hidden">
         <img
           src={
@@ -453,7 +453,7 @@ export default function TripArchivesPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 gap-6 w-full">
+              <div className="grid grid-cols-1 gap-6 w-full" style={{ touchAction: "pan-y pinch-zoom" }}>
                 {(showAllArchives 
                   ? visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter)
                   : visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).slice(0, 4)
@@ -582,7 +582,7 @@ export default function TripArchivesPage() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-6 w-full">
+                  <div className="grid grid-cols-1 gap-6 w-full" style={{ touchAction: "pan-y pinch-zoom" }}>
                     {(showAllReviews 
                       ? visitedSites.filter(s => selectedReviewItineraryFilter === "all" || s.itineraryId?._id === selectedReviewItineraryFilter)
                       : visitedSites.filter(s => selectedReviewItineraryFilter === "all" || s.itineraryId?._id === selectedReviewItineraryFilter).slice(0, 4)

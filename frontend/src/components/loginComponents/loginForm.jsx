@@ -211,23 +211,23 @@ export default function LoginForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl  space-y-6 ">
+    <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-2xl space-y-3">
       {/* Title */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
-        <p className="text-gray-500 text-sm mt-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Welcome Back</h2>
+        <p className="text-gray-500 text-xs sm:text-sm mt-1">
           Login to continue to your account
         </p>
       </div>
 
       {/* Error / Success messages */}
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 border border-red-200 p-2 rounded">
+        <p className="text-red-600 text-xs sm:text-sm bg-red-50 border border-red-200 p-2 rounded">
           {error}
         </p>
       )}
       {success && (
-        <p className="text-green-600 text-sm bg-green-50 border border-green-200 p-2 rounded">
+        <p className="text-green-600 text-xs sm:text-sm bg-green-50 border border-green-200 p-2 rounded">
           {success}
         </p>
       )}
@@ -242,7 +242,7 @@ export default function LoginForm({ toggleForm }) {
               type="email"
               placeholder="Email"
               aria-label="Email Address"
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
+              className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -256,7 +256,7 @@ export default function LoginForm({ toggleForm }) {
               type={showPassword ? "text" : "password"}
               placeholder="Password"
               aria-label="Password"
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
+              className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -273,7 +273,7 @@ export default function LoginForm({ toggleForm }) {
           {/* Login button */}
           <button
             onClick={handleEmailLogin}
-            className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95"
+            className="w-full bg-[#f04e37] text-white font-semibold px-4 py-2.5 sm:py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 text-sm sm:text-base"
           >
             Login
           </button>
@@ -299,8 +299,8 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           {/* Google Login */}
-          <div className="w-full h-[44px] overflow-hidden">
-            <div className="w-full h-[44px]" style={{ minWidth: '100%', minHeight: '44px' }}>
+          <div className="w-full h-[40px] sm:h-[44px] overflow-hidden">
+            <div className="w-full h-[40px] sm:h-[44px]" style={{ minWidth: '100%', minHeight: '40px' }}>
               <GoogleLogin
                 onSuccess={handleGoogleLoginSuccess}
                 onError={() => setError("Google login failed.")}
@@ -328,13 +328,13 @@ export default function LoginForm({ toggleForm }) {
               i18n.changeLanguage("en");
               navigate("/GuestHomepage", { replace: true });
             }}
-            className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95"
+            className="w-full bg-gray-100 text-gray-800 px-4 py-2.5 sm:py-3 rounded-lg hover:bg-gray-200 active:scale-95 text-sm sm:text-base"
           >
             Continue as Guest
           </button>
 
           {/* Switch to signup */}
-          <p className="text-sm text-center text-gray-700 mt-2">
+          <p className="text-xs sm:text-sm text-center text-gray-700">
             New user?{" "}
             <span
               className="text-[#f04e37] font-semibold cursor-pointer hover:underline"

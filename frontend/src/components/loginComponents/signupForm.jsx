@@ -27,6 +27,8 @@ export default function SignupForm({ toggleForm }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [hasReadTermsInModal, setHasReadTermsInModal] = useState(false);
 
   const otpLength = 6;
   const inputRefs = useRef([]);
@@ -71,6 +73,9 @@ export default function SignupForm({ toggleForm }) {
       newErrors.confirmPassword = "Please retype your password";
     else if (form.password !== form.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
+
+    if (!hasAcceptedTerms)
+      newErrors.terms = "You must accept the Terms and Conditions";
 
     return newErrors;
   };
@@ -176,21 +181,21 @@ export default function SignupForm({ toggleForm }) {
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl space-y-6">
+    <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-2xl space-y-3">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-800">Sign Up</h2>
-        <p className="text-gray-500 text-sm mt-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Sign Up</h2>
+        <p className="text-gray-500 text-xs sm:text-sm mt-1">
           Create an account to get started
         </p>
       </div>
 
       {errors.general && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
+        <p className="text-xs sm:text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
           {errors.general}
         </p>
       )}
       {message && (
-        <p className="text-sm text-green-600 bg-green-50 border border-green-200 p-2 rounded">
+        <p className="text-xs sm:text-sm text-green-600 bg-green-50 border border-green-200 p-2 rounded">
           {message}
         </p>
       )}
@@ -208,7 +213,7 @@ export default function SignupForm({ toggleForm }) {
                 aria-label="First Name"
                 value={form.firstName}
                 onChange={handleChange}
-                className={`w-full p-3 rounded-lg border ${
+                className={`w-full p-2.5 sm:p-3 rounded-lg border text-sm ${
                   errors.firstName ? "border-red-400" : "border-gray-300"
                 } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
               />
@@ -227,7 +232,7 @@ export default function SignupForm({ toggleForm }) {
                 aria-label="Last Name"
                 value={form.lastName}
                 onChange={handleChange}
-                className={`w-full p-3 rounded-lg border ${
+                className={`w-full p-2.5 sm:p-3 rounded-lg border text-sm ${
                   errors.lastName ? "border-red-400" : "border-gray-300"
                 } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
               />
@@ -247,7 +252,7 @@ export default function SignupForm({ toggleForm }) {
               aria-label="Email Address"
               value={form.email}
               onChange={handleChange}
-              className={`w-full p-3 rounded-lg border ${
+              className={`w-full p-2.5 sm:p-3 rounded-lg border text-sm ${
                 errors.email ? "border-red-400" : "border-gray-300"
               } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800`}
             />
@@ -267,7 +272,7 @@ export default function SignupForm({ toggleForm }) {
               aria-label="Password"
               value={form.password}
               onChange={handleChange}
-              className={`w-full p-3 rounded-lg border ${
+              className={`w-full p-2.5 sm:p-3 rounded-lg border text-sm ${
                 errors.password ? "border-red-400" : "border-gray-300"
               } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800 pr-10`}
             />
@@ -295,7 +300,7 @@ export default function SignupForm({ toggleForm }) {
               aria-label="Confirm Password"
               value={form.confirmPassword}
               onChange={handleChange}
-              className={`w-full p-3 rounded-lg border ${
+              className={`w-full p-2.5 sm:p-3 rounded-lg border text-sm ${
                 errors.confirmPassword ? "border-red-400" : "border-gray-300"
               } focus:outline-none focus:ring-2 focus:ring-[#f04e37] text-gray-800 pr-10`}
             />
@@ -314,9 +319,61 @@ export default function SignupForm({ toggleForm }) {
             )}
           </div>
 
+          {/* Terms Acceptance */}
+          <div className="space-y-2">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={hasAcceptedTerms}
+                onChange={(e) => {
+                  // If trying to check and hasn't read in modal, open modal
+                  if (e.target.checked && !hasReadTermsInModal) {
+                    setShowTermsModal(true);
+                  } else {
+                    // Allow unchecking even after modal acceptance
+                    setHasAcceptedTerms(e.target.checked);
+                  }
+                }}
+                className="mt-1 w-4 h-4 text-[#f04e37] border-gray-300 rounded focus:ring-[#f04e37] focus:ring-2 cursor-pointer"
+              />
+              <span className="text-xs sm:text-sm text-gray-700 leading-relaxed">
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowTermsModal(true);
+                  }}
+                  className="font-semibold text-[#f04e37] hover:underline"
+                >
+                  Terms and Conditions
+                </button>
+                {" "}and{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPrivacyModal(true);
+                  }}
+                  className="font-semibold text-[#f04e37] hover:underline"
+                >
+                  Privacy Policy
+                </button>
+              </span>
+            </label>
+            {errors.terms && (
+              <p className="text-xs text-red-600 ml-7">{errors.terms}</p>
+            )}
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md font-semibold hover:bg-[#d9442f] transition duration-200 active:scale-95"
+            disabled={!hasAcceptedTerms}
+            className={`w-full px-4 py-2.5 sm:py-3 rounded-lg shadow-md font-semibold transition duration-200 active:scale-95 text-sm sm:text-base ${
+              hasAcceptedTerms
+                ? 'bg-[#f04e37] text-white hover:bg-[#d9442f]'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             Create an Account
           </button>
@@ -371,8 +428,8 @@ export default function SignupForm({ toggleForm }) {
       </div>
 
       {/* Google Login */}
-      <div className="w-full h-[44px] overflow-hidden">
-        <div className="w-full h-[44px]" style={{ minWidth: '100%', minHeight: '44px' }}>
+      <div className="w-full h-[40px] sm:h-[44px] overflow-hidden">
+        <div className="w-full h-[40px] sm:h-[44px]" style={{ minWidth: '100%', minHeight: '40px' }}>
           <GoogleLogin
             onSuccess={handleGoogleSignup}
             onError={() => setErrors({ general: "Google sign-up error" })}
@@ -385,24 +442,7 @@ export default function SignupForm({ toggleForm }) {
         </div>
       </div>
 
-      <p className="text-xs text-center mt-4 text-gray-600">
-        By signing up, you agree to our{" "}
-        <span 
-          className="font-semibold underline cursor-pointer hover:text-[#f04e37] transition-colors"
-          onClick={() => setShowTermsModal(true)}
-        >
-          Terms
-        </span>{" "}
-        and{" "}
-        <span 
-          className="font-semibold underline cursor-pointer hover:text-[#f04e37] transition-colors"
-          onClick={() => setShowPrivacyModal(true)}
-        >
-          Privacy
-        </span>
-      </p>
-
-      <p className="text-sm text-center text-gray-700 mt-2">
+      <p className="text-xs sm:text-sm text-center text-gray-700">
         Already have an account?{" "}
         <span
           className="text-[#f04e37] font-semibold cursor-pointer hover:underline"
@@ -413,7 +453,15 @@ export default function SignupForm({ toggleForm }) {
       </p>
 
       {/* Modals */}
-      <TermsModal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} />
+      <TermsModal 
+        isOpen={showTermsModal} 
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setHasReadTermsInModal(true);
+          setHasAcceptedTerms(true);
+        }}
+        requireAcceptance={true}
+      />
       <PrivacyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
     </div>
   );

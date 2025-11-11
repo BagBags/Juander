@@ -13,7 +13,7 @@
     <meta http-equiv="Expires" content="0" />
 
     <!-- App Title -->
-    <title>Juander - Dev Mode</title>
+    <title>Juander - Your Intramuros Guide</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/TabIcon.svg" />
@@ -52,11 +52,6 @@
   </head>
 
   <body>
-    <!-- Loading indicator while cleaning up -->
-    <div id="cleanup-indicator" style="position: fixed; top: 0; left: 0; right: 0; background: #4CAF50; color: white; padding: 10px; text-align: center; z-index: 99999; font-family: monospace; font-size: 12px;">
-      [DEV MODE] Cleaning service workers and caches...
-    </div>
-    
     <div id="root"></div>
 
     <!-- CONDITIONAL SERVICE WORKER CLEANUP - Only in dev mode -->
@@ -69,10 +64,6 @@
         
         if (!isDevelopment) {
           console.log('[PWA MODE] Skipping service worker cleanup - allowing PWA to function');
-          var indicator = document.getElementById('cleanup-indicator');
-          if (indicator) {
-            indicator.style.display = 'none';
-          }
           return;
         }
         
@@ -132,20 +123,6 @@
         }
         
         console.log('[CLEANUP] Cleanup complete');
-        
-        // Update indicator with success message
-        var indicator = document.getElementById('cleanup-indicator');
-        if (indicator) {
-          indicator.textContent = '[DEV MODE] Cleanup complete - Loading app...';
-          indicator.style.background = '#2196F3';
-        }
-        
-        // Remove cleanup indicator after 2 seconds
-        setTimeout(function() {
-          if (indicator) {
-            indicator.style.display = 'none';
-          }
-        }, 2000);
       })();
     </script>
     
