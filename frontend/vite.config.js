@@ -50,6 +50,22 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         runtimeCaching: [
+          // Chatbot API calls - Bot entries and OpenAI
+          {
+            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai).*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'chatbot-api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day for chatbot responses
+              },
+              networkTimeoutSeconds: 30, // Longer timeout for OpenAI API
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // Guest API calls - Public endpoints only (pins, reviews)
           {
             urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,

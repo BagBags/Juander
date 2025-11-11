@@ -15,10 +15,28 @@ export default function Chatbot() {
   const sessionId = useRef(uuidv4());
   const lastBotMessageRef = useRef("");
 
+  // Get user-specific localStorage key
+  const getUserKey = (baseKey) => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        const userId = userData._id || userData.id;
+        return `${baseKey}_${userId}`;
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return `${baseKey}_guest`;
+  };
+
   const [messages, setMessages] = useState(() => {
     // Load saved messages from localStorage with expiry check
-    const saved = localStorage.getItem('chatbotMessages');
-    const savedTimestamp = localStorage.getItem('chatbotMessagesTimestamp');
+    const messagesKey = getUserKey('chatbotMessages');
+    const timestampKey = getUserKey('chatbotMessagesTimestamp');
+    
+    const saved = localStorage.getItem(messagesKey);
+    const savedTimestamp = localStorage.getItem(timestampKey);
     
     if (saved && savedTimestamp) {
       const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
@@ -28,9 +46,9 @@ export default function Chatbot() {
       // Check if data is older than 3 days
       if (now - timestamp > threeDaysInMs) {
         // Clear expired data
-        localStorage.removeItem('chatbotMessages');
-        localStorage.removeItem('chatbotMessagesTimestamp');
-        localStorage.removeItem('chatbotHasUserMessaged');
+        localStorage.removeItem(messagesKey);
+        localStorage.removeItem(timestampKey);
+        localStorage.removeItem(getUserKey('chatbotHasUserMessaged'));
         return [];
       }
       
@@ -41,7 +59,8 @@ export default function Chatbot() {
   });
   const [hasUserMessaged, setHasUserMessaged] = useState(() => {
     // Load saved state from localStorage
-    const saved = localStorage.getItem('chatbotHasUserMessaged');
+    const hasMessagedKey = getUserKey('chatbotHasUserMessaged');
+    const saved = localStorage.getItem(hasMessagedKey);
     return saved ? JSON.parse(saved) : false;
   });
   const [input, setInput] = useState("");
@@ -55,15 +74,34 @@ export default function Chatbot() {
   // Save messages to localStorage whenever they change with timestamp
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem('chatbotMessages', JSON.stringify(messages));
-      localStorage.setItem('chatbotMessagesTimestamp', Date.now().toString());
+      const messagesKey = getUserKey('chatbotMessages');
+      const timestampKey = getUserKey('chatbotMessagesTimestamp');
+      localStorage.setItem(messagesKey, JSON.stringify(messages));
+      localStorage.setItem(timestampKey, Date.now().toString());
     }
   }, [messages]);
 
   // Save hasUserMessaged state to localStorage
   useEffect(() => {
-    localStorage.setItem('chatbotHasUserMessaged', JSON.stringify(hasUserMessaged));
+    const hasMessagedKey = getUserKey('chatbotHasUserMessaged');
+    localStorage.setItem(hasMessagedKey, JSON.stringify(hasUserMessaged));
   }, [hasUserMessaged]);
+
+  // Clear chat when user changes (logout/login)
+  useEffect(() => {
+    const currentUserKey = getUserKey('chatbotMessages');
+    const savedKey = sessionStorage.getItem('currentChatUserKey');
+    
+    if (savedKey && savedKey !== currentUserKey) {
+      // User has changed, reset chat
+      setMessages([]);
+      setHasUserMessaged(false);
+      setInput("");
+    }
+    
+    // Store current user key
+    sessionStorage.setItem('currentChatUserKey', currentUserKey);
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -88,9 +126,9 @@ export default function Chatbot() {
 
   // Load knowledge base
   useEffect(() => {
-    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     axios
-      .get(`${BACKEND_URL}/api/bot`)
+      .get(`${API_BASE_URL}/bot`)
       .then((res) => setBotEntries(res.data))
       .catch((err) => console.error("Error fetching bot entries:", err));
   }, []);
@@ -273,21 +311,21 @@ export default function Chatbot() {
 
     const userMessage = messageToSend;
     
+    // Clear input field
+    setInput("");
+    
     // Add user message and loading state
     setMessages((prev) => [
       ...prev,
       { role: "user", content: userMessage },
       { role: "assistant", content: "__loading__" },
     ]);
-    
-    // Clear input after adding message
-    setInput("");
     setIsBotTyping(true);
     
     try {
       // Check with OpenAI Moderation API
-      const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
-      const moderationResponse = await axios.post(`${BACKEND_URL}/api/openai/moderate`, {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const moderationResponse = await axios.post(`${API_BASE_URL}/openai/moderate`, {
         input: userMessage
       });
       
@@ -819,7 +857,12 @@ IMPORTANT:
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           disabled={isBotTyping || isListening}
           className="flex-grow bg-transparent outline-none px-2 py-1 text-base"
           style={{ fontSize: '16px' }}
@@ -832,8 +875,11 @@ IMPORTANT:
           }
         />
         <button
-          onClick={handleSend}
-          disabled={isBotTyping}
+          onClick={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          disabled={isBotTyping || !input.trim()}
           className="bg-transparent"
         >
           <div className="transform rotate-45">
