@@ -280,6 +280,8 @@ export default function TouristItineraryMap() {
             title: s.siteName || s.title || "Site",
             siteName: s.siteName || s.title || "Site",
             description: s.siteDescription || s.description || "",
+            siteDescription: s.siteDescription || s.description || "",
+            siteDescriptionTagalog: s.siteDescriptionTagalog || "",
             mediaType: s.mediaType || "image",
             mediaUrl: resolveUrl(s.mediaUrl),
             mediaFiles: s.mediaFiles?.map((media) => ({

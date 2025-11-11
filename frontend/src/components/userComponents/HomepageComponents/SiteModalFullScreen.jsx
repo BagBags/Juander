@@ -53,13 +53,26 @@ export default function SiteModalFullScreen({
     const fetchUserLanguage = async () => {
       try {
         const token = localStorage.getItem('token');
+        const isGuest = localStorage.getItem('guest') === 'true';
+        
+        // Check for guest language first
+        if (isGuest) {
+          const guestLang = localStorage.getItem('guestLanguage') || 'en';
+          setUserLanguage(guestLang === 'tl' ? 'tagalog' : 'english');
+          return;
+        }
+        
+        // For logged-in users, fetch from backend
         if (token) {
           const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/user`,
+            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/me`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const language = response.data.language || 'english';
-          setUserLanguage(language.toLowerCase());
+          const language = response.data.language || 'en';
+          // Convert 'en' or 'tl' to 'english' or 'tagalog'
+          setUserLanguage(language === 'tl' ? 'tagalog' : 'english');
+        } else {
+          setUserLanguage('english');
         }
       } catch (error) {
         console.error('Failed to fetch user language:', error);

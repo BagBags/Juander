@@ -38,11 +38,14 @@ const SiteCard = ({ pin, onClose, distance }) => {
         // For logged-in users, fetch from backend
         if (token) {
           const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/user`,
+            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/me`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const language = response.data.language || 'english';
-          setUserLanguage(language.toLowerCase());
+          const language = response.data.language || 'en';
+          // Convert 'en' or 'tl' to 'english' or 'tagalog'
+          const convertedLang = language === 'tl' ? 'tagalog' : 'english';
+          console.log('🌐 [SiteCard] Backend language:', language, '→ Converted:', convertedLang);
+          setUserLanguage(convertedLang);
         } else {
           setUserLanguage('english');
         }
@@ -395,6 +398,13 @@ const SiteCard = ({ pin, onClose, distance }) => {
                 <div className="text-base leading-relaxed text-gray-700 space-y-4">
                   {(() => {
                     let description = '';
+                    console.log('📝 [SiteCard] Rendering description:', {
+                      userLanguage,
+                      hasTagalog: !!pin.siteDescriptionTagalog,
+                      hasEnglish: !!pin.siteDescription,
+                      tagalogPreview: pin.siteDescriptionTagalog?.substring(0, 50),
+                      englishPreview: pin.siteDescription?.substring(0, 50)
+                    });
                     if (userLanguage === 'tagalog' && pin.siteDescriptionTagalog) {
                       description = pin.siteDescriptionTagalog;
                     } else if (userLanguage === 'english' && pin.siteDescription) {
