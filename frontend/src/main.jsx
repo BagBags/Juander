@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import App from "./App.jsx";
+import { registerServiceWorker } from "./registerSW.js";
 
 // CONDITIONAL SERVICE WORKER CLEANUP - Only in development mode
 // This runs BEFORE React renders to ensure clean state
@@ -67,3 +68,6 @@ createRoot(document.getElementById("root")).render(
     </GoogleOAuthProvider>
   </StrictMode>
 );
+
+// Register service worker in production
+registerServiceWorker();

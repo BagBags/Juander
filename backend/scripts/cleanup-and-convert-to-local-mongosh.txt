@@ -1,0 +1,125 @@
+// ========================================
+// MongoDB Cleanup & Convert S3 to Local Paths - Copy & Paste to mongosh
+// ========================================
+// This script:
+// 1. Removes deprecated 'media' and 'mediaUrl' fields
+// 2. Converts S3 URLs to local paths in mediaFiles
+// 3. Converts S3 URLs to local paths in facadeUrl and glbUrl
+
+// FIRST: Run this command separately in mongosh:
+// use juander
+
+// THEN: Copy and paste everything below this line
+// ========================================
+
+// Configuration
+const S3_BASE_URL = "https://juander-frontend.s3.ap-southeast-2.amazonaws.com";
+
+// 1. Check current state
+print("\n📊 Current State:");
+print("Total pins: " + db.pins.countDocuments());
+print("Pins with 'media' field: " + db.pins.countDocuments({ media: { $exists: true } }));
+print("Pins with 'mediaUrl' field: " + db.pins.countDocuments({ mediaUrl: { $exists: true } }));
+print("Pins with S3 URLs in mediaFiles: " + db.pins.countDocuments({ "mediaFiles.url": { $regex: "^https://juander-frontend.s3" } }));
+print("Pins with S3 URLs in facadeUrl: " + db.pins.countDocuments({ facadeUrl: { $regex: "^https://juander-frontend.s3" } }));
+
+// 2. Process all pins
+print("\n🔄 Processing pins...\n");
+
+const pins = db.pins.find({}).toArray();
+let processedCount = 0;
+let updatedCount = 0;
+
+pins.forEach(pin => {
+  let needsUpdate = false;
+  let updates = {};
+  
+  // Remove deprecated fields
+  if (pin.media || pin.mediaUrl) {
+    updates.$unset = {
+      media: "",
+      mediaUrl: ""
+    };
+    needsUpdate = true;
+  }
+  
+  // Convert S3 URLs to local paths in mediaFiles
+  if (pin.mediaFiles && Array.isArray(pin.mediaFiles)) {
+    const fixedMediaFiles = pin.mediaFiles.map(media => {
+      if (media.url && media.url.includes(S3_BASE_URL)) {
+        needsUpdate = true;
+        // Extract the path after the S3 base URL
+        const localPath = media.url.replace(S3_BASE_URL, "");
+        return {
+          ...media,
+          url: localPath
+        };
+      }
+      return media;
+    });
+    
+    if (needsUpdate) {
+      if (!updates.$set) updates.$set = {};
+      updates.$set.mediaFiles = fixedMediaFiles;
+    }
+  }
+  
+  // Convert S3 URL to local path in facadeUrl
+  if (pin.facadeUrl && pin.facadeUrl.includes(S3_BASE_URL)) {
+    needsUpdate = true;
+    if (!updates.$set) updates.$set = {};
+    updates.$set.facadeUrl = pin.facadeUrl.replace(S3_BASE_URL, "");
+  }
+  
+  // Convert S3 URL to local path in glbUrl
+  if (pin.glbUrl && pin.glbUrl.includes(S3_BASE_URL)) {
+    needsUpdate = true;
+    if (!updates.$set) updates.$set = {};
+    updates.$set.glbUrl = pin.glbUrl.replace(S3_BASE_URL, "");
+  }
+  
+  // Update the pin if needed
+  if (needsUpdate) {
+    db.pins.updateOne({ _id: pin._id }, updates);
+    updatedCount++;
+    print("✅ Updated: " + (pin.siteName || pin._id));
+  }
+  
+  processedCount++;
+});
+
+print("\n📊 Processing Summary:");
+print("Total pins processed: " + processedCount);
+print("Pins updated: " + updatedCount);
+
+// 3. Verify cleanup
+print("\n📊 Final Verification:");
+const remainingMedia = db.pins.countDocuments({ media: { $exists: true } });
+const remainingMediaUrl = db.pins.countDocuments({ mediaUrl: { $exists: true } });
+const remainingS3MediaFiles = db.pins.countDocuments({ "mediaFiles.url": { $regex: "^https://juander-frontend.s3" } });
+const remainingS3Facade = db.pins.countDocuments({ facadeUrl: { $regex: "^https://juander-frontend.s3" } });
+
+print("Pins with 'media' field remaining: " + remainingMedia);
+print("Pins with 'mediaUrl' field remaining: " + remainingMediaUrl);
+print("Pins with S3 URLs in mediaFiles remaining: " + remainingS3MediaFiles);
+print("Pins with S3 URLs in facadeUrl remaining: " + remainingS3Facade);
+
+if (remainingMedia === 0 && remainingMediaUrl === 0 && remainingS3MediaFiles === 0 && remainingS3Facade === 0) {
+  print("\n✅ All deprecated fields removed and URLs converted to local paths!");
+} else {
+  print("\n⚠️  Some issues remain. Check the counts above.");
+}
+
+// 4. Show sample of fixed pins
+print("\n📋 Sample of fixed pins:");
+db.pins.find({}, { siteName: 1, mediaFiles: 1, facadeUrl: 1 }).limit(3).forEach(pin => {
+  print("\n" + pin.siteName);
+  if (pin.mediaFiles && pin.mediaFiles.length > 0) {
+    print("  First media URL: " + pin.mediaFiles[0].url);
+  }
+  if (pin.facadeUrl) {
+    print("  Facade URL: " + pin.facadeUrl);
+  }
+});
+
+print("\n✅ Script completed!");

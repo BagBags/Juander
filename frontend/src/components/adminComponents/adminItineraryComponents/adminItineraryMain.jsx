@@ -831,24 +831,25 @@ export default function AdminItineraryMain() {
                   >
                     {/* Thumbnail */}
                     <img
-                      src={
-                        // Get first image from mediaFiles (not video)
-                        pin.mediaFiles?.find((m) => m.type === "image")?.url
-                          ? `${
-                              import.meta.env.VITE_API_BASE_URL?.replace(
-                                "/api",
-                                ""
-                              ) || "http://localhost:5000"
-                            }${
-                              pin.mediaFiles.find((m) => m.type === "image").url
-                            }`
-                          : pin.mediaUrl ||
-                            pin.image ||
-                            "https://via.placeholder.com/80"
-                      }
+                      src={(() => {
+                        // Get first image from mediaFiles array
+                        const firstMediaFile = pin.mediaFiles?.find((m) => m.type === "image");
+                        if (firstMediaFile?.url) {
+                          // Check if URL is already a full URL (S3) or relative path
+                          return firstMediaFile.url.startsWith('http') 
+                            ? firstMediaFile.url 
+                            : `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5000"}${firstMediaFile.url}`;
+                        }
+                        
+                        // Fallback: placeholder
+                        return "https://via.placeholder.com/80?text=No+Image";
+                      })()}
                       alt={pin.siteName || pin.title}
                       className="object-cover rounded-xl flex-shrink-0"
                       style={{ width: 80, height: 80 }}
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/80?text=Error";
+                      }}
                     />
 
                     {/* Content */}

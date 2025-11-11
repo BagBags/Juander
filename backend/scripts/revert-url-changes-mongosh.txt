@@ -1,0 +1,110 @@
+// ========================================
+// MongoDB Revert Script - Restore S3 URLs
+// ========================================
+// This script reverts the changes made by cleanup-and-convert-to-local-mongosh.txt
+// It converts local paths back to S3 URLs
+
+// FIRST: Run this command separately in mongosh:
+// use juander
+
+// THEN: Copy and paste everything below this line
+// ========================================
+
+// Configuration
+const S3_BASE_URL = "https://juander-frontend.s3.ap-southeast-2.amazonaws.com";
+
+// 1. Check current state
+print("\n📊 Current State:");
+print("Total pins: " + db.pins.countDocuments());
+print("Pins with local mediaFiles paths: " + db.pins.countDocuments({ "mediaFiles.url": { $regex: "^/uploads/" } }));
+print("Pins with local facadeUrl paths: " + db.pins.countDocuments({ facadeUrl: { $regex: "^/uploads/" } }));
+print("Pins with local glbUrl paths: " + db.pins.countDocuments({ glbUrl: { $regex: "^/uploads/" } }));
+
+// 2. Process all pins - REVERT to S3 URLs
+print("\n🔄 Reverting to S3 URLs...\n");
+
+const pins = db.pins.find({}).toArray();
+let processedCount = 0;
+let updatedCount = 0;
+
+pins.forEach(pin => {
+  let needsUpdate = false;
+  let updates = {};
+  
+  // Convert local paths to S3 URLs in mediaFiles
+  if (pin.mediaFiles && Array.isArray(pin.mediaFiles)) {
+    const fixedMediaFiles = pin.mediaFiles.map(media => {
+      if (media.url && media.url.startsWith("/uploads/")) {
+        needsUpdate = true;
+        // Add S3 base URL back
+        return {
+          ...media,
+          url: S3_BASE_URL + media.url
+        };
+      }
+      return media;
+    });
+    
+    if (needsUpdate) {
+      if (!updates.$set) updates.$set = {};
+      updates.$set.mediaFiles = fixedMediaFiles;
+    }
+  }
+  
+  // Convert local path to S3 URL in facadeUrl
+  if (pin.facadeUrl && pin.facadeUrl.startsWith("/uploads/")) {
+    needsUpdate = true;
+    if (!updates.$set) updates.$set = {};
+    updates.$set.facadeUrl = S3_BASE_URL + pin.facadeUrl;
+  }
+  
+  // Convert local path to S3 URL in glbUrl
+  if (pin.glbUrl && pin.glbUrl.startsWith("/uploads/")) {
+    needsUpdate = true;
+    if (!updates.$set) updates.$set = {};
+    updates.$set.glbUrl = S3_BASE_URL + pin.glbUrl;
+  }
+  
+  // Update the pin if needed
+  if (needsUpdate) {
+    db.pins.updateOne({ _id: pin._id }, updates);
+    updatedCount++;
+    print("✅ Reverted: " + (pin.siteName || pin._id));
+  }
+  
+  processedCount++;
+});
+
+print("\n📊 Processing Summary:");
+print("Total pins processed: " + processedCount);
+print("Pins reverted: " + updatedCount);
+
+// 3. Verify revert
+print("\n📊 Final Verification:");
+const remainingLocalMediaFiles = db.pins.countDocuments({ "mediaFiles.url": { $regex: "^/uploads/" } });
+const remainingLocalFacade = db.pins.countDocuments({ facadeUrl: { $regex: "^/uploads/" } });
+const remainingLocalGlb = db.pins.countDocuments({ glbUrl: { $regex: "^/uploads/" } });
+
+print("Pins with local mediaFiles paths remaining: " + remainingLocalMediaFiles);
+print("Pins with local facadeUrl paths remaining: " + remainingLocalFacade);
+print("Pins with local glbUrl paths remaining: " + remainingLocalGlb);
+
+if (remainingLocalMediaFiles === 0 && remainingLocalFacade === 0 && remainingLocalGlb === 0) {
+  print("\n✅ All local paths converted back to S3 URLs!");
+} else {
+  print("\n⚠️  Some local paths still remain.");
+}
+
+// 4. Show sample of reverted pins
+print("\n📋 Sample of reverted pins:");
+db.pins.find({}, { siteName: 1, mediaFiles: 1, facadeUrl: 1 }).limit(3).forEach(pin => {
+  print("\n" + pin.siteName);
+  if (pin.mediaFiles && pin.mediaFiles.length > 0) {
+    print("  First media URL: " + pin.mediaFiles[0].url);
+  }
+  if (pin.facadeUrl) {
+    print("  Facade URL: " + pin.facadeUrl);
+  }
+});
+
+print("\n✅ Revert completed!");
