@@ -156,6 +156,72 @@ export default function SiteModalFullScreen({
       return;
     }
 
+    // Check for inappropriate content using OpenAI Moderation API
+    if (reviewText) {
+      try {
+        const token = localStorage.getItem("token");
+        const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+        
+        const moderationResponse = await axios.post(
+          `${BACKEND_URL}/api/openai/moderate`,
+          { input: reviewText },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        // OpenAI returns results in results[0]
+        const result = moderationResponse.data.results?.[0];
+        console.log("Moderation API Response:", moderationResponse.data);
+        console.log("Moderation Result:", result);
+        
+        if (result && result.flagged) {
+          const categories = Object.entries(result.categories)
+            .filter(([_, value]) => value)
+            .map(([key]) => key);
+            
+          let warningMessage = "⚠️ Your review contains inappropriate content";
+          if (categories.length > 0) {
+            warningMessage += ` (${categories.join(", ")})`;
+          }
+          warningMessage += ". Please revise your review.";
+          
+          setNotification({ isOpen: true, title: "Content Warning", message: warningMessage, type: "warning" });
+          console.log("Flagged categories:", result.categories);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking content moderation:", err);
+        
+        // Always apply basic profanity check as fallback when moderation API fails
+        const basicProfanityList = ["fuck", "shit", "ass", "bitch", "sex", "porn", "dick", "pussy", "cock", "damn", "hell"];
+        const containsProfanity = basicProfanityList.some(word => 
+          reviewText.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (containsProfanity) {
+          setNotification({ isOpen: true, title: "Inappropriate Content", message: "Your review contains inappropriate content. Please revise it.", type: "warning" });
+          return;
+        }
+        
+        // Check if it's a rate limit error
+        if (err.response && 
+            err.response.status === 500 && 
+            err.response.data && 
+            err.response.data.details === "Too Many Requests") {
+          
+          setNotification({ isOpen: true, title: "High Traffic", message: "We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.", type: "info" });
+          console.log("OpenAI rate limit reached, proceeding with submission after profanity check");
+        } else {
+          // For other errors, warn user but allow submission after profanity check
+          console.warn("Moderation API unavailable, used fallback profanity filter");
+        }
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");

@@ -88,9 +88,9 @@ export default function Chatbot() {
 
   // Load knowledge base
   useEffect(() => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
     axios
-      .get(`${apiBaseUrl}/bot`)
+      .get(`${BACKEND_URL}/api/bot`)
       .then((res) => setBotEntries(res.data))
       .catch((err) => console.error("Error fetching bot entries:", err));
   }, []);
@@ -286,8 +286,8 @@ export default function Chatbot() {
     
     try {
       // Check with OpenAI Moderation API
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-      const moderationResponse = await axios.post(`${apiBaseUrl}/openai/moderate`, {
+      const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
+      const moderationResponse = await axios.post(`${BACKEND_URL}/api/openai/moderate`, {
         input: userMessage
       });
       
