@@ -8,11 +8,13 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { useContext } from "react";
 import { UserContext } from "../../../contexts/UserContext";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function AdminProfile() {
   const { currentAdmin, setCurrentAdmin } = useContext(UserContext);
   const [previewImage, setPreviewImage] = useState(null);
   const [imageError, setImageError] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, type: 'info', title: '', message: '' });
   const navigate = useNavigate();
 
   // Load admin from localStorage
@@ -41,7 +43,6 @@ export default function AdminProfile() {
       to: "/AdminProfile/Country",
     },
     { icon: <MdLanguage />, label: "Language", to: "/AdminProfile/Language" },
-    { icon: <IoSettingsSharp />, label: "Settings", to: "/AdminProfile/Settings" },
   ];
 
   const handleFileChange = async (e) => {
@@ -62,12 +63,14 @@ export default function AdminProfile() {
       const token =
         sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
-        alert("Not logged in");
+        setNotification({ isOpen: true, type: 'error', title: 'Not Logged In', message: 'Please log in to upload profile picture.' });
         return;
       }
 
+      // ✅ Use full API URL to bypass CloudFront for uploads
+      const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
       const res = await axios.post(
-        "/api/auth/upload-profile-picture",
+        `${API_URL}/auth/upload-profile-picture`,
         formData,
         {
           headers: {
@@ -89,7 +92,7 @@ export default function AdminProfile() {
       localStorage.setItem("admin", JSON.stringify(updatedAdmin));
     } catch (err) {
       console.error("Upload failed:", err.response?.data || err.message);
-      alert("Failed to upload profile picture.");
+      setNotification({ isOpen: true, type: 'error', title: 'Upload Failed', message: 'Failed to upload profile picture.' });
     }
   };
 
@@ -225,6 +228,14 @@ export default function AdminProfile() {
           © 2025 Intramuros Administration. All rights reserved.
         </p>
       </div>
+      
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </motion.div>
   );
 }

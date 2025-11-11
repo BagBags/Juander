@@ -587,6 +587,7 @@ const AdminPinCard = ({
                           src={mediaUrl}
                           className="w-full h-32 object-cover"
                           controls
+                          crossOrigin="anonymous"
                         >
                           <track kind="captions" />
                         </video>

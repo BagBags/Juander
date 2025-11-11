@@ -430,6 +430,9 @@ exports.verifyOtp = async (req, res) => {
 // Upload profile picture
 exports.uploadProfilePicture = async (req, res) => {
   try {
+    console.log('🔍 Upload Profile Picture - req.file:', JSON.stringify(req.file, null, 2));
+    console.log('🔍 req.user:', req.user?._id);
+    
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
@@ -443,9 +446,21 @@ exports.uploadProfilePicture = async (req, res) => {
       });
     }
 
-    // ✅ Always save full relative path in DB
-    user.profilePicture = `/uploads/profile/${req.file.filename}`;
+    // ✅ For S3 uploads, req.file.location contains the full S3 URL
+    // The S3 key might have 'undefined' in it because req.user wasn't available during multer processing
+    // We'll use the location directly since it's the full URL
+    if (req.file.location) {
+      user.profilePicture = req.file.location;
+    } else {
+      // Fallback for local uploads
+      user.profilePicture = `/uploads/profile/${req.file.filename}`;
+    }
+    
     await user.save();
+    
+    console.log('✅ Profile picture saved:', user.profilePicture);
+    console.log('📁 req.file.location:', req.file.location);
+    console.log('📁 req.file.key:', req.file.key);
 
     // Log action
     const userName = `${user.firstName} ${user.lastName || ""}`.trim();

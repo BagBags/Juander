@@ -176,14 +176,21 @@ router.delete("/:id/remove-media/:index", async (req, res) => {
     }
 
     const mediaFile = pin.mediaFiles[index];
-    const filePath = path.join(
-      __dirname,
-      "..",
-      mediaFile.url.replace(/^\//, "")
-    );
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    
+    // Delete from S3 if it's an S3 URL, otherwise delete from local filesystem
+    if (mediaFile.url.startsWith('http')) {
+      // S3 URL - use deleteFromS3
+      await deleteFromS3(mediaFile.url);
+    } else {
+      // Local path - use filesystem
+      const filePath = path.join(
+        __dirname,
+        "..",
+        mediaFile.url.replace(/^\//, "")
+      );
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     pin.mediaFiles.splice(index, 1);

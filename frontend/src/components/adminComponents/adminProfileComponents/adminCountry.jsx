@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { countries } from "countries-list";
 import { motion } from "framer-motion";
 import axios from "axios";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function CountrySelector() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   // Fetch current user's country on mount
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function CountrySelector() {
 
   const handleSave = async () => {
     if (!selected) {
-      alert("Please select a country before saving.");
+      setNotification({ isOpen: true, type: 'warning', title: 'No Selection', message: 'Please select a country before saving.' });
       return;
     }
 
@@ -53,7 +55,7 @@ export default function CountrySelector() {
       sessionStorage.getItem("token") || localStorage.getItem("token");
 
     if (!token) {
-      alert("You are not logged in.");
+      setNotification({ isOpen: true, type: 'error', title: 'Not Logged In', message: 'You are not logged in.' });
       return;
     }
 
@@ -66,10 +68,10 @@ export default function CountrySelector() {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      alert("Country saved successfully!");
+      setNotification({ isOpen: true, type: 'success', title: 'Success', message: 'Country saved successfully!' });
     } catch (error) {
       console.error("Error saving country:", error.response?.data || error);
-      alert(error.response?.data?.message || "Failed to save country");
+      setNotification({ isOpen: true, type: 'error', title: 'Error', message: error.response?.data?.message || 'Failed to save country' });
     } finally {
       setLoading(false);
     }
@@ -149,6 +151,14 @@ export default function CountrySelector() {
           {loading ? "Saving..." : "Save"}
         </button>
       </div>
+      
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </motion.div>
   );
 }

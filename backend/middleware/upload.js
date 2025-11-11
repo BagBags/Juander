@@ -18,16 +18,30 @@ const S3_BUCKET = process.env.S3_BUCKET_NAME || 'juander-frontend';
 const storage = multerS3({
   s3: s3Client,
   bucket: S3_BUCKET,
-  contentType: multerS3.AUTO_CONTENT_TYPE,
+  contentType: (req, file, cb) => {
+    // Explicitly set content type for videos
+    const mimeType = file.mimetype;
+    if (mimeType.startsWith('video/')) {
+      cb(null, mimeType); // Use the detected video mime type
+    } else {
+      cb(null, file.mimetype); // Use original mime type for other files
+    }
+  },
   key: (req, file, cb) => {
     let folder = '';
     let filename = '';
+    
+    console.log('🔧 Multer-S3 key function - req.baseUrl:', req.baseUrl);
+    console.log('🔧 Multer-S3 key function - req.user:', req.user?._id);
     
     // Determine folder based on route
     if (req.baseUrl.includes("auth")) {
       folder = "uploads/profile";
       const ext = path.extname(file.originalname);
-      filename = `${req.user._id}${ext}`;
+      // Use timestamp + random string if req.user is not available yet
+      const userId = req.user?._id || `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      filename = `${userId}${ext}`;
+      console.log('🔧 Profile upload - userId:', userId, 'filename:', filename);
     } else if (req.baseUrl.includes("pins")) {
       if (file.fieldname === "facade") {
         folder = "uploads/facades";
@@ -48,10 +62,14 @@ const storage = multerS3({
       }
     } else if (req.baseUrl.includes("itineraries")) {
       folder = "uploads/itineraries";
-      filename = file.originalname;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      filename = `${timestamp}-${file.originalname}`;
     } else if (req.baseUrl.includes("userItineraries")) {
       folder = "uploads/userItineraries";
-      filename = file.originalname;
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      filename = `${timestamp}-${file.originalname}`;
     } else if (req.baseUrl.includes("emergency")) {
       folder = "uploads/emergency";
       filename = file.originalname;

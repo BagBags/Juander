@@ -33,6 +33,9 @@ exports.createPin = async (req, res) => {
     
     const pin = new Pin(pinData);
     await pin.save();
+    
+    // Populate category before returning
+    await pin.populate("category", "name");
 
     const adminName = req.user
       ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
@@ -93,7 +96,7 @@ exports.updatePin = async (req, res) => {
       req.params.id, 
       updateObject,
       { new: true, runValidators: true }
-    );
+    ).populate("category", "name");
 
     if (!pin) {
       return res.status(404).json({ message: "Pin not found" });
@@ -164,7 +167,7 @@ exports.archivePin = async (req, res) => {
       req.params.id,
       { isArchived: true },
       { new: true }
-    );
+    ).populate("category", "name");
 
     if (!pin) {
       return res.status(404).json({ message: "Pin not found" });
@@ -196,7 +199,7 @@ exports.restorePin = async (req, res) => {
       req.params.id,
       { isArchived: false },
       { new: true }
-    );
+    ).populate("category", "name");
 
     if (!pin) {
       return res.status(404).json({ message: "Pin not found" });

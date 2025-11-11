@@ -830,8 +830,19 @@ export default function AdminTourMapMain() {
     try {
       notify("info", "Deleting media file...");
       
-      // Call backend to delete the file and update database
-      await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
+      // Only call backend if the pin has been saved (has _id)
+      // For newly uploaded files that haven't been saved, just remove from local state
+      if (pin._id) {
+        try {
+          await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
+        } catch (error) {
+          // If backend returns 400 (invalid index), it means the file wasn't saved yet
+          // Just remove from local state
+          if (error.response?.status !== 400) {
+            throw error; // Re-throw if it's a different error
+          }
+        }
+      }
       
       // Update local state
       setPins((prev) => {
@@ -842,7 +853,7 @@ export default function AdminTourMapMain() {
         return updated;
       });
       
-      notify("success", "Media file deleted successfully");
+      notify("success", "Media file removed");
     } catch (error) {
       console.error("Error removing media file:", error);
       notify("error", "Failed to delete media file. Please try again.");

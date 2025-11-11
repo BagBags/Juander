@@ -11,13 +11,22 @@ import { FaTiktok } from "react-icons/fa";
 import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
 import { clearAuth } from "../../../utils/authStorage";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [imageError, setImageError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const handleRefresh = async () => {
+    setRefreshKey(prev => prev + 1);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  };
 
   // Announce page load
   useEffect(() => {
@@ -73,9 +82,13 @@ export default function ProfilePage() {
         return;
       }
 
-      // ✅ Use proxy-friendly relative path (/api)
+      // ✅ Use full API URL to bypass CloudFront for uploads
+      const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+      console.log('🔵 Uploading to:', `${API_URL}/auth/upload-profile-picture`);
+      console.log('🔵 Token:', token ? 'Present' : 'Missing');
+      
       const res = await axios.post(
-        "/api/auth/upload-profile-picture",
+        `${API_URL}/auth/upload-profile-picture`,
         formData,
         {
           headers: {
@@ -84,6 +97,8 @@ export default function ProfilePage() {
           },
         }
       );
+      
+      console.log('🔵 Upload response:', res.data);
 
       // ✅ Append timestamp to force browser to fetch new image
       const newProfilePic = `${res.data.profilePicture}?t=${Date.now()}`;
@@ -126,7 +141,8 @@ export default function ProfilePage() {
 
       {/* Global TTS Button */}
 
-      <div className="w-full max-w-md relative z-10">
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="w-full max-w-md relative z-10" key={refreshKey}>
         {/* Profile Card */}
         <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
           {/* Decorative circles */}
@@ -292,6 +308,7 @@ export default function ProfilePage() {
           © 2025 {t("intramurosAdmin")}. All rights reserved.
         </p>
       </div>
+      </PullToRefresh>
     </motion.div>
   );
 }

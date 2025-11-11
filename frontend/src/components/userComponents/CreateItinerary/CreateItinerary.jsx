@@ -643,8 +643,8 @@ function SmoothScrollSiteList({
       style={{ 
         scrollBehavior: "smooth",
         scrollSnapType: "y mandatory", // Enable vertical scroll snapping
-        scrollPaddingTop: "calc(50% - 200px)", // Center items in viewport (adjusted for card height)
-        scrollPaddingBottom: "calc(50% - 200px)",
+        scrollPaddingTop: "0px", // Snap strictly at the top
+        scrollPaddingBottom: "0px",
         overflowX: "hidden", // Prevent horizontal scrolling
         touchAction: "pan-y pinch-zoom" // Only allow vertical panning and pinch zoom
       }}
@@ -682,8 +682,9 @@ function SiteCard({
   getFullImageUrl,
 }) {
   const cardRef = useRef(null);
-  const [isInView, setIsInView] = useState(false);
+  const descriptionRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isInView, setIsInView] = useState(false);
   const [cardStyle, setCardStyle] = useState({
     opacity: 1,
     transform: "scale(1)",
@@ -790,7 +791,7 @@ function SiteCard({
       style={{
         opacity: isMobile ? cardStyle.opacity : 1,
         transform: isMobile ? cardStyle.transform : "scale(1)",
-        scrollSnapAlign: "center", // Snap to center of viewport
+        scrollSnapAlign: "start", // Snap to top of viewport
         touchAction: "pan-y pinch-zoom" // Only allow vertical panning
       }}
     >
@@ -822,28 +823,41 @@ function SiteCard({
         {site.siteName}
       </h3>
       
-      <div
-        className={`text-gray-600 text-sm mb-3 flex-grow space-y-1 ${
-          !isExpanded ? "line-clamp-3" : ""
-        }`}
-      >
-        {site.siteDescription ? (
-          site.siteDescription
-            .split("\n\n")
-            .map((paragraph, index) => <p key={index}>{paragraph.trim()}</p>)
-        ) : (
-          <p className="text-gray-400 italic">No description available</p>
+      <div className="mb-3">
+        <div 
+          ref={descriptionRef}
+          className={`text-sm text-gray-600 space-y-1 ${isExpanded ? 'max-h-48 overflow-y-auto pr-2' : 'line-clamp-3'}`} 
+          style={{ 
+            overflow: isExpanded ? 'auto' : 'hidden', 
+            width: '100%', 
+            wordBreak: 'break-word',
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#f04e37 #f3f4f6'
+          }}
+        >
+          {site.siteDescription ? (
+            site.siteDescription.split('\n\n').map((paragraph, idx) => (
+              <p key={idx} style={{ wordBreak: 'break-word' }}>{paragraph.trim()}</p>
+            ))
+          ) : (
+            <p className="text-gray-400 italic">No description available</p>
+          )}
+        </div>
+        {site.siteDescription && site.siteDescription.length > 150 && (
+          <button
+            onClick={() => {
+              // Reset description scroll position when collapsing
+              if (isExpanded && descriptionRef.current) {
+                descriptionRef.current.scrollTop = 0;
+              }
+              toggleDescription(site._id);
+            }}
+            className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
+          >
+            {isExpanded ? "See less" : "See more"}
+          </button>
         )}
       </div>
-      
-      {site.siteDescription && site.siteDescription.length > 100 && (
-        <button
-          className="text-sm text-[#f04e37] font-semibold mb-3 text-left hover:text-orange-600 transition-colors"
-          onClick={() => toggleDescription(site._id)}
-        >
-          {isExpanded ? "Read less" : "Read more"}
-        </button>
-      )}
       
       <button
         onClick={() => toggleSelection(site._id)}

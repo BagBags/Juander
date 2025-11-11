@@ -193,6 +193,13 @@ export default function LoginForm({ toggleForm }) {
       return;
     }
 
+    // Password validation - same as signup
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setError("Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character (@$!%*?&).");
+      return;
+    }
+
     try {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/reset-password`, {
         email,
@@ -299,17 +306,20 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           {/* Google Login */}
-          <div className="w-full h-[40px] sm:h-[44px] overflow-hidden">
-            <div className="w-full h-[40px] sm:h-[44px]" style={{ minWidth: '100%', minHeight: '40px' }}>
-              <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={() => setError("Google login failed.")}
-                useOneTap
-                theme="outline"
-                size="large"
-                shape="rectangular"
-                width="100%"
-              />
+          <div className="w-full" style={{ minHeight: '44px', height: '44px' }}>
+            <div className="w-full h-full flex items-center justify-center">
+              <div style={{ width: '100%', maxWidth: '400px', minWidth: '280px', height: '44px' }}>
+                <GoogleLogin
+                  onSuccess={handleGoogleLoginSuccess}
+                  onError={() => setError("Google login failed.")}
+                  useOneTap
+                  theme="outline"
+                  size="large"
+                  shape="rectangular"
+                  width="100%"
+                  logo_alignment="left"
+                />
+              </div>
             </div>
           </div>
 

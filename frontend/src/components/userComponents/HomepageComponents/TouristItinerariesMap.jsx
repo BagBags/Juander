@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import Map, { Marker, Source, Layer } from "react-map-gl";
+import Map, { Marker, Source, Layer, GeolocateControl } from "react-map-gl";
+import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "./TouristItinerariesMap.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Navigation, MapPin, Car, Bike, Footprints, User } from "lucide-react";
@@ -15,7 +17,6 @@ import {
 } from "../TourMap/mapConfig";
 
 // Import separated components
-import ModernUserMarker from "../TourMap/ModernUserMarker";
 import DirectionsPanel from "./DirectionsPanel";
 import MapControlButtons from "./MapControlButtons";
 import SitePreviewCard from "./SitePreviewCard";
@@ -23,6 +24,7 @@ import SiteModalFullScreen from "./SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
@@ -38,16 +40,18 @@ export default function TouristItineraryMap() {
   });
   const [userLocation, setUserLocation] = useState(null);
   const [userHeading, setUserHeading] = useState(0);
-  const userHeadingRef = useRef(0); // Ref for heading to prevent re-renders
-  const lastLocationRef = useRef(null);
-  const locationUpdateThrottle = useRef(null);
-  const headingUpdateThrottle = useRef(null);
+  const lastHeadingRef = useRef(0); // Track last normalized heading
+  const accumulatedRotationRef = useRef(0); // Track accumulated rotation (can go beyond 360)
+  const geolocateControlRef = useRef(null); // Ref for Mapbox GeolocateControl
+  const mapRef = useRef(null);
+  const userMarkerRef = useRef(null); // Custom user marker with heading
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [savedProgress, setSavedProgress] = useState(null);
   const [itineraryName, setItineraryName] = useState("");
+  const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
   const [showTransportPanel, setShowTransportPanel] = useState(false);
 
@@ -478,77 +482,281 @@ export default function TouristItineraryMap() {
     }
   }, [pins, selectedPin, manuallyDismissed, currentPinIndex]);
 
-  /** Track user location (after consent) - Optimized for smooth heading updates */
+  /** Handle GeolocateControl events */
+  const handleGeolocate = useCallback((e) => {
+    // Update user location when geolocate control gets position
+    const newLoc = {
+      latitude: e.coords.latitude,
+      longitude: e.coords.longitude
+    };
+    setUserLocation(newLoc);
+  }, []);
+
+  const handleGeolocateError = useCallback((e) => {
+    console.error("Geolocate error:", e);
+    setGpsError("Unable to retrieve your location");
+    setShowGpsModal(true);
+  }, []);
+
+  /** Normalize heading to prevent 360° jumps - uses accumulated rotation */
+  const normalizeHeading = useCallback((newHeading) => {
+    // Normalize incoming heading to 0-360
+    let normalized = newHeading % 360;
+    if (normalized < 0) normalized += 360;
+    
+    const lastNormalized = lastHeadingRef.current;
+    
+    // Calculate shortest angular difference
+    let diff = normalized - lastNormalized;
+    
+    // Adjust diff to be in range [-180, 180]
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+    
+    // Add to accumulated rotation (can be any value, not limited to 0-360)
+    accumulatedRotationRef.current += diff;
+    
+    // Update last normalized heading
+    lastHeadingRef.current = normalized;
+    
+    // Return accumulated rotation (this prevents CSS from wrapping)
+    return accumulatedRotationRef.current;
+  }, []);
+
+  /** Track device orientation for heading */
   useEffect(() => {
-    if (showGpsModal) return; // wait for user to enable
-    
-    const id = navigator.geolocation.watchPosition(
-      ({ coords }) => {
-        const newLoc = { 
-          latitude: coords.latitude, 
-          longitude: coords.longitude,
-          heading: coords.heading // Get device heading if available
-        };
-        
-        // ALWAYS update heading immediately for smooth rotation (like Google Maps)
-        // Use throttled updates to prevent excessive re-renders
-        if (coords.heading !== null && coords.heading !== undefined && coords.heading >= 0) {
-          userHeadingRef.current = coords.heading;
-          
-          // Throttle state updates to max 10 per second (100ms)
-          if (headingUpdateThrottle.current) {
-            clearTimeout(headingUpdateThrottle.current);
-          }
-          
-          headingUpdateThrottle.current = setTimeout(() => {
-            setUserHeading(coords.heading);
-          }, 100);
-        }
-        
-        // Only update location if changed significantly (> 5 meters)
-        if (lastLocationRef.current) {
-          const dx = newLoc.latitude - lastLocationRef.current.latitude;
-          const dy = newLoc.longitude - lastLocationRef.current.longitude;
-          const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
-          
-          if (distance < 5) {
-            return; // Don't update location, prevents marker blinking
-          }
-        }
-        
-        lastLocationRef.current = newLoc;
-        setUserLocation(newLoc);
-        
-        // Throttle view state updates to prevent excessive map movements
-        if (locationUpdateThrottle.current) {
-          clearTimeout(locationUpdateThrottle.current);
-        }
-        
-        locationUpdateThrottle.current = setTimeout(() => {
-          setViewState((v) => ({ 
-            ...v, 
-            latitude: newLoc.latitude, 
-            longitude: newLoc.longitude 
-          }));
-        }, 1000); // Update view every 1 second max
-      },
-      (err) => console.error("GPS error:", err),
-      { 
-        enableHighAccuracy: true, 
-        maximumAge: 0, // Always get fresh heading data for smooth rotation
-        timeout: 10000 // Increase timeout to 10 seconds
+    const handleOrientation = (event) => {
+      let heading = null;
+      
+      // iOS: webkitCompassHeading (most accurate)
+      if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+        heading = event.webkitCompassHeading;
       }
-    );
-    
-    return () => {
-      navigator.geolocation.clearWatch(id);
-      if (locationUpdateThrottle.current) {
-        clearTimeout(locationUpdateThrottle.current);
+      // Android: Calculate from alpha
+      else if (event.alpha !== null && event.alpha !== undefined) {
+        // Get screen orientation
+        const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+        let adjustedAlpha = event.alpha;
+        
+        // Adjust for screen rotation
+        if (screenOrientation === 90) {
+          adjustedAlpha = (event.alpha + 90) % 360;
+        } else if (screenOrientation === -90 || screenOrientation === 270) {
+          adjustedAlpha = (event.alpha - 90 + 360) % 360;
+        } else if (screenOrientation === 180) {
+          adjustedAlpha = (event.alpha + 180) % 360;
+        }
+        
+        // Convert to compass bearing (0° = North)
+        heading = (360 - adjustedAlpha) % 360;
       }
-      if (headingUpdateThrottle.current) {
-        clearTimeout(headingUpdateThrottle.current);
+      
+      if (heading !== null) {
+        // Normalize to prevent 360° jumps
+        const smoothHeading = normalizeHeading(heading);
+        setUserHeading(smoothHeading);
       }
     };
+
+    // Auto-add listeners for non-iOS devices
+    window.addEventListener('deviceorientationabsolute', handleOrientation, { passive: true });
+    window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+
+    return () => {
+      window.removeEventListener('deviceorientationabsolute', handleOrientation);
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
+  }, [normalizeHeading]);
+
+  /** Fallback: Request orientation permission when geolocate button is clicked (iOS 13+) */
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    const requestOrientationPermission = async () => {
+      // Only for iOS 13+ that requires permission
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          await DeviceOrientationEvent.requestPermission();
+        } catch (error) {
+          console.log('Orientation permission request:', error);
+        }
+      }
+    };
+
+    // Attach click listener to geolocate button
+    const setupGeolocateListener = () => {
+      setTimeout(() => {
+        const geolocateButton = document.querySelector('.mapboxgl-ctrl-geolocate');
+        if (geolocateButton) {
+          geolocateButton.addEventListener('click', requestOrientationPermission);
+        }
+      }, 500);
+    };
+
+    if (map.loaded()) {
+      setupGeolocateListener();
+    } else {
+      map.on('load', setupGeolocateListener);
+    }
+
+    return () => {
+      const geolocateButton = document.querySelector('.mapboxgl-ctrl-geolocate');
+      if (geolocateButton) {
+        geolocateButton.removeEventListener('click', requestOrientationPermission);
+      }
+    };
+  }, []);
+
+  /** Create custom user marker with heading cone using Mapbox GL JS */
+  useEffect(() => {
+    if (!mapRef.current || !userLocation) return;
+
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    // Remove existing marker if any
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+    }
+
+    // Create marker element (Google Maps style)
+    const el = document.createElement('div');
+    el.className = 'custom-user-marker';
+    el.style.cssText = `
+      position: relative;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    
+    // Create beam container (rotates)
+    const beamContainer = document.createElement('div');
+    beamContainer.className = 'heading-beam-container';
+    beamContainer.style.cssText = `
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform: rotate(${userHeading}deg) translateZ(0);
+      transform-origin: center center;
+      transition: transform 0.15s ease-out;
+      will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      perspective: 1000px;
+      -webkit-perspective: 1000px;
+      pointer-events: none;
+    `;
+    
+    // Create direction beam (Google Maps style - wider trapezoid)
+    const beam = document.createElement('div');
+    beam.className = 'heading-cone';
+    beam.style.cssText = `
+      position: absolute;
+      width: 70px;
+      height: 90px;
+      background: linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0));
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%) translateZ(0);
+      -webkit-transform: translateX(-50%) translateZ(0);
+      clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%);
+      -webkit-clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%);
+      filter: blur(1px);
+      -webkit-filter: blur(1px);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      pointer-events: none;
+    `;
+    beamContainer.appendChild(beam);
+    el.appendChild(beamContainer);
+    
+    // Create pulse animation
+    const pulse = document.createElement('div');
+    pulse.style.cssText = `
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      background-color: rgba(59, 130, 246, 0.2);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      pointer-events: none;
+    `;
+    el.appendChild(pulse);
+    
+    // Create accuracy ring
+    const accuracyRing = document.createElement('div');
+    accuracyRing.style.cssText = `
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-color: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      pointer-events: none;
+    `;
+    el.appendChild(accuracyRing);
+    
+    // Create user dot (Google Maps style)
+    const dot = document.createElement('div');
+    dot.style.cssText = `
+      position: relative;
+      width: 20px;
+      height: 20px;
+      background-color: #3b82f6;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      pointer-events: none;
+    `;
+    el.appendChild(dot);
+
+    // Create and add marker to map
+    const marker = new mapboxgl.Marker({
+      element: el,
+      anchor: 'center'
+    })
+      .setLngLat([userLocation.longitude, userLocation.latitude])
+      .addTo(map);
+
+    userMarkerRef.current = marker;
+
+    return () => {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+      }
+    };
+  }, [userLocation]);
+
+  /** Update heading beam rotation (Google Maps style) */
+  useEffect(() => {
+    if (userMarkerRef.current) {
+      const el = userMarkerRef.current.getElement();
+      const beamContainer = el.querySelector('.heading-beam-container');
+      if (beamContainer) {
+        beamContainer.style.transform = `rotate(${userHeading}deg) translateZ(0)`;
+      }
+    }
+  }, [userHeading]);
+
+  /** Trigger geolocate control on mount and enable watch mode */
+  useEffect(() => {
+    if (geolocateControlRef.current && !showGpsModal) {
+      // Trigger the geolocate control to start tracking
+      const timer = setTimeout(() => {
+        geolocateControlRef.current?.trigger();
+      }, 1000); // Small delay to ensure map is loaded
+      
+      return () => clearTimeout(timer);
+    }
   }, [showGpsModal]);
 
   /** Check if route stays within Intramuros bounds */
@@ -798,7 +1006,12 @@ export default function TouristItineraryMap() {
     setShowFullModal(false);
 
     // Show confirmation
-    alert(`✅ Site "${currentPin.siteName}" marked as visited!`);
+    setNotification({
+      isOpen: true,
+      type: 'success',
+      title: 'Site Visited!',
+      message: `"${currentPin.siteName}" has been marked as visited.`
+    });
 
     // Go to next site, passing the site we just marked as done
     goToNextStop(currentPin._id);
@@ -979,6 +1192,7 @@ export default function TouristItineraryMap() {
       {/* Map Container - Takes remaining height */}
       <div className="flex-1 relative overflow-hidden">
         <Map
+          ref={mapRef}
           {...viewState}
           mapboxAccessToken={MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/streets-v11"
@@ -1009,13 +1223,24 @@ export default function TouristItineraryMap() {
           </Source>
         )}
 
-        {/* User marker - Modern GPS style - Memoized to prevent map re-renders */}
-        {userLocation && (
-          <ModernUserMarker 
-            userLocation={userLocation} 
-            heading={userHeading}
-          />
-        )}
+        {/* GeolocateControl for tracking user location */}
+        <GeolocateControl
+          ref={geolocateControlRef}
+          positionOptions={{
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 6000
+          }}
+          trackUserLocation={true}
+          showUserHeading={false}
+          onGeolocate={handleGeolocate}
+          onError={handleGeolocateError}
+          style={{
+            position: 'absolute',
+            bottom: 10,
+            right: 10
+          }}
+        />
 
         {/* Site markers - numbered by optimized route */}
         {optimizedPins.map((pin, idx) => {
@@ -1135,6 +1360,15 @@ export default function TouristItineraryMap() {
 
         {/* Floating Chatbot */}
         <FloatingChatbot />
+        
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+        />
       </div>
     </div>
   );

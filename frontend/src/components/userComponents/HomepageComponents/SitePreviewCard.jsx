@@ -11,6 +11,18 @@ export default function SitePreviewCard({
   onMarkAsDone,
   isVisited,
 }) {
+  // Get first media file from mediaFiles array
+  const firstMedia = selectedPin?.mediaFiles?.[0];
+  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
+    ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
+    : "http://localhost:5000";
+  
+  const thumbnailUrl = firstMedia?.url?.startsWith('http') 
+    ? firstMedia.url 
+    : firstMedia?.url 
+      ? `${BACKEND_URL}${firstMedia.url}` 
+      : null;
+
   // Announce when site info appears or proximity changes
   useEffect(() => {
     if (selectedPin && distance !== null) {
@@ -64,17 +76,18 @@ export default function SitePreviewCard({
         >
           <div className="flex gap-3">
             {/* Thumbnail */}
-            {selectedPin.mediaUrl && (
+            {thumbnailUrl && (
               <div className="flex-shrink-0">
-                {selectedPin.mediaType === "video" ? (
+                {firstMedia.type === "video" ? (
                   <video
-                    src={selectedPin.mediaUrl}
+                    src={thumbnailUrl}
                     className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                     muted
+                    crossOrigin="anonymous"
                   />
                 ) : (
                   <img
-                    src={selectedPin.mediaUrl}
+                    src={thumbnailUrl}
                     alt={selectedPin.title || selectedPin.siteName}
                     className="w-20 h-20 object-cover rounded-lg border border-gray-200"
                   />

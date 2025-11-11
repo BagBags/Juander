@@ -2,7 +2,6 @@
 export function registerServiceWorker() {
   // Only register in production
   if (import.meta.env.DEV) {
-    console.log('[SW] Skipping registration in development mode');
     return;
   }
 
@@ -12,7 +11,6 @@ export function registerServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((registration) => {
-          console.log('[SW] Registered successfully:', registration.scope);
 
           // Check for updates every 60 seconds
           setInterval(() => {
@@ -22,12 +20,9 @@ export function registerServiceWorker() {
           // Handle updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
-            console.log('[SW] Update found, installing new version...');
 
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('[SW] New version installed, activating...');
-                
                 // Skip waiting and activate immediately
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
                 
@@ -39,12 +34,11 @@ export function registerServiceWorker() {
 
           // Listen for controller change (new SW activated)
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[SW] New service worker activated, reloading page...');
             window.location.reload();
           });
         })
         .catch((error) => {
-          console.error('[SW] Registration failed:', error);
+          // Silent fail
         });
     });
   }
@@ -52,10 +46,7 @@ export function registerServiceWorker() {
 
 function showUpdateNotification() {
   // Optional: Show a toast/notification to user
-  console.log('[SW] App updated! Reloading...');
-  
-  // You can add a UI notification here if desired
-  // For now, we'll just auto-reload after a short delay
+  // Auto-reload after a short delay
   setTimeout(() => {
     window.location.reload();
   }, 1000);

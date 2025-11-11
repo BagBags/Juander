@@ -15,13 +15,8 @@ router.post(
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-      // The upload middleware automatically determines the correct folder based on baseUrl
-      // For /api/userItineraries/upload -> uploads/userItineraries/
-      // For /api/itineraries/upload -> uploads/itineraries/
-      const folder = req.baseUrl.includes("userItineraries")
-        ? "userItineraries"
-        : "itineraries";
-      const imageUrl = `/uploads/${folder}/${req.file.filename}`;
+      // ✅ Use S3 URL if available (multer-s3), otherwise construct local path
+      const imageUrl = req.file.location || `/uploads/${req.baseUrl.includes("userItineraries") ? "userItineraries" : "itineraries"}/${req.file.filename}`;
 
       console.log("Image uploaded successfully:", imageUrl);
       res.status(200).json({ imageUrl });

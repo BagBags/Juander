@@ -41,14 +41,11 @@ export const fetchWithOfflineFallback = async (url, options = {}) => {
   try {
     // Check if online
     if (!navigator.onLine) {
-      console.warn(`Offline: Attempting to use cached data for ${url}`);
-      
       // Try to get from localStorage cache
       if (cacheKey) {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
-          console.log(`Using cached data from ${new Date(timestamp).toLocaleString()}`);
           return { data, fromCache: true, offline: true };
         }
       }
@@ -82,14 +79,11 @@ export const fetchWithOfflineFallback = async (url, options = {}) => {
   } catch (error) {
     // Network error - might be offline
     if (error.message === 'Network Error' || !navigator.onLine) {
-      console.warn(`Network error: Attempting to use cached data for ${url}`);
-      
       // Try cache
       if (cacheKey) {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
-          console.log(`Using cached data from ${new Date(timestamp).toLocaleString()}`);
           return { data, fromCache: true, offline: true };
         }
       }
@@ -128,7 +122,6 @@ export const useOfflineAwareData = (url, options = {}) => {
         setError(null);
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
@@ -232,7 +225,6 @@ export const clearOfflineCache = () => {
       localStorage.removeItem(key);
     }
   });
-  console.log('Offline cache cleared');
 };
 
 /**

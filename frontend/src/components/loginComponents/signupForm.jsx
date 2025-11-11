@@ -116,7 +116,22 @@ export default function SignupForm({ toggleForm }) {
         }
       );
       setMessage(res.data.message);
-      navigate("/Homepage");
+      
+      // Store user data and token
+      const { user, token } = res.data;
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token", token);
+      
+      // Check if user has completed demographics (birthday, gender, country)
+      const hasCompletedProfile = user.birthday && user.gender && user.country;
+      
+      if (hasCompletedProfile) {
+        // User already has demographics, go to Homepage
+        navigate("/Homepage");
+      } else {
+        // New user needs to complete profile
+        navigate("/CompleteProfile");
+      }
     } catch (err) {
       setErrors({
         otp: err.response?.data?.message || "OTP verification failed",
@@ -172,9 +187,26 @@ export default function SignupForm({ toggleForm }) {
         }
       );
 
-      const user = res.data;
+      const { user, token } = res.data;
       localStorage.setItem("user", JSON.stringify(user));
-      navigate(user.user.role === "admin" ? "/AdminHome" : "/Home");
+      localStorage.setItem("token", token);
+      
+      // Handle admin users
+      if (user.role === "admin") {
+        navigate("/AdminHome");
+        return;
+      }
+      
+      // Check if user has completed demographics
+      const hasCompletedProfile = user.birthday && user.gender && user.country;
+      
+      if (hasCompletedProfile) {
+        // User already has demographics, go to Homepage
+        navigate("/Homepage");
+      } else {
+        // New user needs to complete profile
+        navigate("/CompleteProfile");
+      }
     } catch (error) {
       setErrors({ general: "Google sign-up failed" });
     }
@@ -428,17 +460,20 @@ export default function SignupForm({ toggleForm }) {
       </div>
 
       {/* Google Login */}
-      <div className="w-full h-[40px] sm:h-[44px] overflow-hidden">
-        <div className="w-full h-[40px] sm:h-[44px]" style={{ minWidth: '100%', minHeight: '40px' }}>
-          <GoogleLogin
-            onSuccess={handleGoogleSignup}
-            onError={() => setErrors({ general: "Google sign-up error" })}
-            width="100%"
-            text="signup_with"
-            theme="outline"
-            size="large"
-            shape="rectangular"
-          />
+      <div className="w-full" style={{ minHeight: '44px', height: '44px' }}>
+        <div className="w-full h-full flex items-center justify-center">
+          <div style={{ width: '100%', maxWidth: '400px', minWidth: '280px', height: '44px' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSignup}
+              onError={() => setErrors({ general: "Google sign-up error" })}
+              width="100%"
+              text="signup_with"
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              logo_alignment="left"
+            />
+          </div>
         </div>
       </div>
 
