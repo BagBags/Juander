@@ -62,6 +62,13 @@ const AdminPinCard = ({
 }) => {
   if (!pin) return null;
 
+  // Normalize category to ID on mount if it's a populated object
+  useEffect(() => {
+    if (pin.category && typeof pin.category === 'object' && pin.category._id) {
+      updatePinField(selectedPinIndex, "category", pin.category._id);
+    }
+  }, []);
+
   // Language toggle state
   const [selectedLanguage, setSelectedLanguage] = useState('english');
   
@@ -174,7 +181,9 @@ const AdminPinCard = ({
     }
   };
 
-  const selectedCategory = categories.find(cat => cat._id === pin.category);
+  // Handle both populated category (object) and category ID (string)
+  const categoryId = typeof pin.category === 'object' ? pin.category?._id : pin.category;
+  const selectedCategory = categories.find(cat => cat._id === categoryId);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4 pointer-events-none">
@@ -266,9 +275,9 @@ const AdminPinCard = ({
                       <div
                         key={cat._id}
                         className="px-4 py-2.5 cursor-pointer text-sm transition"
-                        style={pin.category === cat._id ? { backgroundColor: '#fef2f0', color: '#f04e37', fontWeight: '500' } : { color: '#374151' }}
-                        onMouseEnter={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = '#fef2f0'; }}
-                        onMouseLeave={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        style={categoryId === cat._id ? { backgroundColor: '#fef2f0', color: '#f04e37', fontWeight: '500' } : { color: '#374151' }}
+                        onMouseEnter={(e) => { if (categoryId !== cat._id) e.currentTarget.style.backgroundColor = '#fef2f0'; }}
+                        onMouseLeave={(e) => { if (categoryId !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
                         onClick={() => {
                           updatePinField(selectedPinIndex, "category", cat._id);
                           if (setValidationErrors) {
