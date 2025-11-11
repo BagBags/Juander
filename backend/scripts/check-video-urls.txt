@@ -1,0 +1,42 @@
+// ========================================
+// Check Video URLs in Database
+// ========================================
+// This script checks what video URLs are stored in the database
+
+// FIRST: Run this command separately in mongosh:
+// use juander
+
+// THEN: Copy and paste everything below this line
+// ========================================
+
+print("\n🔍 Checking Video URLs in Database...\n");
+
+// Find all pins with video files
+const pinsWithVideos = db.pins.find({
+  "mediaFiles": {
+    $elemMatch: {
+      type: "video"
+    }
+  }
+}).toArray();
+
+print(`Found ${pinsWithVideos.length} pins with videos\n`);
+
+pinsWithVideos.forEach((pin, index) => {
+  print(`\n--- Pin ${index + 1}: ${pin.siteName} ---`);
+  print(`Pin ID: ${pin._id}`);
+  
+  const videos = pin.mediaFiles.filter(m => m.type === "video");
+  print(`Number of videos: ${videos.length}`);
+  
+  videos.forEach((video, vIndex) => {
+    print(`\n  Video ${vIndex + 1}:`);
+    print(`    URL: ${video.url}`);
+    print(`    Type: ${video.type}`);
+    print(`    Starts with http: ${video.url.startsWith('http')}`);
+    print(`    Starts with https: ${video.url.startsWith('https')}`);
+    print(`    Contains s3.amazonaws: ${video.url.includes('s3.amazonaws.com')}`);
+  });
+});
+
+print("\n✅ Check complete!");

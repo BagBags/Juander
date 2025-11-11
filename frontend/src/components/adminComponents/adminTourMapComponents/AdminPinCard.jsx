@@ -575,12 +575,10 @@ const AdminPinCard = ({
             {pin.mediaFiles && pin.mediaFiles.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 {pin.mediaFiles.map((media, index) => {
-                  // Priority: S3 URL > HTTP URL > Local path
+                  // S3 URL or local path
                   const mediaUrl = media.url?.startsWith('http') 
                     ? media.url 
-                    : media.url?.includes('s3.amazonaws.com')
-                      ? media.url
-                      : `${BACKEND_URL}${media.url}`;
+                    : `${BACKEND_URL}${media.url}`;
                   
                   return (
                     <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
