@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import TouristItineraryMain from "./TouristItineraryMain";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
+import PullToRefresh from "../../shared/PullToRefresh";
 import axios from "axios";
 
 export default function TouristItinerary() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -25,8 +27,15 @@ export default function TouristItinerary() {
     fetchUser();
   }, []);
 
+  const handleRefresh = async () => {
+    // Trigger refresh by updating key
+    setRefreshKey(prev => prev + 1);
+    // Wait a bit to simulate refresh
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  };
+
   return (
-    <div className="min-h-screen bg-[#f04e37] relative">
+    <div className="min-h-screen bg-[#f04e37] relative overflow-hidden" style={{ overscrollBehavior: 'none', touchAction: 'pan-y' }}>
       {/* Back Header */}
       <div 
         className="sticky top-0 z-10 bg-[#f04e37]"
@@ -45,11 +54,13 @@ export default function TouristItinerary() {
 
       {/* Main Content */}
       <MainLayout includeSideButtons={false}>
-        <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
-          <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
-            <TouristItineraryMain />
+        <PullToRefresh onRefresh={handleRefresh}>
+          <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
+            <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
+              <TouristItineraryMain key={refreshKey} />
+            </div>
           </div>
-        </div>
+        </PullToRefresh>
       </MainLayout>
     </div>
   );

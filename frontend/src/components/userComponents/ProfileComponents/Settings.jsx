@@ -86,7 +86,7 @@ export default function Settings() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
+      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden"
     >
       <div className="w-full max-w-md">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">

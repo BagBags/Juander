@@ -317,7 +317,7 @@ export default function AdminChatbot() {
       <section className="bg-gray-50 min-h-screen">
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Knowledge Base Entries */}
-        <div className="flex-1 space-y-6">
+        <div className="w-full lg:max-w-[560px] space-y-6">
           <div className="bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-2xl font-bold text-gray-800 mb-6">
               Knowledge Base Management

@@ -6,6 +6,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Camera, X, MapPin, Calendar, Star as StarIcon, Filter, BookOpen } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 // Reusable Site Card Component
 const SiteCard = ({ site, resolveUrl, children }) => {
@@ -59,10 +60,18 @@ export default function TripArchivesPage() {
   const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
   const [expandedItineraries, setExpandedItineraries] = useState({}); // Track which itinerary names are expanded
   const [expandedDescriptions, setExpandedDescriptions] = useState({}); // Track which descriptions are expanded
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
+
+  const handleRefresh = async () => {
+    setRefreshKey(prev => prev + 1);
+    setLoading(true);
+    await fetchVisitedSites();
+    await fetchReviews();
+  };
 
   const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
 
@@ -342,6 +351,7 @@ export default function TripArchivesPage() {
           paddingLeft: "16px",
           paddingRight: "16px"
         }}
+        key={refreshKey}
       >
         <BackHeader title="Trip Archives" />
       </div>
@@ -828,12 +838,6 @@ export default function TripArchivesPage() {
           </div>
         </div>
       )}
-
-      <div className="mt-auto py-8 text-center relative z-10">
-        <p className="text-xs text-gray-400">
-          2025 Intramuros Administration. All rights reserved.
-        </p>
-      </div>
 
       {/* Notification Modal */}
       <NotificationModal

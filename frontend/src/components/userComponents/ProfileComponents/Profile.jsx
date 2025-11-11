@@ -11,13 +11,22 @@ import { FaTiktok } from "react-icons/fa";
 import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
 import { clearAuth } from "../../../utils/authStorage";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [imageError, setImageError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const handleRefresh = async () => {
+    setRefreshKey(prev => prev + 1);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  };
 
   // Announce page load
   useEffect(() => {
@@ -126,7 +135,8 @@ export default function ProfilePage() {
 
       {/* Global TTS Button */}
 
-      <div className="w-full max-w-md relative z-10">
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="w-full max-w-md relative z-10" key={refreshKey}>
         {/* Profile Card */}
         <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
           {/* Decorative circles */}
@@ -292,6 +302,7 @@ export default function ProfilePage() {
           © 2025 {t("intramurosAdmin")}. All rights reserved.
         </p>
       </div>
+      </PullToRefresh>
     </motion.div>
   );
 }

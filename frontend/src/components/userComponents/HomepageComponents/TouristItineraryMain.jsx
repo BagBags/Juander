@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ChevronLeft, ChevronRight, Info, MapPin, DollarSign } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, MapPin, DollarSign, Clock, FileText, Map } from "lucide-react";
 
 function FortSantiagoModal({ isOpen, onClose, feeAmount, feeAmountDiscounted }) {
   if (!isOpen) return null;
@@ -141,14 +141,14 @@ export default function TouristItineraryMain() {
 
   // Carousel states for admin itineraries
   const [adminIndex, setAdminIndex] = useState(0);
-  const [adminTouchStart, setAdminTouchStart] = useState(0);
-  const [adminTouchEnd, setAdminTouchEnd] = useState(0);
+  const [adminTouchStart, setAdminTouchStart] = useState({ x: 0, y: 0 });
+  const [adminTouchEnd, setAdminTouchEnd] = useState({ x: 0, y: 0 });
   const adminCarouselRef = useRef(null);
 
   // Carousel states for user itineraries
   const [userIndex, setUserIndex] = useState(0);
-  const [userTouchStart, setUserTouchStart] = useState(0);
-  const [userTouchEnd, setUserTouchEnd] = useState(0);
+  const [userTouchStart, setUserTouchStart] = useState({ x: 0, y: 0 });
+  const [userTouchEnd, setUserTouchEnd] = useState({ x: 0, y: 0 });
   const userCarouselRef = useRef(null);
 
   const navigate = useNavigate();
@@ -228,40 +228,96 @@ export default function TouristItineraryMain() {
 
   // Touch handlers for admin carousel
   const handleAdminTouchStart = (e) => {
-    setAdminTouchStart(e.targetTouches[0].clientX);
-    setAdminTouchEnd(0);
+    setAdminTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+    setAdminTouchEnd({ x: 0, y: 0 });
   };
 
   const handleAdminTouchMove = (e) => {
-    setAdminTouchEnd(e.targetTouches[0].clientX);
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    
+    setAdminTouchEnd({
+      x: currentX,
+      y: currentY
+    });
+    
+    // If horizontal movement is dominant, prevent vertical scroll
+    if (adminTouchStart.x && adminTouchStart.y) {
+      const diffX = Math.abs(currentX - adminTouchStart.x);
+      const diffY = Math.abs(currentY - adminTouchStart.y);
+      
+      if (diffX > diffY && diffX > 10) {
+        e.preventDefault();
+      }
+    }
   };
 
   const handleAdminTouchEnd = () => {
-    if (!adminTouchStart || !adminTouchEnd) return;
-    const distance = adminTouchStart - adminTouchEnd;
-    if (distance > 50) goToAdminNext();
-    if (distance < -50) goToAdminPrevious();
-    setAdminTouchStart(0);
-    setAdminTouchEnd(0);
+    if (!adminTouchStart.x || !adminTouchEnd.x) return;
+    
+    const distanceX = adminTouchStart.x - adminTouchEnd.x;
+    const distanceY = adminTouchStart.y - adminTouchEnd.y;
+    
+    // Only trigger carousel navigation if it's primarily a horizontal swipe
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+    
+    if (isHorizontalSwipe) {
+      if (distanceX > 50) goToAdminNext();
+      if (distanceX < -50) goToAdminPrevious();
+    }
+    
+    setAdminTouchStart({ x: 0, y: 0 });
+    setAdminTouchEnd({ x: 0, y: 0 });
   };
 
   // Touch handlers for user carousel
   const handleUserTouchStart = (e) => {
-    setUserTouchStart(e.targetTouches[0].clientX);
-    setUserTouchEnd(0);
+    setUserTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+    setUserTouchEnd({ x: 0, y: 0 });
   };
 
   const handleUserTouchMove = (e) => {
-    setUserTouchEnd(e.targetTouches[0].clientX);
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    
+    setUserTouchEnd({
+      x: currentX,
+      y: currentY
+    });
+    
+    // If horizontal movement is dominant, prevent vertical scroll
+    if (userTouchStart.x && userTouchStart.y) {
+      const diffX = Math.abs(currentX - userTouchStart.x);
+      const diffY = Math.abs(currentY - userTouchStart.y);
+      
+      if (diffX > diffY && diffX > 10) {
+        e.preventDefault();
+      }
+    }
   };
 
   const handleUserTouchEnd = () => {
-    if (!userTouchStart || !userTouchEnd) return;
-    const distance = userTouchStart - userTouchEnd;
-    if (distance > 50) goToUserNext();
-    if (distance < -50) goToUserPrevious();
-    setUserTouchStart(0);
-    setUserTouchEnd(0);
+    if (!userTouchStart.x || !userTouchEnd.x) return;
+    
+    const distanceX = userTouchStart.x - userTouchEnd.x;
+    const distanceY = userTouchStart.y - userTouchEnd.y;
+    
+    // Only trigger carousel navigation if it's primarily a horizontal swipe
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+    
+    if (isHorizontalSwipe) {
+      if (distanceX > 50) goToUserNext();
+      if (distanceX < -50) goToUserPrevious();
+    }
+    
+    setUserTouchStart({ x: 0, y: 0 });
+    setUserTouchEnd({ x: 0, y: 0 });
   };
 
   const handleItineraryClick = (itinerary) => {
@@ -545,13 +601,17 @@ export default function TouristItineraryMain() {
 }
 
 function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
   const imageSrc = getFullImageUrl(itinerary.imageUrl);
 
   return (
     <div
-      className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
-      onClick={() => onCardClick(itinerary)}
+      className="bg-white rounded-3xl shadow-lg overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
     >
+      <div
+        className="cursor-pointer"
+        onClick={() => onCardClick(itinerary)}
+      >
       {imageSrc ? (
         <img
           src={imageSrc}
@@ -572,7 +632,7 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
         <div className="relative">
           <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
           <MapPin
-            className="w-20 h-20 text-[#f04e37] relative animate-pulse"
+            className="w-20 h-20 text-[#f04e37] relative"
             strokeWidth={1.5}
           />
         </div>
@@ -580,22 +640,57 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
           Itinerary Image
         </p>
       </div>
+      </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
-        <h2 className="text-xl font-semibold text-red-600 mb-2 flex-shrink-0">
+        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0">
           {itinerary.name}
         </h2>
+        
         {itinerary.description && (
-          <p className="text-gray-600 text-sm mb-3 line-clamp-2 flex-shrink-0">
-            {itinerary.description}
-          </p>
+          <div className="flex-shrink-0 mb-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <FileText className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs font-semibold text-gray-500">Description</p>
+            </div>
+            <p className={`text-gray-700 text-sm ${isDescriptionExpanded ? '' : 'line-clamp-2'}`}>
+              {itinerary.description}
+            </p>
+            {itinerary.description.length > 100 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDescriptionExpanded(!isDescriptionExpanded);
+                }}
+                className="text-[#f04e37] text-xs font-semibold mt-1 hover:underline focus:outline-none"
+              >
+                {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+              </button>
+            )}
+          </div>
         )}
+        
+        {itinerary.duration && (
+          <div className="flex-shrink-0 mb-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs font-semibold text-gray-500">Duration</p>
+            </div>
+            <p className="text-gray-700 text-sm font-medium">
+              {itinerary.duration} {itinerary.duration === 1 ? 'hour' : 'hours'}
+            </p>
+          </div>
+        )}
+        
         {itinerary.sites?.length > 0 ? (
           <div className="text-gray-700 text-sm flex-1 overflow-hidden flex flex-col">
-            <span className="font-semibold flex-shrink-0">Sites:</span>
-            <ul className="list-disc list-inside mt-1 space-y-0.5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+            <div className="flex items-center gap-1.5 mb-1 flex-shrink-0">
+              <Map className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs font-semibold text-gray-500">Itinerary</p>
+            </div>
+            <ul className="list-disc list-inside space-y-0.5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
               {itinerary.sites.map((site) => (
-                <li key={site._id}>{site.siteName || site.title}</li>
+                <li key={site._id} className="text-sm text-gray-700">{site.siteName || site.title}</li>
               ))}
             </ul>
           </div>

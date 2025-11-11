@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, XCircle, AlertTriangle, Info, X } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react";
 
 /**
  * Modern Notification Modal - Replaces alert()
@@ -64,15 +64,6 @@ export default function NotificationModal({
   return (
     <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl animate-slideUp">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="Close"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
         {/* Icon Circle */}
         <div className="flex justify-center pt-8 pb-4">
           <div

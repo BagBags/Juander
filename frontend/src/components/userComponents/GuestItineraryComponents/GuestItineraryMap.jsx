@@ -24,6 +24,7 @@ import SitePreviewCard from "../HomepageComponents/SitePreviewCard";
 import SiteModalFullScreen from "../HomepageComponents/SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function GuestItineraryMap() {
   const { itineraryId } = useParams();
@@ -33,6 +34,7 @@ export default function GuestItineraryMap() {
   const [pins, setPins] = useState([]);
   const [optimizedPins, setOptimizedPins] = useState([]); // Optimized route order
   const [hasLoadedProgress, setHasLoadedProgress] = useState(false); // Track if we've loaded saved progress
+  const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [viewState, setViewState] = useState({
     latitude: 14.5896,
     longitude: 120.9747,
@@ -820,7 +822,12 @@ export default function GuestItineraryMap() {
     setShowFullModal(false);
 
     // Show confirmation
-    alert(`✅ Site "${currentPin.siteName}" marked as visited!`);
+    setNotification({
+      isOpen: true,
+      type: 'success',
+      title: 'Site Visited!',
+      message: `"${currentPin.siteName}" has been marked as visited.`
+    });
 
     // Go to next site, passing the site we just marked as done
     goToNextStop(currentPin._id);
@@ -870,7 +877,12 @@ export default function GuestItineraryMap() {
     if (!nextPin) {
       // No more sites left
       console.log('🎉 All sites visited!');
-      alert('🎉 All sites visited! Great job!');
+      setNotification({
+        isOpen: true,
+        type: 'success',
+        title: 'Congratulations!',
+        message: 'All sites visited! Great job!'
+      });
       setSelectedPin(null);
       setRoute(null);
       setSteps([]);
@@ -1189,6 +1201,15 @@ export default function GuestItineraryMap() {
 
         {/* Floating Chatbot */}
         <FloatingChatbot />
+        
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+        />
         
         {/* Hidden restart button for testing - can be removed or styled properly */}
         {/* <button 

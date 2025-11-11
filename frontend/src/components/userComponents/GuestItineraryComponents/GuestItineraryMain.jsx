@@ -1,7 +1,7 @@
 // GuestItineraryMain.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Clock, FileText, Map } from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
 
 export default function GuestItineraryMain() {
@@ -9,8 +9,8 @@ export default function GuestItineraryMain() {
   const [isOffline, setIsOffline] = useState(false);
   const [fromCache, setFromCache] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [touchStart, setTouchStart] = useState(0);
-  const [touchEnd, setTouchEnd] = useState(0);
+  const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
+  const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
   const carouselRef = useRef(null);
   const navigate = useNavigate();
 
@@ -60,30 +60,58 @@ export default function GuestItineraryMain() {
 
   // Touch handlers for mobile swipe
   const handleTouchStart = (e) => {
-    setTouchStart(e.targetTouches[0].clientX);
-    setTouchEnd(0);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY
+    });
+    setTouchEnd({ x: 0, y: 0 });
   };
 
   const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    
+    setTouchEnd({
+      x: currentX,
+      y: currentY
+    });
+    
+    // If we've started moving, determine if it's a horizontal swipe
+    if (touchStart.x && touchStart.y) {
+      const diffX = Math.abs(currentX - touchStart.x);
+      const diffY = Math.abs(currentY - touchStart.y);
+      
+      // If horizontal movement is dominant, prevent vertical scroll
+      if (diffX > diffY && diffX > 10) {
+        e.preventDefault();
+      }
+    }
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
+    if (!touchStart.x || !touchEnd.x) return;
     
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    
+    // Calculate if the swipe is more horizontal than vertical
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+    
+    // Only trigger carousel navigation if it's primarily a horizontal swipe
+    if (isHorizontalSwipe) {
+      const isLeftSwipe = distanceX > 50;
+      const isRightSwipe = distanceX < -50;
 
-    if (isLeftSwipe) {
-      goToNext();
-    }
-    if (isRightSwipe) {
-      goToPrevious();
+      if (isLeftSwipe) {
+        goToNext();
+      }
+      if (isRightSwipe) {
+        goToPrevious();
+      }
     }
 
-    setTouchStart(0);
-    setTouchEnd(0);
+    setTouchStart({ x: 0, y: 0 });
+    setTouchEnd({ x: 0, y: 0 });
   };
 
   return (
@@ -231,38 +259,61 @@ function ItineraryCard({ itinerary, navigate }) {
         >
           <div className="relative">
             <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
-            <MapPin className="w-20 h-20 text-[#f04e37] relative animate-pulse" strokeWidth={1.5} />
+            <MapPin className="w-20 h-20 text-[#f04e37] relative" strokeWidth={1.5} />
           </div>
           <p className="text-[#f04e37]/60 text-sm font-medium mt-3">Itinerary Image</p>
         </div>
       </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
-        <h2 className="text-xl font-semibold text-red-600 mb-2 flex-shrink-0">
+        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0">
           {itinerary.name}
         </h2>
-        <div className="flex-shrink-0 mb-3">
-          <p className={`text-gray-600 text-sm ${isDescriptionExpanded ? '' : 'line-clamp-2'}`}>
-            {itinerary.description}
-          </p>
-          {itinerary.description && itinerary.description.length > 100 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsDescriptionExpanded(!isDescriptionExpanded);
-              }}
-              className="text-[#f04e37] text-xs font-semibold mt-1 hover:underline focus:outline-none"
-            >
-              {isDescriptionExpanded ? 'Read Less' : 'Read More'}
-            </button>
-          )}
-        </div>
+        
+        {itinerary.description && (
+          <div className="flex-shrink-0 mb-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <FileText className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs font-semibold text-gray-500">Description</p>
+            </div>
+            <p className={`text-gray-700 text-sm ${isDescriptionExpanded ? '' : 'line-clamp-2'}`}>
+              {itinerary.description}
+            </p>
+            {itinerary.description.length > 100 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDescriptionExpanded(!isDescriptionExpanded);
+                }}
+                className="text-[#f04e37] text-xs font-semibold mt-1 hover:underline focus:outline-none"
+              >
+                {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+              </button>
+            )}
+          </div>
+        )}
+        
+        {itinerary.duration && (
+          <div className="flex-shrink-0 mb-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs font-semibold text-gray-500">Duration</p>
+            </div>
+            <p className="text-gray-700 text-sm font-medium">
+              {itinerary.duration} {itinerary.duration === 1 ? 'hour' : 'hours'}
+            </p>
+          </div>
+        )}
+        
         {itinerary.sites?.length > 0 ? (
           <div className="text-gray-700 text-sm flex-1 overflow-hidden flex flex-col">
-            <span className="font-semibold flex-shrink-0">Sites:</span>
-            <ul className="list-disc list-inside mt-1 space-y-0.5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+            <div className="flex items-center gap-1.5 mb-1 flex-shrink-0">
+              <Map className="w-3.5 h-3.5 text-gray-500" />
+              <p className="text-xs font-semibold text-gray-500">Itinerary</p>
+            </div>
+            <ul className="list-disc list-inside space-y-0.5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
               {itinerary.sites.map((site) => (
-                <li key={site._id}>{site.siteName || site.title}</li>
+                <li key={site._id} className="text-sm text-gray-700">{site.siteName || site.title}</li>
               ))}
             </ul>
           </div>

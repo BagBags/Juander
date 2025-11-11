@@ -2,14 +2,15 @@ import React, { useState, useEffect } from "react";
 // eslint-disable-next-line no-unused-vars
 import axios from "axios";
 import { motion } from "framer-motion";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function Language() {
   const languages = [
     { name: "English", code: "en" },
-    { name: "Tagalog", code: "tl" },
   ];
 
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState("en");
+  const [notification, setNotification] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   // Fetch language on mount
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Language() {
         sessionStorage.getItem("token") || localStorage.getItem("token");
 
       if (!token) {
-        alert("Not logged in!");
+        setNotification({ isOpen: true, type: 'error', title: 'Not Logged In', message: 'Please log in to save language preference.' });
         return;
       }
 
@@ -51,7 +52,7 @@ export default function Language() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert("Language saved!");
+      setNotification({ isOpen: true, type: 'success', title: 'Success', message: 'Language preference saved successfully!' });
     } catch (err) {
       console.error("Error saving language:", err.response?.data || err);
     }
@@ -70,26 +71,20 @@ export default function Language() {
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-6">Choose Language</h2>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="flex justify-center">
             {languages.map((lang) => (
-              <button
+              <div
                 key={lang.code}
-                onClick={() => setSelected(lang.code)}
-                className={`flex flex-col items-center border rounded-xl px-4 py-4 ${
-                  selected === lang.code
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200"
-                }`}
+                className="flex flex-col items-center border border-blue-500 bg-blue-50 rounded-xl px-8 py-6 max-w-xs"
               >
                 <img
-                  src={`https://flagcdn.com/w80/${
-                    lang.code === "en" ? "gb" : "ph"
-                  }.png`}
+                  src={`https://flagcdn.com/w80/gb.png`}
                   alt={lang.name}
-                  className="w-12 h-8 mb-2 rounded"
+                  className="w-16 h-12 mb-3 rounded"
                 />
-                <span className="text-sm font-medium">{lang.name}</span>
-              </button>
+                <span className="text-base font-semibold">{lang.name}</span>
+                <span className="text-xs text-gray-500 mt-1">Admin Language</span>
+              </div>
             ))}
           </div>
         </div>
@@ -107,6 +102,14 @@ export default function Language() {
           Continue
         </button>
       </div>
+      
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </motion.div>
   );
 }
