@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
     
     <!-- Content Security Policy for Mapbox, Workers, and APIs -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://accounts.google.com https://www.gstatic.com blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; connect-src 'self' https://api.mapbox.com https://events.mapbox.com https://d3des4qdhz53rp.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://accounts.google.com https://api.openai.com wss:; frame-src https://accounts.google.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://accounts.google.com https://www.gstatic.com blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; connect-src 'self' http://localhost:5000 https://api.mapbox.com https://events.mapbox.com https://d3des4qdhz53rp.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://accounts.google.com https://api.openai.com wss:; frame-src https://accounts.google.com;" />
     
     <!-- App Title -->
     <title>Juander - Intramuros Tour Guide</title>
@@ -48,97 +48,6 @@
 
   <body>
     <div id="root"></div>
-
-    <!-- CONDITIONAL SERVICE WORKER CLEANUP - Only in dev mode -->
-    <script>
-      (function() {
-        'use strict';
-        
-        // Only run cleanup if explicitly in development mode (not in PWA/production)
-        var isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        
-        if (!isDevelopment) {
-          console.log('[PWA MODE] Skipping service worker cleanup - allowing PWA to function');
-          return;
-        }
-        
-        console.log('[CLEANUP] Starting aggressive service worker cleanup...');
-        
-        // 1. Unregister ALL service workers immediately
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            var unregisterPromises = registrations.map(function(registration) {
-              console.log('[CLEANUP] Unregistering SW:', registration.scope);
-              return registration.unregister();
-            });
-            
-            Promise.all(unregisterPromises).then(function() {
-              console.log('[CLEANUP] All service workers unregistered');
-            });
-          }).catch(function(err) {
-            console.error('[CLEANUP] Error unregistering SW:', err);
-          });
-          
-          // Block any new service worker registrations
-          var originalRegister = navigator.serviceWorker.register;
-          navigator.serviceWorker.register = function() {
-            console.log('[CLEANUP] Blocked service worker registration attempt');
-            return Promise.reject(new Error('Service worker disabled in development'));
-          };
-        }
-        
-        // 2. Clear ALL caches
-        if ('caches' in window) {
-          caches.keys().then(function(cacheNames) {
-            return Promise.all(
-              cacheNames.map(function(cacheName) {
-                console.log('[CLEANUP] Deleting cache:', cacheName);
-                return caches.delete(cacheName);
-              })
-            );
-          }).then(function() {
-            console.log('[CLEANUP] All caches cleared');
-          }).catch(function(err) {
-            console.error('[CLEANUP] Error clearing caches:', err);
-          });
-        }
-        
-        // 3. Force reload if service worker was active
-        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-          console.log('[CLEANUP] Service worker was controlling page - forcing reload');
-          // Set flag to prevent infinite reload loop
-          if (!sessionStorage.getItem('sw_cleanup_done')) {
-            sessionStorage.setItem('sw_cleanup_done', 'true');
-            setTimeout(function() {
-              window.location.reload(true);
-            }, 100);
-          }
-        } else {
-          sessionStorage.removeItem('sw_cleanup_done');
-        }
-        
-        console.log('[CLEANUP] Cleanup complete');
-      })();
-    </script>
-    
-    <!-- DEBUG: Intercept fetch to log all API calls -->
-    <script>
-      (function() {
-        var originalFetch = window.fetch;
-        window.fetch = function() {
-          var url = arguments[0];
-          console.log('[API CALL]', url);
-          return originalFetch.apply(this, arguments).then(function(response) {
-            console.log('[API RESPONSE]', url, 'Status:', response.status);
-            return response;
-          }).catch(function(error) {
-            console.error('[API ERROR]', url, error);
-            throw error;
-          });
-        };
-        console.log('[DEBUG] Fetch interceptor installed');
-      })();
-    </script>
 
     <!-- Scripts -->
     <script type="module" src="/src/main.jsx"></script>

@@ -21,12 +21,7 @@ export default function GuestItineraryMain() {
         setAdminItineraries(result.data || []);
         setIsOffline(result.offline);
         setFromCache(result.fromCache);
-        
-        if (result.fromCache) {
-          console.log('📦 Loaded itineraries from cache');
-        }
       } catch (err) {
-        console.error("Failed to fetch itineraries:", err);
         // Try to load from cache even on error
         const cached = localStorage.getItem('guest_admin_itineraries');
         if (cached) {
@@ -75,17 +70,6 @@ export default function GuestItineraryMain() {
       x: currentX,
       y: currentY
     });
-    
-    // If we've started moving, determine if it's a horizontal swipe
-    if (touchStart.x && touchStart.y) {
-      const diffX = Math.abs(currentX - touchStart.x);
-      const diffY = Math.abs(currentY - touchStart.y);
-      
-      // If horizontal movement is dominant, prevent vertical scroll
-      if (diffX > diffY && diffX > 10) {
-        e.preventDefault();
-      }
-    }
   };
 
   const handleTouchEnd = () => {
@@ -116,13 +100,6 @@ export default function GuestItineraryMain() {
 
   return (
     <div className="flex flex-col items-center justify-start">
-      {/* Offline/Cache indicator */}
-      {(isOffline || fromCache) && (
-        <div className="w-full bg-blue-500 text-white px-4 py-2 text-center text-sm">
-          {isOffline ? '📦 Offline Mode - Showing cached content' : '📦 Loaded from cache'}
-        </div>
-      )}
-      
       {/* Suggested itineraries - Horizontal Carousel */}
       <div className="w-full mx-auto flex flex-col gap-4 py-6 px-4 mb-8">
         <h2 className="text-2xl font-bold text-white mb-4 text-center">
@@ -137,7 +114,7 @@ export default function GuestItineraryMain() {
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              style={{ touchAction: 'pan-y pinch-zoom' }}
+              style={{ touchAction: 'pan-x' }}
             >
               {/* Slides */}
               <div

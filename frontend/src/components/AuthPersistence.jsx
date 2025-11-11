@@ -20,8 +20,6 @@ export default function AuthPersistence({ children }) {
     const user = getUser();
 
     if (token && user) {
-      console.log('✅ Session restored from storage');
-      
       // Extend token expiry on app launch (user activity)
       extendTokenExpiry();
       
