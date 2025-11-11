@@ -22,8 +22,8 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
-    // Process uploaded photos
-    const photoPaths = req.files ? req.files.map(file => `/uploads/reviews/${file.filename}`) : [];
+    // Process uploaded photos - use S3 URLs if available
+    const photoPaths = req.files ? req.files.map(file => file.location || `/uploads/reviews/${file.filename}`) : [];
 
     // Always create new review (allow multiple reviews per user per site)
     const review = await Review.create({

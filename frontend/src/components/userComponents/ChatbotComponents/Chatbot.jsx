@@ -631,11 +631,11 @@ IMPORTANT:
     const fullPrompt = `${SYSTEM_PROMPT}\n\n=== KNOWLEDGE BASE ===\n${knowledgeText}\n\n=== USER QUESTION ===\n${userMessage}\n\nPlease answer the question above using the Knowledge Base. Be helpful and conversational!`;
 
     try {
-      // Call backend OpenAI API with GPT-5 mini model with streaming
+      // Call backend OpenAI API with GPT-5 mini model (non-streaming)
       const API_BASE_URL =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
       
-      const response = await fetch(`${API_BASE_URL}/openai/chat-stream`, {
+      const response = await fetch(`${API_BASE_URL}/openai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -651,44 +651,19 @@ IMPORTANT:
       });
 
       if (!response.ok) {
-        throw new Error('Stream request failed');
+        throw new Error('Request failed');
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedText = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') break;
-            
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                accumulatedText += parsed.content;
-                // Update message with accumulated text in real-time
-                setMessages((prev) =>
-                  prev.map((msg, i) =>
-                    i === prev.length - 1 
-                      ? { role: "assistant", content: accumulatedText }
-                      : msg
-                  )
-                );
-              }
-            } catch (e) {
-              // Skip invalid JSON
-            }
-          }
-        }
-      }
+      const data = await response.json();
+      
+      // Update the last message with the response
+      setMessages((prev) =>
+        prev.map((msg, i) =>
+          i === prev.length - 1 
+            ? { role: "assistant", content: data.message }
+            : msg
+        )
+      );
     } catch (err) {
       console.error("OpenAI API error:", err);
       setMessages((prev) =>
