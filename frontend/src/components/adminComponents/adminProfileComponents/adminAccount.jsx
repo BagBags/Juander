@@ -37,6 +37,9 @@ export default function Account() {
   const [deactivating, setDeactivating] = useState(false);
 
   const token = localStorage.getItem("token");
+  
+  // Check if current user is super admin
+  const isSuperAdmin = user.email === "aaronbagain@gmail.com";
 
   // Fetch user data on mount
   useEffect(() => {
@@ -573,30 +576,32 @@ export default function Account() {
           </form>
         </div>
 
-        {/* Deactivate Account Section */}
-        <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 mt-1">
-              <AlertTriangle className="w-6 h-6 text-red-500" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-800 mb-2 text-base">
-                Deactivate Admin Account
-              </h3>
-              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                Permanently delete your admin account and all associated data. This action cannot be undone.
-                A log entry will be created before deletion. All your itineraries and reviews will be permanently deleted, but existing system logs will be preserved.
-              </p>
-              <button
-                onClick={() => setShowDeactivateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
-              >
-                <Trash2 size={18} />
-                Deactivate Account
-              </button>
+        {/* Deactivate Account Section - Hidden for Super Admin */}
+        {!isSuperAdmin && (
+          <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-800 mb-2 text-base">
+                  Deactivate Admin Account
+                </h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                  Permanently delete your admin account and all associated data. This action cannot be undone.
+                  A log entry will be created before deletion. All your itineraries and reviews will be permanently deleted, but existing system logs will be preserved.
+                </p>
+                <button
+                  onClick={() => setShowDeactivateModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
+                >
+                  <Trash2 size={18} />
+                  Deactivate Account
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Deactivation Confirmation Modal */}
         {showDeactivateModal && (

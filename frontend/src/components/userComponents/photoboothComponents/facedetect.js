@@ -86,9 +86,21 @@ function createKeypointsFromBoundingBox(face) {
 export function setupFaceDetection(model, webcamRef, setFaces) {
   let rafId;
   let active = true;
+  let lastDetectionTime = 0;
+  const DETECTION_INTERVAL = 100; // Run detection every 100ms instead of every frame (60fps -> 10fps)
 
   async function detectLoop() {
     if (!active) return;
+    
+    const now = performance.now();
+    const timeSinceLastDetection = now - lastDetectionTime;
+    
+    // Skip detection if not enough time has passed
+    if (timeSinceLastDetection < DETECTION_INTERVAL) {
+      rafId = requestAnimationFrame(detectLoop);
+      return;
+    }
+    
     if (!model) {
       rafId = requestAnimationFrame(detectLoop);
       return;
@@ -105,6 +117,7 @@ export function setupFaceDetection(model, webcamRef, setFaces) {
     }
 
     try {
+      lastDetectionTime = now;
       const predictions = await detectFaces(model, video);
       setFaces(predictions);
     } catch (error) {

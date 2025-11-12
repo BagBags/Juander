@@ -66,6 +66,22 @@ export default defineConfig({
               },
             },
           },
+          // Photobooth filters API - StaleWhileRevalidate for instant load
+          {
+            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/photobooth\/filters$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'photobooth-api-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+              networkTimeoutSeconds: 3, // Fast timeout, use cache if slow
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // Guest API calls - Public endpoints only (pins, reviews)
           {
             urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
@@ -86,6 +102,21 @@ export default defineConfig({
           {
             urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i,
             handler: 'NetworkOnly',
+          },
+          // Photobooth filters from S3 - Cache First with high priority
+          {
+            urlPattern: /^https:\/\/juander-frontend\.s3\.ap-southeast-2\.amazonaws\.com\/uploads\/photobooth\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'photobooth-filters-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days - filters rarely change
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
           },
           // Images - Cache First (with stale-while-revalidate)
           {

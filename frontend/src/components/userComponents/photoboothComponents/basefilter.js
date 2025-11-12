@@ -1,38 +1,32 @@
 // constants/baseFilter.js
 export const baseFilters = [
   {
-    value: "all",
-    label: "All",
-    image: "/filters/all-filter.png",
-    category: "all",
-  },
-  {
     value: "hat",
-    label: "Hat Only",
+    label: "Hat",
     image: "/filters/hat.png",
     category: "head",
   },
   {
+    value: "hat2",
+    label: "Hat 2",
+    image: "/filters/hat2.png",
+    category: "head",
+  },
+  {
     value: "shades",
-    label: "Shades Only",
+    label: "Shades",
     image: "/filters/shades.png",
     category: "eyes",
   },
   {
     value: "shades2",
-    label: "Shades 2 Only",
+    label: "Shades 2",
     image: "/filters/shades2.png",
     category: "eyes",
   },
   {
-    value: "eyes",
-    label: "Eye Color",
-    image: "/filters/eye-color.png",
-    category: "eyes",
-  },
-  {
     value: "border",
-    label: "Border Only",
+    label: "Border",
     image: "/filters/border.png",
     category: "frame",
   },

@@ -826,6 +826,13 @@ exports.deactivateAccount = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Prevent super admin from deactivating their account
+    if (user.email === "aaronbagain@gmail.com") {
+      return res.status(403).json({ 
+        message: "Super admin account cannot be deactivated." 
+      });
+    }
+
     // Import models
     const Itinerary = require("../models/itineraryModel");
     const Review = require("../models/reviewModel");

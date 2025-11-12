@@ -148,15 +148,21 @@ export default function PhotoboothSlider({
             }}
             title={filter.label}
           >
-            {/* Filter preview image */}
+            {/* Filter preview image with lazy loading */}
             <img
               src={filter.image}
               alt={filter.label}
+              loading="lazy"
+              decoding="async"
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
                 pointerEvents: "none",
+              }}
+              onError={(e) => {
+                console.warn(`Failed to load filter image: ${filter.label}`);
+                e.target.style.opacity = '0.5';
               }}
             />
             
