@@ -23,6 +23,13 @@ const itineraryProgressSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Site'
   }],
+  optimizedOrder: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Site'
+    }],
+    default: []
+  },
   lastPosition: {
     latitude: Number,
     longitude: Number

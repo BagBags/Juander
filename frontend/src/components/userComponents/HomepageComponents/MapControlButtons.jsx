@@ -16,6 +16,7 @@ export default function MapControlButtons({
   setShowTransportPanel,
   transportMode,
   setTransportMode,
+  hideRecenterButton = false,
 }) {
   const { t } = useTranslation();
   const [isTTSEnabled, setIsTTSEnabled] = useState(ttsService.isEnabled);
@@ -96,7 +97,7 @@ export default function MapControlButtons({
       </button>
 
       {/* Recenter to User Location Button with Compass Permission */}
-      {userLocation && (
+      {userLocation && !hideRecenterButton && (
         <button
           onClick={handleCenterToUser}
           className={`p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${

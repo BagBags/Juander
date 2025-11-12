@@ -15,19 +15,19 @@ export default function ResumeItineraryModal({ isOpen, onResume, onRestart, onCl
         {/* Content */}
         <div className="p-6">
           <p className="text-gray-600 mb-2">
-            You have an existing progress for this itinerary.
+            Your progress has been restored.
           </p>
           {currentSiteName && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-gray-600">Last visited site:</p>
+              <p className="text-sm text-gray-600">Current site:</p>
               <p className="font-semibold text-gray-900">{currentSiteName}</p>
             </div>
           )}
           <p className="text-sm text-gray-500 mb-2">
-            Would you like to resume from where you left off or start from the beginning?
+            Continue with your progress or restart from the beginning?
           </p>
           <p className="text-xs text-gray-400 mb-6 text-center">
-            Your visited sites will be saved
+            Your visited sites are preserved
           </p>
 
           {/* Action Buttons */}
@@ -38,7 +38,7 @@ export default function ResumeItineraryModal({ isOpen, onResume, onRestart, onCl
               className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:from-blue-600 hover:to-indigo-700 active:scale-95 transition-all shadow-lg"
             >
               <Play className="w-5 h-5" />
-              Resume Journey
+              Continue Journey
             </button>
 
             {/* Restart Button */}
@@ -47,7 +47,7 @@ export default function ResumeItineraryModal({ isOpen, onResume, onRestart, onCl
               className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-200 active:scale-95 transition-all"
             >
               <RotateCcw className="w-5 h-5" />
-              Go to First Site
+              Restart from Beginning
             </button>
           </div>
         </div>

@@ -242,19 +242,34 @@ export default function GuestItineraryMap() {
             // Load visited sites
             const visitedKey = `guest_visited_${itineraryId}`;
             const savedVisited = localStorage.getItem(visitedKey);
+            const visitedSet = savedVisited ? new Set(JSON.parse(savedVisited)) : new Set();
             if (savedVisited) {
-              const visitedIds = JSON.parse(savedVisited);
-              setVisitedSites(new Set(visitedIds));
+              setVisitedSites(visitedSet);
+              console.log('✅ Restored visited sites:', Array.from(visitedSet));
             }
             
-            // Set first unvisited site as current
-            const nextSite = getNextSite(restoredPins, visitedSites);
-            if (nextSite) {
-              const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
-              if (nextIndex !== -1) {
-                setCurrentPinIndex(nextIndex);
-                setSelectedPin(nextSite);
-                setActivePin(nextSite);
+            // Load saved current pin index
+            const indexKey = `guest_current_index_${itineraryId}`;
+            const savedIndex = localStorage.getItem(indexKey);
+            const currentIndex = savedIndex !== null ? parseInt(savedIndex, 10) : 0;
+            
+            // Restore current pin position
+            if (currentIndex >= 0 && currentIndex < restoredPins.length) {
+              setCurrentPinIndex(currentIndex);
+              const currentPin = restoredPins[currentIndex];
+              setSelectedPin(currentPin);
+              setActivePin(currentPin);
+              console.log('✅ Restored current pin index:', currentIndex);
+            } else {
+              // Fallback to first unvisited site
+              const nextSite = getNextSite(restoredPins, visitedSet);
+              if (nextSite) {
+                const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
+                if (nextIndex !== -1) {
+                  setCurrentPinIndex(nextIndex);
+                  setSelectedPin(nextSite);
+                  setActivePin(nextSite);
+                }
               }
             }
             
@@ -294,6 +309,10 @@ export default function GuestItineraryMap() {
       setCurrentPinIndex(0);
       setSelectedPin(optimized[0]);
       setActivePin(optimized[0]);
+      
+      // Save initial current index
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, '0');
     }
   }, [userLocation, pins.length, optimizedPins.length, hasLoadedProgress]);
 
@@ -791,6 +810,10 @@ export default function GuestItineraryMap() {
       }
     }
     
+    // Reset current index to 0
+    const indexKey = `guest_current_index_${itineraryId}`;
+    localStorage.setItem(indexKey, '0');
+    
     console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags (Guest)');
   };
 
@@ -875,6 +898,10 @@ export default function GuestItineraryMap() {
       if (userLocation) {
         buildRoute(userLocation, nextPin);
       }
+      
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, nextIndex.toString());
     }
   }, [activePin, currentPinIndex, optimizedPins, skippedSites, userLocation]);
 
@@ -889,8 +916,12 @@ export default function GuestItineraryMap() {
       if (userLocation) {
         buildRoute(userLocation, prevPin);
       }
+      
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, prevIndex.toString());
     }
-  }, [currentPinIndex, optimizedPins, userLocation]);
+  }, [currentPinIndex, optimizedPins, userLocation, itineraryId]);
 
   // Go to next site (marks current as visited)
   const handleNextSite = useCallback(async () => {
@@ -918,6 +949,10 @@ export default function GuestItineraryMap() {
       if (userLocation) {
         buildRoute(userLocation, nextPin);
       }
+      
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, nextIndex.toString());
     }
   }, [currentPinIndex, optimizedPins, userLocation, visitedSites, itineraryId]);
 
@@ -968,6 +1003,10 @@ export default function GuestItineraryMap() {
     setManuallyDismissed(false); // Reset manual dismissal for new site
 
     if (userLocation) buildRoute(userLocation, nextPin);
+    
+    // Save current index to localStorage
+    const indexKey = `guest_current_index_${itineraryId}`;
+    localStorage.setItem(indexKey, nextIndex.toString());
   };
 
   // Memoize onMove handler to prevent unnecessary re-renders
