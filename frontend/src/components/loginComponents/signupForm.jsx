@@ -460,21 +460,17 @@ export default function SignupForm({ toggleForm }) {
       </div>
 
       {/* Google Login */}
-      <div className="w-full" style={{ minHeight: '44px', height: '44px' }}>
-        <div className="w-full h-full flex items-center justify-center">
-          <div style={{ width: '100%', maxWidth: '400px', minWidth: '280px', height: '44px' }}>
-            <GoogleLogin
-              onSuccess={handleGoogleSignup}
-              onError={() => setErrors({ general: "Google sign-up error" })}
-              width="100%"
-              text="signup_with"
-              theme="outline"
-              size="large"
-              shape="rectangular"
-              logo_alignment="left"
-            />
-          </div>
-        </div>
+      <div className="w-full">
+        <GoogleLogin
+          onSuccess={handleGoogleSignup}
+          onError={() => setErrors({ general: "Google sign-up error" })}
+          width="100%"
+          text="signup_with"
+          theme="outline"
+          size="large"
+          shape="rectangular"
+          logo_alignment="left"
+        />
       </div>
 
       <p className="text-xs sm:text-sm text-center text-gray-700">

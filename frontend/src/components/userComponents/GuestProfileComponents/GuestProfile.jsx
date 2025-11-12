@@ -1,9 +1,10 @@
 // GuestProfilePage.jsx
 import React, { useEffect } from "react";
-import { FaUser, FaBirthdayCake, FaVenusMars, FaUserCircle } from "react-icons/fa";
+import { FaUser, FaBirthdayCake, FaVenusMars, FaUserCircle, FaTiktok } from "react-icons/fa";
 import { MdLanguage, MdSettings } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -168,9 +169,67 @@ export default function GuestProfilePage() {
           {t("createAccount")}
         </button>
 
+        {/* Social Media Icons */}
+        <div className="mt-12 mb-4 flex items-center justify-center gap-4">
+          <a
+            href="https://www.facebook.com/share/17YomjzorW/?mibextid=wwXIfr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Facebook"
+          >
+            <Facebook className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.instagram.com/intramurosph?igsh=MXUwb3o0YTBkN3cycw=="
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Instagram"
+          >
+            <Instagram className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.tiktok.com/@intramurosph?_r=1&_t=ZS-91HcteutvZR"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="TikTok"
+          >
+            <FaTiktok className="w-5 h-5" />
+          </a>
+          <a
+            href="https://youtube.com/@intramurosadministration?si=NxzDejo3UOFWI6x3"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="YouTube"
+          >
+            <Youtube className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.linkedin.com/company/intramuros-administration/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="LinkedIn"
+          >
+            <Linkedin className="w-5 h-5" />
+          </a>
+          <a
+            href="https://x.com/intramuros?s=21"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="X (Twitter)"
+          >
+            <Twitter className="w-5 h-5" />
+          </a>
+        </div>
+
         {/* Footer */}
-        <p className="mt-12 mb-8 text-xs text-center text-gray-400">
-          © 2025 Intramuros Administration. All rights reserved.
+        <p className="mb-8 text-xs text-center text-gray-400">
+          © 2025 {t("intramurosAdmin")}. All rights reserved.
         </p>
       </div>
     </motion.div>
