@@ -340,14 +340,16 @@ export default function SiteModalFullScreen({
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-gradient-to-b from-gray-50 to-white overflow-y-auto"
-      style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      className="fixed inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
     >
       {/* Modern Header with Close Button */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 py-4 flex items-center justify-between shadow-sm z-10">
+      <div 
+        className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 flex items-center justify-between shadow-sm z-10"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)',
+          paddingBottom: '16px'
+        }}
+      >
         <div>
           <h2 className="text-lg font-bold text-gray-900">Site Information</h2>
           <p className="text-xs text-gray-500 mt-0.5">Explore the details</p>
@@ -365,7 +367,12 @@ export default function SiteModalFullScreen({
       </div>
 
       {/* Content */}
-      <div className="px-5 py-6 pb-20 max-w-3xl mx-auto">
+      <div 
+        className="flex-1 overflow-y-auto px-5 py-6 max-w-3xl mx-auto w-full"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 80px)'
+        }}
+      >
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
           <div className="h-[70vh] rounded-xl overflow-hidden">

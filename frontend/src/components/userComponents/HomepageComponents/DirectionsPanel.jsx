@@ -53,7 +53,12 @@ const DirectionsPanel = memo(function DirectionsPanel({
     : undefined;
 
   return (
-    <div className="absolute bottom-3 left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl p-4 text-sm flex flex-col items-center z-40 border border-gray-200 rounded-2xl">
+    <div 
+      className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl p-4 text-sm flex flex-col items-center z-40 border border-gray-200 rounded-2xl"
+      style={{
+        bottom: 'max(12px, env(safe-area-inset-bottom, 12px))'
+      }}
+    >
       <div className="flex items-center gap-2 mb-2">
         <h4 className="font-semibold text-gray-800">Directions</h4>
         {modeLabel && (

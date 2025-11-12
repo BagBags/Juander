@@ -74,6 +74,8 @@ export default function GuestItineraryMap() {
   const [isNearby, setIsNearby] = useState(false);
   const [manuallyDismissed, setManuallyDismissed] = useState(false);
   const [visitedSites, setVisitedSites] = useState(new Set());
+  const [skippedSites, setSkippedSites] = useState(new Set());
+  const [activePin, setActivePin] = useState(null); // Pin with active directions
   const [siteReviews, setSiteReviews] = useState([]);
   const [showReviews, setShowReviews] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -216,46 +218,49 @@ export default function GuestItineraryMap() {
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
 
-  /** Load saved progress from sessionStorage */
+  /** Load saved progress from localStorage */
   useEffect(() => {
     if (!itineraryId || pins.length === 0 || hasLoadedProgress) return;
     
     try {
-      // Load saved optimized order
-      const orderKey = `guest_optimized_order_${itineraryId}`;
-      const savedOrder = sessionStorage.getItem(orderKey);
+      // Try to load saved optimized order from localStorage
+      if (itineraryId) {
+        const orderKey = `guest_optimized_order_${itineraryId}`;
+        const savedOrder = localStorage.getItem(orderKey);
       
-      if (savedOrder) {
-        const optimizedOrder = JSON.parse(savedOrder);
-        // Reconstruct optimized pins from saved order
-        const restoredPins = optimizedOrder
-          .map(siteId => pins.find(p => p._id === siteId))
-          .filter(Boolean);
-        
-        if (restoredPins.length > 0) {
-          setOptimizedPins(restoredPins);
-          console.log('✅ Restored optimized pin order from sessionStorage');
+        if (savedOrder) {
+          const optimizedOrder = JSON.parse(savedOrder);
+          // Reconstruct optimized pins from saved order
+          const restoredPins = optimizedOrder
+            .map(siteId => pins.find(p => p._id === siteId))
+            .filter(Boolean);
           
-          // Load visited sites
-          const visitedKey = `guest_visited_${itineraryId}`;
-          const savedVisited = sessionStorage.getItem(visitedKey);
-          if (savedVisited) {
-            const visitedIds = JSON.parse(savedVisited);
-            setVisitedSites(new Set(visitedIds));
-          }
-          
-          // Set first unvisited site as current
-          const nextSite = getNextSite(restoredPins, visitedSites);
-          if (nextSite) {
-            const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
-            if (nextIndex !== -1) {
-              setCurrentPinIndex(nextIndex);
-              setSelectedPin(nextSite);
+          if (restoredPins.length > 0) {
+            setOptimizedPins(restoredPins);
+            console.log('✅ Restored optimized pin order from localStorage');
+            
+            // Load visited sites
+            const visitedKey = `guest_visited_${itineraryId}`;
+            const savedVisited = localStorage.getItem(visitedKey);
+            if (savedVisited) {
+              const visitedIds = JSON.parse(savedVisited);
+              setVisitedSites(new Set(visitedIds));
             }
+            
+            // Set first unvisited site as current
+            const nextSite = getNextSite(restoredPins, visitedSites);
+            if (nextSite) {
+              const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
+              if (nextIndex !== -1) {
+                setCurrentPinIndex(nextIndex);
+                setSelectedPin(nextSite);
+                setActivePin(nextSite);
+              }
+            }
+            
+            setHasLoadedProgress(true);
+            return;
           }
-          
-          setHasLoadedProgress(true);
-          return;
         }
       }
       
@@ -270,25 +275,25 @@ export default function GuestItineraryMap() {
   /** Optimize route when user location or pins change - ONLY if no saved order */
   useEffect(() => {
     if (userLocation && pins.length > 0 && optimizedPins.length === 0 && hasLoadedProgress) {
-      // Only optimize if we don't have a saved order
-      const optimized = optimizeRoute(userLocation, pins, visitedSites);
+      // Only optimize if we don't have a saved order - optimize ALL sites
+      console.log('🔄 First time opening itinerary - running optimization (Guest)');
+      console.log('📍 User location:', userLocation);
+      console.log('📍 Total pins:', pins.length);
+      console.log('📍 Visited sites:', Array.from(visitedSites));
+      const optimized = optimizeRoute(userLocation, pins, new Set());
+      console.log('📍 Optimized order:', optimized.map((p, i) => `${i+1}. ${p.siteName || p.title}`));
       setOptimizedPins(optimized);
       
-      // Save optimized order to sessionStorage
+      // Save optimized order to localStorage
       const orderKey = `guest_optimized_order_${itineraryId}`;
       const optimizedOrder = optimized.map(pin => pin._id);
-      sessionStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
-      console.log('✅ Created and saved new optimized route');
+      localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
+      console.log('✅ Created and saved new optimized route (Guest)');
       
-      // Set first unvisited site as current
-      const nextSite = getNextSite(optimized, visitedSites);
-      if (nextSite) {
-        const nextIndex = optimized.findIndex(p => p._id === nextSite._id);
-        if (nextIndex !== -1) {
-          setCurrentPinIndex(nextIndex);
-          setSelectedPin(nextSite);
-        }
-      }
+      // Set first site as current (start from pin 1)
+      setCurrentPinIndex(0);
+      setSelectedPin(optimized[0]);
+      setActivePin(optimized[0]);
     }
   }, [userLocation, pins.length, optimizedPins.length, hasLoadedProgress]);
 
@@ -741,18 +746,18 @@ export default function GuestItineraryMap() {
     setCurrentStepIndex((prevIdx) => prevIdx === closestIdx ? prevIdx : closestIdx);
   }, [userLocation, steps]);
 
-  /** Mark site as visited - Guest users store in sessionStorage */
+  /** Mark site as visited - Guest users store in localStorage */
   const markSiteAsVisited = async (pin) => {
     if (!pin || !pin._id || visitedSites.has(pin._id)) return;
 
     try {
-      // For guest users, store visited sites in sessionStorage
+      // For guest users, store visited sites in localStorage
       const visitedKey = `guest_visited_${itineraryId}`;
-      const existingVisited = JSON.parse(sessionStorage.getItem(visitedKey) || "[]");
+      const existingVisited = JSON.parse(localStorage.getItem(visitedKey) || "[]");
       
       if (!existingVisited.includes(pin._id)) {
         existingVisited.push(pin._id);
-        sessionStorage.setItem(visitedKey, JSON.stringify(existingVisited));
+        localStorage.setItem(visitedKey, JSON.stringify(existingVisited));
       }
 
       setVisitedSites((prev) => new Set(prev).add(pin._id));
@@ -766,26 +771,27 @@ export default function GuestItineraryMap() {
   const handleRestartItinerary = () => {
     if (!userLocation || pins.length === 0) return;
     
-    // Re-run optimization from current location
-    const optimized = optimizeRoute(userLocation, pins, visitedSites);
+    // Re-run optimization from current location - optimize ALL sites
+    const optimized = optimizeRoute(userLocation, pins, new Set());
     setOptimizedPins(optimized);
     
     // Save new optimized order
     const orderKey = `guest_optimized_order_${itineraryId}`;
     const optimizedOrder = optimized.map(pin => pin._id);
-    sessionStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
+    localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
     
-    // Reset to first site
+    // Go to first site in NEW optimized order (keep visited flags)
     setCurrentPinIndex(0);
     if (optimized.length > 0) {
       const firstPin = optimized[0];
       setSelectedPin(firstPin);
+      setActivePin(firstPin);
       if (userLocation) {
         buildRoute(userLocation, firstPin);
       }
     }
     
-    console.log('✅ Restart: Re-optimized route for guest user');
+    console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags (Guest)');
   };
 
   /** Fetch reviews for current site */
@@ -815,7 +821,7 @@ export default function GuestItineraryMap() {
     // Immediately add to visited sites Set
     setVisitedSites((prev) => new Set(prev).add(currentPin._id));
 
-    // Mark as visited in sessionStorage (async, but we don't wait)
+    // Mark as visited in localStorage (async, but we don't wait)
     markSiteAsVisited(currentPin);
 
     // Close the modal first
@@ -851,6 +857,70 @@ export default function GuestItineraryMap() {
     }
   }, [selectedPin]);
 
+  // Skip current site and move to next
+  const handleSkipSite = useCallback(() => {
+    if (!activePin) return;
+    
+    const newSkipped = new Set(skippedSites);
+    newSkipped.add(activePin._id);
+    setSkippedSites(newSkipped);
+    
+    // Move to next site
+    const nextIndex = currentPinIndex + 1;
+    if (nextIndex < optimizedPins.length) {
+      setCurrentPinIndex(nextIndex);
+      const nextPin = optimizedPins[nextIndex];
+      setActivePin(nextPin);
+      setSelectedPin(nextPin);
+      if (userLocation) {
+        buildRoute(userLocation, nextPin);
+      }
+    }
+  }, [activePin, currentPinIndex, optimizedPins, skippedSites, userLocation]);
+
+  // Go to previous site
+  const handlePrevSite = useCallback(() => {
+    const prevIndex = currentPinIndex - 1;
+    if (prevIndex >= 0) {
+      setCurrentPinIndex(prevIndex);
+      const prevPin = optimizedPins[prevIndex];
+      setActivePin(prevPin);
+      setSelectedPin(prevPin);
+      if (userLocation) {
+        buildRoute(userLocation, prevPin);
+      }
+    }
+  }, [currentPinIndex, optimizedPins, userLocation]);
+
+  // Go to next site (marks current as visited)
+  const handleNextSite = useCallback(async () => {
+    // Mark current site as visited before moving to next
+    const currentPin = optimizedPins[currentPinIndex];
+    const updatedVisited = new Set(visitedSites);
+    if (currentPin && !updatedVisited.has(currentPin._id)) {
+      updatedVisited.add(currentPin._id);
+      setVisitedSites(updatedVisited);
+      
+      // Save to localStorage
+      const visitedKey = `guest_visited_${itineraryId}`;
+      localStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
+      
+      // Save to permanent visited-sites record
+      await markSiteAsVisited(currentPin);
+    }
+
+    const nextIndex = currentPinIndex + 1;
+    if (nextIndex < optimizedPins.length) {
+      setCurrentPinIndex(nextIndex);
+      const nextPin = optimizedPins[nextIndex];
+      setActivePin(nextPin);
+      setSelectedPin(nextPin);
+      if (userLocation) {
+        buildRoute(userLocation, nextPin);
+      }
+    }
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, itineraryId]);
+
   /** Go to next stop - follows optimized route order (no re-optimization) */
   const goToNextStop = (justVisitedSiteId = null) => {
     if (!userLocation || optimizedPins.length === 0) return;
@@ -866,9 +936,9 @@ export default function GuestItineraryMap() {
       updatedVisited.add(justVisitedSiteId);
       setVisitedSites(updatedVisited);
       
-      // Save to sessionStorage
+      // Save to localStorage
       const visitedKey = `guest_visited_${itineraryId}`;
-      sessionStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
+      localStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
     }
 
     // Get next unvisited site from existing optimized route (don't re-optimize)
@@ -1103,9 +1173,13 @@ export default function GuestItineraryMap() {
             onClick={(e) => {
               e.originalEvent.stopPropagation();
               setSelectedPin(pin);
-              setCurrentPinIndex(idx);
               setShowFullModal(false); // Show preview card first
-              if (userLocation) buildRoute(userLocation, pin);
+              // Only build route if this is the active pin or no active pin set
+              if (!activePin || activePin._id === pin._id) {
+                setCurrentPinIndex(idx);
+                setActivePin(pin);
+                if (userLocation) buildRoute(userLocation, pin);
+              }
             }}
           >
             {/* Number Badge - shows optimized order (never changes) */}
@@ -1145,6 +1219,11 @@ export default function GuestItineraryMap() {
         arrivalTime={arrivalTime}
         transportMode={transportMode}
         isRouting={isRouting}
+        onPrevSite={handlePrevSite}
+        onSkipSite={handleSkipSite}
+        onNextSite={handleNextSite}
+        hasPrevSite={currentPinIndex > 0}
+        hasNextSite={currentPinIndex < optimizedPins.length - 1}
           />
         )}
 

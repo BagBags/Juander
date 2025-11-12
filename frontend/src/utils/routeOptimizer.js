@@ -26,32 +26,26 @@ export const calculateDistance = (coord1, coord2) => {
 
 /**
  * Optimize route using nearest-neighbor algorithm
- * Starts from user location and finds the nearest unvisited site at each step
+ * Arranges ALL sites optimally regardless of visited/skipped status
  * 
  * @param {Object} userLocation - {latitude, longitude}
  * @param {Array} sites - Array of site objects with latitude/longitude
- * @param {Set} visitedSites - Set of visited site IDs
- * @returns {Array} Optimized array of sites with original indices
+ * @param {Set} visitedSites - Set of visited site IDs (not used for optimization, only for tracking)
+ * @returns {Array} Optimized array of ALL sites in optimal order
  */
 export const optimizeRoute = (userLocation, sites, visitedSites = new Set()) => {
   if (!userLocation || !sites || sites.length === 0) {
     return sites.map((site, index) => ({ ...site, originalIndex: index }));
   }
 
-  // Filter out visited sites
-  const unvisitedSites = sites
-    .map((site, index) => ({ ...site, originalIndex: index }))
-    .filter(site => !visitedSites.has(site._id));
-
-  if (unvisitedSites.length === 0) {
-    return sites.map((site, index) => ({ ...site, originalIndex: index }));
-  }
+  // Include ALL sites in optimization, regardless of visited status
+  const allSites = sites.map((site, index) => ({ ...site, originalIndex: index }));
 
   const optimizedRoute = [];
   let currentLocation = userLocation;
-  const remainingSites = [...unvisitedSites];
+  const remainingSites = [...allSites];
 
-  // Nearest-neighbor algorithm
+  // Nearest-neighbor algorithm - optimize ALL sites
   while (remainingSites.length > 0) {
     let nearestIndex = 0;
     let minDistance = Infinity;
@@ -83,13 +77,7 @@ export const optimizeRoute = (userLocation, sites, visitedSites = new Set()) => 
     remainingSites.splice(nearestIndex, 1);
   }
 
-  // Add visited sites at the end (maintaining their original order)
-  const visitedSitesArray = sites
-    .map((site, index) => ({ ...site, originalIndex: index }))
-    .filter(site => visitedSites.has(site._id))
-    .sort((a, b) => a.originalIndex - b.originalIndex);
-
-  return [...optimizedRoute, ...visitedSitesArray];
+  return optimizedRoute;
 };
 
 /**
