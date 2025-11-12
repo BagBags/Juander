@@ -27,6 +27,9 @@ export default function Photobooth() {
   const [webcamReady, setWebcamReady] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [filters, setFilters] = useState([]);
+  const [filtersLoading, setFiltersLoading] = useState(true);
+  const [filtersError, setFiltersError] = useState(null);
+  const [modelError, setModelError] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   
@@ -43,32 +46,41 @@ export default function Photobooth() {
   // We don't use window dimensions anymore because face detection coordinates
   // are in video stream space, not window space
 
-  // ✅ Load filters from backend (fallback to baseFilters)
+  // ✅ Preload images for better performance
+  const preloadImage = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => reject(url);
+      img.src = url;
+    });
+  };
+
+  // ✅ Load filters from backend with optimizations
   useEffect(() => {
     const fetchFilters = async () => {
+      setFiltersLoading(true);
+      setFiltersError(null);
+      
       try {
+        // Start with base filters immediately for instant UI
+        setFilters(baseFilters);
+        
         const res = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
-          { timeout: 5000 } // Add timeout
+          { timeout: 8000 }
         );
         
         if (res.data && res.data.length > 0) {
           const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
-          console.log("Backend URL:", BACKEND_URL);
-          console.log("Raw filters from backend:", res.data);
           
           const normalized = res.data.map((f) => {
-            // Resolve image URL - check both possible field names
             let imageUrl = f.image || f.imageUrl;
             
-            console.log("Processing filter:", f.name, "| Original image:", imageUrl);
-            
-            // Just use the S3 URL directly - CORS should be configured on S3 bucket
+            // Use S3 URL directly
             if (imageUrl && !imageUrl.startsWith('http')) {
               imageUrl = `${BACKEND_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
             }
-            
-            console.log("Resolved image URL:", imageUrl);
             
             return {
               ...f,
@@ -80,24 +92,36 @@ export default function Photobooth() {
             };
           });
           
-          // Combine base filters with backend filters
           const allFilters = [...baseFilters, ...normalized];
-          console.log("Total filters loaded:", allFilters.length);
-          console.log("All filters:", allFilters);
+          
+          // Preload all filter images in parallel
+          const preloadPromises = allFilters.map(f => 
+            preloadImage(f.image).catch(err => {
+              console.warn(`Failed to preload ${f.label}:`, err);
+              return null;
+            })
+          );
+          
+          // Wait for images to load (with timeout)
+          await Promise.race([
+            Promise.allSettled(preloadPromises),
+            new Promise(resolve => setTimeout(resolve, 3000)) // Max 3s wait
+          ]);
+          
+          console.log(`✅ Loaded ${allFilters.length} filters (${normalized.length} from backend)`);
           setFilters(allFilters);
         } else {
-          console.log("No backend filters, using base filters");
-          setFilters(baseFilters);
+          console.log("No backend filters, using base filters only");
         }
       } catch (err) {
-        console.error("Failed to fetch filters, using baseFilters:", err);
-        setFilters(baseFilters);
+        console.error("Failed to fetch backend filters:", err);
+        setFiltersError("Some filters may be unavailable");
+        // Keep base filters that were already set
+      } finally {
+        setFiltersLoading(false);
       }
     };
     
-    // Always start with base filters immediately
-    setFilters(baseFilters);
-    // Then try to load backend filters
     fetchFilters();
   }, []);
 
@@ -120,10 +144,14 @@ export default function Photobooth() {
       .then((loadedModel) => {
         console.log("Face model loaded successfully:", loadedModel);
         setModel(loadedModel);
+        setModelError(false);
       })
       .catch((err) => {
         console.error("Failed to load face model:", err);
-        alert("Failed to load face detection model. Please refresh the page.");
+        console.error("Error details:", err.message);
+        setModelError(true);
+        // Don't block the app, filters can still work without face tracking
+        console.warn("Photobooth will work with limited functionality (no face tracking)");
       });
   }, []);
 
@@ -399,7 +427,7 @@ export default function Photobooth() {
           )}
 
           {/* ✅ Loading states */}
-          {!model && (
+          {!model && !modelError && (
             <div className="loading-overlay">
               <div className="spinner" />
               <div className="loading-text">
@@ -407,9 +435,19 @@ export default function Photobooth() {
               </div>
             </div>
           )}
+          {modelError && webcamReady && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-600/90 text-white px-4 py-2 rounded-lg text-sm z-10 max-w-xs text-center">
+              Face tracking unavailable. Border filters will still work.
+            </div>
+          )}
           {!webcamReady && (
             <div className="loading-overlay">
               <div className="loading-text">Initializing camera...</div>
+            </div>
+          )}
+          {filtersLoading && webcamReady && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm z-10">
+              Loading filters...
             </div>
           )}
         </div>

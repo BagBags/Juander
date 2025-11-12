@@ -382,7 +382,7 @@ export default function SiteModalFullScreen({
                   src={scannedArUrl}
                   title="AR Experience"
                   className="flex-1 w-full"
-                  allow="camera; microphone; gyroscope; accelerometer; magnetometer; xr-spatial-tracking; fullscreen;"
+                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; autoplay *; fullscreen *"
                   allowFullScreen
                 />
                 <button
