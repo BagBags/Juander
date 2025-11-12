@@ -13,15 +13,15 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
 
   const getSizeConfig = () => ({
     eyes: {
-      widthRatio: 1.4,      // Width relative to face width
-      heightRatio: 0.35,    // Height relative to face height
+      widthRatio: 1.2,      // Reduced width for better fit
+      heightRatio: 0.3,     // Slightly reduced height
       anchorPoint: 'eyes',  // Anchor to eyes
     },
     head: {
-      widthRatio: 2.2,      // Slightly larger for better coverage
-      heightRatio: 1.3,     // Proportional height
+      widthRatio: 1.8,      // Reduced width for better proportions
+      heightRatio: 1.1,     // Reduced height for better fit
       anchorPoint: 'top',   // Anchor to top of head
-      verticalOffset: -0.4, // Position above forehead (negative = up)
+      verticalOffset: -0.3, // Slightly closer to forehead
     },
     frame: {
       useFullScreen: true,  // Special flag for full screen frames
@@ -306,15 +306,39 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
                   src={selectedMeta.image}
                   alt="overlay"
                   crossOrigin="anonymous"
+                  onLoad={(e) => {
+                    // Mark image as CORS-compatible for canvas operations
+                    e.target.setAttribute('data-cors-ready', 'true');
+                    console.log("Filter image loaded with CORS support:", selectedMeta.image);
+                  }}
                   onError={(e) => {
-                    console.error("Failed to load filter image:", selectedMeta.image);
+                    console.error("Failed to load filter image with CORS:", selectedMeta.image);
                     // Try loading without CORS as fallback
                     if (e.target.crossOrigin) {
-                      console.log("Retrying without CORS...");
+                      console.log("Retrying filter image without CORS...");
                       e.target.crossOrigin = null;
-                      e.target.src = selectedMeta.image;
+                      
+                      // Try to fix URL encoding issues before retry
+                      let retryUrl = selectedMeta.image;
+                      if (retryUrl.includes('s3.ap-southeast-2.amazonaws.com')) {
+                        try {
+                          const url = new URL(retryUrl);
+                          const pathParts = url.pathname.split('/');
+                          const encodedPath = pathParts.map(part => encodeURIComponent(decodeURIComponent(part))).join('/');
+                          retryUrl = `${url.protocol}//${url.host}${encodedPath}`;
+                          console.log("Trying with re-encoded URL:", retryUrl);
+                        } catch (urlError) {
+                          console.warn('Failed to re-encode URL:', urlError);
+                        }
+                      }
+                      
+                      e.target.src = retryUrl;
+                      // Mark as non-CORS for canvas operations
+                      e.target.setAttribute('data-cors-ready', 'false');
                     } else {
+                      console.error("Filter image failed to load completely, hiding:", selectedMeta.image);
                       e.target.style.display = 'none';
+                      e.target.setAttribute('data-cors-ready', 'failed');
                     }
                   }}
                   style={{

@@ -82,6 +82,19 @@ export default function Photobooth() {
               imageUrl = `${BACKEND_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
             }
             
+            // Fix URL encoding issues for S3 URLs with special characters
+            if (imageUrl && imageUrl.includes('s3.ap-southeast-2.amazonaws.com')) {
+              try {
+                // Properly encode the URL path while preserving the domain
+                const url = new URL(imageUrl);
+                const pathParts = url.pathname.split('/');
+                const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+                imageUrl = `${url.protocol}//${url.host}${encodedPath}`;
+              } catch (urlError) {
+                console.warn('Failed to fix URL encoding for:', imageUrl, urlError);
+              }
+            }
+            
             return {
               ...f,
               label: f.label || f.name,
@@ -249,8 +262,35 @@ export default function Photobooth() {
         // Get all overlay images that are currently displayed
         const overlayImages = overlayContainer.querySelectorAll("img");
         
+        // Check if any images are not CORS-ready before proceeding
+        const nonCorsImages = Array.from(overlayImages).filter(img => {
+          const corsStatus = img.getAttribute('data-cors-ready');
+          return corsStatus !== 'true';
+        });
+        
+        const failedImages = Array.from(overlayImages).filter(img => 
+          img.getAttribute('data-cors-ready') === 'failed'
+        );
+        
+        if (nonCorsImages.length > 0) {
+          console.warn("Found non-CORS images, will skip overlay drawing to prevent canvas tainting:", 
+            nonCorsImages.map(img => ({ src: img.src, status: img.getAttribute('data-cors-ready') })));
+        }
+        
+        if (failedImages.length > 0) {
+          console.error("Some filter images failed to load completely:", 
+            failedImages.map(img => img.src));
+        }
+        
         overlayImages.forEach((img) => {
           try {
+            // Check if image is CORS-ready for canvas operations
+            const corsReady = img.getAttribute('data-cors-ready') === 'true';
+            if (!corsReady) {
+              console.warn("Skipping non-CORS image in canvas:", img.src);
+              return; // Skip this image to avoid CORS errors
+            }
+
             const parent = img.parentElement;
             const parentStyle = window.getComputedStyle(parent);
             const position = parentStyle.position;
@@ -314,7 +354,35 @@ export default function Photobooth() {
     } catch (error) {
       console.error("Canvas error:", error);
       if (error.name === 'SecurityError') {
-        alert("Unable to capture photo with this filter due to CORS restrictions. The filter will display but cannot be saved in photos. Please use base filters or configure S3 CORS properly.");
+        // CORS error occurred - create a fallback photo without filter overlay
+        console.log("Creating fallback photo without filter overlay due to CORS restrictions");
+        
+        try {
+          // Create a new clean canvas with just the video
+          const fallbackCanvas = document.createElement("canvas");
+          fallbackCanvas.width = videoWidth;
+          fallbackCanvas.height = videoHeight;
+          const fallbackCtx = fallbackCanvas.getContext("2d");
+          
+          // Draw only the mirrored video (no overlays)
+          fallbackCtx.save();
+          fallbackCtx.scale(-1, 1);
+          fallbackCtx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
+          fallbackCtx.restore();
+          
+          const fallbackImage = fallbackCanvas.toDataURL("image/png");
+          setCapturedImage(fallbackImage);
+          setShowPreview(true);
+          
+          // Show user-friendly message
+          setTimeout(() => {
+            alert("Photo captured successfully! Note: Filter overlay couldn't be included due to technical restrictions, but the filter displays correctly during use.");
+          }, 100);
+          
+        } catch (fallbackError) {
+          console.error("Fallback capture also failed:", fallbackError);
+          alert("Unable to capture photo. Please try again or contact support.");
+        }
       } else {
         alert("Unable to capture photo. Please try again.");
       }

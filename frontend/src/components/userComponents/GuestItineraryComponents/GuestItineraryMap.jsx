@@ -152,6 +152,63 @@ export default function GuestItineraryMap() {
     checkGpsPermission();
   }, []);
 
+  /** Continuous location tracking */
+  useEffect(() => {
+    let watchId = null;
+
+    const startLocationTracking = () => {
+      if (!navigator.geolocation) {
+        console.warn("Geolocation not supported");
+        return;
+      }
+
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          
+          console.log('📍 Location updated:', newLocation);
+          setUserLocation(newLocation);
+          
+          // Update heading if available from GPS
+          if (position.coords.heading !== null && position.coords.heading !== undefined) {
+            const smoothHeading = normalizeHeading(position.coords.heading);
+            setUserHeading(smoothHeading);
+            console.log('🧭 Heading updated from GPS:', position.coords.heading);
+          }
+          
+          // Don't auto-center the map on location updates to avoid disrupting user interaction
+          // Only update if user hasn't manually moved the map
+        },
+        (error) => {
+          console.error("Location tracking error:", error);
+          if (error.code === error.PERMISSION_DENIED) {
+            setGpsError("Location access denied. Please enable location services.");
+            setShowGpsModal(true);
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 10000, // Accept cached position up to 10 seconds old
+          timeout: 15000, // Wait up to 15 seconds for position
+        }
+      );
+    };
+
+    // Start tracking after a short delay to allow initial GPS check to complete
+    const timeoutId = setTimeout(startLocationTracking, 1000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        console.log('🛑 Location tracking stopped');
+      }
+    };
+  }, []);
+
   /** Fetch mask */
   useEffect(() => {
     const fetchMask = async () => {

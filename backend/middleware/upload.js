@@ -81,7 +81,14 @@ const storage = multerS3({
       filename = `${timestamp}-${req.user._id}-${basename}${ext}`;
     } else {
       folder = "uploads/photobooth";
-      filename = file.originalname;
+      // Sanitize filename for photobooth filters to avoid URL encoding issues
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const basename = path.basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace special chars with underscore
+        .replace(/_+/g, '_') // Replace multiple underscores with single
+        .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+      filename = `${timestamp}-${basename}${ext}`;
     }
     
     const key = `${folder}/${filename}`;
@@ -146,6 +153,7 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024, // 50MB limit for video files
   }
 });
+
 
 // Helper function to delete files from local storage
 const deleteFile = (filePath) => {
