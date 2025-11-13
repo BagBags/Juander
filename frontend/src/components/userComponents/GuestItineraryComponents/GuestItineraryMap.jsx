@@ -777,7 +777,7 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     if (!userLocation || optimizedPins.length === 0) return;
 
-    const radius = 50; // meters - show preview when within 50m
+    const radius = 10; // meters - show preview when within 10m
 
     const pin = optimizedPins[currentPinIndex];
     if (!pin) return;

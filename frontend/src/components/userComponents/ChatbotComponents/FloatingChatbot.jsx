@@ -142,7 +142,7 @@ export default function FloatingChatbot() {
             position: "fixed",
           }}
           className="bg-white shadow-2xl flex flex-col z-[60]
-                     w-full h-full sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem]
+                     w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem]
                      sm:rounded-2xl"
         >
           <div 

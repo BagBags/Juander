@@ -66,7 +66,7 @@ export async function loadFaceModel(onProgress) {
         faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
         {
           runtime: "tfjs",
-          maxFaces: 2,
+          maxFaces: 1, // Reduced from 2 to 1 for better performance
           refineLandmarks: false,
           shouldLoadIrisModel: false,
         }

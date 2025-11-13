@@ -3,7 +3,16 @@ import { Navigate, Outlet } from "react-router-dom";
 import AdminWebOnlyPage from "./adminComponents/AdminWebOnlyPage";
 
 export default function AdminProtectedRoute() {
-  const userData = JSON.parse(localStorage.getItem("user"));
+  let userData = null;
+  
+  try {
+    const userStr = localStorage.getItem("user");
+    userData = userStr ? JSON.parse(userStr) : null;
+  } catch (error) {
+    console.error("Error parsing user data:", error);
+    userData = null;
+  }
+  
   const token = localStorage.getItem("token");
   const [isMobile, setIsMobile] = useState(false);
 
@@ -35,7 +44,7 @@ export default function AdminProtectedRoute() {
 
   // Check authentication first
   if (!token || !userData || userData.role !== "admin") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // If mobile device, show web-only page

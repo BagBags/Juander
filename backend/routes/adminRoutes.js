@@ -3,7 +3,7 @@ const router = express.Router();
 const User = require("../models/userModel");
 const Log = require("../models/logModel");
 const { verifyAdmin } = require("../middleware/authMiddleware");
-const { SUPER_ADMIN_EMAIL } = require("../config/superAdmin");
+const { SUPER_ADMIN_EMAIL, isSuperAdmin } = require("../config/superAdmin");
 
 // GET all users
 router.get("/users", async (req, res) => {
@@ -31,15 +31,15 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
 
     const requester = req.user;
 
-    // 🚫 Nobody can change the super admin
-    if (targetUser.email === SUPER_ADMIN_EMAIL) {
+    // 🚫 Nobody can change any super admin
+    if (isSuperAdmin(targetUser.email)) {
       return res
         .status(403)
         .json({ message: "Super Admin role cannot be modified" });
     }
 
     // ✅ If requester is admin (but not super admin)
-    if (requester.email !== SUPER_ADMIN_EMAIL) {
+    if (!isSuperAdmin(requester.email)) {
       // Admins can modify tourists and admins
       if (!["tourist", "admin"].includes(targetUser.role)) {
         return res
@@ -67,6 +67,59 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
     res.json(updatedUser);
   } catch (error) {
     console.error("Error updating role:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// DELETE user (Super Admin only)
+router.delete("/users/:id", verifyAdmin, async (req, res) => {
+  try {
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const requester = req.user;
+
+    // 🚫 Only super admin can delete users
+    if (!isSuperAdmin(requester.email)) {
+      return res.status(403).json({ message: "Only Super Admin can delete users" });
+    }
+
+    // 🚫 Super admin cannot delete any super admin (including themselves)
+    if (isSuperAdmin(targetUser.email)) {
+      return res.status(403).json({ message: "Super Admin cannot be deleted" });
+    }
+
+    // Store user info for logging before deletion
+    const deletedUserInfo = {
+      firstName: targetUser.firstName,
+      lastName: targetUser.lastName,
+      email: targetUser.email,
+      role: targetUser.role
+    };
+
+    // Delete the user
+    await User.findByIdAndDelete(req.params.id);
+
+    // Log the deletion
+    const adminName = `${requester.firstName} ${requester.lastName || ""}`.trim();
+    await Log.create({
+      adminName,
+      action: `Permanently deleted user: ${deletedUserInfo.firstName} ${deletedUserInfo.lastName} (${deletedUserInfo.email})`,
+      role: "admin",
+      targetType: "user",
+      targetId: req.params.id,
+      details: {
+        deletedUser: deletedUserInfo,
+        deletedAt: new Date(),
+        deletedBy: adminName
+      }
+    });
+
+    res.json({ message: "User deleted successfully", deletedUser: deletedUserInfo });
+  } catch (error) {
+    console.error("Error deleting user:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

@@ -115,10 +115,10 @@ export default function Photobooth() {
             })
           );
           
-          // Wait for images to load (with timeout)
+          // Wait for images to load (with shorter timeout)
           await Promise.race([
             Promise.allSettled(preloadPromises),
-            new Promise(resolve => setTimeout(resolve, 3000)) // Max 3s wait
+            new Promise(resolve => setTimeout(resolve, 1500)) // Max 1.5s wait
           ]);
           
           console.log(`✅ Loaded ${allFilters.length} filters (${normalized.length} from backend)`);
@@ -470,8 +470,9 @@ export default function Photobooth() {
             onUserMediaError={(err) => console.error("Webcam error:", err)}
             videoConstraints={{
               facingMode: "user",
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              frameRate: { ideal: 30, max: 30 }
             }}
             screenshotFormat="image/jpeg"
             mirrored={true}

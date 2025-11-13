@@ -28,6 +28,7 @@ export default function LoginForm({ toggleForm }) {
 
   // OTP countdown timer (10 minutes = 600 seconds)
   const [timeLeft, setTimeLeft] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
 
   // 👇 Load saved language on component mount
   useEffect(() => {
@@ -41,6 +42,13 @@ export default function LoginForm({ toggleForm }) {
       return () => clearInterval(timer);
     }
   }, [step, timeLeft]);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendCooldown]);
 
   const formatTime = (secs) => {
     const mins = Math.floor(secs / 60);
@@ -176,6 +184,7 @@ export default function LoginForm({ toggleForm }) {
       setSuccess("OTP sent to your email.");
       setStep(2);
       setTimeLeft(600);
+      setResendCooldown(60); // 60 second cooldown for resend
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP.");
     }
@@ -214,6 +223,21 @@ export default function LoginForm({ toggleForm }) {
       setNewPassword("");
     } catch (err) {
       setError(err.response?.data?.message || "Password reset failed.");
+    }
+  };
+
+  const handleResendForgotOtp = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-otp`, {
+        email,
+      });
+      setSuccess("OTP resent to your email.");
+      setResendCooldown(60); // 60 second cooldown
+      setError(""); // Clear any previous errors
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to resend OTP.");
     }
   };
 
@@ -398,6 +422,24 @@ export default function LoginForm({ toggleForm }) {
               <p className="text-xs text-gray-500 mt-2">
                 Expires in: {formatTime(timeLeft)}
               </p>
+
+              {/* Resend OTP Button */}
+              <div className="text-center mt-3">
+                <button
+                  type="button"
+                  onClick={handleResendForgotOtp}
+                  disabled={resendCooldown > 0}
+                  className={`text-sm font-medium ${
+                    resendCooldown > 0
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-[#f04e37] hover:underline"
+                  }`}
+                >
+                  {resendCooldown > 0
+                    ? `Resend OTP in ${resendCooldown}s`
+                    : "Resend OTP"}
+                </button>
+              </div>
 
               {/* New password */}
               <div className="relative w-full mt-4">

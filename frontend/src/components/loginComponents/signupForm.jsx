@@ -22,6 +22,7 @@ export default function SignupForm({ toggleForm }) {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -39,6 +40,13 @@ export default function SignupForm({ toggleForm }) {
       return () => clearInterval(timer);
     }
   }, [step, timeLeft]);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendCooldown]);
 
   const formatTime = (secs) => {
     const mins = Math.floor(secs / 60);
@@ -98,6 +106,7 @@ export default function SignupForm({ toggleForm }) {
       setMessage(res.data.message);
       setStep("verify");
       setTimeLeft(600);
+      setResendCooldown(60); // 60 second cooldown for resend
     } catch (err) {
       setErrors({
         general: err.response?.data?.message || "Registration failed",
@@ -135,6 +144,23 @@ export default function SignupForm({ toggleForm }) {
     } catch (err) {
       setErrors({
         otp: err.response?.data?.message || "OTP verification failed",
+      });
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/resend-otp`, {
+        email: form.email,
+      });
+      setMessage(res.data.message);
+      setResendCooldown(60); // 60 second cooldown
+      setErrors({}); // Clear any previous errors
+    } catch (err) {
+      setErrors({
+        otp: err.response?.data?.message || "Failed to resend OTP",
       });
     }
   };
@@ -449,6 +475,24 @@ export default function SignupForm({ toggleForm }) {
           >
             Verify OTP
           </button>
+
+          {/* Resend OTP Button */}
+          <div className="text-center mt-3">
+            <button
+              type="button"
+              onClick={handleResendOtp}
+              disabled={resendCooldown > 0}
+              className={`text-sm font-medium ${
+                resendCooldown > 0
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-[#f04e37] hover:underline"
+              }`}
+            >
+              {resendCooldown > 0
+                ? `Resend OTP in ${resendCooldown}s`
+                : "Resend OTP"}
+            </button>
+          </div>
         </form>
       )}
 

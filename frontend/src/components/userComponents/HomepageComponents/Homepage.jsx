@@ -90,7 +90,7 @@ export default function Homepage() {
         // Step 2: Load background image (50%)
         const isMobile = window.innerWidth < 640;
         const bgImage = new Image();
-        bgImage.src = isMobile ? '/icons/BGEnhanced4.png' : '/JuanderBGWeb1.svg';
+        bgImage.src = isMobile ? '/icons/BGEnhanced4.png' : '/JuanderBG3.png';
         
         await new Promise((resolve) => {
           bgImage.onload = resolve;
@@ -211,7 +211,7 @@ export default function Homepage() {
       flex flex-col items-center justify-start 
       overflow-hidden relative
       bg-[url('/icons/BGEnhanced4.png')] 
-      sm:bg-[url('/JuanderBGWeb1.svg')]
+      sm:bg-[url('/JuanderBG3.png')]
     "
         style={{
           backgroundColor: "#d9d9d9",

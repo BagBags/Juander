@@ -87,7 +87,7 @@ export function setupFaceDetection(model, webcamRef, setFaces) {
   let rafId;
   let active = true;
   let lastDetectionTime = 0;
-  const DETECTION_INTERVAL = 100; // Run detection every 100ms instead of every frame (60fps -> 10fps)
+  const DETECTION_INTERVAL = 150; // Run detection every 150ms (6.7fps) for better performance
 
   async function detectLoop() {
     if (!active) return;
@@ -120,6 +120,14 @@ export function setupFaceDetection(model, webcamRef, setFaces) {
       lastDetectionTime = now;
       const predictions = await detectFaces(model, video);
       setFaces(predictions);
+      
+      // Performance monitoring (only log occasionally)
+      if (Math.random() < 0.01) { // 1% of the time
+        const detectionTime = performance.now() - now;
+        if (detectionTime > 50) {
+          console.warn(`Slow face detection: ${detectionTime.toFixed(1)}ms`);
+        }
+      }
     } catch (error) {
       console.error("Detection loop error:", error);
     } finally {

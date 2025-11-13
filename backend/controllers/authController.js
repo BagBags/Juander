@@ -243,6 +243,56 @@ exports.sendOtp = async (req, res) => {
   }
 };
 
+exports.resendSignupOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log("Resending signup OTP to:", email);
+
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    // Find user in PendingUser collection (signup process uses PendingUser)
+    const user = await PendingUser.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ 
+        message: "No pending registration found for this email" 
+      });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    // Send email
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"Juander" <${process.env.MAIL_USER}>`,
+      to: email,
+      subject: "Verify Your Account - OTP Resent",
+      text: `Your verification OTP is ${otp}. It will expire in 10 minutes.`,
+    });
+
+    console.log("Resend OTP email sent:", info.response);
+    res.status(200).json({ message: "OTP resent successfully" });
+  } catch (err) {
+    console.error("Resend signup OTP error:", err);
+    res.status(500).json({ 
+      message: "Failed to resend OTP", 
+      error: err.message 
+    });
+  }
+};
+
 exports.resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;

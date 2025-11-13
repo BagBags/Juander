@@ -135,7 +135,7 @@ function GuestHomepageContent() {
       
       <div
         className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative
-          bg-[url('/icons/BGEnhanced4.png')] sm:bg-[url('/JuanderBGWeb.svg')]"
+          bg-[url('/icons/BGEnhanced4.png')] sm:bg-[url('/JuanderBG3.png')]"
         style={{
           backgroundColor: "#d9d9d9",
           backgroundSize: "cover",
@@ -199,19 +199,19 @@ function GuestHomepageContent() {
         }}
       >
         <Compass className="w-5 h-5" />
-        <span>Explore</span>
+        <span>Start Tour</span>
       </button>
 
-      {/* Sign Up to Explore Button (Desktop Only) - Ultra Modern */}
+      {/* Explore Button (Desktop Only) - Matching Homepage Style */}
       <button
-        onClick={() => navigate("/login")}
-        className="absolute lg:top-[83%] lg:bottom-auto 
+        onClick={() => navigate("/TourMap")}
+        className="fixed bottom-16 lg:fixed lg:bottom-16
         left-1/2 -translate-x-1/2
         bg-white/95 backdrop-blur-md
         text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl
-        w-52 sm:w-56 lg:w-64 
-        h-14 sm:h-16 lg:h-16 
-        text-lg sm:text-xl lg:text-xl 
+        w-48 sm:w-52 lg:w-56
+        h-14 sm:h-16 lg:h-16
+        text-lg sm:text-xl lg:text-xl
         hover:bg-[#f04e37]
         hover:text-white
         hover:shadow-[0_8px_32px_rgba(240,78,55,0.4)]
@@ -220,14 +220,11 @@ function GuestHomepageContent() {
         focus:outline-none 
         transition-all duration-300 ease-out
         border border-white/50
-        flex items-center justify-center gap-2
-        hidden md:block"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom) + 50px)",
-        }}
+        flex items-center justify-center gap-2 z-40
+        hidden md:flex"
       >
-        <UserPlus className="w-5 h-5" />
-        <span>Sign Up to Explore</span>
+        <Compass className="w-5 h-5" />
+        <span>{t("explore")}</span>
       </button>
 
       {/* Floating Chatbot (Juan Mascot) */}
