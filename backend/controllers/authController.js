@@ -74,7 +74,7 @@ exports.sendEmailVerificationOtp = async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Check if the email is already used by another user
@@ -83,79 +83,13 @@ exports.sendEmailVerificationOtp = async (req, res) => {
       return res.status(400).json({ message: "Email is already in use" });
     }
 
-    exports.verifyEmailOtp = async (req, res) => {
-      try {
-        const { otp } = req.body;
-        const userId = req.user.id; // comes from verifyToken middleware
-
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        if (
-          user.otp !== otp ||
-          !user.otpExpires ||
-          user.otpExpires < new Date()
-        ) {
-          return res.status(400).json({ message: "Invalid or expired OTP" });
-        }
-
-        // If you also want to update the email at this point:
-        if (req.body.newEmail) user.email = req.body.newEmail;
-
-        user.isVerified = true;
-        user.otp = undefined;
-        user.otpExpires = undefined;
-        await user.save();
-
-        res.status(200).json({ message: "Email verified successfully" });
-      } catch (err) {
-        console.error(err);
-        res
-          .status(500)
-          .json({ message: "Verification failed", error: err.message });
-      }
-    };
-
-    exports.verifyEmailOtp = async (req, res) => {
-      try {
-        const { otp } = req.body;
-        const userId = req.user.id; // comes from verifyToken middleware
-
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        if (
-          user.otp !== otp ||
-          !user.otpExpires ||
-          user.otpExpires < new Date()
-        ) {
-          return res.status(400).json({ message: "Invalid or expired OTP" });
-        }
-
-        // If you also want to update the email at this point:
-        if (req.body.newEmail) user.email = req.body.newEmail;
-
-        user.isVerified = true;
-        user.otp = undefined;
-        user.otpExpires = undefined;
-        await user.save();
-
-        res.status(200).json({ message: "Email verified successfully" });
-      } catch (err) {
-        console.error(err);
-        res
-          .status(500)
-          .json({ message: "Verification failed", error: err.message });
-      }
-    };
-
-    // Send OTP
+    // Generate and send OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     user.otp = otp;
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    const transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransporter({
       service: "gmail",
       auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
     });
@@ -174,10 +108,11 @@ exports.sendEmailVerificationOtp = async (req, res) => {
   }
 };
 
+
 exports.verifyEmailOtp = async (req, res) => {
   try {
     const { otp } = req.body;
-    const userId = req.user.id; // comes from verifyToken middleware
+    const userId = req.user._id; // comes from verifyToken middleware
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -466,9 +401,36 @@ exports.verifyOtp = async (req, res) => {
     // Delete pending user
     await PendingUser.deleteOne({ _id: pendingUser._id });
 
-    res
-      .status(200)
-      .json({ message: "Email verified successfully", userId: newUser._id });
+    // Generate JWT token for the new user
+    const token = jwt.sign(
+      {
+        id: newUser._id,
+        role: newUser.role,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.status(200).json({
+      message: "Email verified successfully",
+      token,
+      user: {
+        id: newUser._id,
+        email: newUser.email,
+        role: newUser.role,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        authProvider: newUser.authProvider,
+        profilePicture: newUser.profilePicture || null,
+        language: newUser.language || "en",
+        profileCompleted: newUser.profileCompleted || false,
+        birthday: newUser.birthday,
+        gender: newUser.gender,
+        country: newUser.country,
+      },
+    });
   } catch (err) {
     console.error("OTP verification error:", err);
     res
@@ -487,7 +449,7 @@ exports.uploadProfilePicture = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.authProvider === "google") {
@@ -538,7 +500,7 @@ exports.saveAccount = async (req, res) => {
     const { firstName, lastName, email, password } = req.body;
 
     // Fetch current user data before updating
-    const currentUser = await User.findById(req.user.id);
+    const currentUser = await User.findById(req.user._id);
     if (!currentUser) return res.status(404).json({ message: "User not found" });
 
     const updates = {};
@@ -560,7 +522,7 @@ exports.saveAccount = async (req, res) => {
     if (email && email !== currentUser.email) {
       // 🔎 Check if email is already taken
       const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser._id.toString() !== req.user.id) {
+      if (existingUser && existingUser._id.toString() !== req.user._id.toString()) {
         return res.status(400).json({ message: "Email already in use" });
       }
       updates.email = email;
@@ -572,7 +534,7 @@ exports.saveAccount = async (req, res) => {
       changedFields.push("password");
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, updates, {
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
       new: true,
       select: "-password -otp -otpExpires",
     });
@@ -614,7 +576,7 @@ exports.saveAccount = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     // Fetch current user data before updating
-    const currentUser = await User.findById(req.user.id);
+    const currentUser = await User.findById(req.user._id);
     if (!currentUser) return res.status(404).json({ message: "User not found" });
 
     const oldName = `${currentUser.firstName} ${currentUser.lastName || ""}`.trim();
@@ -624,7 +586,7 @@ exports.updateProfile = async (req, res) => {
       updates.password = await argon2.hash(updates.password);
     }
 
-    const user = await User.findByIdAndUpdate(req.user.id, updates, {
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
       new: true,
       select: "-password -otp -otpExpires",
     });
@@ -692,7 +654,7 @@ exports.saveBirthday = async (req, res) => {
 
     // Update user
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       { birthday },
       { new: true, select: "-password -otp -otpExpires" }
     );
@@ -722,7 +684,7 @@ exports.saveGender = async (req, res) => {
       gender.charAt(0).toUpperCase() + gender.slice(1).toLowerCase();
 
     const user = await User.findByIdAndUpdate(
-      req.user.id,
+      req.user._id,
       { gender: normalizedGender },
       { new: true, select: "-password -otp -otpExpires" }
     );
@@ -755,7 +717,7 @@ exports.saveCountry = async (req, res) => {
     const { country } = req.body;
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -787,7 +749,7 @@ exports.saveCountry = async (req, res) => {
 exports.saveLanguage = async (req, res) => {
   try {
     const { language } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Validate language input
     if (!["en", "tl"].includes(language)) {
@@ -827,7 +789,7 @@ exports.saveLanguage = async (req, res) => {
 // Mark profile as completed
 exports.completeProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -861,7 +823,7 @@ exports.completeProfile = async (req, res) => {
 // Deactivate Account
 exports.deactivateAccount = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { confirmationText } = req.body;
 
     // Verify confirmation text
