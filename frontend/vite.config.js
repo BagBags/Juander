@@ -5,6 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
+  base: '', // Empty string for relative paths
   plugins: [
     react(),
     tailwindcss(),
@@ -15,7 +16,7 @@ export default defineConfig({
         name: "Juander - Intramuros Tour Guide",
         short_name: "Juander",
         description: "Your personal guide to exploring Intramuros, Manila",
-        start_url: "/guest-itinerary",
+        start_url: "/",
         scope: "/",
         display: "standalone",
         orientation: "portrait-primary",
@@ -36,6 +37,7 @@ export default defineConfig({
           },
         ],
       },
+      manifestFilename: 'manifest.json',
       workbox: {
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB for videos/3D models
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}'],
@@ -45,7 +47,7 @@ export default defineConfig({
         runtimeCaching: [
           // Guest API calls - Public endpoints only (pins, reviews)
           {
-            urlPattern: /^http:\/\/localhost:5000\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
+            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'guest-api-cache',
@@ -61,7 +63,7 @@ export default defineConfig({
           },
           // Exclude authenticated endpoints from caching
           {
-            urlPattern: /^http:\/\/localhost:5000\/api\/(admin|auth|users|userItineraries)\/.*/i,
+            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i,
             handler: 'NetworkOnly',
           },
           // Images - Cache First (with stale-while-revalidate)
@@ -159,17 +161,7 @@ export default defineConfig({
         ],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [
-          /^\/api/,
-          /^\/admin/,
-          /^\/create-itinerary/,
-          /^\/profile/,
-          /^\/homepage/,
-        ],
-        navigateFallbackAllowlist: [
-          /^\/guest-itinerary/,
-          /^\/$/,
-          /^\/login/,
-          /^\/signup/,
+          /^\/api/,  // Only block API calls
         ],
       },
       devOptions: {

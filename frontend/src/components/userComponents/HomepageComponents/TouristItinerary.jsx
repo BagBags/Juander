@@ -13,7 +13,7 @@ export default function TouristItinerary() {
       if (!token) return;
 
       try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser(res.data);
@@ -28,9 +28,18 @@ export default function TouristItinerary() {
   return (
     <div className="min-h-screen bg-[#f04e37] relative">
       {/* Back Header */}
-      <div className="sticky top-0 z-10 bg-[#f04e37] p-4">
+      <div 
+        className="sticky top-0 z-10 bg-[#f04e37]"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
         <BackHeader
           title={<span className="text-white">Available Itineraries</span>}
+          className="text-white"
         />
       </div>
 

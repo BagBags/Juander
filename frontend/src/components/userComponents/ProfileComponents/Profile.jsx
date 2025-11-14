@@ -2,13 +2,12 @@ import React, { useEffect, useState } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars, FaCamera } from "react-icons/fa";
 import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
-import { IoChevronForwardSharp } from "react-icons/io5";
+import { IoChevronForwardSharp, IoSettingsSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -44,6 +43,7 @@ export default function ProfilePage() {
       to: "/Profile/Country",
     },
     { icon: <MdLanguage />, label: t("language"), to: "/Profile/Language" },
+    { icon: <IoSettingsSharp />, label: "Settings", to: "/Profile/Settings" },
   ];
 
   // Handle profile picture upload
@@ -111,6 +111,10 @@ export default function ProfilePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       className="min-h-screen bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top), 16px)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -119,7 +123,6 @@ export default function ProfilePage() {
       </div>
 
       {/* Global TTS Button */}
-      <GlobalTTSButton />
 
       <div className="w-full max-w-md relative z-10">
         {/* Profile Card */}
@@ -139,7 +142,7 @@ export default function ProfilePage() {
                     : currentUser?.profilePicture
                     ? currentUser.profilePicture.startsWith("http")
                       ? currentUser.profilePicture
-                      : `http://localhost:5000${currentUser.profilePicture}`
+                      : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${currentUser.profilePicture}`
                     : "https://ui-avatars.com/api/?name=" + 
                       encodeURIComponent(`${currentUser?.firstName || 'User'} ${currentUser?.lastName || ''}`) +
                       "&background=ffffff&color=f04e37&size=200&bold=true"

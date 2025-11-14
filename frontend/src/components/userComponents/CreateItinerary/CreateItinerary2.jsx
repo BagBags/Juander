@@ -10,6 +10,8 @@ import {
   FaTrash,
   FaEdit,
 } from "react-icons/fa";
+import { X } from "lucide-react";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function CreateItineraryPage() {
   const [selected, setSelected] = useState([]);
@@ -21,6 +23,7 @@ export default function CreateItineraryPage() {
   const [sites, setSites] = useState([]);
   const [descriptionToggles, setDescriptionToggles] = useState({});
   const [showMyItineraries, setShowMyItineraries] = useState(false);
+  const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -32,7 +35,7 @@ export default function CreateItineraryPage() {
 
   const fetchSites = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/pins");
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins`);
       setSites(res.data);
     } catch {
       alert("Failed to load sites");
@@ -42,7 +45,7 @@ export default function CreateItineraryPage() {
   const fetchItineraries = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/itineraries",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`,
         config
       );
       setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
@@ -60,7 +63,7 @@ export default function CreateItineraryPage() {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/userItineraries/upload",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/userItineraries/upload`,
         formData,
         {
           headers: {
@@ -81,7 +84,27 @@ export default function CreateItineraryPage() {
     // If URL already starts with http, return as-is
     if (url.startsWith("http")) return url;
     // Otherwise, prepend localhost
-    return `http://localhost:5000${url}`;
+    return `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${url}`;
+  };
+
+  const handleDeleteImage = async () => {
+    try {
+      // If there's an imageUrl, delete from server
+      if (imageUrl) {
+        await axios.delete(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/userItineraries/delete-image`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            data: { imageUrl }
+          }
+        );
+      }
+      setImageUrl("");
+      setShowDeleteImageModal(false);
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      alert("Failed to delete image");
+    }
   };
 
   const toggleSelection = (siteId) =>
@@ -105,13 +128,13 @@ export default function CreateItineraryPage() {
     try {
       if (editingItineraryId) {
         await axios.put(
-          `http://localhost:5000/api/itineraries/${editingItineraryId}`,
+          `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/${editingItineraryId}`,
           payload,
           config
         );
       } else {
         await axios.post(
-          "http://localhost:5000/api/itineraries",
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itineraries`,
           payload,
           config
         );
@@ -126,7 +149,7 @@ export default function CreateItineraryPage() {
   const handleDelete = async (id) => {
     if (!confirm("Delete this itinerary?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/${id}`, config);
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
     } catch {
       alert("Failed to delete itinerary");
@@ -157,9 +180,28 @@ export default function CreateItineraryPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f04e37] text-white scroll-smooth">
+      {/* Delete Image Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteImageModal}
+        onClose={() => setShowDeleteImageModal(false)}
+        onConfirm={handleDeleteImage}
+        title="Delete Image?"
+        message="Are you sure you want to remove this image? This action cannot be undone."
+        confirmText="Delete Image"
+        type="danger"
+      />
+      
       {/* === STICKY BACKHEADER === */}
-      <div className="sticky top-0 z-40 bg-[#f04e37] px-3 py-3">
-        <BackHeader title="Create Itinerary" />
+      <div 
+        className="sticky top-0 z-40 bg-[#f04e37]"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
+        <BackHeader title="Create Itinerary" className="text-white" />
       </div>
 
       <MainLayout includeSideButtons={false}>
@@ -181,11 +223,20 @@ export default function CreateItineraryPage() {
                   />
                 </label>
                 {imageUrl && (
-                  <img
-                    src={getFullImageUrl(imageUrl)}
-                    alt="Itinerary Preview"
-                    className="w-full h-40 md:h-48 object-cover rounded-lg shadow-lg border-2 border-white"
-                  />
+                  <div className="relative group">
+                    <img
+                      src={getFullImageUrl(imageUrl)}
+                      alt="Itinerary Preview"
+                      className="w-full h-40 md:h-48 object-cover rounded-lg shadow-lg border-2 border-white"
+                    />
+                    <button
+                      onClick={() => setShowDeleteImageModal(true)}
+                      className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition opacity-0 group-hover:opacity-100"
+                      title="Delete image"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 )}
                 <input
                   type="text"

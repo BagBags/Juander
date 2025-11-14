@@ -4,6 +4,7 @@ const Itinerary = require("../models/itineraryModel");
 const Log = require("../models/logModel"); // import Log model
 const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload"); // your Multer setup
+const { deleteFromS3 } = require("../middleware/upload");
 
 // Upload itinerary image (for both admin and user itineraries)
 router.post(
@@ -17,11 +18,11 @@ router.post(
       // The upload middleware automatically determines the correct folder based on baseUrl
       // For /api/userItineraries/upload -> uploads/userItineraries/
       // For /api/itineraries/upload -> uploads/itineraries/
-      const folder = req.baseUrl.includes("userItineraries") 
-        ? "userItineraries" 
+      const folder = req.baseUrl.includes("userItineraries")
+        ? "userItineraries"
         : "itineraries";
       const imageUrl = `/uploads/${folder}/${req.file.filename}`;
-      
+
       console.log("Image uploaded successfully:", imageUrl);
       res.status(200).json({ imageUrl });
     } catch (err) {
@@ -31,6 +32,30 @@ router.post(
   }
 );
 
+// Delete itinerary image from S3
+router.delete("/delete-image", verifyToken, async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Image URL is required" });
+    }
+
+    // Delete from S3
+    const deleted = await deleteFromS3(imageUrl);
+
+    if (deleted) {
+      console.log("Image deleted successfully:", imageUrl);
+      res.status(200).json({ message: "Image deleted successfully" });
+    } else {
+      res.status(500).json({ error: "Failed to delete image from S3" });
+    }
+  } catch (err) {
+    console.error("Error deleting image:", err);
+    res.status(500).json({ error: "Failed to delete image" });
+  }
+});
+
 // Helper to get admin/user name
 const getUserName = (user) =>
   user ? `${user.firstName} ${user.lastName || ""}`.trim() : "Unknown User";
@@ -38,12 +63,14 @@ const getUserName = (user) =>
 // CREATE a new itinerary (user or admin)
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { name, description, imageUrl, sites, isAdminCreated } = req.body;
+    const { name, description, imageUrl, duration, sites, isAdminCreated } =
+      req.body;
 
     console.log("Creating itinerary with data:", {
       name,
       description,
       imageUrl,
+      duration,
       sitesCount: sites?.length,
       isAdminCreated: isAdminCreated || false,
     });
@@ -52,6 +79,7 @@ router.post("/", verifyToken, async (req, res) => {
       name,
       description,
       imageUrl,
+      duration,
       sites,
       createdBy: req.user._id,
       isAdminCreated: isAdminCreated || false,
@@ -84,7 +112,10 @@ router.get("/", verifyToken, async (req, res) => {
     const itineraries = await Itinerary.find({
       $or: [{ isAdminCreated: true }, { createdBy: req.user._id }],
       isArchived: false,
-    }).populate("sites");
+    }).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
 
     res.json(itineraries);
   } catch (err) {
@@ -97,7 +128,12 @@ router.get("/archived", verifyAdmin, async (req, res) => {
   try {
     const itineraries = await Itinerary.find({
       isArchived: true,
-    }).populate("sites").sort({ updatedAt: -1 });
+    })
+      .populate({
+        path: "sites",
+        populate: { path: "category", select: "name" }
+      })
+      .sort({ updatedAt: -1 });
 
     res.json(itineraries);
   } catch (err) {
@@ -108,10 +144,13 @@ router.get("/archived", verifyAdmin, async (req, res) => {
 // Public itineraries for guests (exclude archived)
 router.get("/guest", async (req, res) => {
   try {
-    const itineraries = await Itinerary.find({ 
+    const itineraries = await Itinerary.find({
       isAdminCreated: true,
-      isArchived: false 
-    }).populate("sites");
+      isArchived: false,
+    }).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
     res.json(itineraries);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -121,7 +160,10 @@ router.get("/guest", async (req, res) => {
 // Public itinerary by ID (guest)
 router.get("/guest/:id", async (req, res) => {
   try {
-    const itinerary = await Itinerary.findById(req.params.id).populate("sites");
+    const itinerary = await Itinerary.findById(req.params.id).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
@@ -140,7 +182,10 @@ router.get("/guest/:id", async (req, res) => {
 // GET single itinerary by ID
 router.get("/:id", verifyToken, async (req, res) => {
   try {
-    const itinerary = await Itinerary.findById(req.params.id).populate("sites");
+    const itinerary = await Itinerary.findById(req.params.id).populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    });
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
 
@@ -166,18 +211,22 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    const { name, description, imageUrl, sites } = req.body;
+    const { name, description, imageUrl, sites, duration } = req.body;
     itinerary.name = name || itinerary.name;
     itinerary.description = description || itinerary.description;
     // Allow empty string to clear imageUrl
     if (imageUrl !== undefined) {
       itinerary.imageUrl = imageUrl;
+    }
+    // Allow duration to be set to 0 or any number; only fallback to existing when undefined
+    if (duration !== undefined) {
+      itinerary.duration = Number(duration) || 0;
     }
     itinerary.sites = sites || itinerary.sites;
 
@@ -189,7 +238,10 @@ router.put("/:id", verifyToken, async (req, res) => {
       action: `Updated itinerary: "${itinerary.name}"`,
     });
 
-    res.json(await itinerary.populate("sites"));
+    res.json(await itinerary.populate({
+      path: "sites",
+      populate: { path: "category", select: "name" }
+    }));
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -203,7 +255,7 @@ router.put("/:id/archive", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -232,7 +284,7 @@ router.put("/:id/restore", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -261,7 +313,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Itinerary not found" });
 
     if (
-      !req.user.isAdmin &&
+      req.user.role !== "admin" &&
       itinerary.createdBy.toString() !== req.user._id.toString()
     ) {
       return res.status(403).json({ error: "Unauthorized" });

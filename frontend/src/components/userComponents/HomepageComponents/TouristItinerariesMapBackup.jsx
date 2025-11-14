@@ -35,7 +35,7 @@
 //   useEffect(() => {
 //     const fetchMask = async () => {
 //       try {
-//         const { data } = await axios.get("http://localhost:5000/api/mask");
+//         const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/mask`);
 //         if (!data?.geometry) return;
 //         const feature = {
 //           type: "Feature",
@@ -56,7 +56,7 @@
 //     const fetchItinerary = async () => {
 //       try {
 //         const res = await axios.get(
-//           `http://localhost:5000/api/itineraries/${itineraryId}`,
+//           `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/${itineraryId}`,
 //           config
 //         );
 

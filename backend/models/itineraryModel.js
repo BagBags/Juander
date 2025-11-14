@@ -6,6 +6,7 @@ const itinerarySchema = new mongoose.Schema(
     name: { type: String, required: true },
     description: { type: String },
     imageUrl: { type: String },
+    duration: { type: Number, default: 0 }, // duration in hours
     sites: [
       {
         type: mongoose.Schema.Types.ObjectId,

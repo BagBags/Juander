@@ -31,7 +31,7 @@ export default function Birthday() {
 
         if (!token) return;
 
-        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -65,7 +65,7 @@ export default function Birthday() {
       }
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/auth/birthday",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/birthday`,
         { month, date, year },
         { headers: { Authorization: `Bearer ${token}` } }
       );

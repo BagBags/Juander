@@ -1,0 +1,16 @@
+# Elastic Beanstalk ignore file
+# Files and directories to exclude from deployment
+
+.git
+.gitignore
+.env
+.env.local
+.env.development
+node_modules
+npm-debug.log
+*.log
+.DS_Store
+*.swp
+*.swo
+.vscode
+.idea

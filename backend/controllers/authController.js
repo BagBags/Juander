@@ -1,4 +1,3 @@
-const { GoogleLogin } = require("@react-oauth/google");
 const { OAuth2Client } = require("google-auth-library");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");

@@ -193,7 +193,7 @@ function ItineraryCard({ itinerary, navigate }) {
     if (!url || url.trim() === "") return null;
     if (url.startsWith("http")) return url;
     const path = url.startsWith("/") ? url : `/${url}`;
-    return `http://localhost:5000${path}`;
+    return `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${path}`;
   };
   
   const imageSrc = getImageUrl(itinerary.imageUrl);

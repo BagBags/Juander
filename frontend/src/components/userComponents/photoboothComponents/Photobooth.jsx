@@ -31,6 +31,9 @@ export default function Photobooth() {
   const [capturedImage, setCapturedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   
+  // Video element reference for actual dimensions
+  const [videoElement, setVideoElement] = useState(null);
+  
   // Dynamic video dimensions that adapt to screen size
   const [videoDims, setVideoDims] = useState({
     width: window.innerWidth,
@@ -59,13 +62,23 @@ export default function Photobooth() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const res = await axios.get("/api/photobooth/filters");
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`);
         if (res.data && res.data.length > 0) {
-          const normalized = res.data.map((f) => ({
-            ...f,
-            label: f.label || f.name, // ensure label exists
-            value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
-          }));
+          const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+          const normalized = res.data.map((f) => {
+            // Resolve image URL
+            let imageUrl = f.imageUrl || f.image;
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${BACKEND_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+            
+            return {
+              ...f,
+              label: f.label || f.name, // ensure label exists
+              value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
+              image: imageUrl, // map imageUrl to image for slider
+            };
+          });
           setFilters([...baseFilters, ...normalized]);
         } else {
           setFilters(baseFilters);
@@ -118,6 +131,10 @@ export default function Photobooth() {
 
   const handleWebcamLoad = useCallback(() => {
     setWebcamReady(true);
+    // Store video element reference
+    if (webcamRef.current && webcamRef.current.video) {
+      setVideoElement(webcamRef.current.video);
+    }
   }, []);
 
   const handleSliderDragStart = useCallback(() => {
@@ -132,20 +149,24 @@ export default function Photobooth() {
   const capturePhoto = useCallback(() => {
     if (!webcamRef.current) return;
 
-    // Create canvas with actual viewport dimensions
-    const canvas = document.createElement("canvas");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const ctx = canvas.getContext("2d");
-
     // Get video element
     const video = webcamRef.current.video;
     if (!video) return;
 
-    // Draw mirrored video
+    // Get actual video stream dimensions
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    
+    // Create canvas with video's actual dimensions to prevent stretching
+    const canvas = document.createElement("canvas");
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+    const ctx = canvas.getContext("2d");
+
+    // Draw mirrored video at its native resolution
     ctx.save();
     ctx.scale(-1, 1);
-    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
     ctx.restore();
 
     // If filter is selected, draw it on top using the actual displayed overlay
@@ -172,12 +193,17 @@ export default function Photobooth() {
               // For face-tracking overlays, calculate relative position
               const rect = parent.getBoundingClientRect();
               const cameraRect = document.querySelector(".camera-view").getBoundingClientRect();
+
+              // Calculate scale factor between canvas and display
+              const scaleX = canvas.width / cameraRect.width;
+              const scaleY = canvas.height / cameraRect.height;
               
-              // Calculate position relative to camera
-              const x = rect.left - cameraRect.left;
-              const y = rect.top - cameraRect.top;
-              const width = rect.width;
-              const height = rect.height;
+              // Calculate position relative to camera and scale to canvas
+
+              const x = (rect.left - cameraRect.left) * scaleX;
+              const y = (rect.top - cameraRect.top) * scaleY;
+              const width = rect.width * scaleX;
+              const height = rect.height * scaleY;
               
               // Get transform matrix
               const transform = parentStyle.transform;
@@ -242,14 +268,25 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
-        {/* ✅ Back button + refresh */}
-        <div className="absolute top-0 left-0 w-full z-[200] bg-gradient-to-b from-black/60 to-transparent backdrop-blur-sm">
-          <div className="p-4 flex items-center justify-between">
-            <BackHeader />
+        {/* ✅ Back button + refresh - Blurred transparent background */}
+        <div 
+          className="absolute top-0 left-0 w-full z-[200] bg-black/30 backdrop-blur-md"
+          style={{
+            paddingTop: "max(env(safe-area-inset-top), 16px)",
+            paddingBottom: "12px",
+            paddingLeft: "16px",
+            paddingRight: "16px"
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 text-white">
+              <BackHeader className="flex-1" />
+            </div>
             <button
-              className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white text-xl hover:bg-white/30 transition-all shadow-lg"
+              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-2xl hover:bg-white/30 transition-all active:scale-90"
               onClick={() => window.location.reload()}
               title="Refresh"
+              aria-label="Refresh camera"
             >
               ↻
             </button>
@@ -260,19 +297,21 @@ export default function Photobooth() {
           <Webcam
             ref={webcamRef}
             audio={false}
-            width={videoDims.width}
-            height={videoDims.height}
             className="webcam"
             onUserMedia={handleWebcamLoad}
             onUserMediaError={(err) => console.error("Webcam error:", err)}
             videoConstraints={{
-              width: videoDims.width,
-              height: videoDims.height,
               facingMode: "user",
-              frameRate: 15,
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
             }}
             screenshotFormat="image/jpeg"
             mirrored={true}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
           />
 
           {/* ✅ Show overlays if filter selected */}

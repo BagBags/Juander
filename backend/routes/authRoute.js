@@ -147,6 +147,29 @@ router.get("/me", verifyToken, async (req, res) => {
   }
 });
 
+// Update Fort Santiago modal preference
+router.put("/fort-santiago-modal", verifyToken, async (req, res) => {
+  try {
+    const { hideFortSantiagoModal } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { hideFortSantiagoModal },
+      { new: true, select: "-password -otp -otpExpires" }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ 
+      message: "Preference updated successfully",
+      hideFortSantiagoModal: user.hideFortSantiagoModal 
+    });
+  } catch (err) {
+    console.error("Error updating Fort Santiago modal preference:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Upload Profile Picture Route
 router.post(
   "/upload-profile-picture",

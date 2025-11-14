@@ -174,6 +174,51 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
     }
 
+    // Check content with OpenAI Moderation API if reviewText is provided
+    if (reviewText) {
+      try {
+        const axios = require('axios');
+        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+        
+        if (!OPENAI_API_KEY) {
+          console.error('OPENAI_API_KEY not found in environment variables');
+          return res.status(500).json({ error: 'Content moderation service unavailable' });
+        }
+
+        const moderationResponse = await axios.post(
+          'https://api.openai.com/v1/moderations',
+          {
+            model: "omni-moderation-latest",
+            input: reviewText
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        const results = moderationResponse.data.results[0];
+        
+        if (results.flagged) {
+          // Get the flagged categories
+          const flaggedCategories = Object.entries(results.categories)
+            .filter(([_, value]) => value)
+            .map(([key, _]) => key);
+            
+          return res.status(400).json({ 
+            error: "Your review contains inappropriate content",
+            flagged: true,
+            categories: flaggedCategories
+          });
+        }
+      } catch (error) {
+        console.error('OpenAI Moderation API Error:', error.response?.data || error.message);
+        // Continue with the review update even if moderation fails
+      }
+    }
+
     const review = await Review.findOne({ _id: id, userId });
 
     if (!review) {
@@ -209,6 +254,33 @@ router.delete("/:id", verifyToken, async (req, res) => {
     const { id } = req.params;
 
     const review = await Review.findOne({ _id: id, userId });
+
+    if (!review) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    await Review.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Review deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting review:", err);
+    res.status(500).json({ error: "Failed to delete review" });
+  }
+});
+
+// @route   DELETE /api/reviews/admin/:id
+// @desc    Delete any review (admin only)
+// @access  Private (Admin)
+router.delete("/admin/:id", verifyToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
+      return res.status(403).json({ error: "Access denied. Admin only." });
+    }
+
+    const { id } = req.params;
+
+    const review = await Review.findById(id);
 
     if (!review) {
       return res.status(404).json({ error: "Review not found" });

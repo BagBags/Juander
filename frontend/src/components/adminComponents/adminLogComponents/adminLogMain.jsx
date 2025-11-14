@@ -17,7 +17,7 @@ export default function AdminLogMain() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get("/api/admin/logs", {
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLogs(res.data);

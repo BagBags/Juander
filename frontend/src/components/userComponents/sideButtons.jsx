@@ -6,13 +6,13 @@ export default function SideButtons({ userType = "tourist" }) {
   const { t } = useTranslation();
 
   const allIcons = [
-    { url: "icons/Home.svg", label: "home", to: "/Homepage", Device: "All", allowedFor: ["tourist"] },
     {
       url: "icons/Tourmap.svg",
       label: "tourMap",
       to: "/TourMap",
-      Device: userType === "guest" ? "All" : "Mobile", // Guests see on all devices, tourists only on mobile
+      Device: userType === "guest" ? "All" : "Mobile",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-map", // Tour target
     },
     {
       url: "icons/Itineraries.svg",
@@ -20,6 +20,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/CreateItinerary",
       Device: "All",
       allowedFor: ["tourist"],
+      tourClass: "side-button-itinerary", // Tour target
     },
     {
       url: "icons/Photobooth.svg",
@@ -27,6 +28,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/Photobooth",
       Device: "Mobile",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-photobooth", // Tour target
     },
     {
       url: "icons/Hotlines.svg",
@@ -34,6 +36,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/Emergency",
       Device: "Mobile",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-emergency", // Tour target
     },
     {
       url: "icons/Profile.svg",
@@ -41,6 +44,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: userType === "guest" ? "/GuestProfile" : "/Profile",
       Device: "All",
       allowedFor: ["tourist", "guest"],
+      tourClass: "side-button-profile", // Tour target
     },
     {
       url: "icons/TripArchives.svg",
@@ -48,6 +52,7 @@ export default function SideButtons({ userType = "tourist" }) {
       to: "/TripArchive",
       Device: "All",
       allowedFor: ["tourist"],
+      tourClass: "side-button-archives", // Tour target
     },
   ];
 
@@ -56,7 +61,7 @@ export default function SideButtons({ userType = "tourist" }) {
 
   return (
     <div
-      className="fixed top-1/2 -translate-y-1/2 flex flex-col gap-6 z-50
+      className="fixed top-1/2 -translate-y-1/2 flex flex-col gap-5 z-50
                 right-2 max-[375px]:right-1"
     >
       {icons.map((icon, index) => {
@@ -68,11 +73,11 @@ export default function SideButtons({ userType = "tourist" }) {
           <Link
             to={icon.to}
             key={index}
-            className={`${visibilityClass} flex flex-col items-center group`}
+            className={`${visibilityClass} ${icon.tourClass || ''} flex flex-col items-center group`}
           >
             <div
-              className="w-16 h-16 max-[375px]:w-12 max-[375px]:h-12
-                     sm:w-20 sm:h-20 lg:w-20 lg:h-20
+              className="w-14 h-14 max-[375px]:w-11 max-[375px]:h-11
+                     sm:w-18 sm:h-18 lg:w-18 lg:h-18
                      rounded-full bg-yellow-400 flex items-center justify-center
                      shadow-lg hover:shadow-yellow-300/50 hover:scale-110
                      transition-transform duration-300 ease-out"
@@ -80,12 +85,12 @@ export default function SideButtons({ userType = "tourist" }) {
               <img
                 src={icon.url}
                 alt={`icon-${index}`}
-                className="w-8 h-8 max-[375px]:w-6 max-[375px]:h-6 sm:w-10 sm:h-10 lg:w-10 lg:h-10 object-contain"
+                className="w-7 h-7 max-[375px]:w-5 max-[375px]:h-5 sm:w-9 sm:h-9 lg:w-9 lg:h-9 object-contain"
               />
             </div>
 
             <span
-              className="text-xs sm:text-sm lg:text-base text-white mt-2 font-semibold
+              className="text-[11px] sm:text-xs lg:text-sm text-white mt-1.5 font-semibold
                      opacity-80 group-hover:opacity-100 transition-opacity duration-300"
               style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.4)' }}
             >

@@ -16,7 +16,13 @@ export default function ProfileLayout() {
   return (
     <div className="min-h-screen bg-white flex flex-col text-sm relative">
       {/* BackHeader pinned to the left */}
-      <div className="sticky top-0 z-20 bg-white px-4 py-3 flex items-center">
+      <div 
+        className="sticky top-0 z-20 bg-white px-4 flex items-center"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 12px)",
+          paddingBottom: "12px",
+        }}
+      >
         <BackHeader title={getTitle()} />
       </div>
 

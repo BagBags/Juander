@@ -4,7 +4,6 @@ import Card from "./Card";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
 import { Phone, AlertCircle } from "lucide-react";
 
@@ -21,13 +20,13 @@ export default function EmergencyPage() {
   useEffect(() => {
     const fetchHotlines = async () => {
       try {
-        const res = await axios.get(`/api/emergency`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`);
         const transformed = res.data.map((agency) => ({
           title: agency.name,
           icon: agency.icon
             ? agency.icon.startsWith("http")
               ? agency.icon
-              : `http://localhost:5000${agency.icon}`
+              : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${agency.icon}`
             : null,
           contacts: agency.contactChannels.map((channel) => ({
             label: channel.label,
@@ -47,13 +46,20 @@ export default function EmergencyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative">
+    <div className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Global TTS Button */}
-      <GlobalTTSButton />
 
       {/* Sticky Back Header */}
-      <div className="pt-4 sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full px-4">
-        <BackHeader title={<span className="text-white">Emergency Hotlines</span>} />
+      <div 
+        className="sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
+        <BackHeader title={<span className="text-white">Emergency Hotlines</span>} className="text-white" />
       </div>
 
       <MainLayout includeSideButtons={false}>

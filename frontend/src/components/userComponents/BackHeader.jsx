@@ -2,25 +2,31 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-export default function BackHeader({ title }) {
+/**
+ * Professional BackHeader component following IT standards:
+ * - Uses CSS custom properties for safe-area-inset (iOS notch/dynamic island)
+ * - No internal padding to prevent double-padding issues
+ * - Parent container controls all spacing
+ * - Accessible with ARIA labels
+ * - Responsive with proper text truncation
+ */
+export default function BackHeader({ title, className = "" }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const fromPath = location.state?.fromPath; // "/GuestHomepage", "/Homepage", etc.
+  const fromPath = location.state?.fromPath;
 
   const handleBack = () => {
     if (fromPath) {
-      // Go exactly where we came from (guest or tourist)
       navigate(fromPath, { replace: true });
       return;
     }
 
-    // If a real history entry exists, go back
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1);
       return;
     }
 
-    // Final fallback by role
+    // Fallback by role
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user") || "null");
 
@@ -34,14 +40,21 @@ export default function BackHeader({ title }) {
   };
 
   return (
-    <div className="sticky top-0 z-20 pt-4 pb-2 px-4 flex items-center border-gray-200">
-      <span
-        className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
+    <div className={`flex items-center gap-2 ${className}`}>
+      <button
+        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
         onClick={handleBack}
+        aria-label="Go back"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          color: 'inherit'
+        }}
       >
-        &lt;
-      </span>
-      <h1 className="ml-2 font-bold text-xl">{title}</h1>
+        ‹
+      </button>
+      <h1 className="font-bold text-xl truncate" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+        {title}
+      </h1>
     </div>
   );
 }

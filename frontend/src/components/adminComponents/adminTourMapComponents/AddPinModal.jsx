@@ -14,7 +14,7 @@ export default function AddPinModal({
   setShowAddPinModal,
 }) {
   return (
-    <div className="absolute top-6 left-160 w-[380px] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
+    <div className="absolute top-6 right-24 w-[380px] bg-white rounded-2xl shadow-2xl flex flex-col z-40 border border-gray-100 animate-fade-in">
       {/* Header */}
       <div className="flex justify-between items-center p-4 border-b border-gray-100 rounded-t-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
         <h2 className="text-lg font-semibold text-gray-800">Add Pin</h2>
@@ -29,7 +29,7 @@ export default function AddPinModal({
       {/* Add Pin Options */}
       <div className="p-5 space-y-4">
         <button
-          onClick={() => setIsAddingPin(true)}
+          onClick={() => setIsAddingPin(!isAddingPin)}
           className={`w-full p-4 border-2 rounded-xl text-left transition-all duration-200 ${
             isAddingPin
               ? "border-blue-400 bg-blue-50 shadow-md"
@@ -53,10 +53,13 @@ export default function AddPinModal({
                   isAddingPin ? "text-blue-700" : "text-gray-800"
                 }`}
               >
-                Tap to place
+                {isAddingPin ? "Cancel pin adding" : "Tap to place"}
               </h3>
               <p className="text-sm text-gray-500">
-                Activate pin adding when tapping on the map
+                {isAddingPin 
+                  ? "Click again to cancel pin adding mode" 
+                  : "Activate pin adding when tapping on the map"
+                }
               </p>
             </div>
           </div>

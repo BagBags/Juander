@@ -5,10 +5,11 @@ import Button from "./Button";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
-import { useTranslation } from "react-i18next"; // 👈 import hook
-import GlobalTTSButton from "../../GlobalTTSButton";
+import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import { WifiOff, X } from "lucide-react";
+import TourProvider from "../../TourComponents/TourProvider";
+import { homepageTourSteps } from "../../TourComponents/tourSteps";
 
 export default function Homepage() {
   const { t } = useTranslation(); // 👈 initialize translations
@@ -17,6 +18,7 @@ export default function Homepage() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [fromCache, setFromCache] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(true);
+  const [bgLoaded, setBgLoaded] = useState(false);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -34,6 +36,15 @@ export default function Homepage() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Preload background images
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640;
+    const bgImage = new Image();
+    bgImage.src = isMobile ? '/JuanderBGPhone.png' : '/JuanderBGWeb1.svg';
+    bgImage.onload = () => setBgLoaded(true);
+    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
   }, []);
 
   // Announce page load
@@ -59,7 +70,7 @@ export default function Homepage() {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUser(res.data);
@@ -80,18 +91,35 @@ export default function Homepage() {
   }, []);
 
   return (
-    <div
-      className="
-    min-h-screen bg-cover bg-no-repeat bg-center 
-    flex flex-col items-center justify-start 
-    px-4 sm:px-6 md:px-8 lg:px-10 relative
-    bg-[url('/JuanderBGPhone.png')] 
-    sm:bg-[url('/JuanderBGWeb1.svg')]
-  "
-      style={{
-        backgroundColor: "#d9d9d9",
-      }}
-    >
+    <TourProvider steps={homepageTourSteps} userRole="tourist">
+      {/* Loading Screen */}
+      {!bgLoaded && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
+          </div>
+        </div>
+      )}
+      
+      <div
+        className="
+      min-h-screen bg-cover bg-no-repeat bg-center 
+      flex flex-col items-center justify-start 
+      overflow-hidden relative
+      bg-[url('/JuanderBGPhone.png')] 
+      sm:bg-[url('/JuanderBGWeb1.svg')]
+    "
+        style={{
+          backgroundColor: "#d9d9d9",
+          backgroundSize: "cover",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          touchAction: "none",
+          overscrollBehavior: "none",
+          WebkitOverscrollBehavior: "none",
+        }}
+      >
       {/* Offline Indicator */}
       {isOffline && showOfflineBanner && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-4 py-3 shadow-lg">
@@ -112,14 +140,14 @@ export default function Homepage() {
       )}
 
       {/* Logo Header */}
-      <div className={`w-full flex justify-center px-4 ${isOffline && showOfflineBanner ? 'mt-20' : 'mt-10'}`}>
+      <div className={`w-full flex justify-center px-4 ${isOffline && showOfflineBanner ? 'mt-20' : 'mt-2'}`}>
         <LogoHeader />
       </div>
 
       {/* Title */}
-      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10">
+      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10 px-4">
         <h5
-          className="text-[42px] sm:text-[60px] md:text-[72px] 
+          className="text-[38px] sm:text-[56px] md:text-[68px] 
              font-poppins font-extrabold tracking-tight leading-[1.1] 
              text-[#f5f5dc] drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
         >
@@ -131,8 +159,8 @@ export default function Homepage() {
       <MainLayout>
         <Button navigate={navigate} />
       </MainLayout>
-      <FloatingChatbot />
-      <GlobalTTSButton />
-    </div>
+        <FloatingChatbot />
+      </div>
+    </TourProvider>
   );
 }

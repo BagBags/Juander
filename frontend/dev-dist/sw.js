@@ -21,22 +21,20 @@ if (!self.define) {
 
   const singleRequire = (uri, parentUri) => {
     uri = new URL(uri + ".js", parentUri).href;
-    return registry[uri] || (
-      
-        new Promise(resolve => {
-          if ("document" in self) {
-            const script = document.createElement("script");
-            script.src = uri;
-            script.onload = resolve;
-            document.head.appendChild(script);
-          } else {
-            nextDefineUri = uri;
-            importScripts(uri);
-            resolve();
-          }
-        })
-      
-      .then(() => {
+    return (
+      registry[uri] ||
+      new Promise((resolve) => {
+        if ("document" in self) {
+          const script = document.createElement("script");
+          script.src = uri;
+          script.onload = resolve;
+          document.head.appendChild(script);
+        } else {
+          nextDefineUri = uri;
+          importScripts(uri);
+          resolve();
+        }
+      }).then(() => {
         let promise = registry[uri];
         if (!promise) {
           throw new Error(`Module ${uri} didn’t register its module`);
@@ -47,27 +45,31 @@ if (!self.define) {
   };
 
   self.define = (depsNames, factory) => {
-    const uri = nextDefineUri || ("document" in self ? document.currentScript.src : "") || location.href;
+    const uri =
+      nextDefineUri ||
+      ("document" in self ? document.currentScript.src : "") ||
+      location.href;
     if (registry[uri]) {
       // Module is already loading or loaded.
       return;
     }
     let exports = {};
-    const require = depUri => singleRequire(depUri, uri);
+    const require = (depUri) => singleRequire(depUri, uri);
     const specialDeps = {
       module: { uri },
       exports,
-      require
+      require,
     };
-    registry[uri] = Promise.all(depsNames.map(
-      depName => specialDeps[depName] || require(depName)
-    )).then(deps => {
+    registry[uri] = Promise.all(
+      depsNames.map((depName) => specialDeps[depName] || require(depName))
+    ).then((deps) => {
       factory(...deps);
       return exports;
     });
   };
 }
-define(['./workbox-3e1353d5'], (function (workbox) { 'use strict';
+define(["./workbox-3e1353d5"], function (workbox) {
+  "use strict";
 
   self.skipWaiting();
   workbox.clientsClaim();
@@ -77,81 +79,143 @@ define(['./workbox-3e1353d5'], (function (workbox) { 'use strict';
    * requests for URLs in the manifest.
    * See https://goo.gl/S9QRab
    */
-  workbox.precacheAndRoute([{
-    "url": "/index.html",
-    "revision": "0.0hc9q02f59"
-  }], {});
+  workbox.precacheAndRoute(
+    [
+      {
+        url: "/index.html",
+        revision: "0.4o8apncgft8",
+      },
+    ],
+    {}
+  );
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
-    allowlist: [/^\/$/],
-    denylist: [/^\/api/, /^\/admin/, /^\/create-itinerary/, /^\/profile/, /^\/homepage/]
-  }));
-  workbox.registerRoute(/^http:\/\/localhost:5000\/api\/(pins|reviews|itineraries\/admin)\/.*/i, new workbox.NetworkFirst({
-    "cacheName": "guest-api-cache",
-    "networkTimeoutSeconds": 10,
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 200,
-      maxAgeSeconds: 604800
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    })]
-  }), 'GET');
-  workbox.registerRoute(/^http:\/\/localhost:5000\/api\/(admin|auth|users|userItineraries)\/.*/i, new workbox.NetworkOnly(), 'GET');
-  workbox.registerRoute(/\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i, new workbox.CacheFirst({
-    "cacheName": "image-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 200,
-      maxAgeSeconds: 2592000
-    })]
-  }), 'GET');
-  workbox.registerRoute(/\.(?:mp4|webm|ogg|mov)$/i, new workbox.CacheFirst({
-    "cacheName": "video-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 50,
-      maxAgeSeconds: 2592000
-    }), new workbox.RangeRequestsPlugin()]
-  }), 'GET');
-  workbox.registerRoute(/\.(?:glb|gltf)$/i, new workbox.CacheFirst({
-    "cacheName": "3d-model-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 30,
-      maxAgeSeconds: 2592000
-    })]
-  }), 'GET');
-  workbox.registerRoute(/\.(?:woff|woff2|ttf|eot)$/i, new workbox.CacheFirst({
-    "cacheName": "font-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 30,
-      maxAgeSeconds: 31536000
-    })]
-  }), 'GET');
-  workbox.registerRoute(/^https:\/\/api\.mapbox\.com\/.*/i, new workbox.CacheFirst({
-    "cacheName": "mapbox-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 1000,
-      maxAgeSeconds: 2592000
-    }), new workbox.CacheableResponsePlugin({
-      statuses: [0, 200]
-    }), {
-      handlerDidError: async () => {
-        return new Response(JSON.stringify({
-          error: "Offline - Map tiles unavailable"
-        }), {
-          status: 503,
-          statusText: "Service Unavailable",
-          headers: {
-            "Content-Type": "application/json"
-          }
-        });
+  workbox.registerRoute(
+    new workbox.NavigationRoute(
+      workbox.createHandlerBoundToURL("/index.html"),
+      {
+        allowlist: [/^\/$/],
+        denylist: [/^\/api/],
       }
-    }]
-  }), 'GET');
-  workbox.registerRoute(/^https:\/\/(cdn|unpkg|fonts\.googleapis|fonts\.gstatic)\.com\/.*/i, new workbox.StaleWhileRevalidate({
-    "cacheName": "cdn-cache",
-    plugins: [new workbox.ExpirationPlugin({
-      maxEntries: 100,
-      maxAgeSeconds: 2592000
-    })]
-  }), 'GET');
-
-}));
+    )
+  );
+  workbox.registerRoute(
+    /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
+    new workbox.NetworkFirst({
+      cacheName: "guest-api-cache",
+      networkTimeoutSeconds: 10,
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 200,
+          maxAgeSeconds: 604800,
+        }),
+        new workbox.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+    }),
+    "GET"
+  );
+  workbox.registerRoute(
+    /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i,
+    new workbox.NetworkOnly(),
+    "GET"
+  );
+  workbox.registerRoute(
+    /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+    new workbox.CacheFirst({
+      cacheName: "image-cache",
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 200,
+          maxAgeSeconds: 2592000,
+        }),
+      ],
+    }),
+    "GET"
+  );
+  workbox.registerRoute(
+    /\.(?:mp4|webm|ogg|mov)$/i,
+    new workbox.CacheFirst({
+      cacheName: "video-cache",
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 50,
+          maxAgeSeconds: 2592000,
+        }),
+        new workbox.RangeRequestsPlugin(),
+      ],
+    }),
+    "GET"
+  );
+  workbox.registerRoute(
+    /\.(?:glb|gltf)$/i,
+    new workbox.CacheFirst({
+      cacheName: "3d-model-cache",
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 30,
+          maxAgeSeconds: 2592000,
+        }),
+      ],
+    }),
+    "GET"
+  );
+  workbox.registerRoute(
+    /\.(?:woff|woff2|ttf|eot)$/i,
+    new workbox.CacheFirst({
+      cacheName: "font-cache",
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 30,
+          maxAgeSeconds: 31536000,
+        }),
+      ],
+    }),
+    "GET"
+  );
+  workbox.registerRoute(
+    /^https:\/\/api\.mapbox\.com\/.*/i,
+    new workbox.CacheFirst({
+      cacheName: "mapbox-cache",
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 1000,
+          maxAgeSeconds: 2592000,
+        }),
+        new workbox.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+        {
+          handlerDidError: async () => {
+            return new Response(
+              JSON.stringify({
+                error: "Offline - Map tiles unavailable",
+              }),
+              {
+                status: 503,
+                statusText: "Service Unavailable",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+          },
+        },
+      ],
+    }),
+    "GET"
+  );
+  workbox.registerRoute(
+    /^https:\/\/(cdn|unpkg|fonts\.googleapis|fonts\.gstatic)\.com\/.*/i,
+    new workbox.StaleWhileRevalidate({
+      cacheName: "cdn-cache",
+      plugins: [
+        new workbox.ExpirationPlugin({
+          maxEntries: 100,
+          maxAgeSeconds: 2592000,
+        }),
+      ],
+    }),
+    "GET"
+  );
+});

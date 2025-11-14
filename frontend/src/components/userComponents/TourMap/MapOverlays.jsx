@@ -1,36 +1,25 @@
 // components/userComponents/MapOverlays.jsx
 import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import BackHeader from "../BackHeader";
 import SiteCard from "./SiteCard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faInfo } from "@fortawesome/free-solid-svg-icons";
 
 const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLegend }) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const handleBack = () => {
-    if (location.key !== "default") {
-      navigate(-1);
-    } else {
-      navigate("/");
-    }
-  };
-
   return (
     <>
       {/* Header with Legend Button */}
-      <div className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-md">
-        <div className="px-4 pb-2 pt-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <span
-              className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
-              onClick={handleBack}
-            >
-              &lt;
-            </span>
-            <h1 className="ml-2 font-bold text-xl">Tour Map</h1>
-          </div>
+      <div 
+        className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-md"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <BackHeader title={<span className="text-black">Tour Map</span>} className="flex-1" />
           
           {/* Legend Button - aligned to the right */}
           <button
@@ -40,7 +29,8 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
               setShowLegend((prev) => !prev);
             }}
             title="Map Legend"
-            className={`p-2.5 rounded-lg shadow-md transition-all hover:scale-105 cursor-pointer ${
+            aria-label="Toggle map legend"
+            className={`p-2.5 rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer ${
               showLegend ? "bg-blue-50 text-blue-600" : "bg-white text-gray-700 hover:bg-gray-100"
             }`}
           >
@@ -92,7 +82,7 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
       )}
 
       {/* Footer */}
-      <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-30 pointer-events-auto">
+      <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-30 pointer-events-auto" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}>
         Tour Map
       </div>
     </>

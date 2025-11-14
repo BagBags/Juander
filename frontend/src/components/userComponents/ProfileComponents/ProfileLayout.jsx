@@ -13,18 +13,27 @@ export default function ProfileLayout() {
     if (location.pathname.endsWith("/Gender")) return t("gender");
     if (location.pathname.endsWith("/Country")) return t("country");
     if (location.pathname.endsWith("/Language")) return t("language");
+    if (location.pathname.endsWith("/Settings")) return "Settings";
     return t("profile");
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col text-sm relative">
-      {/* BackHeader pinned to the left */}
-      <div className="sticky top-0 z-20 bg-white px-4 py-3 flex items-center">
+      {/* BackHeader with safe-area support */}
+      <div 
+        className="sticky top-0 z-20 bg-white border-b border-gray-200"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
         <BackHeader title={getTitle()} />
       </div>
 
       {/* Centered page content */}
-      <div className="flex-1 flex justify-center px-4 md:px-0">
+      <div className="flex-1 flex justify-center px-4 md:px-0" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="w-full max-w-md mt-4">
           <Outlet />
         </div>

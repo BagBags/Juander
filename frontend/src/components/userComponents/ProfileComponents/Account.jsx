@@ -39,7 +39,7 @@ export default function Account() {
       if (!token) return;
       try {
         setLoading(true);
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser({
@@ -120,7 +120,7 @@ export default function Account() {
     }
     try {
       await axios.post(
-        "http://localhost:5000/api/auth/send-email-verification-otp",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-email-verification-otp`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -141,7 +141,7 @@ export default function Account() {
     }
     try {
       await axios.post(
-        "http://localhost:5000/api/auth/verify-email-otp",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/verify-email-otp`,
         { otp },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -160,7 +160,7 @@ export default function Account() {
   const handleSubmitEmailChange = async () => {
     try {
       const res = await axios.put(
-        "http://localhost:5000/api/auth/account",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -227,7 +227,7 @@ export default function Account() {
       }
 
       const res = await axios.put(
-        "http://localhost:5000/api/auth/account",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );

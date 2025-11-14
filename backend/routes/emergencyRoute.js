@@ -8,7 +8,10 @@ const upload = require("../middleware/upload"); // multer middleware
 router.get("/", controller.getContacts);
 
 //Protected routes for emergency contacts
+router.get("/archived", verifyAdmin, controller.getArchivedContacts);
 router.put("/reorder", verifyAdmin, controller.reorderContacts);
+router.put("/:id/archive", verifyAdmin, controller.archiveContact);
+router.put("/:id/restore", verifyAdmin, controller.restoreContact);
 router.post("/", verifyAdmin, upload.single("icon"), controller.createContact); // ✅ accept file
 router.put(
   "/:id",

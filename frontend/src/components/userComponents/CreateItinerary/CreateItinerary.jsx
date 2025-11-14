@@ -3,9 +3,9 @@ import axios from "axios";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import ttsService from "../../../utils/textToSpeech";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import { useTranslation } from "react-i18next";
 import OnlineRequiredModal from "../../shared/OnlineRequiredModal";
+import ConfirmModal from "../../shared/ConfirmModal";
 import {
   FaCheck,
   FaPlus,
@@ -14,6 +14,73 @@ import {
   FaTrash,
   FaEdit,
 } from "react-icons/fa";
+import { Info, X } from "lucide-react";
+
+function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  const handleClose = async () => {
+    if (dontShowAgain && onDontShowAgain) {
+      await onDontShowAgain();
+    }
+    onClose();
+  };
+
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        <div className="bg-[#f04e37] p-4 flex items-center gap-3">
+          <Info className="text-white w-7 h-7" />
+          <h2 className="text-lg font-semibold text-white">
+            Fort Santiago Notice
+          </h2>
+        </div>
+
+        <div className="p-6">
+          <p className="text-gray-700 mb-4 text-sm leading-relaxed">
+            You've selected a site inside Fort Santiago.
+          </p>
+
+          <div className="bg-orange-50 p-4 rounded-lg flex items-start gap-3 mb-5">
+            <div className="w-2 h-2 bg-[#f04e37] rounded-full mt-1.5 flex-shrink-0"></div>
+            <div className="flex-1">
+              <p className="text-gray-700 text-sm leading-relaxed mb-2">
+                An entrance fee is required to access Fort Santiago and its sites.
+              </p>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Please purchase tickets at the Fort Santiago entrance before visiting.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+                className="w-4 h-4 text-[#f04e37] border-gray-300 rounded focus:ring-[#f04e37] cursor-pointer"
+              />
+              <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
+                Don't show this again
+              </span>
+            </label>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleClose}
+              className="flex-1 px-4 py-2.5 bg-[#f04e37] hover:bg-[#c53d27] text-white font-medium rounded-lg transition-colors text-sm"
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CreateItineraryPage() {
   const { t } = useTranslation();
@@ -25,23 +92,42 @@ export default function CreateItineraryPage() {
   const [editingItineraryId, setEditingItineraryId] = useState(null);
   const [sites, setSites] = useState([]);
   const [descriptionToggles, setDescriptionToggles] = useState({});
-  const [showMyItineraries, setShowMyItineraries] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(true);
   const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("create"); // "create" or "myItineraries"
+  const [showFortModal, setShowFortModal] = useState(false);
   const [offlineMessage, setOfflineMessage] = useState("");
+  const [hideFortModalPreference, setHideFortModalPreference] = useState(false);
+  const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
-    ttsService.speak(t('tts_createItinerary'));
+    ttsService.speak(t("tts_createItinerary"));
     fetchSites();
     fetchItineraries();
+    fetchUserPreference();
   }, [t]);
+
+  const fetchUserPreference = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`,
+        config
+      );
+      setHideFortModalPreference(res.data.hideFortSantiagoModal || false);
+    } catch (err) {
+      console.error("Error fetching user preference:", err);
+    }
+  };
 
   const fetchSites = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/pins");
+      const res = await axios.get(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/pins`
+      );
       setSites(res.data);
     } catch {
       alert("Failed to load sites");
@@ -51,7 +137,9 @@ export default function CreateItineraryPage() {
   const fetchItineraries = async () => {
     try {
       const res = await axios.get(
-        "http://localhost:5000/api/itineraries",
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries`,
         config
       );
       setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
@@ -68,7 +156,9 @@ export default function CreateItineraryPage() {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/userItineraries/upload",
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/userItineraries/upload`,
         formData,
         {
           headers: {
@@ -84,25 +174,70 @@ export default function CreateItineraryPage() {
     }
   };
 
+  const handleDeleteImage = async () => {
+    try {
+      // If there's an imageUrl, delete from server
+      if (imageUrl) {
+        await axios.delete(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/userItineraries/delete-image`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            data: { imageUrl }
+          }
+        );
+      }
+      setImageUrl("");
+      setShowDeleteImageModal(false);
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      alert("Failed to delete image");
+    }
+  };
+
   const getFullImageUrl = (url) => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
-    return `http://localhost:5000${url}`;
+    return `${
+      import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+      "http://localhost:5000"
+    }${url}`;
   };
 
-  const toggleSelection = (siteId) =>
+  const toggleSelection = (siteId) => {
+    const site = sites.find((s) => s._id === siteId);
+    
+    if (site?.insideFortSantiago && !selected.includes(siteId) && !hideFortModalPreference) {
+      // Only show modal when adding a Fort Santiago site and user hasn't disabled it
+      setShowFortModal(true);
+    }
     setSelected((prev) =>
       prev.includes(siteId)
         ? prev.filter((id) => id !== siteId)
         : [...prev, siteId]
     );
+  };
+
+  const handleDontShowAgain = async () => {
+    try {
+      await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/fort-santiago-modal`,
+        { hideFortSantiagoModal: true },
+        config
+      );
+      setHideFortModalPreference(true);
+    } catch (err) {
+      console.error("Error updating preference:", err);
+    }
+  };
 
   const handleSave = async () => {
     // Check if offline
     if (!navigator.onLine) {
       setOfflineMessage(
-        editingItineraryId 
-          ? "Updating itineraries requires an internet connection" 
+        editingItineraryId
+          ? "Updating itineraries requires an internet connection"
           : "Creating itineraries requires an internet connection"
       );
       setShowOfflineModal(true);
@@ -122,14 +257,18 @@ export default function CreateItineraryPage() {
     try {
       if (editingItineraryId) {
         await axios.put(
-          `http://localhost:5000/api/itineraries/${editingItineraryId}`,
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/itineraries/${editingItineraryId}`,
           payload,
           config
         );
         alert("Itinerary updated successfully");
       } else {
         await axios.post(
-          "http://localhost:5000/api/itineraries",
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/itineraries`,
           payload,
           config
         );
@@ -140,8 +279,10 @@ export default function CreateItineraryPage() {
     } catch (err) {
       console.error("Save error:", err);
       // Check if it's a network error
-      if (!navigator.onLine || err.message === 'Network Error') {
-        setOfflineMessage("Lost connection while saving. Please try again when online.");
+      if (!navigator.onLine || err.message === "Network Error") {
+        setOfflineMessage(
+          "Lost connection while saving. Please try again when online."
+        );
         setShowOfflineModal(true);
       } else {
         alert("Failed to save itinerary");
@@ -159,11 +300,18 @@ export default function CreateItineraryPage() {
 
     if (!confirm("Delete this itinerary?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/itineraries/${id}`, config);
+      await axios.delete(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries/${id}`,
+        config
+      );
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
     } catch (err) {
-      if (!navigator.onLine || err.message === 'Network Error') {
-        setOfflineMessage("Lost connection while deleting. Please try again when online.");
+      if (!navigator.onLine || err.message === "Network Error") {
+        setOfflineMessage(
+          "Lost connection while deleting. Please try again when online."
+        );
         setShowOfflineModal(true);
       } else {
         alert("Failed to delete itinerary");
@@ -176,8 +324,8 @@ export default function CreateItineraryPage() {
     setItineraryName(itinerary.name);
     setImageUrl(itinerary.imageUrl || "");
     setSelected(itinerary.sites.map((s) => s._id));
+    setActiveTab("create"); // Switch to Create tab
     window.scrollTo({ top: 0, behavior: "smooth" });
-    setShowMyItineraries(false);
   };
 
   const handleCancelUpdate = () => resetForm();
@@ -195,249 +343,258 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="h-screen flex flex-col bg-[#f04e37] text-white overflow-hidden scroll-smooth">
-      {/* Global TTS Button */}
-      <GlobalTTSButton />
-
-      {/* === STICKY BACKHEADER + FILE + NAME + SELECTED === */}
-      <div className="sticky top-0 z-40 bg-[#f04e37] px-3 py-3 pt-3">
-        <BackHeader title="Create Itinerary" />
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative">
+      {/* Fort Santiago Modal */}
+      {showFortModal && (
+        <FortSantiagoModal
+          isOpen={showFortModal}
+          onClose={() => setShowFortModal(false)}
+          onDontShowAgain={handleDontShowAgain}
+        />
+      )}
       
-      {/* Mobile: Collapsible Toggle Button */}
-      <div className="lg:hidden bg-[#f04e37] px-3 py-2">
-        <button
-          onClick={() => setShowCreateForm((prev) => !prev)}
-          className="w-full flex justify-between items-center font-bold text-white text-lg p-3 rounded-lg bg-white/10 hover:bg-white/20 transition"
-        >
-          <span>{editingItineraryId ? "Update Itinerary" : "Create Itinerary"}</span>
-          {showCreateForm ? <FaChevronUp /> : <FaChevronDown />}
-        </button>
+      {/* Delete Image Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteImageModal}
+        onClose={() => setShowDeleteImageModal(false)}
+        onConfirm={handleDeleteImage}
+        title="Delete Image?"
+        message="Are you sure you want to remove this image? This action cannot be undone."
+        confirmText="Delete Image"
+        type="danger"
+      />
+      
+      {/* Global TTS Button */}
+
+      {/* === STICKY BACKHEADER === */}
+      <div 
+        className="sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 16px)",
+          paddingBottom: "8px",
+          paddingLeft: "16px",
+          paddingRight: "16px"
+        }}
+      >
+        <BackHeader title={<span className="text-white">Itinerary Manager</span>} className="text-white" />
       </div>
 
-      <div className={`bg-[#f04e37] px-3 transition-all duration-300 ease-in-out ${
-        showCreateForm ? 'py-3' : 'max-h-0 overflow-hidden lg:max-h-none lg:py-3'
-      }`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col gap-3">
-            {/* Mobile: Name and Selected Sites first */}
-            <div className="flex flex-col gap-3 lg:hidden">
-              {/* Itinerary name */}
-              <input
-                type="text"
-                value={itineraryName}
-                onChange={(e) => setItineraryName(e.target.value)}
-                placeholder="Enter itinerary name"
-                className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-gray-500 shadow-md focus:ring-2 focus:ring-[#f4cc27] text-base"
-              />
-
-              {/* Selected Sites summary with buttons */}
-              <div className="flex flex-row items-center justify-between bg-white/20 rounded-lg px-4 py-3 gap-3">
-                <span className="font-semibold text-base">
-                  Selected Sites:{" "}
-                  <span className="text-[#f4cc27] font-bold text-lg">
-                    {selected.length}
-                  </span>
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSave}
-                    className="bg-[#f4cc27] text-[#f04e37] font-bold text-sm px-6 py-2 rounded-lg hover:bg-yellow-400 shadow-md transition whitespace-nowrap"
-                  >
-                    {editingItineraryId ? "Update" : "Save"}
-                  </button>
-                  {editingItineraryId && (
-                    <button
-                      onClick={handleCancelUpdate}
-                      className="bg-gray-200 text-gray-800 font-bold text-sm px-6 py-2 rounded-lg hover:bg-gray-300 shadow-md transition whitespace-nowrap"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Upload Image Section for mobile */}
-              <div className="w-full">
-                {imageUrl ? (
-                  <div className="relative">
-                    <img
-                      src={getFullImageUrl(imageUrl)}
-                      alt="Itinerary Preview"
-                      className="w-full h-40 object-cover rounded-xl border-4 border-white shadow-lg"
-                    />
-                    <button
-                      onClick={() => setImageUrl("")}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 shadow-md transition font-bold"
-                      title="Remove image"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer block text-center bg-white text-[#f04e37] font-semibold py-2 px-6 rounded-lg hover:bg-white/90 shadow-md transition">
-                    Upload Itinerary Image (Optional)
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Desktop: Compact single row layout */}
-            <div className="hidden lg:flex gap-3 items-center">
-              {/* Left: Upload Image Button or Preview (expands when image uploaded) */}
-              <div className="flex-shrink-0">
-                {imageUrl ? (
-                  <div className="relative group">
-                    <img
-                      src={getFullImageUrl(imageUrl)}
-                      alt="Preview"
-                      className="w-32 h-20 object-cover rounded-lg border-2 border-white shadow transition-all"
-                    />
-                    <button
-                      onClick={() => setImageUrl("")}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 shadow text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Remove image"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <label className="cursor-pointer flex items-center justify-center w-12 h-12 text-center bg-white text-[#f04e37] font-bold rounded-lg hover:bg-white/90 shadow transition" title="Upload Image (Optional)">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
-
-              {/* Middle: Itinerary name input */}
-              <input
-                type="text"
-                value={itineraryName}
-                onChange={(e) => setItineraryName(e.target.value)}
-                placeholder="Enter itinerary name"
-                className="flex-1 px-3 py-2 rounded-lg bg-white text-gray-900 placeholder-gray-500 shadow focus:ring-2 focus:ring-[#f4cc27] text-sm"
-              />
-
-              {/* Right: Selected Sites counter and Save button */}
-              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2">
-                <span className="text-xs font-medium whitespace-nowrap">
-                  Selected Sites: <span className="text-[#f4cc27] font-bold text-sm">{selected.length}</span>
-                </span>
-              </div>
-
+      {/* === TAB NAVIGATION === */}
+      <div className="px-4 pt-6 pb-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20">
+            {/* Sliding Background */}
+            <div
+              className="absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] bg-white rounded-xl shadow-lg transition-transform duration-300 ease-out"
+              style={{
+                transform: activeTab === "create" ? "translateX(0)" : "translateX(calc(100% + 0.75rem))"
+              }}
+            />
+            
+            {/* Tab Buttons */}
+            <div className="relative grid grid-cols-2 gap-1.5">
               <button
-                onClick={handleSave}
-                className="bg-[#f4cc27] text-[#f04e37] font-bold text-sm px-4 py-2 rounded-lg hover:bg-yellow-300 shadow transition whitespace-nowrap"
+                onClick={() => setActiveTab("create")}
+                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 ${
+                  activeTab === "create"
+                    ? "text-[#f04e37]"
+                    : "text-white hover:text-white/80"
+                }`}
               >
-                {editingItineraryId ? "Update" : "Save"}
+                {editingItineraryId ? "Update Itinerary" : "Create Itinerary"}
               </button>
-              
-              {editingItineraryId && (
-                <button
-                  onClick={handleCancelUpdate}
-                  className="bg-white/90 text-gray-700 font-semibold text-sm px-4 py-2 rounded-lg hover:bg-white shadow transition"
-                >
-                  Cancel
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("myItineraries")}
+                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 ${
+                  activeTab === "myItineraries"
+                    ? "text-[#f04e37]"
+                    : "text-white hover:text-white/80"
+                }`}
+              >
+                My Itineraries
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ---------------------------------------------- */}
-
-      {/* === MAIN BODY === */}
+      {/* === MAIN CONTENT === */}
       <MainLayout includeSideButtons={false}>
-        <div className="flex flex-1 px-2 scroll-smooth">
-          <div className="flex-1 w-full flex flex-col md:flex-row gap-4 py-4 px-3 md:pl-0 z-20">
-          {/* === LEFT COLUMN: My Itineraries === */}
-          <div className="w-full md:w-80 flex flex-col order-1 md:order-1">
-            <div className="flex flex-col gap-4">
-              <div className="bg-[#f04e37] rounded-xl ">
-                <button
-                  onClick={() => setShowMyItineraries((prev) => !prev)}
-                  className="w-full flex justify-between items-center font-bold text-white text-lg p-2 rounded-lg bg-white/10 hover:bg-white/20 md:hidden"
-                >
-                  My Itineraries
-                  {showMyItineraries ? <FaChevronUp /> : <FaChevronDown />}
-                </button>
-
-                {/* === My Itineraries Section === */}
-                <div
-                  className={`transition-all duration-300 ease-in-out flex flex-col overflow-hidden ${
-                    showMyItineraries
-                      ? "max-h-[65vh]"
-                      : "max-h-0 md:max-h-[65vh]"
-                  }`}
-                >
-                  {/* Sticky Header (same as Available Sites) */}
-                  <div className="hidden md:block bg-[#f04e37] px-2 py-2 mb-2 border-b border-white/20 sticky top-0 z-10">
-                    <h2 className="text-2xl font-bold text-white">
-                      My Itineraries
-                    </h2>
+        <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8">
+          {/* CREATE ITINERARY TAB */}
+          {activeTab === "create" && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Form Section */}
+              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
+                  {editingItineraryId ? "Update Your Itinerary" : "Create New Itinerary"}
+                </h2>
+                
+                <div className="space-y-4">
+                  {/* Itinerary Name */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Itinerary Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={itineraryName}
+                      onChange={(e) => setItineraryName(e.target.value)}
+                      placeholder="e.g., Historical Tour, Weekend Adventure"
+                      className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                    />
                   </div>
 
-                  {/* Scrollable List */}
-                  <div className="flex-1 overflow-y-auto px-2 pb-24 md:pb-6 scroll-smooth">
-                    {userItineraries.length === 0 ? (
-                      <p className="text-white/80 text-sm">
-                        No itineraries created yet.
-                      </p>
-                    ) : (
-                      userItineraries.map((itinerary, idx) => (
-                        <ItineraryCard
-                          key={itinerary._id}
-                          itinerary={itinerary}
-                          expanded={expandedIndex === idx}
-                          toggleExpand={() => toggleExpand(idx)}
-                          handleDelete={handleDelete}
-                          handleEdit={handleEdit}
-                          getFullImageUrl={getFullImageUrl}
+                  {/* Image Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Cover Image (Optional)
+                    </label>
+                    {imageUrl ? (
+                      <div className="relative group">
+                        <img
+                          src={getFullImageUrl(imageUrl)}
+                          alt="Itinerary Preview"
+                          className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
                         />
-                      ))
+                        <button
+                          onClick={() => setShowDeleteImageModal(true)}
+                          className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-red-600 shadow-lg transition opacity-0 group-hover:opacity-100"
+                          title="Remove image"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#f04e37] hover:bg-gray-50 transition-all group">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-10 h-10 text-gray-400 group-hover:text-[#f04e37] transition-colors"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span className="mt-2 text-sm text-gray-500 group-hover:text-[#f04e37] transition-colors">
+                          Click to upload cover image
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Selected Sites Counter */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
+                    <span className="text-sm font-semibold text-gray-700">
+                      Sites Selected
+                    </span>
+                    <span className="text-2xl font-bold text-[#f04e37]">
+                      {selected.length}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleSave}
+                      className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                    >
+                      {editingItineraryId ? "Update Itinerary" : "Save Itinerary"}
+                    </button>
+                    {editingItineraryId && (
+                      <button
+                        onClick={handleCancelUpdate}
+                        className="px-6 py-3.5 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all"
+                      >
+                        Cancel
+                      </button>
                     )}
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* === RIGHT COLUMN: Available Sites === */}
-          <div className="flex-1 flex flex-col order-2 overflow-hidden">
-            {/* Header fixed at top of this section */}
-            <div className="bg-[#f04e37] px-2 py-2 mb-2 border-b border-white/20">
-              <h2 className="text-2xl font-bold text-white">Available Sites</h2>
+              {/* Available Sites Section */}
+              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
+                  Available Sites
+                </h2>
+                
+                <SmoothScrollSiteList
+                  sites={sites}
+                  selected={selected}
+                  descriptionToggles={descriptionToggles}
+                  toggleDescription={toggleDescription}
+                  toggleSelection={toggleSelection}
+                  getFullImageUrl={getFullImageUrl}
+                />
+              </div>
             </div>
+          )}
 
-            {/* Scrollable site list */}
-            <SmoothScrollSiteList
-              sites={sites}
-              selected={selected}
-              descriptionToggles={descriptionToggles}
-              toggleDescription={toggleDescription}
-              toggleSelection={toggleSelection}
-              getFullImageUrl={getFullImageUrl}
-            />
-          </div>
-        </div>
+          {/* MY ITINERARIES TAB */}
+          {activeTab === "myItineraries" && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
+                  My Itineraries
+                </h2>
+                
+                {userItineraries.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium mb-2">
+                      No itineraries yet
+                    </p>
+                    <p className="text-gray-400 text-sm mb-6">
+                      Create your first itinerary to get started
+                    </p>
+                    <button
+                      onClick={() => setActiveTab("create")}
+                      className="bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-xl hover:scale-105 transition-all"
+                    >
+                      Create Itinerary
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {userItineraries.map((itinerary, idx) => (
+                      <ItineraryCard
+                        key={itinerary._id}
+                        itinerary={itinerary}
+                        expanded={expandedIndex === idx}
+                        toggleExpand={() => toggleExpand(idx)}
+                        handleDelete={handleDelete}
+                        handleEdit={handleEdit}
+                        getFullImageUrl={getFullImageUrl}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </MainLayout>
 
-      <footer className="text-center text-xs text-white opacity-70 py-4">
+      <footer className="text-center text-xs text-white/60 py-6 mt-auto">
         ©2025 Intramuros Administration
       </footer>
 
@@ -482,10 +639,15 @@ function SmoothScrollSiteList({
   return (
     <div
       ref={scrollContainerRef}
-      className="flex-1 overflow-y-auto px-2 pb-[calc(65vh-200px)] md:pb-8 max-h-[65vh] md:max-h-[70vh] snap-y snap-mandatory"
-      style={{ scrollBehavior: "smooth" }}
+      className="overflow-y-auto max-h-[600px]"
+      style={{ 
+        scrollBehavior: "smooth",
+        scrollSnapType: "y mandatory", // Enable vertical scroll snapping
+        scrollPaddingTop: "calc(50% - 200px)", // Center items in viewport (adjusted for card height)
+        scrollPaddingBottom: "calc(50% - 200px)"
+      }}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4" style={{ paddingBottom: "300px" }}>
         {sites.map((site, index) => (
           <SiteCard
             key={site._id}
@@ -530,10 +692,10 @@ function SiteCard({
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024); // lg breakpoint
     };
-    
+
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    
+
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
@@ -577,20 +739,22 @@ function SiteCard({
       const cardRect = card.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
 
-      // Calculate distance from the top of the container
-      const distanceFromTop = cardRect.top - containerRect.top;
+      // Calculate distance from the CENTER of the container
+      const containerCenter = containerRect.top + containerRect.height / 2;
+      const cardCenter = cardRect.top + cardRect.height / 2;
+      const distanceFromCenter = Math.abs(cardCenter - containerCenter);
       const cardHeight = cardRect.height;
 
-      // Define the glow zone (top portion of container)
-      const glowZoneHeight = cardHeight * 1.5;
+      // Define the glow zone (centered around middle of container)
+      const glowZoneRadius = cardHeight * 1.5;
 
-      if (distanceFromTop >= -cardHeight && distanceFromTop < glowZoneHeight) {
-        // Card is in the glow zone near the top
-        const normalizedPosition = Math.max(0, Math.min(1, distanceFromTop / glowZoneHeight));
-        
-        // Full glow at top (0), fades as it moves down
-        const opacity = 1 - (normalizedPosition * 0.6);
-        const scale = 1.05 - (normalizedPosition * 0.15);
+      if (distanceFromCenter < glowZoneRadius) {
+        // Card is in the glow zone near the center
+        const normalizedPosition = distanceFromCenter / glowZoneRadius;
+
+        // Full glow at center (0), fades as it moves away
+        const opacity = 1 - normalizedPosition * 0.6;
+        const scale = 1.05 - normalizedPosition * 0.15;
 
         setCardStyle({
           opacity: Math.max(0.4, opacity),
@@ -620,65 +784,79 @@ function SiteCard({
   return (
     <div
       ref={cardRef}
-      className="bg-white text-black rounded-xl shadow p-3 flex flex-col h-full transition-all duration-300 ease-out snap-start"
+      className="bg-white rounded-2xl shadow-lg hover:shadow-xl p-4 flex flex-col h-full transition-all duration-300 ease-out border border-gray-100"
       style={{
-        opacity: cardStyle.opacity,
-        transform: cardStyle.transform,
+        opacity: isMobile ? cardStyle.opacity : 1,
+        transform: isMobile ? cardStyle.transform : "scale(1)",
+        scrollSnapAlign: "center", // Snap to center of viewport
       }}
     >
-      <img
-        src={
-          site.mediaFiles?.find(m => m.type === "image")?.url
-            ? getFullImageUrl(site.mediaFiles.find(m => m.type === "image").url)
-            : site.mediaUrl 
+      <div className="relative mb-3 overflow-hidden rounded-xl group">
+        <img
+          src={
+            site.mediaFiles?.find((m) => m.type === "image")?.url
+              ? getFullImageUrl(
+                  site.mediaFiles.find((m) => m.type === "image").url
+                )
+              : site.mediaUrl
               ? getFullImageUrl(site.mediaUrl)
               : "https://via.placeholder.com/150"
-        }
-        alt={site.siteName}
-        className="w-full h-24 object-cover rounded-lg mb-2"
-        onError={(e) => {
-          e.currentTarget.src = "https://via.placeholder.com/150";
-        }}
-      />
-      <h3 className="font-bold text-[#f04e37] text-sm mb-1 line-clamp-1">
+          }
+          alt={site.siteName}
+          className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.src = "https://via.placeholder.com/150";
+          }}
+        />
+        {isSelected && (
+          <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+            <FaCheck className="text-sm" />
+          </div>
+        )}
+      </div>
+      
+      <h3 className="font-bold text-gray-800 text-base mb-2 line-clamp-2 min-h-[3rem]">
         {site.siteName}
       </h3>
+      
       <div
-        className={`text-gray-600 text-xs mb-2 flex-grow space-y-1 ${
-          !isExpanded ? "line-clamp-2" : ""
+        className={`text-gray-600 text-sm mb-3 flex-grow space-y-1 ${
+          !isExpanded ? "line-clamp-3" : ""
         }`}
       >
         {site.siteDescription ? (
-          site.siteDescription.split('\n\n').map((paragraph, index) => (
-            <p key={index}>{paragraph.trim()}</p>
-          ))
+          site.siteDescription
+            .split("\n\n")
+            .map((paragraph, index) => <p key={index}>{paragraph.trim()}</p>)
         ) : (
-          <p>No description available</p>
+          <p className="text-gray-400 italic">No description available</p>
         )}
       </div>
-      {site.siteDescription && site.siteDescription.length > 60 && (
+      
+      {site.siteDescription && site.siteDescription.length > 100 && (
         <button
-          className="text-xs text-[#f04e37] font-semibold mb-2 text-left"
+          className="text-sm text-[#f04e37] font-semibold mb-3 text-left hover:text-orange-600 transition-colors"
           onClick={() => toggleDescription(site._id)}
         >
           {isExpanded ? "Read less" : "Read more"}
         </button>
       )}
+      
       <button
         onClick={() => toggleSelection(site._id)}
-        className={`w-full py-2 rounded-lg font-semibold flex items-center justify-center gap-1 text-xs transition-all duration-200 ${
+        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
           isSelected
-            ? "bg-green-500 text-white"
-            : "bg-[#f04e37] text-white hover:bg-[#d43e2a]"
+            ? "bg-green-500 text-white hover:bg-green-600"
+            : "bg-gradient-to-r from-[#f04e37] to-orange-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95"
         }`}
       >
         {isSelected ? (
           <>
-            <FaCheck className="text-xs" /> Added
+            <FaCheck className="text-sm" /> Added to Itinerary
           </>
         ) : (
           <>
-            <FaPlus className="text-xs" /> Add
+            <FaPlus className="text-sm" /> Add to Itinerary
           </>
         )}
       </button>
@@ -700,85 +878,114 @@ function ItineraryCard({
     setDescExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   return (
-    <div className="bg-white text-black rounded-xl shadow p-4 mb-4">
-      {itinerary.imageUrl && (
-        <img
-          src={getFullImageUrl(itinerary.imageUrl)}
-          alt={itinerary.name}
-          className="w-full h-40 object-cover rounded-lg mb-3"
-        />
-      )}
+    <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
+      {/* Horizontal Layout */}
+      <div className="flex flex-col md:flex-row">
+        {/* Image Section */}
+        {itinerary.imageUrl && (
+          <div className="relative w-full md:w-64 h-48 md:h-auto flex-shrink-0">
+            <img
+              src={getFullImageUrl(itinerary.imageUrl)}
+              alt={itinerary.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/40 to-transparent"></div>
+          </div>
+        )}
 
-      <div className="flex justify-between items-center">
-        <p className="font-bold text-lg">{itinerary.name}</p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleEdit(itinerary)}
-            className="text-blue-500"
-          >
-            <FaEdit />
-          </button>
-          <button
-            onClick={() => handleDelete(itinerary._id)}
-            className="text-red-500"
-          >
-            <FaTrash />
-          </button>
-          <button onClick={toggleExpand}>
-            {expanded ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
+        {/* Content Section */}
+        <div className="flex-1 p-6">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="font-bold text-2xl text-gray-800 mb-2">{itinerary.name}</h3>
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 bg-orange-50 text-[#f04e37] px-3 py-1 rounded-full text-sm font-semibold">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                  </svg>
+                  {itinerary.sites?.length || 0} {itinerary.sites?.length === 1 ? "site" : "sites"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(itinerary)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all"
+              >
+                <FaEdit className="text-sm" />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={() => handleDelete(itinerary._id)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
+              >
+                <FaTrash className="text-sm" />
+                <span>Delete</span>
+              </button>
+            </div>
+            <button
+              onClick={toggleExpand}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+            >
+              {expanded ? (
+                <>
+                  <FaChevronUp className="text-sm" />
+                  <span>Hide Sites</span>
+                </>
+              ) : (
+                <>
+                  <FaChevronDown className="text-sm" />
+                  <span>View Sites ({itinerary.sites?.length || 0})</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+      
+      {/* Expanded Sites List */}
       {expanded && itinerary.sites?.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {itinerary.sites.map((site, idx) => {
-            const expandedDesc = descExpanded[idx];
-            return (
-              <div
-                key={idx}
-                className="flex items-center gap-3 bg-gray-100 p-2 rounded-lg"
-              >
-                <img
-                  src={
-                    site.mediaFiles?.find(m => m.type === "image")?.url
-                      ? getFullImageUrl(site.mediaFiles.find(m => m.type === "image").url)
-                      : site.mediaUrl 
+        <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fadeIn">
+          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">Included Sites</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {itinerary.sites.map((site, idx) => {
+              const expandedDesc = descExpanded[idx];
+              return (
+                <div
+                  key={idx}
+                  className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-sm transition-all"
+                >
+                  <img
+                    src={
+                      site.mediaFiles?.find((m) => m.type === "image")?.url
+                        ? getFullImageUrl(
+                            site.mediaFiles.find((m) => m.type === "image").url
+                          )
+                        : site.mediaUrl
                         ? getFullImageUrl(site.mediaUrl)
-                        : "https://via.placeholder.com/50"
-                  }
-                  alt={site.siteName}
-                  className="w-10 h-10 rounded object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = "https://via.placeholder.com/50";
-                  }}
-                />
-                <div className="flex-1">
-                  <p className="font-semibold">{site.siteName}</p>
-                  <div
-                    className={`text-xs text-gray-600 space-y-1 ${
-                      !expandedDesc ? "line-clamp-2" : ""
-                    }`}
-                  >
-                    {site.siteDescription ? (
-                      site.siteDescription.split('\n\n').map((paragraph, index) => (
-                        <p key={index}>{paragraph.trim()}</p>
-                      ))
-                    ) : (
-                      <p>No description available</p>
-                    )}
+                        : "https://via.placeholder.com/60"
+                    }
+                    alt={site.siteName}
+                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://via.placeholder.com/60";
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h5 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-1">{site.siteName}</h5>
+                    <p className="text-xs text-gray-500 line-clamp-2">
+                      {site.siteDescription || "No description available"}
+                    </p>
                   </div>
-                  {site.siteDescription && site.siteDescription.length > 60 && (
-                    <button
-                      className="text-xs text-[#f04e37] font-semibold"
-                      onClick={() => toggleSiteDescription(idx)}
-                    >
-                      {expandedDesc ? "Read less" : "Read more"}
-                    </button>
-                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

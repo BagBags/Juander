@@ -1,7 +1,7 @@
 // GuestProfilePage.jsx
 import React, { useEffect } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars } from "react-icons/fa";
-import { MdLanguage } from "react-icons/md";
+import { MdLanguage, MdSettings } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
@@ -51,6 +51,12 @@ export default function GuestProfilePage() {
       to: "/GuestProfile/GuestLanguage",
       disabled: false,
     },
+    {
+      icon: <MdSettings />,
+      label: t("settings") || "Settings",
+      to: "/GuestProfile/GuestSettings",
+      disabled: false,
+    },
   ];
 
   const handleLogout = () => {
@@ -74,6 +80,10 @@ export default function GuestProfilePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       className="min-h-screen bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
+      style={{
+        paddingTop: "max(env(safe-area-inset-top), 16px)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
       {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">

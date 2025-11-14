@@ -1,15 +1,34 @@
-import { React, useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import LogoHeader from "./logoHeader";
 import { useNavigate } from "react-router-dom";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import SideButtons from "../sideButtons";
 import { useTranslation } from "react-i18next";
-import GlobalTTSButton from "../../GlobalTTSButton";
 import ttsService from "../../../utils/textToSpeech";
+import TourProvider, { useTour } from "../../TourComponents/TourProvider";
+import { guestTourSteps } from "../../TourComponents/tourSteps";
 
 export default function GuestHomepage() {
+  return (
+    <TourProvider steps={guestTourSteps} userRole="guest">
+      <GuestHomepageContent />
+    </TourProvider>
+  );
+}
+
+function GuestHomepageContent() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { startTour } = useTour();
+  const [bgLoaded, setBgLoaded] = React.useState(false);
+
+  // Preload background image
+  useEffect(() => {
+    const bgImage = new Image();
+    bgImage.src = '/JuanderBGWeb.svg';
+    bgImage.onload = () => setBgLoaded(true);
+    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
+  }, []);
 
   // Load guest language preference on mount
   useEffect(() => {
@@ -24,23 +43,53 @@ export default function GuestHomepage() {
     ttsService.speak(t('tts_welcome'));
   }, [t]);
 
+  // Auto-start guest tutorial when flagged from GuestSettings
+  useEffect(() => {
+    const replay = sessionStorage.getItem("guestReplayTutorial") === "true";
+    if (replay) {
+      setTimeout(() => {
+        startTour();
+        sessionStorage.removeItem("guestReplayTutorial");
+      }, 800);
+    }
+  }, [startTour]);
+
   return (
-    <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-start px-4 sm:px-6 md:px-8 lg:px-10 relative"
-      style={{
-        backgroundImage: "url('/JuanderBGWeb.svg')",
-        backgroundColor: "#f04e37",
-      }}
-    >
-      {/* Logo Header */}
-      <div className="w-full mt-10 flex justify-center px-4">
+    <>
+      {/* Loading Screen */}
+      {!bgLoaded && (
+        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
+          </div>
+        </div>
+      )}
+      
+      <div
+        className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative"
+        style={{
+          backgroundImage: "url('/JuanderBGWeb.svg')",
+          backgroundColor: "#d9d9d9",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          touchAction: "none",
+          overscrollBehavior: "none",
+          WebkitOverscrollBehavior: "none",
+        }}
+      >
+        {/* Logo Header */}
+        <div className="w-full mt-10 flex justify-center px-4">
         <LogoHeader />
       </div>
 
       {/* Title */}
-      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10">
+      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10 px-4">
         <h5
-          className="text-[42px] sm:text-[60px] md:text-[72px] 
+          className="text-[38px] sm:text-[56px] md:text-[68px] 
              font-poppins font-extrabold tracking-tight leading-[1.1] 
              text-[#f5f5dc] drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
         >
@@ -54,7 +103,7 @@ export default function GuestHomepage() {
       {/* Explore Button (Mobile Only) */}
       <button
         onClick={() => navigate("/GuestItinerary")}
-        className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
+        className="absolute lg:top-[83%] lg:bottom-auto 
         left-1/2 -translate-x-1/2
         bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
         w-40 sm:w-40 lg:w-52 
@@ -62,6 +111,9 @@ export default function GuestHomepage() {
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200
         block md:hidden"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom) + 40px)",
+        }}
       >
         Explore
       </button>
@@ -69,7 +121,7 @@ export default function GuestHomepage() {
       {/* Sign Up to Explore Button (Desktop Only) */}
       <button
         onClick={() => navigate("/login")}
-        className="absolute bottom-10 lg:top-[83%] lg:bottom-auto 
+        className="absolute lg:top-[83%] lg:bottom-auto 
         left-1/2 -translate-x-1/2
         bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
         w-40 sm:w-40 lg:w-52 
@@ -77,15 +129,16 @@ export default function GuestHomepage() {
         text-sm sm:text-base lg:text-lg 
         hover:bg-yellow-500 focus:outline-none transition duration-200
         hidden md:block"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom) + 40px)",
+        }}
       >
         Sign up to Explore
       </button>
 
       {/* Floating Chatbot (Juan Mascot) */}
       <FloatingChatbot />
-      
-      {/* Global TTS Button */}
-      <GlobalTTSButton />
     </div>
+    </>
   );
 }

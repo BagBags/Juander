@@ -6,7 +6,7 @@ export const useApi = (api) => {
   const [mask, setMask] = useState(null);
   const [inverseMask, setInverseMask] = useState(null);
   const [pins, setPins] = useState([]);
-  const BACKEND_URL = "http://localhost:5000";
+  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
 
   // ✅ Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -48,7 +48,10 @@ export const useApi = (api) => {
           latitude: p.latitude,
           longitude: p.longitude,
           title: p.siteName || "Site",
+          siteName: p.siteName || "Site",
           description: p.siteDescription || "",
+          siteDescription: p.siteDescription || "",
+          siteDescriptionTagalog: p.siteDescriptionTagalog || "",
           mediaType: p.mediaType || "image",
           mediaUrl: resolveUrl(p.mediaUrl), // ✅ fixed
           mediaFiles: p.mediaFiles?.map((media) => ({
@@ -60,6 +63,9 @@ export const useApi = (api) => {
           arEnabled: p.arEnabled === true,
           arLink: p.arLink || "",
           status: p.status || "active",
+          category: p.category || null,
+          feeType: p.feeType || "none",
+          feeAmount: p.feeAmount || null,
         }));
 
         setPins(normalized);
@@ -67,7 +73,26 @@ export const useApi = (api) => {
         console.error("❌ Error fetching pins:", err);
       }
     };
+    
+    // Initial fetch
     fetchPins();
+    
+    // Set up polling to refetch pins every 30 seconds
+    const intervalId = setInterval(fetchPins, 30000);
+    
+    // Refetch when page becomes visible (user returns to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchPins();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup interval and event listener on unmount
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [api]);
 
   return { mask, inverseMask, pins };

@@ -30,6 +30,11 @@ export default function AdminContentMain() {
       iconPath: "/icons/Itineraries.svg",
       route: "/AdminItinerary",
     },
+    {
+      title: "Reviews",
+      iconPath: "/icons/Reviews.svg",
+      route: "/AdminReviews",
+    },
   ];
 
   const handleCardClick = (route) => {

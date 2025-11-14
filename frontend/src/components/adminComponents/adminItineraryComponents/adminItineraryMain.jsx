@@ -1,32 +1,71 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Edit, Trash2, Plus, Check, Upload, Archive, RotateCcw } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Check,
+  Upload,
+  Archive,
+  RotateCcw,
+  X,
+} from "lucide-react";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
   const [selectedSites, setSelectedSites] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [duration, setDuration] = useState(""); // Duration in hours
   const [imageFile, setImageFile] = useState(null); // <-- File state
   const [imagePreview, setImagePreview] = useState(""); // <-- Preview URL
+  const [imageUrl, setImageUrl] = useState(""); // <-- Store the actual image URL for deletion
   const [itineraries, setItineraries] = useState([]);
   const [archivedItineraries, setArchivedItineraries] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
+  
+  // Validation errors
+  const [errors, setErrors] = useState({
+    name: "",
+    description: "",
+    duration: "",
+    image: "",
+    sites: "",
+  });
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "warning",
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false,
+  });
 
   const ICON_SIZE = 20;
   const COVER_IMAGE_HEIGHT = 192;
 
-  const token = localStorage.getItem("token"); // Get admin token
-  const config = {
-    headers: { Authorization: `Bearer ${token}` },
+  // Helper function to get fresh config with token
+  const getConfig = () => {
+    const token = localStorage.getItem("token");
+    return {
+      headers: { Authorization: `Bearer ${token}` },
+    };
   };
 
   // Fetch pins
   useEffect(() => {
     const fetchPins = async () => {
       try {
-        const res = await axios.get("/api/pins", config);
+        const res = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/pins`,
+          getConfig()
+        );
         setPins(res.data);
       } catch (err) {
         console.error("Failed to fetch pins:", err);
@@ -43,7 +82,12 @@ export default function AdminItineraryMain() {
 
   const fetchItineraries = async () => {
     try {
-      const res = await axios.get("/api/itineraries", config);
+      const res = await axios.get(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries`,
+        getConfig()
+      );
       setItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch itineraries:", err);
@@ -52,7 +96,12 @@ export default function AdminItineraryMain() {
 
   const fetchArchivedItineraries = async () => {
     try {
-      const res = await axios.get("/api/itineraries/archived", config);
+      const res = await axios.get(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/itineraries/archived`,
+        getConfig()
+      );
       setArchivedItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch archived itineraries:", err);
@@ -77,120 +126,219 @@ export default function AdminItineraryMain() {
   };
 
   // Handle save / update itinerary
-  const handleSave = async () => {
-    if (!name.trim()) return alert("Please enter a name");
-    if (selectedSites.length === 0)
-      return alert("Please select at least one site before saving");
-
-    try {
-      let imageUrl = "";
-
-      // If user selected a new image, upload it
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append("image", imageFile);
-
-        const res = await axios.post("/api/itineraries/upload", formData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        });
-
-        // Backend should return full URL like http://localhost:5000/uploads/itineraries/...
-        imageUrl = res.data.imageUrl;
-      } else if (editingId) {
-        // Keep existing image when editing if no new file
-        const existing = itineraries.find((i) => i._id === editingId);
-        imageUrl = existing?.imageUrl || "";
-      }
-
-      const payload = {
-        name,
-        description,
-        imageUrl,
-        sites: selectedSites.map((s) => s._id),
-        isAdminCreated: true,
-      };
-
-      if (editingId) {
-        await axios.put(`/api/itineraries/${editingId}`, payload, config);
-        alert("Itinerary updated!");
-      } else {
-        await axios.post("/api/itineraries", payload, config);
-        alert("Itinerary saved!");
-      }
-
-      // Reset form
-      setName("");
-      setDescription("");
-      setImageFile(null);
-      setImagePreview("");
-      setSelectedSites([]);
-      setEditingId(null);
-      fetchItineraries();
-    } catch (err) {
-      console.error("Failed to save itinerary:", err);
-      alert("Failed to save itinerary");
+  const handleSave = () => {
+    // Validation
+    const newErrors = {};
+    if (!name.trim()) {
+      newErrors.name = "Itinerary name is required";
     }
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    }
+    if (!duration || duration <= 0) {
+      newErrors.duration = "Duration is required and must be greater than 0";
+    }
+    // Image is required for both new and edit
+    if (!imageFile && !imagePreview) {
+      newErrors.image = "Image is required";
+    }
+    if (selectedSites.length === 0) {
+      newErrors.sites = "Please select at least one site";
+    }
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: editingId ? "Update Itinerary?" : "Add New Itinerary?",
+      message: editingId 
+        ? `Are you sure you want to update the itinerary "${name}"?`
+        : `Are you sure you want to add the itinerary "${name}"?`,
+      confirmText: editingId ? "Update" : "Add Itinerary",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          let imageUrl = "";
+
+          // If user selected a new image, upload it
+          if (imageFile) {
+            const formData = new FormData();
+            formData.append("image", imageFile);
+
+            const res = await axios.post(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/upload`,
+              formData,
+              {
+                headers: {
+                  ...getConfig().headers,
+                  "Content-Type": "multipart/form-data",
+                },
+              }
+            );
+
+            imageUrl = res.data.imageUrl;
+          } else if (editingId) {
+            const existing = itineraries.find((i) => i._id === editingId);
+            imageUrl = existing?.imageUrl || "";
+          }
+
+          const payload = {
+            name,
+            description,
+            imageUrl,
+            duration: duration ? Number(duration) : 0,
+            sites: selectedSites.map((s) => s._id),
+            isAdminCreated: true,
+          };
+
+          if (editingId) {
+            await axios.put(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/${editingId}`,
+              payload,
+              getConfig()
+            );
+          } else {
+            await axios.post(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries`,
+              payload,
+              getConfig()
+            );
+          }
+
+          // Reset form
+          setName("");
+          setDescription("");
+          setDuration("");
+          setImageFile(null);
+          setImagePreview("");
+          setImageUrl("");
+          setSelectedSites([]);
+          setEditingId(null);
+          fetchItineraries();
+          setErrors({ name: "", description: "", duration: "", image: "", sites: "" }); // Clear errors
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to save itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
-  const handleArchive = async (id) => {
-    if (!confirm("Are you sure you want to archive this itinerary?")) return;
-
-    try {
-      await axios.put(`/api/itineraries/${id}/archive`, {}, config);
-      fetchItineraries();
-      fetchArchivedItineraries();
-      alert("Itinerary archived successfully!");
-    } catch (err) {
-      console.error("Failed to archive itinerary:", err);
-      alert("Failed to archive itinerary");
-    }
+  const handleArchive = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "info",
+      title: "Archive Itinerary?",
+      message: "This itinerary will be moved to the archived section. You can restore it later if needed.",
+      confirmText: "Archive",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/itineraries/${id}/archive`,
+            {},
+            getConfig()
+          );
+          fetchItineraries();
+          fetchArchivedItineraries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to archive itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
-  const handleRestore = async (id) => {
-    if (!confirm("Are you sure you want to restore this itinerary?")) return;
-
-    try {
-      await axios.put(`/api/itineraries/${id}/restore`, {}, config);
-      fetchItineraries();
-      fetchArchivedItineraries();
-      alert("Itinerary restored successfully!");
-    } catch (err) {
-      console.error("Failed to restore itinerary:", err);
-      alert("Failed to restore itinerary");
-    }
+  const handleRestore = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "restore",
+      title: "Restore Itinerary?",
+      message: "This itinerary will be restored to the active itineraries list and will be available for users again.",
+      confirmText: "Restore",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.put(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/itineraries/${id}/restore`,
+            {},
+            getConfig()
+          );
+          fetchItineraries();
+          fetchArchivedItineraries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to restore itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
-  const handlePermanentDelete = async (id) => {
-    if (!confirm("⚠️ PERMANENT DELETE: This action cannot be undone! Are you sure?")) return;
-
-    try {
-      await axios.delete(`/api/itineraries/${id}`, config);
-      fetchArchivedItineraries();
-      alert("Itinerary permanently deleted!");
-    } catch (err) {
-      console.error("Failed to delete itinerary:", err);
-      alert("Failed to delete itinerary");
-    }
+  const handlePermanentDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Permanent Delete?",
+      message: "WARNING: This action cannot be undone! The itinerary will be permanently deleted from the database.",
+      confirmText: "Delete Forever",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          await axios.delete(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/itineraries/${id}`,
+            getConfig()
+          );
+          fetchArchivedItineraries();
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to delete itinerary:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
   };
 
   const handleEdit = (itinerary) => {
+    // Clear any existing validation errors
+    setErrors({ name: "", description: "", duration: "", image: "", sites: "" });
+    
     setName(itinerary.name);
     setDescription(itinerary.description);
 
     // Only set preview if imageUrl exists
     if (itinerary.imageUrl) {
+      setImageUrl(itinerary.imageUrl); // Store the actual URL
       setImagePreview(
         itinerary.imageUrl.startsWith("http")
           ? itinerary.imageUrl
-          : `http://localhost:5000${itinerary.imageUrl}`
+          : `${
+              import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+              "http://localhost:5000"
+            }${itinerary.imageUrl}`
       ); // <-- prepend localhost if needed
     } else {
+      setImageUrl("");
       setImagePreview(""); // show placeholder
     }
 
     setImageFile(null); // clear any previously selected file
+    setDuration(itinerary.duration || "");
 
     const selected = pins.filter((pin) =>
       itinerary.sites?.some((site) => site._id === pin._id)
@@ -199,203 +347,343 @@ export default function AdminItineraryMain() {
     setEditingId(itinerary._id);
   };
 
+  const handleDeleteImage = () => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete Image?",
+      message: "Are you sure you want to remove this image? This action cannot be undone.",
+      confirmText: "Delete Image",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          // If editing an existing itinerary with an image URL, delete from server
+          if (editingId && imageUrl) {
+            await axios.delete(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/delete-image`,
+              {
+                ...getConfig(),
+                data: { imageUrl }
+              }
+            );
+          }
+          
+          // Clear local state
+          setImageFile(null);
+          setImagePreview("");
+          setImageUrl("");
+          setErrors({ ...errors, image: "" });
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+        } catch (err) {
+          console.error("Failed to delete image:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+        }
+      },
+    });
+  };
+
   return (
-    <div className="flex gap-6 p-6">
+    <>
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
+      
+      <div className="flex gap-6 p-6">
       {/* Form Panel */}
       <div className="w-1/2 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
         <h2 className="text-2xl font-bold text-gradient-red mb-4">
-          {editingId ? "Edit Itinerary" : "Add Itinerary"}
-        </h2>
-
-        {/* Cover Image Preview */}
-        <div
-          className="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center"
-          style={{ height: COVER_IMAGE_HEIGHT }}
-        >
-          {imagePreview ? (
-            <img
-              src={imagePreview}
-              alt="Itinerary Preview"
-              className="w-full h-full object-cover rounded-xl"
-              onError={(e) => {
-                e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
-              }}
-            />
-          ) : (
-            <span className="text-gray-400">Image Preview</span>
-          )}
-        </div>
-
-        {/* File Upload */}
-        <div className="w-full">
-          {!imageFile && !imagePreview ? (
-            <label className="flex flex-col items-center justify-center w-full h-13 px-4 border-2 border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-              <span className="text-gray-500 text-sm">Click to upload</span>
-              <input
-                type="file"
-                accept="image/png"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </label>
-          ) : (
-            <p className="text-sm text-green-600">Image uploaded ✓</p>
-          )}
-        </div>
-
-        {/* Inputs */}
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Itinerary Name"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm"
-        />
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description"
-          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none"
-        />
-
-        {/* Selected Sites */}
-        <div className="p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-700 text-sm h-28 overflow-y-auto">
-          {selectedSites.length ? (
-            selectedSites.map((site) => (
-              <span key={site._id} className="block">
-                • {site.siteName || site.title}
-              </span>
-            ))
-          ) : (
-            <span className="text-gray-400">No sites selected</span>
-          )}
-        </div>
-
-        {/* Buttons */}
-        <div className="flex gap-3 mt-2">
-          <button
-            onClick={handleSave}
-            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 rounded-lg hover:opacity-90 transition"
-          >
-            {editingId ? <Check size={ICON_SIZE} /> : <Plus size={ICON_SIZE} />}
-            {editingId ? "Update" : "Save"}
-          </button>
-          <button
-            onClick={() => {
-              setName("");
-              setDescription("");
-              setImageFile(null);
-              setImagePreview("");
-              setSelectedSites([]);
-              setEditingId(null);
-            }}
-            className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-
-      {/* Itineraries & Sites Panel */}
-      <div className="w-1/2 flex flex-col gap-6">
-        {/* Existing Itineraries */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 flex-1 flex flex-col">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Itineraries
+            {editingId ? "Edit Itinerary" : "Add Itinerary"}
           </h2>
-          
-          {/* Tabs */}
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setActiveTab("active")}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-                activeTab === "active"
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Active Itineraries ({itineraries.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("archived")}
-              className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-                activeTab === "archived"
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Archived ({archivedItineraries.length})
-            </button>
+
+          {/* Cover Image Preview */}
+          <div
+            className="w-full rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center relative"
+            style={{ height: COVER_IMAGE_HEIGHT }}
+          >
+            {imagePreview ? (
+              <>
+                <img
+                  src={imagePreview}
+                  alt="Itinerary Preview"
+                  className="w-full h-full object-cover rounded-xl"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://via.placeholder.com/192"; // fallback
+                  }}
+                />
+                <button
+                  onClick={handleDeleteImage}
+                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition"
+                  title="Delete image"
+                >
+                  <X size={20} />
+                </button>
+              </>
+            ) : (
+              <span className="text-gray-400">Image Preview</span>
+            )}
           </div>
 
-          {/* Scrollable itineraries list */}
-          <div className="flex flex-col gap-4 overflow-y-auto max-h-[50vh] pr-2">
-            {activeTab === "active" ? (
-              itineraries.length ? (
-                itineraries.map((itinerary) => (
-                  <div
-                    key={itinerary._id}
-                    className="border border-gray-200 rounded-xl p-5 bg-white 
+          {/* File Upload */}
+          <div className="w-full">
+            {!imageFile && !imagePreview ? (
+              <label className={`flex flex-col items-center justify-center w-full h-13 px-4 border-2 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition ${
+                errors.image ? "border-red-500" : "border-gray-300"
+              }`}>
+                <span className="text-gray-500 text-sm">Click to upload</span>
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={(e) => {
+                    handleFileChange(e);
+                    if (errors.image) {
+                      setErrors({ ...errors, image: "" });
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <p className="text-sm text-green-600">Image uploaded ✓</p>
+            )}
+            {errors.image && (
+              <p className="text-red-500 text-xs mt-1">{errors.image}</p>
+            )}
+          </div>
+
+          {/* Name Input */}
+          <div>
+            <input
+              type="text"
+              placeholder="Itinerary Name"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name && e.target.value.trim()) {
+                  setErrors({ ...errors, name: "" });
+                }
+              }}
+              className={`w-full border-2 rounded-lg p-3 text-sm focus:ring-2 outline-none transition ${
+                errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-red-400 focus:ring-red-200"
+              }`}
+            />
+            {errors.name && (
+              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+            )}
+          </div>
+
+          {/* Description */}
+          <textarea
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              if (errors.description && e.target.value.trim()) {
+                setErrors({ ...errors, description: "" });
+              }
+            }}
+            placeholder="Description"
+            className={`w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none ${
+              errors.description ? "border-red-500 focus:border-red-500 focus:ring-red-200" : ""
+            }`}
+          />
+          {errors.description && (
+            <p className="text-red-500 text-xs mt-1">{errors.description}</p>
+          )}
+
+          {/* Duration input */}
+          <div>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={duration}
+              onChange={(e) => {
+                setDuration(e.target.value);
+                if (errors.duration && e.target.value > 0) {
+                  setErrors({ ...errors, duration: "" });
+                }
+              }}
+              placeholder="Duration (hours)"
+              className={`w-full p-3 border-2 rounded-lg focus:ring-2 outline-none text-gray-700 text-sm transition ${
+                errors.duration ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+              }`}
+            />
+            {errors.duration && (
+              <p className="text-red-500 text-xs mt-1">{errors.duration}</p>
+            )}
+          </div>
+
+          {/* Selected Sites */}
+          <div className="p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-700 text-sm h-28 overflow-y-auto">
+            {selectedSites.length ? (
+              selectedSites.map((site) => (
+                <span key={site._id} className="block">
+                  • {site.siteName || site.title}
+                </span>
+              ))
+            ) : (
+              <span className="text-gray-400">No sites selected</span>
+            )}
+          </div>
+          {errors.sites && (
+            <p className="text-red-500 text-xs mt-1">{errors.sites}</p>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={handleSave}
+              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 rounded-lg hover:opacity-90 transition"
+            >
+              {editingId ? (
+                <Check size={ICON_SIZE} />
+              ) : (
+                <Plus size={ICON_SIZE} />
+              )}
+              {editingId ? "Update" : "Save"}
+            </button>
+            <button
+              onClick={() => {
+                setName("");
+                setDescription("");
+                setDuration("");
+                setImageFile(null);
+                setImagePreview("");
+                setImageUrl("");
+                setSelectedSites([]);
+                setEditingId(null);
+                setErrors({ name: "", description: "", duration: "", image: "", sites: "" });
+              }}
+              className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        {/* Itineraries & Sites Panel */}
+        <div className="w-1/2 flex flex-col gap-6">
+          {/* Existing Itineraries Card */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Itineraries
+              </h2>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setActiveTab("active")}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+                  activeTab === "active"
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Active Itineraries ({itineraries.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("archived")}
+                className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
+                  activeTab === "archived"
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Archived ({archivedItineraries.length})
+              </button>
+            </div>
+
+            {/* Scrollable itineraries list */}
+            <div className="flex flex-col gap-4 overflow-y-auto max-h-[45vh] pr-2">
+              {activeTab === "active" ? (
+                itineraries.length ? (
+                  itineraries.map((itinerary) => (
+                    <div
+                      key={itinerary._id}
+                      className="border border-gray-200 rounded-xl p-5 bg-white 
                shadow-sm hover:shadow-lg transition"
-                  >
-                    {/* Title + Subtitle */}
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      {itinerary.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {itinerary.description}
-                    </p>
-
-                    {/* Image */}
-                    {itinerary.imageUrl && (
-                      <img
-                        src={
-                          itinerary.imageUrl.startsWith("http")
-                            ? itinerary.imageUrl
-                            : `http://localhost:5000${itinerary.imageUrl}`
-                        }
-                        alt={itinerary.name}
-                        className="w-full h-48 object-cover rounded-xl mt-3"
-                        onError={(e) => {
-                          e.currentTarget.src = "https://via.placeholder.com/192";
-                        }}
-                      />
-                    )}
-
-                    {/* Sites */}
-                    {itinerary.sites?.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        Sites: {itinerary.sites.length}
+                    >
+                      {/* Title + Subtitle */}
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {itinerary.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {itinerary.description}
                       </p>
-                    )}
 
-                    {/* Actions */}
-                    <div className="flex gap-3 mt-4">
-                      <button
-                        onClick={() => handleEdit(itinerary)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 
+                      {itinerary.duration > 0 && (
+                        <p className="text-xs text-gray-500 mt-1 font-medium">
+                          Duration: {itinerary.duration}{" "}
+                          {itinerary.duration === 1 ? "hour" : "hours"}
+                        </p>
+                      )}
+
+                      {/* Image */}
+                      {itinerary.imageUrl && (
+                        <img
+                          src={
+                            itinerary.imageUrl.startsWith("http")
+                              ? itinerary.imageUrl
+                              : `${
+                                  import.meta.env.VITE_API_BASE_URL?.replace(
+                                    "/api",
+                                    ""
+                                  ) || "http://localhost:5000"
+                                }${itinerary.imageUrl}`
+                          }
+                          alt={itinerary.name}
+                          className="w-full h-48 object-cover rounded-xl mt-3"
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              "https://via.placeholder.com/192";
+                          }}
+                        />
+                      )}
+
+                      {/* Sites */}
+                      {itinerary.sites?.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Sites: {itinerary.sites.length}
+                        </p>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-3 mt-4">
+                        <button
+                          onClick={() => handleEdit(itinerary)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 
                 bg-yellow-500 hover:bg-yellow-700
                 text-white text-sm font-medium rounded-lg shadow-sm transition"
-                      >
-                        <Edit size={16} /> Edit
-                      </button>
+                        >
+                          <Edit size={16} /> Edit
+                        </button>
 
-                      <button
-                        onClick={() => handleArchive(itinerary._id)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 
+                        <button
+                          onClick={() => handleArchive(itinerary._id)}
+                          className="flex items-center justify-center gap-2 px-4 py-2 
                 bg-orange-500 hover:bg-orange-600 
                 text-white text-sm font-medium rounded-lg shadow-sm transition"
-                      >
-                        <Archive size={16} /> Archive
-                      </button>
+                        >
+                          <Archive size={16} /> Archive
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-400">No active itineraries found</p>
-              )
-            ) : (
-              archivedItineraries.length ? (
+                  ))
+                ) : (
+                  <p className="text-gray-400">No active itineraries found</p>
+                )
+              ) : archivedItineraries.length ? (
                 archivedItineraries.map((itinerary) => (
                   <div
                     key={itinerary._id}
@@ -409,6 +697,12 @@ export default function AdminItineraryMain() {
                     <p className="text-sm text-gray-400">
                       {itinerary.description}
                     </p>
+                    {itinerary.duration > 0 && (
+                      <p className="text-xs text-gray-500 mt-1 font-medium">
+                        Duration: {itinerary.duration}{" "}
+                        {itinerary.duration === 1 ? "hour" : "hours"}
+                      </p>
+                    )}
 
                     {/* Image */}
                     {itinerary.imageUrl && (
@@ -416,12 +710,18 @@ export default function AdminItineraryMain() {
                         src={
                           itinerary.imageUrl.startsWith("http")
                             ? itinerary.imageUrl
-                            : `http://localhost:5000${itinerary.imageUrl}`
+                            : `${
+                                import.meta.env.VITE_API_BASE_URL?.replace(
+                                  "/api",
+                                  ""
+                                ) || "http://localhost:5000"
+                              }${itinerary.imageUrl}`
                         }
                         alt={itinerary.name}
                         className="w-full h-48 object-cover rounded-xl mt-3 opacity-60"
                         onError={(e) => {
-                          e.currentTarget.src = "https://via.placeholder.com/192";
+                          e.currentTarget.src =
+                            "https://via.placeholder.com/192";
                         }}
                       />
                     )}
@@ -457,66 +757,87 @@ export default function AdminItineraryMain() {
                 ))
               ) : (
                 <p className="text-gray-400">No archived itineraries</p>
-              )
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Sites below */}
-          <h2 className="text-2xl font-bold text-gradient-red mt-6 mb-4">
-            Sites
-          </h2>
+          {/* Sites Card - Separate section */}
+          <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col border-2 border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Sites
+              </h2>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {pins.length} available
+              </span>
+            </div>
 
-          <div className="flex flex-col gap-4 max-h-[35vh] overflow-y-auto pr-2">
-            {pins.map((pin) => {
-              const isSelected = selectedSites.some((s) => s._id === pin._id);
-              return (
-                <div
-                  key={pin._id}
-                  className="flex items-center gap-4 rounded-2xl p-4 border border-gray-200 
+            <p className="text-sm text-gray-600 mb-4">
+              Select sites to add to your itinerary
+            </p>
+
+            {/* Scrollable sites list */}
+            <div className="flex flex-col gap-4 max-h-[40vh] overflow-y-auto pr-2">
+              {pins.map((pin) => {
+                const isSelected = selectedSites.some((s) => s._id === pin._id);
+                return (
+                  <div
+                    key={pin._id}
+                    className="flex items-center gap-4 rounded-2xl p-4 border border-gray-200 
           bg-white shadow-sm hover:shadow-md transition"
-                >
-                  {/* Thumbnail */}
-                  <img
-                    src={
-                      // Get first image from mediaFiles (not video)
-                      pin.mediaFiles?.find(m => m.type === "image")?.url
-                        ? `http://localhost:5000${pin.mediaFiles.find(m => m.type === "image").url}`
-                        : pin.mediaUrl || pin.image || "https://via.placeholder.com/80"
-                    }
-                    alt={pin.siteName || pin.title}
-                    className="object-cover rounded-xl flex-shrink-0"
-                    style={{ width: 80, height: 80 }}
-                  />
+                  >
+                    {/* Thumbnail */}
+                    <img
+                      src={
+                        // Get first image from mediaFiles (not video)
+                        pin.mediaFiles?.find((m) => m.type === "image")?.url
+                          ? `${
+                              import.meta.env.VITE_API_BASE_URL?.replace(
+                                "/api",
+                                ""
+                              ) || "http://localhost:5000"
+                            }${
+                              pin.mediaFiles.find((m) => m.type === "image").url
+                            }`
+                          : pin.mediaUrl ||
+                            pin.image ||
+                            "https://via.placeholder.com/80"
+                      }
+                      alt={pin.siteName || pin.title}
+                      className="object-cover rounded-xl flex-shrink-0"
+                      style={{ width: 80, height: 80 }}
+                    />
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-gray-800 truncate">
-                      {pin.siteName || pin.title}
-                    </h3>
-                    <p className="text-gray-500 text-sm line-clamp-2">
-                      {pin.description}
-                    </p>
-                  </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-800 truncate">
+                        {pin.siteName || pin.title}
+                      </h3>
+                      <p className="text-gray-500 text-sm line-clamp-2">
+                        {pin.description}
+                      </p>
+                    </div>
 
-                  {/* Action button */}
-                  <button
-                    onClick={() => toggleSite(pin)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition 
+                    {/* Action button */}
+                    <button
+                      onClick={() => toggleSite(pin)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition 
             ${
               isSelected
                 ? "bg-green-500 hover:bg-green-600"
                 : "bg-red-500 hover:bg-red-600"
             }`}
-                  >
-                    {isSelected ? <Check size={20} /> : <Plus size={20} />}
-                    {isSelected ? "Added" : "Add"}
-                  </button>
-                </div>
-              );
-            })}
+                    >
+                      {isSelected ? <Check size={20} /> : <Plus size={20} />}
+                      {isSelected ? "Added" : "Add"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      </>
   );
 }

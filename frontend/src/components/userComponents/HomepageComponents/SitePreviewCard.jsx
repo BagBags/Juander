@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { X, MapPin } from "lucide-react";
+import { X, MapPin, ChevronUp, Navigation, CheckCircle, Star } from "lucide-react";
 import { announceSiteInfo, announceArrival } from "../../../utils/textToSpeech";
 
 export default function SitePreviewCard({
@@ -8,6 +8,8 @@ export default function SitePreviewCard({
   isNearby,
   onExpand,
   onClose,
+  onMarkAsDone,
+  isVisited,
 }) {
   // Announce when site info appears or proximity changes
   useEffect(() => {
@@ -24,7 +26,12 @@ export default function SitePreviewCard({
   }, [selectedPin?._id, isNearby]);
 
   return (
-    <div className="absolute top-4 left-4 right-4 z-40 animate-slide-down">
+    <div 
+      className="absolute left-4 right-4 z-40 animate-slide-down"
+      style={{
+        top: "calc(env(safe-area-inset-top) + 16px)",
+      }}
+    >
       <div className="bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden">
         {/* Header with status indicator */}
         <div
@@ -95,16 +102,59 @@ export default function SitePreviewCard({
               {/* Distance badge */}
               {distance !== null && (
                 <div className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
-                  🛣️ {(distance / 1000).toFixed(2)} km away
+                  <Navigation className="w-3 h-3" />
+                  <span>{(distance / 1000).toFixed(2)} km away</span>
+                </div>
+              )}
+
+              {/* Done marker badge */}
+              {isVisited && (
+                <div className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-semibold ml-2">
+                  <CheckCircle className="w-3 h-3" />
+                  <span>Done</span>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Action Buttons */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            {/* Mark as Done Button */}
+            {onMarkAsDone && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMarkAsDone(selectedPin._id);
+                }}
+                className={`py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                  isVisited
+                    ? "bg-green-500 text-white"
+                    : "bg-[#f04e37] text-white hover:bg-[#e03d2d] active:scale-95"
+                }`}
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                {isVisited ? "Done" : "Mark Done"}
+              </button>
+            )}
+            
+            {/* Write Review Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExpand();
+              }}
+              className="py-2 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all"
+            >
+              <Star className="w-3.5 h-3.5" />
+              Write Review
+            </button>
+          </div>
+
           {/* Tap to expand hint */}
           <div className="mt-3 pt-3 border-t border-gray-200 text-center">
-            <p className="text-xs text-gray-500 font-medium">
-              👆 Tap to view full details
+            <p className="text-xs text-gray-500 font-medium flex items-center justify-center gap-1">
+              <ChevronUp className="w-3.5 h-3.5" />
+              <span>Tap to view full details</span>
             </p>
           </div>
         </div>

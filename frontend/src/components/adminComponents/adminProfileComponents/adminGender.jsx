@@ -16,7 +16,7 @@ export default function Gender() {
 
         if (!token) return;
 
-        const { data } = await axios.get("http://localhost:5000/api/auth/me", {
+        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -45,7 +45,7 @@ export default function Gender() {
       }
 
       const res = await axios.post(
-        "http://localhost:5000/api/auth/gender",
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/gender`,
         {
           gender:
             selected.charAt(0).toUpperCase() + selected.slice(1).toLowerCase(),

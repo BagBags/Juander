@@ -14,13 +14,7 @@ export default function GlobalTTSButton() {
   const handleToggle = () => {
     const newState = ttsService.toggle();
     setIsEnabled(newState);
-    
-    // Announce the change
-    if (newState) {
-      setTimeout(() => {
-        ttsService.speak(t('tts_voiceEnabled'));
-      }, 100);
-    }
+    // Don't announce activation
   };
 
   if (!ttsService.isSupported()) {

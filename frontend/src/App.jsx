@@ -33,6 +33,8 @@ import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
 import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
 import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
 import AdminItinerary from "./components/adminComponents/adminItineraryComponents/adminItinerary";
+import AdminReviews from "./components/adminComponents/adminReviewsComponents/adminReviews";
+import AdminReports from "./components/adminComponents/adminReportsComponents/adminReports";
 import AdminProfileLayout from "./components/adminComponents/adminProfileComponents/adminProfileLayout";
 import AdminProfile from "./components/adminComponents/adminProfileComponents/adminProfile";
 import AdminAccount from "./components/adminComponents/adminProfileComponents/adminAccount";
@@ -52,6 +54,7 @@ import Birthday from "./components/userComponents/ProfileComponents/Birthday";
 import Gender from "./components/userComponents/ProfileComponents/Gender";
 import Country from "./components/userComponents/ProfileComponents/Country";
 import Language from "./components/userComponents/ProfileComponents/Language";
+import Settings from "./components/userComponents/ProfileComponents/Settings";
 import TripArchives from "./components/userComponents/TripArchive/TripArchive";
 import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
 import TourMap from "./components/userComponents/TourMap/LazyUserMap";
@@ -68,6 +71,7 @@ import TouristProtectedRoute from "./components/TouristProtectedRoute";
 import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
 import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
 import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
+import GuestSettings from "./components/userComponents/GuestProfileComponents/GuestSettings";
 import NotFound from "./components/NotFound";
 import CompleteProfile from "./components/userComponents/CompleteProfile";
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
@@ -98,6 +102,7 @@ function AnimatedRoutes() {
         <Route path="/GuestProfile" element={<GuestProfileLayout />}>
           <Route index element={<GuestProfile />} />
           <Route path="GuestLanguage" element={<GuestLanguage />} />
+          <Route path="GuestSettings" element={<GuestSettings />} />
         </Route>
         <Route element={<AdminProtectedRoute />}>
           {/* Admin */}
@@ -110,6 +115,8 @@ function AnimatedRoutes() {
           <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
           <Route path="/AdminItinerary" element={<AdminItinerary />} />
           <Route path="/AdminPhotobooth" element={<AdminPhotobooth />} />
+          <Route path="/AdminReviews" element={<AdminReviews />} />
+          <Route path="/AdminReports" element={<AdminReports />} />
           <Route path="/AdminProfile" element={<AdminProfileLayout />}>
             <Route index element={<AdminProfile />} />
             <Route path="Account" element={<AdminAccount />} />
@@ -137,6 +144,7 @@ function AnimatedRoutes() {
             <Route path="Gender" element={<Gender />} />
             <Route path="Country" element={<Country />} />
             <Route path="Language" element={<Language />} />
+            <Route path="Settings" element={<Settings />} />
           </Route>
         </Route>
         {/* <Route element={<GuestProtectedRoute />}> */}
