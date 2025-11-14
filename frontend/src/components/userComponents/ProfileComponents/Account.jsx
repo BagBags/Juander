@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { Eye, EyeOff, AlertTriangle, Trash2 } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, Trash2, CheckCircle2, XCircle, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -33,6 +33,13 @@ export default function Account() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [notif, setNotif] = useState(null);
+  
+  // Notification helper
+  const notify = (type, message) => {
+    setNotif({ type, message });
+    setTimeout(() => setNotif(null), 3000);
+  };
   
   // Deactivation states
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -280,11 +287,11 @@ export default function Account() {
       setShowPassword(false);
       setShowConfirm(false);
       setErrors({});
-      setSuccessMessage(t("profileUpdated"));
+      notify("success", t("profileUpdated"));
       setOtpMessage("");
     } catch (err) {
       console.error("Update error:", err);
-      setOtpMessage(err.response?.data?.message || t("profileUpdateFailed"));
+      notify("error", err.response?.data?.message || t("profileUpdateFailed"));
     } finally {
       setLoading(false);
     }
@@ -310,12 +317,12 @@ export default function Account() {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       
-      // Redirect to home
-      alert("Your account has been successfully deactivated. All your itineraries and reviews have been deleted.");
-      navigate("/");
+      // Show success notification and redirect
+      notify("success", "Your account has been successfully deactivated. All your itineraries and reviews have been deleted.");
+      setTimeout(() => navigate("/"), 2000); // Delay navigation to show notification
     } catch (err) {
       console.error("Deactivation error:", err);
-      alert(err.response?.data?.message || "Failed to deactivate account");
+      notify("error", err.response?.data?.message || "Failed to deactivate account");
     } finally {
       setDeactivating(false);
     }
@@ -327,14 +334,36 @@ export default function Account() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden"
+      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden relative"
     >
+      {/* Professional Notification System */}
+      {notif && (
+        <div
+          className={`absolute top-4 left-1/2 z-[10000] w-auto min-w-[300px] max-w-md px-4 py-3 rounded-xl shadow-lg border animate-slideDown ${
+            notif.type === "success"
+              ? "bg-green-50 border-green-300 text-green-800"
+              : notif.type === "error"
+              ? "bg-red-50 border-red-300 text-red-800"
+              : "bg-blue-50 border-blue-300 text-blue-800"
+          }`}
+          style={{ transform: 'translateX(-50%)' }}
+        >
+          <div className="flex items-center gap-3">
+            {notif.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            ) : notif.type === "error" ? (
+              <XCircle className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <Info className="w-5 h-5 flex-shrink-0" />
+            )}
+            <p className="text-sm font-medium leading-relaxed">{notif.message}</p>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {successMessage && (
-              <p className="text-green-600 text-sm mb-2">{successMessage}</p>
-            )}
 
             {/* First Name */}
             <div>

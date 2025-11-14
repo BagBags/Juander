@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import TermsModal from "./TermsModal";
 import PrivacyModal from "./PrivacyModal";
+import GoogleSSOButton from "../shared/GoogleSSOButton";
 
 export default function SignupForm({ toggleForm }) {
   const navigate = useNavigate();
@@ -503,17 +503,12 @@ export default function SignupForm({ toggleForm }) {
         <hr className="flex-1 border-gray-300" />
       </div>
 
-      {/* Google Login */}
+      {/* Google Sign Up */}
       <div className="w-full">
-        <GoogleLogin
+        <GoogleSSOButton
           onSuccess={handleGoogleSignup}
           onError={() => setErrors({ general: "Google sign-up error" })}
-          width="100%"
           text="signup_with"
-          theme="outline"
-          size="large"
-          shape="rectangular"
-          logo_alignment="left"
         />
       </div>
 

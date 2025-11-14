@@ -25,6 +25,7 @@ import GpsConsentModal from "../../shared/GpsConsentModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import NotificationModal from "../../shared/NotificationModal";
+import ttsService from "../../../utils/textToSpeech";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
@@ -88,6 +89,15 @@ export default function TouristItineraryMap() {
   const getConfig = useCallback(() => {
     const token = localStorage.getItem("token");
     return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  }, []);
+
+  // Stop TTS when component unmounts (user exits the page)
+  useEffect(() => {
+    return () => {
+      // Cancel any ongoing TTS when leaving the page
+      ttsService.cancel();
+      console.log('🔇 TTS stopped on TouristItineraryMap unmount');
+    };
   }, []);
 
   // Debug: Component mount
@@ -240,17 +250,44 @@ export default function TouristItineraryMap() {
 
   // Go to next site (marks current as visited)
   const handleNextSite = useCallback(async () => {
-    // Mark current site as visited before moving to next
+    // Mark current site as visited before moving to next / ending tour
     const currentPin = optimizedPins[currentPinIndex];
     const updatedVisited = new Set(visitedSites);
     if (currentPin && !updatedVisited.has(currentPin._id)) {
       updatedVisited.add(currentPin._id);
       setVisitedSites(updatedVisited);
-      
+
       // Save to permanent visited-sites record (for Trip Archives)
       await markSiteAsVisited(currentPin);
     }
 
+    const isLastSite =
+      optimizedPins.length > 0 && currentPinIndex === optimizedPins.length - 1;
+
+    // If this is the last site, treat Next as "End Tour"
+    if (isLastSite) {
+      const allCompleted = updatedVisited.size === optimizedPins.length;
+
+      // Persist final position & visited state
+      saveProgress(currentPinIndex, updatedVisited, skippedSites, userLocation, optimizedPins);
+
+      if (allCompleted) {
+        setNotification({
+          isOpen: true,
+          type: 'success',
+          title: 'Congratulations!',
+          message:
+            'You have completed all sites in this itinerary! Click Restart to tour again.',
+          confirmText: 'Restart Tour',
+          secondaryText: 'Go back to homepage',
+          action: 'restart',
+        });
+      }
+
+      return;
+    }
+
+    // Normal next-site behavior
     const nextIndex = currentPinIndex + 1;
     if (nextIndex < optimizedPins.length) {
       setCurrentPinIndex(nextIndex);
@@ -452,206 +489,113 @@ export default function TouristItineraryMap() {
 
   /** Load saved progress from database */
   useEffect(() => {
+    if (!itineraryId || pins.length === 0 || hasLoadedProgressOnceRef.current) return;
+
     const loadProgress = async () => {
-      console.log('🔍 loadProgress called - itineraryId:', itineraryId, 'pins.length:', pins.length, 'optimizedPins.length:', optimizedPins.length);
-      
-      if (!itineraryId) {
-        console.log('❌ No itineraryId, skipping progress load');
-        return;
-      }
-      
-      if (pins.length === 0) {
-        console.log('❌ No pins loaded yet, skipping progress load');
-        return;
-      }
-      
-      // Prevent loading progress multiple times
-      if (hasLoadedProgressRef.current) {
-        console.log('✅ Progress already loaded from DB, skipping');
-        return;
-      }
-      
-      // Mark as loading
-      hasLoadedProgressRef.current = true;
-      console.log('🔄 Starting progress load...');
-      
+      console.log('🔍 loadProgress called - itineraryId:', itineraryId, 'pins.length:', pins.length);
+
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          console.log('❌ No token, guest user - running optimization');
-          // Mark as loaded for guest users (no database to load from)
-          hasLoadedProgressOnceRef.current = true;
-          // No saved progress for guest users, run optimization
-          if (userLocation && optimizedPins.length === 0) {
-            const optimized = optimizeRoute(userLocation, pins, new Set());
-            setOptimizedPins(optimized);
-            if (optimized.length > 0) {
-              setCurrentPinIndex(0);
-              setSelectedPin(optimized[0]);
-              setActivePin(optimized[0]);
-            }
-          }
+          console.log('❌ No token, guest user - skipping DB progress');
           return;
         }
-        
-        console.log('🔄 Loading progress from database for itinerary:', itineraryId);
-        
+
         const response = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/itinerary-progress/${itineraryId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        
+
         console.log('📊 Loaded progress from API:', response.data);
-        console.log('📊 API Response details - currentPinIndex:', response.data.currentPinIndex, 'visitedSites:', response.data.visitedSites?.length, 'optimizedOrder:', response.data.optimizedOrder?.length);
-        const { currentPinIndex, visitedSites, skippedSites, optimizedOrder } = response.data;
-        
-        // Mark that we've loaded progress from database
+
+        const {
+          currentPinIndex: savedIndex = 0,
+          visitedSites: visitedSitesArr = [],
+          skippedSites: skippedSitesArr = [],
+          optimizedOrder = [],
+        } = response.data;
+
         hasLoadedProgressOnceRef.current = true;
-        console.log('✅ Progress loaded from database - saveProgress now enabled');
-        
-        // Check if there's meaningful progress FIRST (before checking optimizedOrder)
-        const hasProgress = currentPinIndex > 0 || (visitedSites && visitedSites.length > 0) || (skippedSites && skippedSites.length > 0);
-        
-        // ALWAYS set visited/skipped sites (even if empty) to ensure state is initialized
-        const visitedSet = visitedSites && visitedSites.length > 0 ? new Set(visitedSites) : new Set();
-        const skippedSet = skippedSites && skippedSites.length > 0 ? new Set(skippedSites) : new Set();
-        
+
+        const visitedSet = new Set(visitedSitesArr);
+        const skippedSet = new Set(skippedSitesArr);
+
         setVisitedSites(visitedSet);
         setSkippedSites(skippedSet);
-        console.log('✅ Restored visited sites:', Array.from(visitedSet));
-        console.log('✅ Restored skipped sites:', Array.from(skippedSet));
-        
-        // Restore optimized pin order if available
+
+        let restoredPins = pins;
         if (optimizedOrder && optimizedOrder.length > 0) {
-          // Reconstruct optimized pins from saved order
-          const restoredPins = optimizedOrder
-            .map(siteId => pins.find(p => p._id === siteId))
-            .filter(Boolean); // Remove any null values
-          
-          setOptimizedPins(restoredPins);
-          console.log('✅ Restored optimized pin order from saved progress');
-          
-          // Check if all sites are completed
-          const allCompleted = visitedSites && visitedSites.length === restoredPins.length;
-          
-          if (allCompleted) {
-            // All sites visited - show completion notification
-            console.log('🎉 All sites completed!');
-            setNotification({
-              isOpen: true,
-              type: 'success',
-              title: 'Congratulations!',
-              message: 'You have completed all sites in this itinerary! Click Restart to tour again.'
-            });
-            
-            // Stay at last site, don't auto-reset
-            const lastIndex = restoredPins.length - 1;
-            setCurrentPinIndex(lastIndex);
-            setSelectedPin(restoredPins[lastIndex]);
-            setActivePin(restoredPins[lastIndex]);
-          } else {
-            // Check if there's meaningful progress
-            const hasProgress = currentPinIndex > 0 || (visitedSet.size > 0) || (skippedSet.size > 0);
-            
-            if (hasProgress) {
-              // IMMEDIATELY restore state - don't wait for modal
-              console.log('✅ Restoring progress immediately: pin', currentPinIndex, 'visited:', visitedSet.size);
-              
-              // Restore current position
-              if (currentPinIndex !== undefined && currentPinIndex < restoredPins.length) {
-                setCurrentPinIndex(currentPinIndex);
-                const currentPin = restoredPins[currentPinIndex];
-                setSelectedPin(currentPin);
-                setActivePin(currentPin);
-                console.log('✅ State restored to pin', currentPinIndex);
-              } else {
-                // Fallback to first pin
-                setCurrentPinIndex(0);
-                setSelectedPin(restoredPins[0]);
-                setActivePin(restoredPins[0]);
-              }
-              
-              // Save progress data for modal actions
-              setSavedProgress(response.data);
-              
-              // Show modal as informational (optional) - state already restored
-              setTimeout(() => {
-                setShowResumeModal(true);
-                console.log('✅ Resume modal shown (state already restored)');
-              }, 100);
-            } else {
-              // No progress, start fresh
-              if (restoredPins.length > 0) {
-                const firstPin = restoredPins[0];
-                setSelectedPin(firstPin);
-                setActivePin(firstPin);
-                setCurrentPinIndex(0);
-              }
-            }
-          }
-        } else if (hasProgress) {
-          // Has progress but no saved order - need to optimize
-          console.log('✅ Has progress but no saved order - will optimize with visited sites preserved');
-          
-          // ALWAYS save progress data to trigger restoration later
+          restoredPins = optimizedOrder
+            .map((siteId) => pins.find((p) => p._id === siteId))
+            .filter(Boolean);
+        }
+
+        if (restoredPins.length === 0) {
+          console.log('⚠️ No pins to restore from progress');
+          return;
+        }
+
+        setOptimizedPins(restoredPins);
+
+        const lastIndex = restoredPins.length - 1;
+        const allCompleted = visitedSet.size === restoredPins.length;
+        const isAtLastSite = savedIndex === lastIndex;
+        const hasProgress =
+          savedIndex > 0 || visitedSet.size > 0 || skippedSet.size > 0;
+
+        if (allCompleted && isAtLastSite) {
+          console.log('🎉 All sites completed and at last site - show congrats modal!');
+          setNotification({
+            isOpen: true,
+            type: 'success',
+            title: 'Congratulations!',
+            message:
+              'You have completed all sites in this itinerary! Click Restart to tour again.',
+            confirmText: 'Restart Tour',
+            secondaryText: 'Go back to homepage',
+            action: 'restart',
+          });
+
+          setCurrentPinIndex(lastIndex);
+          const lastPin = restoredPins[lastIndex];
+          setSelectedPin(lastPin);
+          setActivePin(lastPin);
+          return;
+        }
+
+        if (hasProgress) {
+          const safeIndex =
+            savedIndex >= 0 && savedIndex < restoredPins.length ? savedIndex : 0;
+          setCurrentPinIndex(safeIndex);
+          const currentPin = restoredPins[safeIndex];
+          setSelectedPin(currentPin);
+          setActivePin(currentPin);
+
           setSavedProgress(response.data);
-          
-          // If userLocation is available, optimize immediately
-          if (userLocation && pins.length > 0) {
-            const optimized = optimizeRoute(userLocation, pins, visitedSet);
-            setOptimizedPins(optimized);
-            console.log('✅ Optimized pins created with visited sites:', Array.from(visitedSet));
-            
-            // Restore to current index
-            const resumeIndex = currentPinIndex || 0;
-            if (resumeIndex < optimized.length) {
-              setCurrentPinIndex(resumeIndex);
-              const resumePin = optimized[resumeIndex];
-              setSelectedPin(resumePin);
-              setActivePin(resumePin);
-              if (userLocation) {
-                buildRoute(userLocation, resumePin);
-              }
-              console.log('✅ State restored to pin', resumeIndex);
-            }
-            
-            // IMPORTANT: Save the newly created optimizedOrder to database
-            saveProgress(resumeIndex, visitedSet, skippedSet, userLocation, optimized);
-            console.log('✅ Saved newly created optimizedOrder to database');
-            
-            // Show modal
+
+          if (!isAtLastSite) {
             setTimeout(() => {
               setShowResumeModal(true);
-              console.log('✅ Resume modal shown');
+              console.log('✅ Resume/Restart modal shown');
             }, 100);
-          } else {
-            // UserLocation not ready yet - will optimize when it becomes available
-            console.log('⏳ Waiting for userLocation to optimize route (visited sites preserved)');
           }
-        } else {
-          // No progress at all, start fresh
-          console.log('⏳ No progress, will optimize when userLocation is available');
+
+          return;
         }
+
+        // No progress, start at first pin
+        setCurrentPinIndex(0);
+        const firstPin = restoredPins[0];
+        setSelectedPin(firstPin);
+        setActivePin(firstPin);
       } catch (error) {
         console.error('Error loading progress:', error);
-        // Mark as loaded even on error so saves can happen
         hasLoadedProgressOnceRef.current = true;
-        // If error, run optimization from scratch
-        if (userLocation && optimizedPins.length === 0) {
-          const optimized = optimizeRoute(userLocation, pins, new Set());
-          setOptimizedPins(optimized);
-          if (optimized.length > 0 && !selectedPin) {
-            const firstPin = optimized[0];
-            setSelectedPin(firstPin);
-            setActivePin(firstPin);
-            setCurrentPinIndex(0);
-          }
-        }
       }
     };
-    
+
     loadProgress();
-  }, [itineraryId, pins.length]);
+  }, [itineraryId, pins, hasLoadedProgressOnceRef]);
 
   // Run optimization when userLocation becomes available WITH saved progress (on refresh)
   useEffect(() => {
@@ -740,9 +684,15 @@ export default function TouristItineraryMap() {
         if (userLocation) {
           buildRoute(userLocation, firstPin);
         }
-        // Save NEW optimized order with current visited/skipped flags (don't reset flags)
-        // Pass optimized array directly to ensure new order is saved
-        await saveProgress(0, visitedSites, skippedSites, userLocation, optimized);
+        // CRITICAL: Save restart state to database with currentPinIndex=0
+        // This ensures refresh loads first site, not last saved position
+        console.log('🔄 RESTART: Saving currentPinIndex=0 to database...');
+        try {
+          await saveProgress(0, visitedSites, skippedSites, userLocation, optimized);
+          console.log('✅ RESTART: Successfully saved currentPinIndex=0 to database');
+        } catch (error) {
+          console.error('❌ RESTART: Failed to save to database:', error);
+        }
         console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags');
       }
     }
@@ -1580,6 +1530,7 @@ export default function TouristItineraryMap() {
             onNextSite={handleNextSite}
             hasPrevSite={currentPinIndex > 0}
             hasNextSite={currentPinIndex < optimizedPins.length - 1}
+            isLastSite={currentPinIndex === optimizedPins.length - 1}
         />
 
         {/* Control Buttons */}
@@ -1645,6 +1596,18 @@ export default function TouristItineraryMap() {
           type={notification.type}
           title={notification.title}
           message={notification.message}
+          confirmText={notification.confirmText || 'OK'}
+          onConfirm={
+            notification.action === 'restart'
+              ? handleRestartProgress
+              : undefined
+          }
+          secondaryText={notification.secondaryText}
+          onSecondary={
+            notification.action === 'restart'
+              ? () => navigate('/Homepage')
+              : undefined
+          }
         />
       </div>
     </div>

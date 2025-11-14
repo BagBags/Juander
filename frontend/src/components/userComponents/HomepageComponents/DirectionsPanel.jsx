@@ -16,6 +16,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
   onNextSite,
   hasPrevSite,
   hasNextSite,
+  isLastSite,
 }) {
   const lastAnnouncedStep = useRef(-1);
 
@@ -27,9 +28,35 @@ const DirectionsPanel = memo(function DirectionsPanel({
         return;
       }
 
+      const step = steps[currentStepIndex];
+
+      // Base fallback instruction from Mapbox
+      let instructionText = step?.maneuver?.instruction || "Follow route";
+
+      // Try to build a Waze/Google-style phrase when data is available
+      const distanceMeters = step?.distance; // meters for this step
+      const streetName = step?.name;
+      const maneuverType = step?.maneuver?.type;
+      const maneuverModifier = step?.maneuver?.modifier; // e.g. "left" | "right"
+
+      const isTurn = maneuverType === "turn" || maneuverType === "new name";
+      const isLeftOrRight = maneuverModifier === "left" || maneuverModifier === "right";
+
+      if (isTurn && isLeftOrRight && streetName) {
+        const directionWord = maneuverModifier === "left" ? "left" : "right";
+
+        if (typeof distanceMeters === "number" && distanceMeters > 0) {
+          // Round to the nearest 10 meters for a cleaner announcement
+          const rounded = Math.max(10, Math.round(distanceMeters / 10) * 10);
+          instructionText = `In ${rounded} meters, turn ${directionWord} into ${streetName}`;
+        } else {
+          // No reliable distance – treat as being at the turn already
+          instructionText = `Turn ${directionWord} into ${streetName}`;
+        }
+      }
+
       // Announce immediately when step changes
-      const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
-      announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
+      announceDirectionStep(instructionText, currentStepIndex + 1, steps.length);
       lastAnnouncedStep.current = currentStepIndex;
     }
   }, [currentStepIndex, steps]);
@@ -123,17 +150,17 @@ const DirectionsPanel = memo(function DirectionsPanel({
           Skip
         </button>
 
-        {/* Next Site Button */}
+        {/* Next Site / End Tour Button */}
         <button
           onClick={onNextSite}
-          disabled={!hasNextSite}
+          disabled={!hasNextSite && !isLastSite}
           className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
-            hasNextSite
+            hasNextSite || isLastSite
               ? "bg-[#f04e37] text-white hover:bg-[#d9442f] active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          Next Site
+          {isLastSite ? "End Tour" : "Next Site"}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
