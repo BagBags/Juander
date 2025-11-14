@@ -1,5 +1,12 @@
 import mbxDirections from "@mapbox/mapbox-sdk/services/directions";
 import { polygon } from "@turf/helpers";
+import mapboxgl from "mapbox-gl";
+
+// Configure mapbox-gl to work with PWA and service workers
+// This prevents worker loading issues in PWA mode
+if (typeof window !== 'undefined') {
+  mapboxgl.workerClass = null; // Let mapbox-gl handle worker loading automatically
+}
 
 export const MAPBOX_TOKEN =
   "pk.eyJ1IjoiY2hhcmxlczI5ZyIsImEiOiJjbWNrYWVzYmUwYzY4MmpweGcwZDN0c25iIn0.JJ7mcLEqZchHFAV5XY776A";

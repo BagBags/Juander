@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from "react";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
+import React, { useEffect, useRef, memo } from "react";
+import { ChevronLeft, ChevronRight, SkipForward, Clock } from "lucide-react";
 import { announceDirectionStep } from "../../../utils/textToSpeech";
 
-export default function DirectionsPanel({
+const DirectionsPanel = memo(function DirectionsPanel({
   steps,
   currentStepIndex,
   setCurrentStepIndex,
@@ -10,11 +10,17 @@ export default function DirectionsPanel({
   distance,
   arrivalTime,
   transportMode,
+  isRouting,
+  onPrevSite,
+  onSkipSite,
+  onNextSite,
+  hasPrevSite,
+  hasNextSite,
+  isLastSite,
 }) {
   const lastAnnouncedStep = useRef(-1);
-  const announceTimeout = useRef(null);
 
-  // Announce direction changes with debouncing
+  // Announce direction changes immediately when step updates
   useEffect(() => {
     if (steps.length > 0 && steps[currentStepIndex]) {
       // Only announce if step actually changed
@@ -22,25 +28,37 @@ export default function DirectionsPanel({
         return;
       }
 
-      // Clear any pending announcement
-      if (announceTimeout.current) {
-        clearTimeout(announceTimeout.current);
+      const step = steps[currentStepIndex];
+
+      // Base fallback instruction from Mapbox
+      let instructionText = step?.maneuver?.instruction || "Follow route";
+
+      // Try to build a Waze/Google-style phrase when data is available
+      const distanceMeters = step?.distance; // meters for this step
+      const streetName = step?.name;
+      const maneuverType = step?.maneuver?.type;
+      const maneuverModifier = step?.maneuver?.modifier; // e.g. "left" | "right"
+
+      const isTurn = maneuverType === "turn" || maneuverType === "new name";
+      const isLeftOrRight = maneuverModifier === "left" || maneuverModifier === "right";
+
+      if (isTurn && isLeftOrRight && streetName) {
+        const directionWord = maneuverModifier === "left" ? "left" : "right";
+
+        if (typeof distanceMeters === "number" && distanceMeters > 0) {
+          // Round to the nearest 10 meters for a cleaner announcement
+          const rounded = Math.max(10, Math.round(distanceMeters / 10) * 10);
+          instructionText = `In ${rounded} meters, turn ${directionWord} into ${streetName}`;
+        } else {
+          // No reliable distance – treat as being at the turn already
+          instructionText = `Turn ${directionWord} into ${streetName}`;
+        }
       }
 
-      // Debounce announcements - wait 2 seconds before announcing
-      // This prevents rapid-fire announcements when location updates frequently
-      announceTimeout.current = setTimeout(() => {
-        const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
-        announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
-        lastAnnouncedStep.current = currentStepIndex;
-      }, 2000);
+      // Announce immediately when step changes
+      announceDirectionStep(instructionText, currentStepIndex + 1, steps.length);
+      lastAnnouncedStep.current = currentStepIndex;
     }
-
-    return () => {
-      if (announceTimeout.current) {
-        clearTimeout(announceTimeout.current);
-      }
-    };
   }, [currentStepIndex, steps]);
 
   if (steps.length === 0) return null;
@@ -62,7 +80,12 @@ export default function DirectionsPanel({
     : undefined;
 
   return (
-    <div className="absolute bottom-3 left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl p-4 text-sm flex flex-col items-center z-40 border border-gray-200 rounded-2xl">
+    <div 
+      className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl p-4 text-sm flex flex-col items-center z-40 border border-gray-200 rounded-2xl"
+      style={{
+        bottom: 'max(12px, env(safe-area-inset-bottom, 12px))'
+      }}
+    >
       <div className="flex items-center gap-2 mb-2">
         <h4 className="font-semibold text-gray-800">Directions</h4>
         {modeLabel && (
@@ -97,34 +120,52 @@ export default function DirectionsPanel({
         </div>
       )}
 
-      {/* Navigation Controls */}
-      <div className="flex justify-between w-full">
+      {/* Site Navigation Controls */}
+      <div className="flex gap-2 w-full">
+        {/* Previous Site Button */}
         <button
-          onClick={() => setCurrentStepIndex((prev) => Math.max(prev - 1, 0))}
-          disabled={currentStepIndex === 0}
-          className={`px-3 py-1 rounded-md text-sm font-medium shadow flex items-center gap-1 ${
-            currentStepIndex === 0
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-[#f04e37] text-white hover:bg-[#d9442f]"
+          onClick={onPrevSite}
+          disabled={!hasPrevSite}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+            hasPrevSite
+              ? "bg-gray-200 text-gray-700 hover:bg-gray-300 active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          <ArrowLeft className="w-4 h-4" /> Prev
+          <ChevronLeft className="w-4 h-4" />
+          Prev Site
         </button>
 
+        {/* Skip Site Button */}
         <button
-          onClick={() =>
-            setCurrentStepIndex((prev) => Math.min(prev + 1, steps.length - 1))
-          }
-          disabled={currentStepIndex === steps.length - 1}
-          className={`px-3 py-1 rounded-md text-sm font-medium shadow flex items-center gap-1 ${
-            currentStepIndex === steps.length - 1
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-[#f04e37] text-white hover:bg-[#d9442f]"
+          onClick={onSkipSite}
+          disabled={!hasNextSite}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+            hasNextSite
+              ? "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          Next <ArrowRight className="w-4 h-4" />
+          <SkipForward className="w-4 h-4" />
+          Skip
+        </button>
+
+        {/* Next Site / End Tour Button */}
+        <button
+          onClick={onNextSite}
+          disabled={!hasNextSite && !isLastSite}
+          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+            hasNextSite || isLastSite
+              ? "bg-[#f04e37] text-white hover:bg-[#d9442f] active:scale-95"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          }`}
+        >
+          {isLastSite ? "End Tour" : "Next Site"}
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
     </div>
   );
-}
+});
+
+export default DirectionsPanel;

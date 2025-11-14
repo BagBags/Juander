@@ -1,5 +1,5 @@
 // AdminTourMapMain.jsx
-import React, { useState, useRef, useEffect, Suspense } from "react";
+import React, { useState, useRef, useEffect, Suspense, Component } from "react";
 import Map, { Marker, Source, Layer } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -38,6 +38,29 @@ const ThreeDModelPreview = React.lazy(() =>
   import("../adminTourMapComponents/ThreeDModelPreview")
 );
 
+// Error Boundary for 3D Model
+class ModelErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.log('3D model preview failed, skipping:', error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Don't render anything on error
+    }
+    return this.props.children;
+  }
+}
+
 // ---------- Axios instance ----------
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
@@ -48,7 +71,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function AdminTourMapMain() {
+export default function AdminTourMapMain({ isExpanded }) {
   const [viewState, setViewState] = useState({
     latitude: 40.5896,
     longitude: 120.9747,
@@ -88,8 +111,16 @@ export default function AdminTourMapMain() {
   const [showGlbPreview, setShowGlbPreview] = useState(false);
   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
   
-  // Validation error for siteName
-  const [siteNameError, setSiteNameError] = useState("");
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState({
+    siteName: "",
+    siteDescription: "",
+    category: "",
+    latitude: "",
+    longitude: "",
+    facadeUrl: "",
+    mediaFiles: "",
+  });
 
   const adminMapRef = useRef(null);
   const drawRef = useRef(null);
@@ -210,6 +241,26 @@ export default function AdminTourMapMain() {
     };
     fetchData();
   }, []);
+
+  // Professional UX solution: Pure CSS transitions without map movement
+  useEffect(() => {
+    const map = adminMapRef.current?.getMap?.();
+    if (map) {
+      // Apply smooth CSS transitions to map container only
+      const mapContainer = map.getContainer();
+      if (mapContainer) {
+        mapContainer.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
+        mapContainer.style.willChange = 'auto';
+        
+        // Clean up transition after animation completes
+        const cleanup = setTimeout(() => {
+          mapContainer.style.willChange = 'auto';
+        }, 300);
+        
+        return () => clearTimeout(cleanup);
+      }
+    }
+  }, [isExpanded]);
 
   // ---------- Mask Editing ----------
   const enableMaskEditing = async () => {
@@ -394,8 +445,51 @@ export default function AdminTourMapMain() {
     const pinName = pin.siteName || `Pin #${index + 1}`;
     
     // Validation
+    const errors = {};
+    
     if (!pin.siteName || !pin.siteName.trim()) {
-      setSiteNameError("Site name is required");
+      errors.siteName = "Site name is required";
+    }
+    
+    if (!pin.siteDescription || !pin.siteDescription.trim()) {
+      errors.siteDescription = "Site description is required";
+    }
+    
+    // Handle both populated category (object) and category ID (string)
+    const categoryValue = typeof pin.category === 'object' ? pin.category?._id : pin.category;
+    if (!categoryValue) {
+      errors.category = "Category is required";
+    }
+    
+    if (!pin.latitude || isNaN(parseFloat(pin.latitude))) {
+      errors.latitude = "Valid latitude is required";
+    } else {
+      const lat = parseFloat(pin.latitude);
+      if (lat < -90 || lat > 90) {
+        errors.latitude = "Latitude must be between -90 and 90";
+      }
+    }
+    
+    if (!pin.longitude || isNaN(parseFloat(pin.longitude))) {
+      errors.longitude = "Valid longitude is required";
+    } else {
+      const lng = parseFloat(pin.longitude);
+      if (lng < -180 || lng > 180) {
+        errors.longitude = "Longitude must be between -180 and 180";
+      }
+    }
+    
+    if (!pin.facadeUrl || !pin.facadeUrl.trim()) {
+      errors.facadeUrl = "2D Facade image is required";
+    }
+    
+    if (!pin.mediaFiles || pin.mediaFiles.length === 0) {
+      errors.mediaFiles = "At least 1 media file is required";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      notify("error", "Please fill in all required fields");
       return;
     }
     
@@ -413,10 +507,19 @@ export default function AdminTourMapMain() {
           let saved;
           if (pin._id) {
             const { _id, ...payload } = pin;
+            // Ensure category is sent as ID only, not the populated object
+            if (payload.category && typeof payload.category === 'object') {
+              payload.category = payload.category._id;
+            }
             const res = await api.put(`/pins/${_id}`, payload);
             saved = res.data;
           } else {
-            const res = await api.post("/pins", pin);
+            // Ensure category is sent as ID only, not the populated object
+            const pinData = { ...pin };
+            if (pinData.category && typeof pinData.category === 'object') {
+              pinData.category = pinData.category._id;
+            }
+            const res = await api.post("/pins", pinData);
             saved = res.data;
           }
           setPins((prev) => prev.map((p, i) => (i === index ? saved : p)));
@@ -424,7 +527,7 @@ export default function AdminTourMapMain() {
           setSelectedPin(null);
           setOriginalPinData(null);
           setIsAddingPin(false);
-          setSiteNameError(""); // Clear error
+          setValidationErrors({}); // Clear all errors
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
@@ -758,8 +861,19 @@ export default function AdminTourMapMain() {
     try {
       notify("info", "Deleting media file...");
       
-      // Call backend to delete the file and update database
-      await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
+      // Only call backend if the pin has been saved (has _id)
+      // For newly uploaded files that haven't been saved, just remove from local state
+      if (pin._id) {
+        try {
+          await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
+        } catch (error) {
+          // If backend returns 400 (invalid index), it means the file wasn't saved yet
+          // Just remove from local state
+          if (error.response?.status !== 400) {
+            throw error; // Re-throw if it's a different error
+          }
+        }
+      }
       
       // Update local state
       setPins((prev) => {
@@ -770,7 +884,7 @@ export default function AdminTourMapMain() {
         return updated;
       });
       
-      notify("success", "Media file deleted successfully");
+      notify("success", "Media file removed");
     } catch (error) {
       console.error("Error removing media file:", error);
       notify("error", "Failed to delete media file. Please try again.");
@@ -791,8 +905,8 @@ export default function AdminTourMapMain() {
         loading={confirmModal.loading}
       />
       
-      <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
-      <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="w-full h-screen bg-gray-100">
+      <div className="relative w-full h-full bg-white overflow-hidden">
         {loading && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[10000] bg-white/90 border border-gray-200 px-3 py-1 rounded shadow">
             Loading…
@@ -821,29 +935,42 @@ export default function AdminTourMapMain() {
             </div>
           </div>
         )}
+        
         {/* 3D Model Preview */}
-        {showGlbPreview && (
-          <Suspense
-            fallback={
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
-                Loading 3D preview…
-              </div>
-            }
-          >
-            <ThreeDModelPreview url={currentGlbUrl} />
-          </Suspense>
+        {currentGlbUrl && (
+          <ModelErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
+                  Loading 3D preview…
+                </div>
+              }
+            >
+              <ThreeDModelPreview url={currentGlbUrl} />
+            </Suspense>
+          </ModelErrorBoundary>
         )}
 
         {/* Map */}
         <Map
           ref={adminMapRef}
-          initialViewState={{ ...viewState, minZoom: 15.5 }}
+          initialViewState={{
+            latitude: 14.5906,
+            longitude: 120.9747,
+            zoom: 16,
+            bearing: 45,
+            minZoom: 5
+          }}
           maxBounds={INTRAMUROS_BOUNDS}
           mapboxAccessToken={MAPBOX_TOKEN}
-          onMove={(evt) => setViewState(evt.viewState)}
           onClick={handleMapClick}
           mapStyle="mapbox://styles/mapbox/streets-v11"
-          style={{ width: "100%", height: "100%" }}
+          style={{ 
+            width: "100%", 
+            height: "100%",
+            transition: "all 300ms cubic-bezier(0.4, 0, 0.2, 1)",
+            willChange: "transform"
+          }}
         >
           {/* Inverse Mask Overlay - Dark outside bounds */}
           {inverseMask && (
@@ -883,6 +1010,13 @@ export default function AdminTourMapMain() {
               draggable={draggablePinIndex === index}
               onDragEnd={async (event) => {
                 const { lng, lat } = event.lngLat;
+
+                // Validate if new position is inside Intramuros mask
+                if (!isInsideMask(lng, lat)) {
+                  notify("error", "Pin must be placed within Intramuros bounds");
+                  // Revert to original position
+                  return;
+                }
 
                 // Update local state immediately
                 updatePinField(index, "latitude", lat);
@@ -947,6 +1081,8 @@ export default function AdminTourMapMain() {
               onClose={closePinCard}
               categories={categories}
               fetchCategories={fetchCategories}
+              validationErrors={validationErrors}
+              setValidationErrors={setValidationErrors}
             />
           </Suspense>
         )}
@@ -1212,7 +1348,7 @@ export default function AdminTourMapMain() {
               </div>
 
               {/* Pins Grid */}
-              <div className="flex-1 overflow-y-auto p-5 min-h-[500px]">
+              <div className="flex-1 overflow-y-auto p-5 pb-[140px] min-h-[500px]">
                 {activeTab === "active" ? (
                   (() => {
                     // Filter pins based on search and filters
@@ -1330,7 +1466,11 @@ export default function AdminTourMapMain() {
                             {/* Buttons - Original Design */}
                             <div className="flex gap-2 mt-auto">
                               <button
-                                onClick={() => { setShowPinsPanel(false); openPinCard(index); }}
+                                onClick={() => { 
+                                  setShowPinsPanel(false); 
+                                  const actualIndex = pins.findIndex(p => p._id === pin._id);
+                                  openPinCard(actualIndex); 
+                                }}
                                 className="flex-1 flex items-center justify-center gap-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-sm py-2 px-3 rounded-lg transition font-semibold shadow-sm"
                               >
                                 <Edit size={16} />

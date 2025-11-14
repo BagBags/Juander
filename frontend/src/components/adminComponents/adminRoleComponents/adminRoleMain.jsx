@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function RolesPage() {
   const [users, setUsers] = useState([]);
@@ -9,10 +10,70 @@ export default function RolesPage() {
   const [search, setSearch] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "danger",
+    title: "",
+    message: "",
+    onConfirm: null,
+    loading: false,
+  });
 
   useEffect(() => {
     fetchUsers();
     fetchCurrentUser();
+    
+    // Add modern custom scrollbar styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .admin-table-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .admin-table-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 8px;
+      }
+      .admin-table-scrollbar::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #f04e37, #e53e3e);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 2px 4px rgba(240, 78, 55, 0.2);
+        transition: all 0.3s ease;
+      }
+      .admin-table-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #e53e3e, #c53030);
+        box-shadow: 0 4px 8px rgba(240, 78, 55, 0.3);
+        transform: scale(1.1);
+      }
+      .admin-table-scrollbar::-webkit-scrollbar-thumb:active {
+        background: linear-gradient(135deg, #c53030, #9c2a2a);
+        box-shadow: 0 2px 4px rgba(240, 78, 55, 0.4);
+      }
+      .admin-table-scrollbar::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+      
+      /* Modern Firefox scrollbar */
+      .admin-table-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #f04e37 transparent;
+      }
+      
+      /* Smooth scrolling behavior */
+      .admin-table-scrollbar {
+        scroll-behavior: smooth;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   const fetchUsers = async () => {
@@ -80,6 +141,43 @@ export default function RolesPage() {
     }
   };
 
+  const handleDeleteUser = (user) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete User?",
+      message: `WARNING: This action cannot be undone! User "${user.firstName} ${user.lastName}" (${user.email}) will be permanently deleted from the database.`,
+      confirmText: "Delete Forever",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(
+            `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/users/${user._id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          // Remove user from local state
+          setUsers((prev) => prev.filter((u) => u._id !== user._id));
+          
+          // Reset to page 1 if current page becomes empty
+          const remainingUsers = users.filter((u) => u._id !== user._id);
+          const newTotalPages = Math.ceil(remainingUsers.length / usersPerPage);
+          if (currentPage > newTotalPages && newTotalPages > 0) {
+            setCurrentPage(1);
+          }
+
+          setConfirmModal({ isOpen: false, type: "danger", title: "", message: "", onConfirm: null, loading: false });
+          Swal.fire("Deleted!", "User has been permanently deleted.", "success");
+        } catch (err) {
+          console.error("Error deleting user:", err);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+          Swal.fire("Error!", err.response?.data?.message || "There was a problem deleting the user.", "error");
+        }
+      },
+    });
+  };
+
   // ✅ Search filter
   const filteredUsers = users.filter((user) => {
     const searchTerm = search.toLowerCase();
@@ -111,6 +209,12 @@ export default function RolesPage() {
     return 0;
   });
 
+  // Pagination
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = sortedUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(sortedUsers.length / usersPerPage);
+
   // ✅ Formatters
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -136,7 +240,12 @@ export default function RolesPage() {
     return map[lang] || lang;
   };
 
-  const isSuperAdmin = currentUser?.email === "aaronbagain@gmail.com";
+  const SUPER_ADMIN_EMAILS = [
+    "aaronbagain@gmail.com",
+    "sophiamikhaela.fabian.cics@ust.edu.ph"
+  ];
+  
+  const isSuperAdmin = currentUser?.email && SUPER_ADMIN_EMAILS.includes(currentUser.email);
 
   // ✅ Helper for header with sort arrows
   const renderSortableHeader = (label, key) => {
@@ -145,7 +254,7 @@ export default function RolesPage() {
     return (
       <th
         onClick={() => requestSort(key)}
-        className="px-6 py-3 cursor-pointer select-none"
+        className="px-6 py-3 cursor-pointer select-none min-w-[120px]"
       >
         <div className="flex items-center gap-1">
           {label}
@@ -186,7 +295,10 @@ export default function RolesPage() {
           type="text"
           placeholder="Search by name, last name, or email..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
           className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#f04e37] focus:outline-none"
         />
       </div>
@@ -196,16 +308,23 @@ export default function RolesPage() {
       ) : sortedUsers.length === 0 ? (
         <p className="text-gray-500 italic">No users found.</p>
       ) : (
-        <div className="overflow-auto max-h-[60vh] rounded-xl border border-gray-200">
-          <table className="min-w-full text-sm text-left">
+        <>
+        <div 
+          className="overflow-x-scroll overflow-y-visible rounded-xl border border-gray-200 admin-table-scrollbar shadow-sm"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#f04e37 transparent'
+          }}
+        >
+          <table className="min-w-max text-sm text-left">
             <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3">#</th>
+                <th className="px-6 py-3 min-w-[60px]">#</th>
                 {renderSortableHeader("First Name", "firstName")}
                 {renderSortableHeader("Last Name", "lastName")}
                 {renderSortableHeader("Email", "email")}
                 {renderSortableHeader("Role", "role")}
-                <th className="px-6 py-3">Action</th>
+                <th className="px-6 py-3 min-w-[140px]">Action</th>
                 {renderSortableHeader("Country", "country")}
                 {renderSortableHeader("Language", "language")}
                 {renderSortableHeader("Gender", "gender")}
@@ -215,17 +334,17 @@ export default function RolesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {sortedUsers.map((user, idx) => (
+              {currentUsers.map((user, idx) => (
                 <tr key={user._id} className="bg-white hover:bg-gray-50">
-                  <td className="px-6 py-3">{idx + 1}</td>
-                  <td className="px-6 py-3 font-medium text-gray-800">
+                  <td className="px-6 py-3 min-w-[60px]">{indexOfFirstUser + idx + 1}</td>
+                  <td className="px-6 py-3 font-medium text-gray-800 min-w-[120px]">
                     {formatName(user.firstName)}
                   </td>
-                  <td className="px-6 py-3 font-medium text-gray-800">
+                  <td className="px-6 py-3 font-medium text-gray-800 min-w-[120px]">
                     {formatName(user.lastName)}
                   </td>
-                  <td className="px-6 py-3 text-gray-600">{user.email}</td>
-                  <td className="px-6 py-3">
+                  <td className="px-6 py-3 text-gray-600 min-w-[200px]">{user.email}</td>
+                  <td className="px-6 py-3 min-w-[100px]">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold mr-2 ${
                         user.role === "admin"
@@ -236,48 +355,59 @@ export default function RolesPage() {
                       {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-3">
-                    {user.email === "aaronbagain@gmail.com" ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                        Super
-                      </span>
-                    ) : isSuperAdmin ? (
-                      <select
-                        value={user.role}
-                        onChange={(e) =>
-                          confirmRoleChange(user._id, e.target.value)
-                        }
-                        className="min-w-[120px] border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-white hover:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37] focus:border-[#f04e37] focus:outline-none transition-colors cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23666%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
-                      >
-                        <option value="tourist">tourist</option>
-                        <option value="admin">admin</option>
-                      </select>
-                    ) : (
-                      <select
-                        value={user.role}
-                        disabled
-                        className="min-w-[120px] border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium bg-gray-50 text-gray-500 cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23ccc%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
-                      >
-                        <option>{user.role}</option>
-                      </select>
-                    )}
+                  <td className="px-6 py-3 min-w-[200px]">
+                    <div className="flex items-center gap-2">
+                      {SUPER_ADMIN_EMAILS.includes(user.email) ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                          Super
+                        </span>
+                      ) : isSuperAdmin ? (
+                        <>
+                          <select
+                            value={user.role}
+                            onChange={(e) =>
+                              confirmRoleChange(user._id, e.target.value)
+                            }
+                            className="min-w-[100px] border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-white hover:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37] focus:border-[#f04e37] focus:outline-none transition-colors cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23666%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
+                          >
+                            <option value="tourist">tourist</option>
+                            <option value="admin">admin</option>
+                          </select>
+                          <button
+                            onClick={() => handleDeleteUser(user)}
+                            className="px-2 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1"
+                            title="Delete User"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      ) : (
+                        <select
+                          value={user.role}
+                          disabled
+                          className="min-w-[120px] border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium bg-gray-50 text-gray-500 cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23ccc%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
+                        >
+                          <option>{user.role}</option>
+                        </select>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-6 py-3 text-gray-600">
+                  <td className="px-6 py-3 text-gray-600 min-w-[120px]">
                     {user.country || "—"}
                   </td>
-                  <td className="px-6 py-3 text-gray-500">
+                  <td className="px-6 py-3 text-gray-500 min-w-[100px]">
                     {formatLanguage(user.language)}
                   </td>
-                  <td className="px-6 py-3 text-gray-600">
+                  <td className="px-6 py-3 text-gray-600 min-w-[80px]">
                     {user.gender || "—"}
                   </td>
-                  <td className="px-6 py-3 text-gray-600">
+                  <td className="px-6 py-3 text-gray-600 min-w-[120px]">
                     {user.birthday ? formatDate(user.birthday) : "—"}
                   </td>
-                  <td className="px-6 py-3 text-gray-500">
+                  <td className="px-6 py-3 text-gray-500 min-w-[120px]">
                     {user.createdAt ? formatDate(user.createdAt) : "—"}
                   </td>
-                  <td className="px-6 py-3 text-gray-500">
+                  <td className="px-6 py-3 text-gray-500 min-w-[120px]">
                     {user.updatedAt ? formatDate(user.updatedAt) : "—"}
                   </td>
                 </tr>
@@ -285,7 +415,41 @@ export default function RolesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        <div className="flex justify-between items-center mt-4">
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages} ({sortedUsers.length} total users)
+          </span>
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors"
+          >
+            Next
+          </button>
+        </div>
+        </>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, type: "danger", title: "", message: "", onConfirm: null, loading: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
     </div>
   );
 }

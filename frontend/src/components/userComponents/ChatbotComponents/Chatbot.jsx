@@ -14,9 +14,56 @@ export default function Chatbot() {
   const messagesEndRef = useRef(null);
   const sessionId = useRef(uuidv4());
   const lastBotMessageRef = useRef("");
+  const chatContainerRef = useRef(null);
 
-  const [messages, setMessages] = useState([]);
-  const [hasUserMessaged, setHasUserMessaged] = useState(false);
+  // Get user-specific localStorage key
+  const getUserKey = (baseKey) => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        const userId = userData._id || userData.id;
+        return `${baseKey}_${userId}`;
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    return `${baseKey}_guest`;
+  };
+
+  const [messages, setMessages] = useState(() => {
+    // Load saved messages from localStorage with expiry check
+    const messagesKey = getUserKey('chatbotMessages');
+    const timestampKey = getUserKey('chatbotMessagesTimestamp');
+    
+    const saved = localStorage.getItem(messagesKey);
+    const savedTimestamp = localStorage.getItem(timestampKey);
+    
+    if (saved && savedTimestamp) {
+      const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
+      const now = Date.now();
+      const timestamp = parseInt(savedTimestamp, 10);
+      
+      // Check if data is older than 3 days
+      if (now - timestamp > threeDaysInMs) {
+        // Clear expired data
+        localStorage.removeItem(messagesKey);
+        localStorage.removeItem(timestampKey);
+        localStorage.removeItem(getUserKey('chatbotHasUserMessaged'));
+        return [];
+      }
+      
+      return JSON.parse(saved);
+    }
+    
+    return [];
+  });
+  const [hasUserMessaged, setHasUserMessaged] = useState(() => {
+    // Load saved state from localStorage
+    const hasMessagedKey = getUserKey('chatbotHasUserMessaged');
+    const saved = localStorage.getItem(hasMessagedKey);
+    return saved ? JSON.parse(saved) : false;
+  });
   const [input, setInput] = useState("");
   const [botEntries, setBotEntries] = useState([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
@@ -24,6 +71,38 @@ export default function Chatbot() {
   const [speakingMessageIndex, setSpeakingMessageIndex] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+
+  // Save messages to localStorage whenever they change with timestamp
+  useEffect(() => {
+    if (messages.length > 0) {
+      const messagesKey = getUserKey('chatbotMessages');
+      const timestampKey = getUserKey('chatbotMessagesTimestamp');
+      localStorage.setItem(messagesKey, JSON.stringify(messages));
+      localStorage.setItem(timestampKey, Date.now().toString());
+    }
+  }, [messages]);
+
+  // Save hasUserMessaged state to localStorage
+  useEffect(() => {
+    const hasMessagedKey = getUserKey('chatbotHasUserMessaged');
+    localStorage.setItem(hasMessagedKey, JSON.stringify(hasUserMessaged));
+  }, [hasUserMessaged]);
+
+  // Clear chat when user changes (logout/login)
+  useEffect(() => {
+    const currentUserKey = getUserKey('chatbotMessages');
+    const savedKey = sessionStorage.getItem('currentChatUserKey');
+    
+    if (savedKey && savedKey !== currentUserKey) {
+      // User has changed, reset chat
+      setMessages([]);
+      setHasUserMessaged(false);
+      setInput("");
+    }
+    
+    // Store current user key
+    sessionStorage.setItem('currentChatUserKey', currentUserKey);
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -48,9 +127,9 @@ export default function Chatbot() {
 
   // Load knowledge base
   useEffect(() => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     axios
-      .get(`${apiBaseUrl}/bot`)
+      .get(`${API_BASE_URL}/bot`)
       .then((res) => setBotEntries(res.data))
       .catch((err) => console.error("Error fetching bot entries:", err));
   }, []);
@@ -232,22 +311,22 @@ export default function Chatbot() {
     }
 
     const userMessage = messageToSend;
-    if (!quickQuestion) {
-      setInput("");
-    }
+    
+    // Clear input field
+    setInput("");
+    
     // Add user message and loading state
     setMessages((prev) => [
       ...prev,
       { role: "user", content: userMessage },
       { role: "assistant", content: "__loading__" },
     ]);
-    setInput("");
     setIsBotTyping(true);
     
     try {
       // Check with OpenAI Moderation API
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-      const moderationResponse = await axios.post(`${apiBaseUrl}/openai/moderate`, {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+      const moderationResponse = await axios.post(`${API_BASE_URL}/openai/moderate`, {
         input: userMessage
       });
       
@@ -371,15 +450,16 @@ TUNGKOL SA IYO:
 PAANO KA SUMAGOT (RAG Framework):
 1. BASAHIN ang Knowledge Base na ibinigay sa ibaba
 2. HANAPIN ang relevant na impormasyon para sa tanong
-3. SAGUTIN ang tanong gamit ang nahanap mong impormasyon
+3. SAGUTIN ang tanong gamit ang nahanap mong impormasyon pero huwag sumagot ng napakahaba, sumagot ng saktuhan at tama 
 4. Kung may kaugnayan sa Knowledge Base, gamitin ito para sumagot
 5. Kung walang direktang sagot, gamitin ang related information para magbigay ng helpful na tugon
 6. Maging natural at conversational - huwag masyadong strict
 7. Kung talagang walang kaugnayan sa Intramuros o Knowledge Base, aminin na hindi mo alam at mag-alok ng tulong sa iba pang tanong
-
+8. Wag kang magbibigay ng mga suggestions na wala naman sa iyong knowledge base
+9. Wag kang mag sasabi na tutulong ka sa ibang bagay, dapat kung ano lang ang katanungan na tungkol lamang sa intramuros ang iyong sasagutin.
 IMPORTANTE:
 - Sumagot ng FILIPINO kahit English ang keywords
-- Magbigay ng complete details (oras, presyo, lokasyon)
+- Magbigay ng complete details (oras, presyo, lokasyon) 
 - Maging friendly at approachable
 - Okay lang mag-elaborate base sa available information`
         : `You are Juan, a friendly tour guide chatbot for Intramuros, Manila. Answer in ENGLISH.
@@ -392,12 +472,12 @@ ABOUT YOU:
 HOW TO ANSWER (RAG Framework):
 1. READ the Knowledge Base provided below
 2. FIND relevant information for the question
-3. ANSWER the question using the information you found
+3. ANSWER the question using the information you found but do not answer it too long, make it brief
 4. If there's related information in the Knowledge Base, use it to answer
 5. If there's no direct answer, use related information to provide a helpful response
 6. Be natural and conversational - don't be overly strict
 7. If the question is truly unrelated to Intramuros or the Knowledge Base, admit you don't know and offer to help with other questions
-
+8. Do not provide suggestions or recommendations that is not based on your knowledge base
 IMPORTANT:
 - Provide complete details (hours, prices, locations)
 - Be friendly and approachable
@@ -537,8 +617,8 @@ IMPORTANT:
                   role: "assistant",
                   content:
                     lang === "filipino"
-                      ? "Pasensya na, wala akong detalyadong impormasyon tungkol diyan sa aking knowledge base. Mayroon ka bang ibang tanong tungkol sa Intramuros?"
-                      : "Sorry, I don't have detailed information about that in my knowledge base. Do you have any other questions about Intramuros?",
+                      ? "Pasensya na, wala akong detalyadong impormasyon tungkol diyan. Mayroon ka bang ibang tanong tungkol sa Intramuros?"
+                      : "Sorry, I don't have detailed information about that. Do you have any other questions about Intramuros?",
                 }
               : msg
           )
@@ -553,25 +633,37 @@ IMPORTANT:
     const fullPrompt = `${SYSTEM_PROMPT}\n\n=== KNOWLEDGE BASE ===\n${knowledgeText}\n\n=== USER QUESTION ===\n${userMessage}\n\nPlease answer the question above using the Knowledge Base. Be helpful and conversational!`;
 
     try {
-      // Call backend OpenAI API with GPT-5 mini model
+      // Call backend OpenAI API with GPT-5 mini model (non-streaming)
       const API_BASE_URL =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
       
-      const response = await axios.post(`${API_BASE_URL}/openai/chat`, {
-        messages: [
-          { role: "system", content: fullPrompt },
-          { role: "user", content: userMessage },
-        ],
-        model: "gpt-5-mini", // Specify GPT-5 mini model
-        max_completion_tokens: 2000,
+      const response = await fetch(`${API_BASE_URL}/openai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: "system", content: fullPrompt },
+            { role: "user", content: userMessage },
+          ],
+          model: "gpt-5-mini",
+          max_completion_tokens: 2000,
+        }),
       });
 
-      console.log("OpenAI response:", response.data);
-      const reply = response.data.message;
+      if (!response.ok) {
+        throw new Error('Request failed');
+      }
 
+      const data = await response.json();
+      
+      // Update the last message with the response
       setMessages((prev) =>
         prev.map((msg, i) =>
-          i === prev.length - 1 ? { role: "assistant", content: reply } : msg
+          i === prev.length - 1 
+            ? { role: "assistant", content: data.message }
+            : msg
         )
       );
     } catch (err) {
@@ -612,13 +704,45 @@ IMPORTANT:
     }, 100);
   };
 
+  // Handle zoom reset on touch end
+  useEffect(() => {
+    const handleTouchEnd = () => {
+      // Reset zoom by setting viewport meta tag
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        const currentContent = viewport.getAttribute('content');
+        // Force reset by temporarily changing and restoring
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0');
+        setTimeout(() => {
+          viewport.setAttribute('content', currentContent);
+        }, 10);
+      }
+    };
+
+    const container = chatContainerRef.current;
+    if (container) {
+      container.addEventListener('touchend', handleTouchEnd);
+      return () => {
+        container.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, []);
+
   return (
     <div
+      ref={chatContainerRef}
       className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
       style={{
         paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",
       }}
     >
+      <style>{`
+        @media screen and (max-width: 768px) {
+          input:focus {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
       <div className="flex-1 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm space-y-4">
         {messages.map((msg, i) => (
             <div
@@ -735,9 +859,15 @@ IMPORTANT:
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
           disabled={isBotTyping || isListening}
-          className="flex-grow bg-transparent outline-none px-2 py-1 text-sm sm:text-base"
+          className="flex-grow bg-transparent outline-none px-2 py-1 text-base"
+          style={{ fontSize: '16px' }}
           placeholder={
             isBotTyping
               ? "Juan is typing..."
@@ -747,8 +877,11 @@ IMPORTANT:
           }
         />
         <button
-          onClick={handleSend}
-          disabled={isBotTyping}
+          onClick={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          disabled={isBotTyping || !input.trim()}
           className="bg-transparent"
         >
           <div className="transform rotate-45">

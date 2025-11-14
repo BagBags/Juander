@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import Chatbot from "./Chatbot";
 import Draggable from "react-draggable";
@@ -61,8 +61,17 @@ export default function FloatingChatbot() {
       // When closing, snap back to hidden position on left
       setPosition(draggedPosition);
       setIsOpen(false);
+      // Stop any ongoing TTS
+      window.speechSynthesis.cancel();
     }
   };
+
+  // Stop TTS when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      window.speechSynthesis.cancel();
+    }
+  }, [isOpen]);
 
   return (
     <>
@@ -81,6 +90,7 @@ export default function FloatingChatbot() {
             className={`absolute floating-chatbot ${
               isOpen ? "pointer-events-none" : "pointer-events-auto"
             }`}
+            initial={{ x: position.x, y: position.y }}
             animate={{ x: position.x, y: position.y }}
             transition={
               wasDragged.current
@@ -92,7 +102,7 @@ export default function FloatingChatbot() {
               className={`drag-handle flex items-center justify-center cursor-grab active:cursor-grabbing
                 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32
                 transition-transform duration-300 ease-in-out
-                ${isOpen ? "rotate-[45deg] scale-75" : "rotate-[30deg] scale-90"}`}
+                ${isOpen ? "rotate-0 scale-100" : "rotate-[30deg] scale-90"}`}
               onClick={handleToggle}
               onTouchStart={(e) => {
                 const touch = e.touches[0];
@@ -119,7 +129,7 @@ export default function FloatingChatbot() {
               }}
             >
               <img
-                src={isOpen ? "/icons/juan_close.svg" : "/icons/juan_open.svg"}
+                src="/icons/juan_open.svg"
                 alt="Juan"
                 className="w-full h-full object-contain pointer-events-none"
               />
@@ -141,7 +151,7 @@ export default function FloatingChatbot() {
             position: "fixed",
           }}
           className="bg-white shadow-2xl flex flex-col z-[60]
-                     w-full h-full sm:w-[20rem] sm:h-[30rem] lg:w-[24rem] lg:h-[36rem]
+                     w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem]
                      sm:rounded-2xl"
         >
           <div 

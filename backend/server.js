@@ -12,6 +12,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const mongoSanitize = require("express-mongo-sanitize");
+const https = require("https");
+const fs = require("fs");
 const authRoute = require("./routes/authRoute");
 const emergencyRoute = require("./routes/emergencyRoute");
 const filters = require("./routes/filterRoute");
@@ -29,6 +31,7 @@ const reviewRoute = require("./routes/reviewRoute");
 const tourRoute = require("./routes/tourRoute");
 const openaiRoute = require("./routes/openaiRoute");
 const itineraryProgressRoute = require("./routes/itineraryProgressRoute");
+const logRoute = require("./routes/logRoute");
 
 const { verifyAdmin } = require("./middleware/authMiddleware");
 
@@ -57,14 +60,14 @@ app.use(
     origin: [
       "http://localhost:5173", // Development
       "http://juander-frontend.s3-website-ap-southeast-2.amazonaws.com", // Production S3
-      "https://d39zx5gyblzxjs.cloudfront.net", // Production Frontend CloudFront HTTPS
-      "https://d3des4qdhz53rp.cloudfront.net", // Production Backend CloudFront HTTPS
+      "https://d39zx5gyblzxjs.cloudfront.net", // Production Frontend CloudFront
+      "https://d3des4qdhz53rp.cloudfront.net", // Production Backend CloudFront
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 600, // Cache preflight for 10 minutes
+    maxAge: 600,
   })
 );
 
@@ -119,6 +122,7 @@ app.use("/api/visited-sites", visitedSiteRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/openai", openaiRoute);
 app.use("/api/itinerary-progress", itineraryProgressRoute);
+app.use("/api/logs", logRoute);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/uploads/profile",
@@ -144,16 +148,21 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-// Start server
+// Start server with HTTPS
 const PORT = process.env.PORT || 5000;
 
 try {
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  // Try multiple certificate locations
+  let certPath = path.join(__dirname, 'cert', 'backend.pem');
+  let keyPath = path.join(__dirname, 'cert', 'backend-key.pem');
+  
+  // Standard HTTP server for development
+  const server = app.listen(PORT, 'localhost', () => {
     console.log(`✅ Server successfully started on port ${PORT}`);
-    console.log(`🌐 Listening on 0.0.0.0:${PORT}`);
+    console.log(`🌐 Listening on http://localhost:${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-
+  
   server.on('error', (error) => {
     console.error('❌ Server failed to start:', error.message);
     console.error('Stack:', error.stack);

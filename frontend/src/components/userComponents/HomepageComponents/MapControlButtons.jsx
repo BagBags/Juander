@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Locate, MapPin, Volume2, VolumeX, User, Car, Bike, Footprints } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
@@ -16,14 +16,70 @@ export default function MapControlButtons({
   setShowTransportPanel,
   transportMode,
   setTransportMode,
+  hideRecenterButton = false,
 }) {
   const { t } = useTranslation();
   const [isTTSEnabled, setIsTTSEnabled] = useState(ttsService.isEnabled);
+  const [needsCompassPermission, setNeedsCompassPermission] = useState(false);
+  const [compassPermissionGranted, setCompassPermissionGranted] = useState(false);
 
   const handleTTSToggle = () => {
     const newState = ttsService.toggle();
     setIsTTSEnabled(newState);
     // Don't announce activation
+  };
+
+  // Check if compass permission is needed (iOS 13+)
+  useEffect(() => {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      setNeedsCompassPermission(true);
+    }
+  }, []);
+
+  // Request compass permission for iOS
+  const requestCompassPermission = async () => {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      try {
+        const response = await DeviceOrientationEvent.requestPermission();
+        if (response === "granted") {
+          setCompassPermissionGranted(true);
+          setNeedsCompassPermission(false);
+          // After permission, center to user location
+          if (userLocation) {
+            setViewState({
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+              zoom: 16,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error requesting compass permission:", error);
+      }
+    }
+  };
+
+  // Handle GPS center button click
+  const handleCenterToUser = async () => {
+    // If iOS needs permission and hasn't granted it yet
+    if (needsCompassPermission && !compassPermissionGranted) {
+      await requestCompassPermission();
+    } else {
+      // Smoothly center to user location using react-map-gl's transition props
+      if (userLocation) {
+        setViewState((prev) => ({
+          // Preserve existing bearing/pitch/other view parameters
+          ...prev,
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          // Keep current zoom if it's already closer than 16 to avoid jarring jumps
+          zoom: Math.max(prev?.zoom || 16, 16),
+          // Enable a short, efficient animation
+          transitionDuration: 800,
+          transitionEasing: (t) => t,
+        }));
+      }
+    }
   };
 
   return (
@@ -46,18 +102,17 @@ export default function MapControlButtons({
         )}
       </button>
 
-      {/* Recenter to User Location Button */}
-      {userLocation && (
+      {/* Recenter to User Location Button with Compass Permission */}
+      {userLocation && !hideRecenterButton && (
         <button
-          onClick={() => {
-            setViewState({
-              latitude: userLocation.latitude,
-              longitude: userLocation.longitude,
-              zoom: 16,
-            });
-          }}
-          className="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-all duration-200 active:scale-95"
-          title="Go to my location"
+          onClick={handleCenterToUser}
+          className={`p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
+            needsCompassPermission && !compassPermissionGranted
+              ? "bg-blue-500 hover:bg-blue-600 text-white border-blue-600 animate-pulse"
+              : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+          }`}
+          title={needsCompassPermission && !compassPermissionGranted ? "Enable compass & center" : "Go to my location"}
+          aria-label={needsCompassPermission && !compassPermissionGranted ? "Enable compass and center to location" : "Center to my location"}
         >
           <Locate className="w-5 h-5" />
         </button>

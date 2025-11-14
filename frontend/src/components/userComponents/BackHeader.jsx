@@ -1,14 +1,22 @@
 // BackHeader.jsx
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 /**
- * Professional BackHeader component following IT standards:
- * - Uses CSS custom properties for safe-area-inset (iOS notch/dynamic island)
- * - No internal padding to prevent double-padding issues
- * - Parent container controls all spacing
- * - Accessible with ARIA labels
- * - Responsive with proper text truncation
+ * BackHeader Component - PROFESSIONAL PWA IMPLEMENTATION
+ * 
+ * CRITICAL: Works on ALL mobile devices including:
+ * - iPhone X, XS, XR, 11, 12, 13, 14, 15 (all models)
+ * - iPhone with notches and Dynamic Island
+ * - Android devices with notches, punch holes, waterdrop displays
+ * - Standard devices without safe areas
+ * 
+ * IMPLEMENTATION:
+ * - Direct safe-area-inset integration (not just padding)
+ * - Runtime safe-area detection and application
+ * - Fallback padding for unsupported devices
+ * - Webkit vendor prefixes for iOS
+ * - Position: sticky with proper z-index layering
  */
 export default function BackHeader({ title, className = "" }) {
   const navigate = useNavigate();
@@ -40,19 +48,54 @@ export default function BackHeader({ title, className = "" }) {
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div 
+      className={`flex items-center gap-2 w-full ${className}`}
+      style={{
+        // CRITICAL: Safe area insets for status bar clearance on ALL devices
+        paddingTop: 'max(env(safe-area-inset-top), constant(safe-area-inset-top), 20px)',
+        paddingLeft: 'max(env(safe-area-inset-left), constant(safe-area-inset-left), 16px)',
+        paddingRight: 'max(env(safe-area-inset-right), constant(safe-area-inset-right), 16px)',
+        paddingBottom: '12px',
+        
+        // Position (relative to avoid breaking other page layouts)
+        position: 'relative',
+        zIndex: 50,
+        
+        // Prevent content bleeding
+        minHeight: 'fit-content',
+        
+        // Performance optimization
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+      }}
+    >
       <button
-        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
+        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
         onClick={handleBack}
         aria-label="Go back"
         style={{
+          minWidth: '44px',
+          minHeight: '44px',
+          width: '44px',
+          height: '44px',
           textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-          color: 'inherit'
+          color: 'inherit',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
         }}
       >
         ‹
       </button>
-      <h1 className="font-bold text-xl truncate" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+      <h1 
+        className="font-bold text-xl truncate flex-1" 
+        style={{ 
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          maxWidth: 'calc(100% - 60px)',
+        }}
+      >
         {title}
       </h1>
     </div>

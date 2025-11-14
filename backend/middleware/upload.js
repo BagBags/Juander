@@ -1,92 +1,98 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const multerS3 = require("multer-s3");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (req.baseUrl.includes("auth")) {
-      cb(null, "uploads/profile");
-    } else if (req.baseUrl.includes("pins")) {
-      if (file.mimetype.startsWith("image/")) {
-        // Check if it's a facade upload based on field name
-        if (file.fieldname === "facade") {
-          cb(null, "uploads/facades");
-        } else {
-          // Media files go to media folder
-          const uploadDir = "uploads/media";
-          if (!fs.existsSync(uploadDir))
-            fs.mkdirSync(uploadDir, { recursive: true });
-          cb(null, uploadDir);
-        }
-      } else if (file.mimetype.startsWith("video/")) {
-        // Videos go to media folder
-        const uploadDir = "uploads/media";
-        if (!fs.existsSync(uploadDir))
-          fs.mkdirSync(uploadDir, { recursive: true });
-        cb(null, uploadDir);
-      } else {
-        cb(null, "uploads/arModels");
-      }
-    } else if (req.baseUrl.includes("itineraries")) {
-      const uploadDir = "uploads/itineraries";
-      if (!fs.existsSync(uploadDir))
-        fs.mkdirSync(uploadDir, { recursive: true });
-      cb(null, uploadDir);
-    } else if (req.baseUrl.includes("userItineraries")) {
-      const uploadDir = "uploads/userItineraries";
-      if (!fs.existsSync(uploadDir))
-        fs.mkdirSync(uploadDir, { recursive: true });
-      cb(null, uploadDir);
-    } else if (req.baseUrl.includes("emergency")) {
-      const uploadDir = "uploads/emergency";
-      if (!fs.existsSync(uploadDir))
-        fs.mkdirSync(uploadDir, { recursive: true });
-      cb(null, uploadDir);
-    } else if (req.baseUrl.includes("reviews")) {
-      const uploadDir = "uploads/reviews";
-      if (!fs.existsSync(uploadDir))
-        fs.mkdirSync(uploadDir, { recursive: true });
-      cb(null, uploadDir);
+// S3 Client Configuration
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'ap-southeast-2',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+const S3_BUCKET = process.env.S3_BUCKET_NAME || 'juander-frontend';
+
+const storage = multerS3({
+  s3: s3Client,
+  bucket: S3_BUCKET,
+  contentType: (req, file, cb) => {
+    // Explicitly set content type for videos
+    const mimeType = file.mimetype;
+    if (mimeType.startsWith('video/')) {
+      cb(null, mimeType); // Use the detected video mime type
     } else {
-      cb(null, "uploads/photobooth");
+      cb(null, file.mimetype); // Use original mime type for other files
     }
   },
-  filename: (req, file, cb) => {
+  key: (req, file, cb) => {
+    let folder = '';
+    let filename = '';
+    
+    console.log('🔧 Multer-S3 key function - req.baseUrl:', req.baseUrl);
+    console.log('🔧 Multer-S3 key function - req.user:', req.user?._id);
+    
+    // Determine folder based on route
     if (req.baseUrl.includes("auth")) {
-      const uploadDir = "uploads/profile";
-
-      // Delete previous profile pictures
-      fs.readdir(uploadDir, (err, files) => {
-        if (!err) {
-          const userFiles = files.filter((f) => f.startsWith(req.user.id));
-          userFiles.forEach((f) => {
-            try {
-              fs.unlinkSync(path.join(uploadDir, f));
-            } catch (unlinkErr) {
-              console.error("Failed to delete old profile pic:", unlinkErr);
-            }
-          });
-        }
-      });
-
+      folder = "uploads/profile";
       const ext = path.extname(file.originalname);
-      cb(null, `${req.user.id}${ext}`);
+      // Use timestamp + random string if req.user is not available yet
+      const userId = req.user?._id || `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      filename = `${userId}${ext}`;
+      console.log('🔧 Profile upload - userId:', userId, 'filename:', filename);
+    } else if (req.baseUrl.includes("pins")) {
+      if (file.fieldname === "facade") {
+        folder = "uploads/facades";
+        filename = file.originalname;
+      } else if (file.fieldname === "mediaFiles") {
+        folder = "uploads/media";
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        const basename = path.basename(file.originalname, ext);
+        filename = `${timestamp}-${basename}${ext}`;
+      } else if (file.fieldname === "arModel" || file.fieldname === "glb") {
+        // 3D models go to arModels folder
+        folder = "uploads/arModels";
+        filename = file.originalname;
+      } else {
+        folder = "uploads/media";
+        filename = file.originalname;
+      }
+    } else if (req.baseUrl.includes("itineraries")) {
+      folder = "uploads/itineraries";
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      filename = `${timestamp}-${file.originalname}`;
+    } else if (req.baseUrl.includes("userItineraries")) {
+      folder = "uploads/userItineraries";
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      filename = `${timestamp}-${file.originalname}`;
+    } else if (req.baseUrl.includes("emergency")) {
+      folder = "uploads/emergency";
+      filename = file.originalname;
     } else if (req.baseUrl.includes("reviews")) {
-      // For reviews: use timestamp + user ID + original filename
+      folder = "uploads/reviews";
       const timestamp = Date.now();
       const ext = path.extname(file.originalname);
       const basename = path.basename(file.originalname, ext);
-      cb(null, `${timestamp}-${req.user.id}-${basename}${ext}`);
-    } else if (req.baseUrl.includes("pins") && file.fieldname === "mediaFiles") {
-      // For pin media files: use timestamp + original filename
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname);
-      const basename = path.basename(file.originalname, ext);
-      cb(null, `${timestamp}-${basename}${ext}`);
+      filename = `${timestamp}-${req.user._id}-${basename}${ext}`;
     } else {
-      // For everything else: keep original filename
-      cb(null, file.originalname);
+      folder = "uploads/photobooth";
+      // Sanitize filename for photobooth filters to avoid URL encoding issues
+      const timestamp = Date.now();
+      const ext = path.extname(file.originalname);
+      const basename = path.basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace special chars with underscore
+        .replace(/_+/g, '_') // Replace multiple underscores with single
+        .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+      filename = `${timestamp}-${basename}${ext}`;
     }
+    
+    const key = `${folder}/${filename}`;
+    cb(null, key);
   },
 });
 
@@ -148,4 +154,55 @@ const upload = multer({
   }
 });
 
+
+// Helper function to delete files from local storage
+const deleteFile = (filePath) => {
+  try {
+    // Remove leading slash if present
+    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    const fullPath = path.join(__dirname, '..', cleanPath);
+    
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      console.log(`File deleted successfully: ${fullPath}`);
+      return true;
+    } else {
+      console.log(`File not found: ${fullPath}`);
+      return false;
+    }
+  } catch (err) {
+    console.error(`Error deleting file: ${filePath}`, err);
+    return false;
+  }
+};
+
+// Helper function to delete files from S3
+const deleteFromS3 = async (fileUrl) => {
+  try {
+    // Check if it's an S3 URL or local path
+    if (fileUrl.includes('s3.amazonaws.com') || fileUrl.includes('s3.ap-southeast-2.amazonaws.com')) {
+      // It's an S3 URL - extract the key
+      const urlParts = fileUrl.split('.com/');
+      const key = urlParts[1] || fileUrl;
+
+      const command = new DeleteObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: key,
+      });
+
+      await s3Client.send(command);
+      console.log(`File deleted from S3: ${key}`);
+      return true;
+    } else {
+      // It's a local file path - use local deletion
+      return deleteFile(fileUrl);
+    }
+  } catch (err) {
+    console.error(`Error deleting from S3: ${fileUrl}`, err);
+    return false;
+  }
+};
+
 module.exports = upload;
+module.exports.deleteFile = deleteFile;
+module.exports.deleteFromS3 = deleteFromS3;

@@ -18,6 +18,39 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [hasCompletedTour, setHasCompletedTour] = useState(true); // Default to true to prevent flash
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [spotlightRect, setSpotlightRect] = useState(null);
+
+  // Track screen size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Update spotlight position when step changes
+  useEffect(() => {
+    if (!run || !steps[stepIndex]) return;
+    
+    const updateSpotlight = () => {
+      const target = document.querySelector(steps[stepIndex].target);
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        setSpotlightRect({
+          top: rect.top - 8,
+          left: rect.left - 8,
+          width: rect.width + 16,
+          height: rect.height + 16,
+        });
+      }
+    };
+    
+    updateSpotlight();
+    const timer = setTimeout(updateSpotlight, 100);
+    return () => clearTimeout(timer);
+  }, [run, stepIndex, steps]);
 
   // Check tour status on mount (only for tourists)
   useEffect(() => {
@@ -93,6 +126,58 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
   return (
     <TourContext.Provider value={{ startTour, stopTour, hasCompletedTour }}>
       {children}
+      {/* Custom persistent overlay with SVG mask for rounded spotlight */}
+      {run && spotlightRect && (
+        <>
+          <svg
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 9997,
+              pointerEvents: 'none',
+            }}
+          >
+            <defs>
+              <mask id="spotlight-mask">
+                <rect width="100%" height="100%" fill="white" />
+                <rect
+                  x={spotlightRect.left}
+                  y={spotlightRect.top}
+                  width={spotlightRect.width}
+                  height={spotlightRect.height}
+                  rx="20"
+                  ry="20"
+                  fill="black"
+                  style={{ transition: 'all 0.3s ease-in-out' }}
+                />
+              </mask>
+            </defs>
+            <rect
+              width="100%"
+              height="100%"
+              fill="rgba(0, 0, 0, 0.75)"
+              mask="url(#spotlight-mask)"
+            />
+          </svg>
+          
+          {/* Rounded corner overlays to hide sharp edges */}
+          <div style={{
+            position: 'fixed',
+            top: spotlightRect.top - 4,
+            left: spotlightRect.left - 4,
+            width: spotlightRect.width + 8,
+            height: spotlightRect.height + 8,
+            borderRadius: '20px',
+            boxShadow: 'inset 0 0 0 4px rgba(0, 0, 0, 0.75)',
+            zIndex: 9998,
+            pointerEvents: 'none',
+            transition: 'all 0.3s ease-in-out',
+          }} />
+        </>
+      )}
       <Joyride
         steps={steps}
         run={run}
@@ -102,6 +187,11 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
         showSkipButton
         scrollToFirstStep
         disableScrolling={false}
+        disableScrollParentFix
+        disableBeacon
+        hideBackButton={false}
+        spotlightClicks
+        disableOverlay={false}
         callback={handleJoyrideCallback}
         tooltipComponent={CustomTourTooltip}
         styles={{
@@ -109,20 +199,39 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
             zIndex: 10000,
             arrowColor: "#fff",
             backgroundColor: "#fff",
-            overlayColor: "rgba(0, 0, 0, 0.7)",
+            overlayColor: "transparent",
             primaryColor: "#f04e37",
             textColor: "#333",
+            spotlightPadding: 0,
+          },
+          overlay: {
+            display: 'none',
           },
           spotlight: {
-            borderRadius: "16px",
+            display: 'none',
           },
         }}
         floaterProps={{
           disableAnimation: false,
+          disableFlip: false,
+          hideArrow: true,
+          offset: isMobile ? 15 : 20,
           styles: {
             arrow: {
-              length: 8,
-              spread: 16,
+              display: 'none',
+            },
+            floater: {
+              filter: 'none',
+            },
+          },
+          options: {
+            preventOverflow: {
+              boundariesElement: 'viewport',
+              padding: isMobile ? 16 : 24,
+            },
+            flip: {
+              enabled: true,
+              behavior: ['left', 'right', 'top', 'bottom'],
             },
           },
         }}

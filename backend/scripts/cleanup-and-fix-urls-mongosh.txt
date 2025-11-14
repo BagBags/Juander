@@ -1,0 +1,120 @@
+// ========================================
+// MongoDB Cleanup & URL Fix Script - Copy & Paste to mongosh
+// ========================================
+// This script:
+// 1. Removes deprecated 'media' and 'mediaUrl' fields
+// 2. Converts local paths (/uploads/...) to full S3 URLs in mediaFiles
+// 3. Converts local paths in facadeUrl to full S3 URLs
+
+// Switch to your database
+use juander
+
+// Configuration
+const S3_BASE_URL = "https://juander-frontend.s3.ap-southeast-2.amazonaws.com";
+
+// 1. Check current state
+print("\n📊 Current State:");
+print("Total pins: " + db.pins.countDocuments());
+print("Pins with 'media' field: " + db.pins.countDocuments({ media: { $exists: true } }));
+print("Pins with 'mediaUrl' field: " + db.pins.countDocuments({ mediaUrl: { $exists: true } }));
+print("Pins with local mediaFiles paths: " + db.pins.countDocuments({ "mediaFiles.url": { $regex: "^/uploads/" } }));
+print("Pins with local facadeUrl paths: " + db.pins.countDocuments({ facadeUrl: { $regex: "^/uploads/" } }));
+
+// 2. Process all pins
+print("\n🔄 Processing pins...\n");
+
+const pins = db.pins.find({}).toArray();
+let processedCount = 0;
+let updatedCount = 0;
+
+pins.forEach(pin => {
+  let needsUpdate = false;
+  let updates = {};
+  
+  // Remove deprecated fields
+  if (pin.media || pin.mediaUrl) {
+    updates.$unset = {
+      media: "",
+      mediaUrl: ""
+    };
+    needsUpdate = true;
+  }
+  
+  // Fix mediaFiles URLs
+  if (pin.mediaFiles && Array.isArray(pin.mediaFiles)) {
+    const fixedMediaFiles = pin.mediaFiles.map(media => {
+      if (media.url && media.url.startsWith("/uploads/")) {
+        needsUpdate = true;
+        return {
+          ...media,
+          url: S3_BASE_URL + media.url
+        };
+      }
+      return media;
+    });
+    
+    if (needsUpdate) {
+      if (!updates.$set) updates.$set = {};
+      updates.$set.mediaFiles = fixedMediaFiles;
+    }
+  }
+  
+  // Fix facadeUrl
+  if (pin.facadeUrl && pin.facadeUrl.startsWith("/uploads/")) {
+    needsUpdate = true;
+    if (!updates.$set) updates.$set = {};
+    updates.$set.facadeUrl = S3_BASE_URL + pin.facadeUrl;
+  }
+  
+  // Fix glbUrl
+  if (pin.glbUrl && pin.glbUrl.startsWith("/uploads/")) {
+    needsUpdate = true;
+    if (!updates.$set) updates.$set = {};
+    updates.$set.glbUrl = S3_BASE_URL + pin.glbUrl;
+  }
+  
+  // Update the pin if needed
+  if (needsUpdate) {
+    db.pins.updateOne({ _id: pin._id }, updates);
+    updatedCount++;
+    print("✅ Updated: " + (pin.siteName || pin._id));
+  }
+  
+  processedCount++;
+});
+
+print("\n📊 Processing Summary:");
+print("Total pins processed: " + processedCount);
+print("Pins updated: " + updatedCount);
+
+// 3. Verify cleanup
+print("\n📊 Final Verification:");
+const remainingMedia = db.pins.countDocuments({ media: { $exists: true } });
+const remainingMediaUrl = db.pins.countDocuments({ mediaUrl: { $exists: true } });
+const remainingLocalMediaFiles = db.pins.countDocuments({ "mediaFiles.url": { $regex: "^/uploads/" } });
+const remainingLocalFacade = db.pins.countDocuments({ facadeUrl: { $regex: "^/uploads/" } });
+
+print("Pins with 'media' field remaining: " + remainingMedia);
+print("Pins with 'mediaUrl' field remaining: " + remainingMediaUrl);
+print("Pins with local mediaFiles paths remaining: " + remainingLocalMediaFiles);
+print("Pins with local facadeUrl paths remaining: " + remainingLocalFacade);
+
+if (remainingMedia === 0 && remainingMediaUrl === 0 && remainingLocalMediaFiles === 0 && remainingLocalFacade === 0) {
+  print("\n✅ All deprecated fields removed and URLs fixed!");
+} else {
+  print("\n⚠️  Some issues remain. Check the counts above.");
+}
+
+// 4. Show sample of fixed pins
+print("\n📋 Sample of fixed pins:");
+db.pins.find({}, { siteName: 1, mediaFiles: 1, facadeUrl: 1 }).limit(3).forEach(pin => {
+  print("\n" + pin.siteName);
+  if (pin.mediaFiles && pin.mediaFiles.length > 0) {
+    print("  First media URL: " + pin.mediaFiles[0].url);
+  }
+  if (pin.facadeUrl) {
+    print("  Facade URL: " + pin.facadeUrl);
+  }
+});
+
+print("\n✅ Script completed!");

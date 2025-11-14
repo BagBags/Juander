@@ -1,25 +1,48 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-export default function BackHeader({ title }) {
+/**
+ * Standardized BackHeader component - matches Profile page design
+ * Should be wrapped in a container with safe-area padding
+ */
+export default function BackHeader({ title, className = "" }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Extract plain text from title if it's wrapped in React elements
+  const plainTitle = typeof title === 'string' ? title : 
+                     (title?.props?.children || title || "Back");
+
   return (
-    <div className="sticky top-0 z-20 pt-4 pb-2 px-4 flex items-center border-gray-200">
-      <span
-        className="text-xl font-bold text-black cursor-pointer hover:text-[#cf3325]"
+    <div className={`flex items-center gap-2 ${className}`}>
+      <button
+        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/10"
         onClick={() => {
           if (location.key !== "default") {
-            navigate(-1); // go back if possible
+            navigate(-1);
           } else {
-            navigate("/"); // fallback if user opened page directly
+            navigate("/");
           }
         }}
+        aria-label="Go back"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          color: 'inherit'
+        }}
       >
-        &lt;
-      </span>
-      <h1 className="ml-2 font-bold text-xl">{title || "Back"}</h1>
+        ‹
+      </button>
+      <h1 
+        className="font-bold text-xl truncate"
+        style={{
+          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+          margin: 0,
+          padding: 0,
+          color: 'inherit'
+        }}
+      >
+        {plainTitle}
+      </h1>
     </div>
   );
 }

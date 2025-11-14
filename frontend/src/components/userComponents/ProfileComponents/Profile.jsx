@@ -6,15 +6,27 @@ import { IoChevronForwardSharp, IoSettingsSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
+import { FaTiktok } from "react-icons/fa";
 import axios from "axios";
 import ttsService from "../../../utils/textToSpeech";
+import { clearAuth } from "../../../utils/authStorage";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [imageError, setImageError] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const handleRefresh = async () => {
+    setRefreshKey(prev => prev + 1);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  };
 
   // Announce page load
   useEffect(() => {
@@ -70,9 +82,13 @@ export default function ProfilePage() {
         return;
       }
 
-      // ✅ Use proxy-friendly relative path (/api)
+      // ✅ Use full API URL to bypass CloudFront for uploads
+      const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+      console.log('🔵 Uploading to:', `${API_URL}/auth/upload-profile-picture`);
+      console.log('🔵 Token:', token ? 'Present' : 'Missing');
+      
       const res = await axios.post(
-        "/api/auth/upload-profile-picture",
+        `${API_URL}/auth/upload-profile-picture`,
         formData,
         {
           headers: {
@@ -81,6 +97,8 @@ export default function ProfilePage() {
           },
         }
       );
+      
+      console.log('🔵 Upload response:', res.data);
 
       // ✅ Append timestamp to force browser to fetch new image
       const newProfilePic = `${res.data.profilePicture}?t=${Date.now()}`;
@@ -99,8 +117,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearAuth();
     navigate("/");
   };
 
@@ -124,7 +141,8 @@ export default function ProfilePage() {
 
       {/* Global TTS Button */}
 
-      <div className="w-full max-w-md relative z-10">
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="w-full max-w-md relative z-10" key={refreshKey}>
         {/* Profile Card */}
         <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
           {/* Decorative circles */}
@@ -227,11 +245,70 @@ export default function ProfilePage() {
           {t("logout")}
         </button>
 
+        {/* Social Media Icons */}
+        <div className="mt-12 mb-4 flex items-center justify-center gap-4">
+          <a
+            href="https://www.facebook.com/share/17YomjzorW/?mibextid=wwXIfr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Facebook"
+          >
+            <Facebook className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.instagram.com/intramurosph?igsh=MXUwb3o0YTBkN3cycw=="
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Instagram"
+          >
+            <Instagram className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.tiktok.com/@intramurosph?_r=1&_t=ZS-91HcteutvZR"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="TikTok"
+          >
+            <FaTiktok className="w-5 h-5" />
+          </a>
+          <a
+            href="https://youtube.com/@intramurosadministration?si=NxzDejo3UOFWI6x3"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="YouTube"
+          >
+            <Youtube className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.linkedin.com/company/intramuros-administration/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="LinkedIn"
+          >
+            <Linkedin className="w-5 h-5" />
+          </a>
+          <a
+            href="https://x.com/intramuros?s=21"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="X (Twitter)"
+          >
+            <Twitter className="w-5 h-5" />
+          </a>
+        </div>
+
         {/* Footer */}
-        <p className="mt-12 mb-8 text-xs text-center text-gray-400">
+        <p className="mb-8 text-xs text-center text-gray-400">
           © 2025 {t("intramurosAdmin")}. All rights reserved.
         </p>
       </div>
+      </PullToRefresh>
     </motion.div>
   );
 }

@@ -33,6 +33,9 @@ exports.createPin = async (req, res) => {
     
     const pin = new Pin(pinData);
     await pin.save();
+    
+    // Populate category before returning
+    await pin.populate("category", "name");
 
     const adminName = req.user
       ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
@@ -41,6 +44,9 @@ exports.createPin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Created pin: ${formatPinLabel(pin)}`,
+      role: "admin",
+      targetType: "pin",
+      targetId: pin._id,
     });
 
     res.status(201).json(pin);
@@ -53,6 +59,9 @@ exports.createPin = async (req, res) => {
 // UPDATE pin
 exports.updatePin = async (req, res) => {
   try {
+    console.log("📝 Updating pin:", req.params.id);
+    console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+    
     // Prepare update data
     const updateData = { ...req.body };
     
@@ -61,10 +70,21 @@ exports.updatePin = async (req, res) => {
       updateData.feeType = 'none';
     }
     
-    // If feeType is 'none', set feeAmount to null
+    // If feeType is 'none', set feeAmount and feeAmountDiscounted to null
     if (updateData.feeType === 'none') {
       updateData.feeAmount = null;
+      updateData.feeAmountDiscounted = null;
     }
+    
+    // Handle empty string values for fee amounts
+    if (updateData.feeAmount === '') {
+      updateData.feeAmount = null;
+    }
+    if (updateData.feeAmountDiscounted === '') {
+      updateData.feeAmountDiscounted = null;
+    }
+    
+    console.log("✅ Processed update data:", JSON.stringify(updateData, null, 2));
     
     // Create update object with $set and $unset operations
     const updateObject = {
@@ -76,7 +96,7 @@ exports.updatePin = async (req, res) => {
       req.params.id, 
       updateObject,
       { new: true, runValidators: true }
-    );
+    ).populate("category", "name");
 
     if (!pin) {
       return res.status(404).json({ message: "Pin not found" });
@@ -89,12 +109,17 @@ exports.updatePin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Updated pin: ${formatPinLabel(pin)}`,
+      role: "admin",
+      targetType: "pin",
+      targetId: pin._id,
     });
 
+    console.log("✅ Pin updated successfully");
     res.json(pin);
   } catch (err) {
-    console.error("❌ Error updating pin:", err.message);
-    res.status(400).json({ error: err.message });
+    console.error("❌ Error updating pin:", err);
+    console.error("❌ Error stack:", err.stack);
+    res.status(400).json({ error: err.message, details: err.toString() });
   }
 };
 
@@ -111,6 +136,9 @@ exports.deletePin = async (req, res) => {
       await Log.create({
         adminName,
         action: `Deleted pin: ${formatPinLabel(deleted)}`,
+        role: "admin",
+        targetType: "pin",
+        targetId: deleted._id,
       });
     }
 
@@ -139,7 +167,7 @@ exports.archivePin = async (req, res) => {
       req.params.id,
       { isArchived: true },
       { new: true }
-    );
+    ).populate("category", "name");
 
     if (!pin) {
       return res.status(404).json({ message: "Pin not found" });
@@ -152,6 +180,9 @@ exports.archivePin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Archived pin: ${formatPinLabel(pin)}`,
+      role: "admin",
+      targetType: "pin",
+      targetId: pin._id,
     });
 
     res.json(pin);
@@ -168,7 +199,7 @@ exports.restorePin = async (req, res) => {
       req.params.id,
       { isArchived: false },
       { new: true }
-    );
+    ).populate("category", "name");
 
     if (!pin) {
       return res.status(404).json({ message: "Pin not found" });
@@ -181,6 +212,9 @@ exports.restorePin = async (req, res) => {
     await Log.create({
       adminName,
       action: `Restored pin: ${formatPinLabel(pin)}`,
+      role: "admin",
+      targetType: "pin",
+      targetId: pin._id,
     });
 
     res.json(pin);

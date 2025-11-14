@@ -15,7 +15,6 @@ import { baseFilters } from "./basefilter";
 import { loadFaceModel } from "./model";
 import { setupFaceDetection } from "./facedetect";
 import Overlays from "./overlay";
-import BackHeader from "../BackButton";
 import "../../../Photobooth.css";
 
 export default function Photobooth() {
@@ -28,6 +27,9 @@ export default function Photobooth() {
   const [webcamReady, setWebcamReady] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [filters, setFilters] = useState([]);
+  const [filtersLoading, setFiltersLoading] = useState(true);
+  const [filtersError, setFiltersError] = useState(null);
+  const [modelError, setModelError] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   
@@ -40,54 +42,99 @@ export default function Photobooth() {
     height: window.innerHeight,
   });
 
-  // ✅ Handle window resize for responsive border assets
-  useEffect(() => {
-    const handleResize = () => {
-      setVideoDims({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
+  // Note: videoDims is now set from the actual video stream in handleWebcamLoad
+  // We don't use window dimensions anymore because face detection coordinates
+  // are in video stream space, not window space
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
+  // ✅ Preload images for better performance
+  const preloadImage = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(url);
+      img.onerror = () => reject(url);
+      img.src = url;
+    });
+  };
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
-    };
-  }, []);
-
-  // ✅ Load filters from backend (fallback to baseFilters)
+  // ✅ Load filters from backend with optimizations
   useEffect(() => {
     const fetchFilters = async () => {
+      setFiltersLoading(true);
+      setFiltersError(null);
+      
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`);
+        // Start with base filters immediately for instant UI
+        setFilters(baseFilters);
+        
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
+          { timeout: 8000 }
+        );
+        
         if (res.data && res.data.length > 0) {
           const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+          
           const normalized = res.data.map((f) => {
-            // Resolve image URL
-            let imageUrl = f.imageUrl || f.image;
+            let imageUrl = f.image || f.imageUrl;
+            
+            // Use S3 URL directly
             if (imageUrl && !imageUrl.startsWith('http')) {
               imageUrl = `${BACKEND_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
             }
             
+            // Fix URL encoding issues for S3 URLs with special characters
+            if (imageUrl && imageUrl.includes('s3.ap-southeast-2.amazonaws.com')) {
+              try {
+                // Properly encode the URL path while preserving the domain
+                const url = new URL(imageUrl);
+                const pathParts = url.pathname.split('/');
+                const encodedPath = pathParts.map(part => encodeURIComponent(part)).join('/');
+                imageUrl = `${url.protocol}//${url.host}${encodedPath}`;
+              } catch (urlError) {
+                console.warn('Failed to fix URL encoding for:', imageUrl, urlError);
+              }
+            }
+            
             return {
               ...f,
-              label: f.label || f.name, // ensure label exists
+              label: f.label || f.name,
               value: f.value || f.name.toLowerCase().replace(/\s+/g, "-"),
-              image: imageUrl, // map imageUrl to image for slider
+              image: imageUrl,
+              category: f.category || 'general',
+              id: f._id || f.id || f.value || `filter-${Date.now()}-${Math.random()}`,
             };
           });
-          setFilters([...baseFilters, ...normalized]);
+          
+          const allFilters = [...baseFilters, ...normalized];
+          
+          // Preload all filter images in parallel
+          const preloadPromises = allFilters.map(f => 
+            preloadImage(f.image).catch(err => {
+              console.warn(`Failed to preload ${f.label}:`, err);
+              return null;
+            })
+          );
+          
+          // Wait for images to load (with shorter timeout)
+          await Promise.race([
+            Promise.allSettled(preloadPromises),
+            new Promise(resolve => setTimeout(resolve, 1500)) // Max 1.5s wait
+          ]);
+          
+          console.log(`✅ Loaded ${allFilters.length} filters (${normalized.length} from backend)`);
+          setFilters(allFilters);
         } else {
-          setFilters(baseFilters);
+          console.log("No backend filters, using base filters only");
         }
       } catch (err) {
-        console.error("Failed to fetch filters, using baseFilters:", err);
-        setFilters(baseFilters);
+        console.error("Failed to fetch backend filters:", err);
+        setFiltersError("Some filters may be unavailable");
+        // Keep base filters that were already set
+      } finally {
+        setFiltersLoading(false);
       }
     };
+    
     fetchFilters();
   }, []);
 
@@ -105,22 +152,35 @@ export default function Photobooth() {
 
   // ✅ Load face model
   useEffect(() => {
+    console.log("Starting to load face detection model...");
     loadFaceModel()
       .then((loadedModel) => {
+        console.log("Face model loaded successfully:", loadedModel);
         setModel(loadedModel);
+        setModelError(false);
       })
-      .catch((err) => console.error("Failed to load face model:", err));
+      .catch((err) => {
+        console.error("Failed to load face model:", err);
+        console.error("Error details:", err.message);
+        setModelError(true);
+        // Don't block the app, filters can still work without face tracking
+        console.warn("Photobooth will work with limited functionality (no face tracking)");
+      });
   }, []);
 
   // ✅ Face detection loop
   useEffect(() => {
     if (model && webcamReady && webcamRef.current) {
+      console.log("Starting face detection loop...");
       const cleanup = setupFaceDetection(
         model,
         webcamRef,
         (faces) => {
           if (!isDragging) {
             setFaces(faces);
+            if (faces.length > 0) {
+              console.log("Faces detected and set:", faces.length);
+            }
           }
         },
         isDragging
@@ -131,9 +191,34 @@ export default function Photobooth() {
 
   const handleWebcamLoad = useCallback(() => {
     setWebcamReady(true);
-    // Store video element reference
+    // Store video element reference and update dimensions
     if (webcamRef.current && webcamRef.current.video) {
-      setVideoElement(webcamRef.current.video);
+      const video = webcamRef.current.video;
+      setVideoElement(video);
+      
+      // Use actual video stream dimensions for face detection coordinates
+      const updateVideoDims = () => {
+        if (video.videoWidth && video.videoHeight) {
+          const dims = {
+            width: video.videoWidth,
+            height: video.videoHeight
+          };
+          setVideoDims(dims);
+          console.log("✅ Video stream dimensions updated:", dims);
+        } else {
+          console.log("⚠️ Video dimensions not ready yet, retrying...");
+          // Retry after a short delay
+          setTimeout(updateVideoDims, 100);
+        }
+      };
+      
+      // Try multiple times to ensure we get the dimensions
+      updateVideoDims();
+      video.addEventListener('loadedmetadata', updateVideoDims);
+      video.addEventListener('playing', updateVideoDims);
+      
+      // Also retry after a delay as fallback
+      setTimeout(updateVideoDims, 500);
     }
   }, []);
 
@@ -177,8 +262,35 @@ export default function Photobooth() {
         // Get all overlay images that are currently displayed
         const overlayImages = overlayContainer.querySelectorAll("img");
         
+        // Check if any images are not CORS-ready before proceeding
+        const nonCorsImages = Array.from(overlayImages).filter(img => {
+          const corsStatus = img.getAttribute('data-cors-ready');
+          return corsStatus !== 'true';
+        });
+        
+        const failedImages = Array.from(overlayImages).filter(img => 
+          img.getAttribute('data-cors-ready') === 'failed'
+        );
+        
+        if (nonCorsImages.length > 0) {
+          console.warn("Found non-CORS images, will skip overlay drawing to prevent canvas tainting:", 
+            nonCorsImages.map(img => ({ src: img.src, status: img.getAttribute('data-cors-ready') })));
+        }
+        
+        if (failedImages.length > 0) {
+          console.error("Some filter images failed to load completely:", 
+            failedImages.map(img => img.src));
+        }
+        
         overlayImages.forEach((img) => {
           try {
+            // Check if image is CORS-ready for canvas operations
+            const corsReady = img.getAttribute('data-cors-ready') === 'true';
+            if (!corsReady) {
+              console.warn("Skipping non-CORS image in canvas:", img.src);
+              return; // Skip this image to avoid CORS errors
+            }
+
             const parent = img.parentElement;
             const parentStyle = window.getComputedStyle(parent);
             const position = parentStyle.position;
@@ -241,7 +353,39 @@ export default function Photobooth() {
       setShowPreview(true);
     } catch (error) {
       console.error("Canvas error:", error);
-      alert("Unable to capture photo. Please try again.");
+      if (error.name === 'SecurityError') {
+        // CORS error occurred - create a fallback photo without filter overlay
+        console.log("Creating fallback photo without filter overlay due to CORS restrictions");
+        
+        try {
+          // Create a new clean canvas with just the video
+          const fallbackCanvas = document.createElement("canvas");
+          fallbackCanvas.width = videoWidth;
+          fallbackCanvas.height = videoHeight;
+          const fallbackCtx = fallbackCanvas.getContext("2d");
+          
+          // Draw only the mirrored video (no overlays)
+          fallbackCtx.save();
+          fallbackCtx.scale(-1, 1);
+          fallbackCtx.drawImage(video, -videoWidth, 0, videoWidth, videoHeight);
+          fallbackCtx.restore();
+          
+          const fallbackImage = fallbackCanvas.toDataURL("image/png");
+          setCapturedImage(fallbackImage);
+          setShowPreview(true);
+          
+          // Show user-friendly message
+          setTimeout(() => {
+            alert("Photo captured successfully! Note: Filter overlay couldn't be included due to technical restrictions, but the filter displays correctly during use.");
+          }, 100);
+          
+        } catch (fallbackError) {
+          console.error("Fallback capture also failed:", fallbackError);
+          alert("Unable to capture photo. Please try again or contact support.");
+        }
+      } else {
+        alert("Unable to capture photo. Please try again.");
+      }
     }
   }, [selectedMeta]);
 
@@ -268,9 +412,9 @@ export default function Photobooth() {
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
-        {/* ✅ Back button + refresh - Blurred transparent background */}
+        {/* ✅ Back button + refresh - Transparent background */}
         <div 
-          className="absolute top-0 left-0 w-full z-[200] bg-black/30 backdrop-blur-md"
+          className="absolute top-0 left-0 w-full z-[200]"
           style={{
             paddingTop: "max(env(safe-area-inset-top), 16px)",
             paddingBottom: "12px",
@@ -279,11 +423,33 @@ export default function Photobooth() {
           }}
         >
           <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 text-white">
-              <BackHeader className="flex-1" />
-            </div>
             <button
-              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white text-2xl hover:bg-white/30 transition-all active:scale-90"
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40 active:bg-black/50 transition-all duration-200 cursor-pointer"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = '/';
+                }
+              }}
+              aria-label="Go back"
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="white" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button
+              className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white text-2xl hover:bg-black/40 transition-all active:scale-90"
               onClick={() => window.location.reload()}
               title="Refresh"
               aria-label="Refresh camera"
@@ -298,12 +464,15 @@ export default function Photobooth() {
             ref={webcamRef}
             audio={false}
             className="webcam"
+            width={videoDims.width}
+            height={videoDims.height}
             onUserMedia={handleWebcamLoad}
             onUserMediaError={(err) => console.error("Webcam error:", err)}
             videoConstraints={{
               facingMode: "user",
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              frameRate: { ideal: 30, max: 30 }
             }}
             screenshotFormat="image/jpeg"
             mirrored={true}
@@ -327,7 +496,7 @@ export default function Photobooth() {
           )}
 
           {/* ✅ Loading states */}
-          {!model && (
+          {!model && !modelError && (
             <div className="loading-overlay">
               <div className="spinner" />
               <div className="loading-text">
@@ -335,9 +504,19 @@ export default function Photobooth() {
               </div>
             </div>
           )}
+          {modelError && webcamReady && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-amber-600/90 text-white px-4 py-2 rounded-lg text-sm z-10 max-w-xs text-center">
+              Face tracking unavailable. Border filters will still work.
+            </div>
+          )}
           {!webcamReady && (
             <div className="loading-overlay">
               <div className="loading-text">Initializing camera...</div>
+            </div>
+          )}
+          {filtersLoading && webcamReady && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm z-10">
+              Loading filters...
             </div>
           )}
         </div>

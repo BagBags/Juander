@@ -35,7 +35,7 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index to ensure one review per user per site per itinerary
-reviewSchema.index({ userId: 1, itineraryId: 1, siteId: 1 }, { unique: true });
+// Removed unique compound index to allow multiple reviews per user per site
+// Users can now submit multiple reviews for the same site in the same itinerary
 
 module.exports = mongoose.model("Review", reviewSchema);

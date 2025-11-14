@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
 
 export default function GuestSettings() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [showFortModal, setShowFortModal] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [tourLoading, setTourLoading] = useState(false);
 
-  // Load guest preference from sessionStorage
+  // Load guest preference from localStorage
   useEffect(() => {
-    const stored = sessionStorage.getItem("guestHideFortSantiagoModal");
+    const stored = localStorage.getItem("guestHideFortSantiagoModal");
     // stored === "true" means hide; we invert for showFortModal
     setShowFortModal(!(stored === "true"));
   }, []);
@@ -24,7 +26,7 @@ export default function GuestSettings() {
 
     try {
       // Persist guest preference locally (no backend in guest mode)
-      sessionStorage.setItem(
+      localStorage.setItem(
         "guestHideFortSantiagoModal",
         (!newValue).toString()
       );
@@ -48,21 +50,19 @@ export default function GuestSettings() {
     setTourLoading(true);
     try {
       // Set a flag for GuestHomepage to auto-start the tour
-      sessionStorage.setItem("guestReplayTutorial", "true");
+      localStorage.setItem("guestReplayTutorial", "true");
       setSuccessMessage(
         "Tutorial reset! Returning to guest homepage to replay it."
       );
+      // Use navigate instead of window.location.href to avoid PWA navigation issues
       setTimeout(() => {
-        window.location.href = "/GuestHomepage";
+        navigate("/GuestHomepage");
       }, 1500);
     } catch (err) {
       console.error("Error setting replay flag:", err);
       setSuccessMessage("Failed to reset tutorial. Please try again.");
-    } finally {
       setTourLoading(false);
     }
-
-    setTimeout(() => setSuccessMessage(""), 5000);
   };
 
   return (

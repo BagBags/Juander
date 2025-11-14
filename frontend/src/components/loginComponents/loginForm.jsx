@@ -1,9 +1,10 @@
-import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import i18n from "/src/i18n.js"; // 👈 import i18n
+import i18n from "/src/i18n.js";
+import { saveAuth, clearAuth } from "../../utils/authStorage";
+import GoogleSSOButton from "../shared/GoogleSSOButton";
 
 export default function LoginForm({ toggleForm }) {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ export default function LoginForm({ toggleForm }) {
 
   // OTP countdown timer (10 minutes = 600 seconds)
   const [timeLeft, setTimeLeft] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
 
   // 👇 Load saved language on component mount
   useEffect(() => {
@@ -40,6 +42,13 @@ export default function LoginForm({ toggleForm }) {
       return () => clearInterval(timer);
     }
   }, [step, timeLeft]);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendCooldown]);
 
   const formatTime = (secs) => {
     const mins = Math.floor(secs / 60);
@@ -97,13 +106,14 @@ export default function LoginForm({ toggleForm }) {
 
       const { user, token } = res.data;
       localStorage.removeItem("guest");
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("token", token);
+      
+      // Use secure auth storage
+      saveAuth(token, user);
 
       // 👇 Save & apply language
       if (user.language) {
         i18n.changeLanguage(user.language);
-        localStorage.setItem("language", user.language); // 👈 keep consistent
+        localStorage.setItem("language", user.language);
       }
 
       // Check if profile is completed
@@ -174,6 +184,7 @@ export default function LoginForm({ toggleForm }) {
       setSuccess("OTP sent to your email.");
       setStep(2);
       setTimeLeft(600);
+      setResendCooldown(60); // 60 second cooldown for resend
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP.");
     }
@@ -188,6 +199,13 @@ export default function LoginForm({ toggleForm }) {
     }
     if (!newPassword) {
       setError("Please enter a new password.");
+      return;
+    }
+
+    // Password validation - same as signup
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      setError("Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character (@$!%*?&).");
       return;
     }
 
@@ -208,24 +226,39 @@ export default function LoginForm({ toggleForm }) {
     }
   };
 
+  const handleResendForgotOtp = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-otp`, {
+        email,
+      });
+      setSuccess("OTP resent to your email.");
+      setResendCooldown(60); // 60 second cooldown
+      setError(""); // Clear any previous errors
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to resend OTP.");
+    }
+  };
+
   return (
-    <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-2xl  space-y-6 ">
+    <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-2xl space-y-3">
       {/* Title */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
-        <p className="text-gray-500 text-sm mt-0">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Welcome Back</h2>
+        <p className="text-gray-500 text-xs sm:text-sm mt-1">
           Login to continue to your account
         </p>
       </div>
 
       {/* Error / Success messages */}
       {error && (
-        <p className="text-red-600 text-sm bg-red-50 border border-red-200 p-2 rounded">
+        <p className="text-red-600 text-xs sm:text-sm bg-red-50 border border-red-200 p-2 rounded">
           {error}
         </p>
       )}
       {success && (
-        <p className="text-green-600 text-sm bg-green-50 border border-green-200 p-2 rounded">
+        <p className="text-green-600 text-xs sm:text-sm bg-green-50 border border-green-200 p-2 rounded">
           {success}
         </p>
       )}
@@ -233,26 +266,35 @@ export default function LoginForm({ toggleForm }) {
       {!showForgot ? (
         <>
           {/* Email */}
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <div>
+            <label htmlFor="login-email" className="sr-only">Email Address</label>
+            <input
+              id="login-email"
+              type="email"
+              placeholder="Email"
+              aria-label="Email Address"
+              className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
           {/* Password with reveal toggle */}
           <div className="relative w-full">
+            <label htmlFor="login-password" className="sr-only">Password</label>
             <input
+              id="login-password"
               type={showPassword ? "text" : "password"}
               placeholder="Password"
-              className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
+              aria-label="Password"
+              className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -262,7 +304,7 @@ export default function LoginForm({ toggleForm }) {
           {/* Login button */}
           <button
             onClick={handleEmailLogin}
-            className="w-full bg-[#f04e37] text-white font-semibold px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95"
+            className="w-full bg-[#f04e37] text-white font-semibold px-4 py-2.5 sm:py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 text-sm sm:text-base"
           >
             Login
           </button>
@@ -288,39 +330,36 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           {/* Google Login */}
-          <GoogleLogin
-            onSuccess={handleGoogleLoginSuccess}
-            onError={() => setError("Google login failed.")}
-            useOneTap
-            theme="outline" // or "filled_blue"
-            size="large" // "large" | "medium" | "small"
-            shape="rectangular" // or "pill"
-          />
+          <div className="w-full">
+            <GoogleSSOButton
+              onSuccess={handleGoogleLoginSuccess}
+              onError={() => setError("Google login failed.")}
+              text="signin_with"
+            />
+          </div>
 
           {/* Guest Login */}
           <button
             type="button"
             onClick={() => {
-              // Use sessionStorage for guest users
-              sessionStorage.setItem("guest", "true");
-              sessionStorage.setItem("guestLanguage", "en"); // Set English as default for guests
-              sessionStorage.removeItem("token");
-              sessionStorage.removeItem("user");
-              // Clear localStorage guest data if any
-              localStorage.removeItem("guest");
+              // Use localStorage for guest users to persist across tabs/windows
+              localStorage.setItem("guest", "true");
+              localStorage.setItem("guestLanguage", "en"); // Set English as default for guests
               localStorage.removeItem("token");
               localStorage.removeItem("user");
+              // Clear sessionStorage
+              sessionStorage.clear();
               // Set language to English immediately
               i18n.changeLanguage("en");
               navigate("/GuestHomepage", { replace: true });
             }}
-            className="w-full bg-gray-100 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-200 active:scale-95"
+            className="w-full bg-gray-100 text-gray-800 px-4 py-2.5 sm:py-3 rounded-lg hover:bg-gray-200 active:scale-95 text-sm sm:text-base"
           >
             Continue as Guest
           </button>
 
           {/* Switch to signup */}
-          <p className="text-sm text-center text-gray-700 mt-2">
+          <p className="text-xs sm:text-sm text-center text-gray-700">
             New user?{" "}
             <span
               className="text-[#f04e37] font-semibold cursor-pointer hover:underline"
@@ -335,9 +374,12 @@ export default function LoginForm({ toggleForm }) {
           {/* Step 1: Request OTP */}
           {step === 1 && (
             <>
+              <label htmlFor="forgot-email" className="sr-only">Email Address for Password Reset</label>
               <input
+                id="forgot-email"
                 type="email"
                 placeholder="Enter your email"
+                aria-label="Email Address for Password Reset"
                 className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -363,6 +405,7 @@ export default function LoginForm({ toggleForm }) {
                     key={i}
                     type="text"
                     maxLength="1"
+                    aria-label={`OTP digit ${i + 1} of ${otpLength}`}
                     className="w-10 h-10 border rounded text-center text-lg"
                     value={otp[i] || ""}
                     onChange={(e) => handleOtpChange(e.target.value, i)}
@@ -375,11 +418,32 @@ export default function LoginForm({ toggleForm }) {
                 Expires in: {formatTime(timeLeft)}
               </p>
 
+              {/* Resend OTP Button */}
+              <div className="text-center mt-3">
+                <button
+                  type="button"
+                  onClick={handleResendForgotOtp}
+                  disabled={resendCooldown > 0}
+                  className={`text-sm font-medium ${
+                    resendCooldown > 0
+                      ? "text-gray-400 cursor-not-allowed"
+                      : "text-[#f04e37] hover:underline"
+                  }`}
+                >
+                  {resendCooldown > 0
+                    ? `Resend OTP in ${resendCooldown}s`
+                    : "Resend OTP"}
+                </button>
+              </div>
+
               {/* New password */}
               <div className="relative w-full mt-4">
+                <label htmlFor="new-password" className="sr-only">New Password</label>
                 <input
+                  id="new-password"
                   type={showNewPassword ? "text" : "password"}
                   placeholder="New Password"
+                  aria-label="New Password"
                   className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -387,6 +451,7 @@ export default function LoginForm({ toggleForm }) {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
+                  aria-label={showNewPassword ? "Hide new password" : "Show new password"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
                   {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}

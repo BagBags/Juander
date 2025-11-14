@@ -60,6 +60,12 @@ export default function AdminItineraryMain() {
   useEffect(() => {
     const fetchPins = async () => {
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          window.location.href = "/admin/login";
+          return;
+        }
+        
         const res = await axios.get(
           `${
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -69,6 +75,9 @@ export default function AdminItineraryMain() {
         setPins(res.data);
       } catch (err) {
         console.error("Failed to fetch pins:", err);
+        if (err.response?.status === 401) {
+          window.location.href = "/admin/login";
+        }
       }
     };
     fetchPins();
@@ -82,6 +91,12 @@ export default function AdminItineraryMain() {
 
   const fetchItineraries = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      
       const res = await axios.get(
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -91,11 +106,20 @@ export default function AdminItineraryMain() {
       setItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch itineraries:", err);
+      if (err.response?.status === 401) {
+        window.location.href = "/admin/login";
+      }
     }
   };
 
   const fetchArchivedItineraries = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/admin/login";
+        return;
+      }
+      
       const res = await axios.get(
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -105,6 +129,9 @@ export default function AdminItineraryMain() {
       setArchivedItineraries(res.data);
     } catch (err) {
       console.error("Failed to fetch archived itineraries:", err);
+      if (err.response?.status === 401) {
+        window.location.href = "/admin/login";
+      }
     }
   };
 
@@ -160,6 +187,14 @@ export default function AdminItineraryMain() {
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, loading: true }));
         try {
+          // Check if token exists
+          const token = localStorage.getItem("token");
+          if (!token) {
+            alert("Session expired. Please login again.");
+            window.location.href = "/admin/login";
+            return;
+          }
+
           let imageUrl = "";
 
           // If user selected a new image, upload it
@@ -174,7 +209,7 @@ export default function AdminItineraryMain() {
               formData,
               {
                 headers: {
-                  ...getConfig().headers,
+                  Authorization: `Bearer ${token}`,
                   "Content-Type": "multipart/form-data",
                 },
               }
@@ -228,6 +263,14 @@ export default function AdminItineraryMain() {
         } catch (err) {
           console.error("Failed to save itinerary:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
+          
+          // Handle 401 Unauthorized
+          if (err.response?.status === 401) {
+            alert("Session expired. Please login again.");
+            window.location.href = "/admin/login";
+          } else {
+            alert(err.response?.data?.error || "Failed to save itinerary. Please try again.");
+          }
         }
       },
     });
@@ -788,24 +831,25 @@ export default function AdminItineraryMain() {
                   >
                     {/* Thumbnail */}
                     <img
-                      src={
-                        // Get first image from mediaFiles (not video)
-                        pin.mediaFiles?.find((m) => m.type === "image")?.url
-                          ? `${
-                              import.meta.env.VITE_API_BASE_URL?.replace(
-                                "/api",
-                                ""
-                              ) || "http://localhost:5000"
-                            }${
-                              pin.mediaFiles.find((m) => m.type === "image").url
-                            }`
-                          : pin.mediaUrl ||
-                            pin.image ||
-                            "https://via.placeholder.com/80"
-                      }
+                      src={(() => {
+                        // Get first image from mediaFiles array
+                        const firstMediaFile = pin.mediaFiles?.find((m) => m.type === "image");
+                        if (firstMediaFile?.url) {
+                          // Check if URL is already a full URL (S3) or relative path
+                          return firstMediaFile.url.startsWith('http') 
+                            ? firstMediaFile.url 
+                            : `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5000"}${firstMediaFile.url}`;
+                        }
+                        
+                        // Fallback: placeholder
+                        return "https://via.placeholder.com/80?text=No+Image";
+                      })()}
                       alt={pin.siteName || pin.title}
                       className="object-cover rounded-xl flex-shrink-0"
                       style={{ width: 80, height: 80 }}
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/80?text=Error";
+                      }}
                     />
 
                     {/* Content */}

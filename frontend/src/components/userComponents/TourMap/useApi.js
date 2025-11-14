@@ -66,6 +66,7 @@ export const useApi = (api) => {
           category: p.category || null,
           feeType: p.feeType || "none",
           feeAmount: p.feeAmount || null,
+          feeAmountDiscounted: p.feeAmountDiscounted || null,
         }));
 
         setPins(normalized);

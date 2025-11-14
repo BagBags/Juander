@@ -1,707 +1,869 @@
-// // AdminTourMapMain.jsx
-// import React, { useState, useRef, useEffect } from "react";
-// import Map, { Marker } from "react-map-gl";
-// import "mapbox-gl/dist/mapbox-gl.css";
-// import MapboxDraw from "@mapbox/mapbox-gl-draw";
-// import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-// import axios from "axios";
-// import {
-//   MAPBOX_TOKEN,
-//   INTRAMUROS_BOUNDS,
-//   initialMaskFeature,
-// } from "./mapConfig";
-// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// import {
-//   faCropSimple,
-//   faPlus,
-//   faInfo,
-//   faXmark,
-//   faFloppyDisk,
-//   faMapPin,
-//   faRotate,
-// } from "@fortawesome/free-solid-svg-icons";
-// import AdminPinCard from "../adminTourMapComponents/AdminPinCard";
-// import AddPinModal from "../adminTourMapComponents/AddPinModal";
-// import ManualAddModal from "../adminTourMapComponents/ManualAddModal";
-
-// // ---------- Axios instance ----------
-// const api = axios.create({
-//   baseURL: import.meta.env.VITE_API_BASE || "/api",
-// });
-// api.interceptors.request.use((config) => {
-//   const token = localStorage.getItem("token");
-//   if (token) config.headers.Authorization = `Bearer ${token}`;
-//   return config;
-// });
-
-// // 3D Model Preview Component
-// const ModelPreview = ({ glbUrl, onClose }) => {
-//   const [rotation, setRotation] = useState(0);
-//   const containerRef = useRef(null);
-//   const [isDragging, setIsDragging] = useState(false);
-//   const [startX, setStartX] = useState(0);
-
-//   const handleMouseDown = (e) => {
-//     setIsDragging(true);
-//     setStartX(e.clientX);
-//   };
-
-//   const handleMouseMove = (e) => {
-//     if (!isDragging) return;
-//     const deltaX = e.clientX - startX;
-//     setRotation((prev) => (prev + deltaX * 0.5) % 360);
-//     setStartX(e.clientX);
-//   };
-
-//   const handleMouseUp = () => {
-//     setIsDragging(false);
-//   };
-
-//   useEffect(() => {
-//     const handleGlobalMouseUp = () => {
-//       if (isDragging) setIsDragging(false);
-//     };
-
-//     window.addEventListener("mouseup", handleGlobalMouseUp);
-//     return () => window.removeEventListener("mouseup", handleGlobalMouseUp);
-//   }, [isDragging]);
-
-//   return (
-//     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-//       <div className="bg-white rounded-xl p-4 w-full max-w-2xl">
-//         <div className="flex justify-between items-center mb-4">
-//           <h3 className="text-lg font-semibold">3D Model Preview</h3>
-//           <button
-//             onClick={onClose}
-//             className="text-gray-500 hover:text-gray-700"
-//           >
-//             <FontAwesomeIcon icon={faXmark} size="lg" />
-//           </button>
-//         </div>
-
-//         <div
-//           ref={containerRef}
-//           className="w-full h-96 bg-gray-100 rounded-lg relative flex items-center justify-center"
-//           onMouseDown={handleMouseDown}
-//           onMouseMove={handleMouseMove}
-//           onMouseUp={handleMouseUp}
-//           onMouseLeave={handleMouseUp}
-//           style={{ cursor: isDragging ? "grabbing" : "grab" }}
-//         >
-//           <div className="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
-//             <FontAwesomeIcon icon={faRotate} className="mr-2" />
-//             Drag to rotate
-//           </div>
-
-//           <div className="text-center">
-//             <div className="text-5xl mb-2">🧊</div>
-//             <p className="text-gray-600">GLB Model Preview</p>
-//             <p className="text-sm text-gray-500 mt-2">
-//               Rotation: {Math.round(rotation)}°
-//             </p>
-//             <p className="text-sm text-gray-500 mt-1 break-all">{glbUrl}</p>
-//           </div>
-//         </div>
-
-//         <div className="mt-4 flex justify-end">
-//           <button
-//             onClick={onClose}
-//             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-//           >
-//             Close
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default function AdminTourMapMain() {
-//   const [viewState, setViewState] = useState({
-//     latitude: 40.5896,
-//     longitude: 120.9747,
-//     zoom: 4,
-//     bearing: 45,
-//   });
-
-//   const [pins, setPins] = useState([]);
-//   const [maskGeoJson, setMaskGeoJson] = useState(initialMaskFeature);
-
-//   const [isAddingPin, setIsAddingPin] = useState(false);
-//   const [isMaskingMode, setIsMaskingMode] = useState(false);
-//   const [showLegend, setShowLegend] = useState(false);
-//   const [selectedPin, setSelectedPin] = useState(null);
-//   // For manual pin input
-//   const [manualCoords, setManualCoords] = useState({ lat: "", lng: "" });
-
-//   const [loading, setLoading] = useState(false);
-//   const [notif, setNotif] = useState(null); // {type: "success"|"error"|"info", message: string}
-//   const [showGlbPreview, setShowGlbPreview] = useState(false);
-//   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
-
-//   const adminMapRef = useRef(null);
-//   const drawRef = useRef(null);
-//   const [showAddPinModal, setShowAddPinModal] = useState(false);
-//   const [showManualAdd, setShowManualAdd] = useState(false);
-//   // ---------- Helpers ----------
-//   const notify = (type, message) => {
-//     setNotif({ type, message });
-//     setTimeout(() => setNotif(null), 2500);
-//   };
-
-//   // ---------- Load pins + mask on mount ----------
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       setLoading(true);
-//       try {
-//         const [pinsRes, maskRes] = await Promise.all([
-//           api.get("/pins"),
-//           api.get("/mask").catch(() => ({ data: null })), // allow no mask yet
-//         ]);
-
-//         // Expecting pins as array of documents
-//         setPins(
-//           Array.isArray(pinsRes.data)
-//             ? pinsRes.data
-//             : Array.isArray(pinsRes.data?.pins)
-//             ? pinsRes.data.pins
-//             : []
-//         );
-
-//         // Accept either a Feature or something like { geometry: {...} }
-//         const maskData = maskRes?.data;
-//         if (maskData) {
-//           if (maskData.type === "Feature") {
-//             setMaskGeoJson(maskData);
-//           } else if (maskData.geometry) {
-//             setMaskGeoJson({
-//               type: "Feature",
-//               properties: {},
-//               geometry: maskData.geometry,
-//             });
-//           }
-//         }
-//         notify("success", "Map data loaded");
-//       } catch (err) {
-//         console.error(err);
-//         notify("error", "Failed to load pins/mask");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchData();
-//   }, []);
-
-//   /** ----------------- MASK EDITING ------------------ */
-//   const enableMaskEditing = () => {
-//     const map = adminMapRef.current?.getMap?.();
-//     if (!map) return;
-
-//     if (drawRef.current) map.removeControl(drawRef.current);
-
-//     const draw = new MapboxDraw({
-//       displayControlsDefault: false,
-//       controls: { polygon: false, trash: false },
-//       styles: [
-//         {
-//           id: "gl-draw-polygon-fill",
-//           type: "fill",
-//           paint: { "fill-color": "#ff6600", "fill-opacity": 0.5 },
-//         },
-//         {
-//           id: "gl-draw-polygon-stroke",
-//           type: "line",
-//           paint: { "line-color": "#ff0000", "line-width": 3 },
-//         },
-//         {
-//           id: "gl-draw-polygon-and-line-vertex-halo-active",
-//           type: "circle",
-//           paint: { "circle-radius": 7, "circle-color": "#fff" },
-//         },
-//         {
-//           id: "gl-draw-polygon-and-line-vertex-active",
-//           type: "circle",
-//           paint: { "circle-radius": 5, "circle-color": "#ff0000" },
-//         },
-//       ],
-//     });
-
-//     drawRef.current = draw;
-//     map.addControl(draw, "top-left");
-
-//     // Add current mask if exists
-//     if (maskGeoJson?.geometry) {
-//       const added = draw.add(maskGeoJson);
-//       const featureId =
-//         maskGeoJson.id || (Array.isArray(added) ? added[0] : added);
-//       if (featureId) {
-//         draw.changeMode("direct_select", { featureId });
-//       }
-//     }
-
-//     setIsMaskingMode(true);
-//   };
-
-//   const exitMaskEditing = () => {
-//     const map = adminMapRef.current?.getMap?.();
-//     if (drawRef.current && map) {
-//       map.removeControl(drawRef.current);
-//       drawRef.current = null;
-//     }
-//     setIsMaskingMode(false);
-//   };
-
-//   const saveMask = async () => {
-//     const map = adminMapRef.current?.getMap?.();
-//     try {
-//       let featureToSave = maskGeoJson;
-
-//       if (drawRef.current && map) {
-//         const data = drawRef.current.getAll();
-//         if (data.features.length > 0) {
-//           featureToSave = data.features[0];
-//           setMaskGeoJson(featureToSave);
-//         } else {
-//           notify("error", "No mask found to save");
-//           setIsMaskingMode(false);
-//           return;
-//         }
-//       }
-
-//       // Accept POSTing either the Feature or just geometry—mirrors our controller example
-//       await api.post("/mask", {
-//         geometry: featureToSave.geometry, // ✅ only send geometry
-//       });
-
-//       notify("success", "Mask saved");
-//     } catch (err) {
-//       console.error(err);
-//       notify("error", "Failed to save mask");
-//     } finally {
-//       setIsMaskingMode(false);
-//       // Clean up draw control
-//       const map2 = adminMapRef.current?.getMap?.();
-//       if (drawRef.current && map2) {
-//         map2.removeControl(drawRef.current);
-//         drawRef.current = null;
-//       }
-//     }
-//   };
-
-//   /** ----------------- PINS ------------------ */
-//   const handleMapClick = (event) => {
-//     if (!isAddingPin) return;
-//     const { lng, lat } = event.lngLat;
-//     const newPin = {
-//       latitude: lat,
-//       longitude: lng,
-//       siteName: "",
-//       siteDescription: "",
-//       mediaUrl: "",
-//       mediaType: "image",
-//       arEnabled: false,
-//       arLink: "",
-//       status: "active",
-//       // _id is absent => new pin
-//     };
-//     setPins((prev) => [...prev, newPin]);
-//     setSelectedPin(pins.length);
-//   };
-
-//   const addPinFromCoords = () => {
-//     const lat = parseFloat(manualCoords.lat);
-//     const lng = parseFloat(manualCoords.lng);
-
-//     if (isNaN(lat) || isNaN(lng)) {
-//       notify("error", "Invalid latitude or longitude");
-//       return;
-//     }
-
-//     const newPin = {
-//       latitude: lat,
-//       longitude: lng,
-//       siteName: "",
-//       siteDescription: "",
-//       mediaUrl: "",
-//       mediaType: "image",
-//       arEnabled: false,
-//       arLink: "",
-//       status: "active",
-//     };
-
-//     setPins((prev) => [...prev, newPin]);
-//     setSelectedPin(pins.length); // open form immediately
-//     setManualCoords({ lat: "", lng: "" }); // reset
-//   };
-
-//   const updatePinField = (index, field, value) => {
-//     setPins((prev) =>
-//       prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
-//     );
-//   };
-
-//   const handleFormSubmit = async (e, index) => {
-//     e.preventDefault();
-//     const pin = pins[index];
-//     try {
-//       let saved;
-//       if (pin._id) {
-//         // Update existing
-//         const { _id, ...payload } = pin;
-//         const res = await api.put(`/pins/${_id}`, payload);
-//         saved = res.data;
-//       } else {
-//         // Create new
-//         const res = await api.post("/pins", pin);
-//         saved = res.data;
-//       }
-
-//       // Replace pin at index with the saved version (ensures we get _id)
-//       setPins((prev) => prev.map((p, i) => (i === index ? saved : p)));
-
-//       notify("success", `Pin #${index + 1} saved`);
-//       setSelectedPin(null);
-//       setIsAddingPin(false);
-//     } catch (err) {
-//       console.error(err);
-//       notify("error", "Failed to save pin");
-//     }
-//   };
-
-//   const handleDeletePin = async (id) => {
-//     if (!id) return;
-
-//     const confirmDelete = window.confirm(
-//       "Are you sure you want to delete this pin?"
-//     );
-//     if (!confirmDelete) return;
-
-//     try {
-//       await api.delete(`/pins/${id}`); // ✅ use `api` instance
-//       setPins((prev) => prev.filter((pin) => pin._id !== id));
-//       setSelectedPin(null);
-//       alert("Pin deleted successfully");
-//     } catch (error) {
-//       console.error("Error deleting pin:", error);
-//       alert(
-//         error.response?.data?.message || "Failed to delete pin. Unauthorized?"
-//       );
-//     }
-//   };
-
-//   // Handle GLB file upload
-//   const handleGlbUpload = async (e, index) => {
-//     const file = e.target.files[0];
-//     if (!file) return;
-
-//     const formData = new FormData();
-//     formData.append("arModel", file);
-
-//     try {
-//       const res = await axios.post(
-//         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins/upload-ar`,
-//         formData,
-//         { headers: { "Content-Type": "multipart/form-data" } }
-//       );
-
-//       const uploadedUrl = res.data.url;
-
-//       // Update the pin in state
-//       setPins((prev) =>
-//         prev.map((p, i) => (i === index ? { ...p, glbUrl: uploadedUrl } : p))
-//       );
-
-//       notify("success", "3D model uploaded successfully");
-//     } catch (err) {
-//       console.error("Upload error:", err.response?.data || err);
-//       notify("error", err.response?.data?.message || "Upload failed");
-//     }
-//   };
-
-//   // Preview 3D model
-//   const previewGlb = (glbUrl) => {
-//     setCurrentGlbUrl(glbUrl);
-//     setShowGlbPreview(true);
-//   };
-
-//   // Facade image upload
-//   const handleFacadeUpload = async (e, pinIndex) => {
-//     const file = e.target.files[0];
-//     if (!file) return;
-
-//     const formData = new FormData();
-//     formData.append("facade", file);
-
-//     try {
-//       const pinId = pins[pinIndex]._id;
-//       const res = await api.post(`/pins/${pinId}/upload-facade`, formData, {
-//         headers: { "Content-Type": "multipart/form-data" },
-//       });
-
-//       const updatedPins = [...pins];
-//       updatedPins[pinIndex].facadeUrl = res.data.facadeUrl;
-//       setPins(updatedPins);
-//     } catch (err) {
-//       console.error("❌ Facade upload failed:", err);
-//     }
-//   };
-
-//   // Facade remove
-//   const handleRemoveFacade = async (index) => {
-//     const pin = pins[index];
-//     if (!pin?._id) {
-//       // just clear locally for unsaved pins
-//       setPins((prev) => {
-//         const updated = [...prev];
-//         updated[index] = { ...updated[index], facadeUrl: "" };
-//         return updated;
-//       });
-//       return;
-//     }
-
-//     try {
-//       const res = await api.delete(`/pins/${pin._id}/remove-facade`);
-//       setPins((prev) => {
-//         const updated = [...prev];
-//         updated[index] = { ...updated[index], facadeUrl: "" };
-//         return updated;
-//       });
-
-//       notify("success", "Facade removed successfully");
-//     } catch (err) {
-//       console.error("❌ Error removing facade:", err);
-//       notify("error", "Failed to remove facade");
-//     }
-//   };
-
-//   // Optional: bulk-save any unsaved pins (if you keep the toolbar Save Pins)
-//   const savePins = async () => {
-//     try {
-//       // Save only those without _id (new)
-//       const newOnes = pins
-//         .map((p, i) => ({ ...p, __idx: i }))
-//         .filter((p) => !p._id);
-
-//       const savedCopies = [...pins];
-//       for (const p of newOnes) {
-//         const { __idx, ...payload } = p;
-//         const res = await api.post("/pins", payload);
-//         savedCopies[__idx] = res.data;
-//       }
-//       setPins(savedCopies);
-
-//       notify("success", `Saved ${newOnes.length} new pin(s)`);
-//       setIsAddingPin(false);
-//     } catch (err) {
-//       console.error(err);
-//       notify("error", "Failed to save pins");
-//     }
-//   };
-
-//   return (
-//     <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
-//       <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
-//         {/* Loading/Notif */}
-//         {loading && (
-//           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[10000] bg-white/90 border border-gray-200 px-3 py-1 rounded shadow">
-//             Loading…
-//           </div>
-//         )}
-//         {notif && (
-//           <div
-//             className={`absolute top-3 left-1/2 -translate-x-1/2 z-[10000] px-3 py-1 rounded shadow border ${
-//               notif.type === "success"
-//                 ? "bg-green-50 border-green-200 text-green-700"
-//                 : notif.type === "error"
-//                 ? "bg-red-50 border-red-200 text-red-700"
-//                 : "bg-gray-50 border-gray-200 text-gray-700"
-//             }`}
-//           >
-//             {notif.message}
-//           </div>
-//         )}
-
-//         {/* 3D Model Preview Modal */}
-//         {showGlbPreview && (
-//           <ModelPreview
-//             glbUrl={currentGlbUrl}
-//             onClose={() => setShowGlbPreview(false)}
-//           />
-//         )}
-
-//         {/* Pin Mode Indicator - Always visible when active, not inside modal */}
-//         {isAddingPin && (
-//           <>
-//             {/* Top card: Pin mode active */}
-//             <div className="absolute top-3 left-3 z-[10000] bg-blue-100 border border-blue-300 px-3 py-2 rounded-lg shadow-md">
-//               <div className="flex items-center">
-//                 <FontAwesomeIcon
-//                   icon={faMapPin}
-//                   className="text-blue-600 mr-2"
-//                 />
-//                 <span className="text-blue-700 font-medium">
-//                   Pin mode active
-//                 </span>
-//                 <button
-//                   onClick={() => setIsAddingPin(false)}
-//                   className="ml-3 text-blue-700 hover:text-blue-900"
-//                   title="Exit Pin Mode"
-//                 >
-//                   <FontAwesomeIcon icon={faXmark} />
-//                 </button>
-//               </div>
-//             </div>
-
-//             {/* Bottom card: hint */}
-//             <div className="absolute top-16 left-3 z-[10000] bg-white border border-gray-200 px-3 py-2 rounded-lg shadow-md">
-//               <p className="text-sm text-gray-700">Tap the map to add a pin</p>
-//             </div>
-//           </>
-//         )}
-
-//         {/* Map */}
-//         <Map
-//           ref={adminMapRef}
-//           initialViewState={{ ...viewState, minZoom: 15.5 }}
-//           maxBounds={INTRAMUROS_BOUNDS}
-//           mapboxAccessToken={MAPBOX_TOKEN}
-//           onMove={(evt) => setViewState(evt.viewState)}
-//           onClick={handleMapClick}
-//           mapStyle="mapbox://styles/mapbox/streets-v11"
-//           style={{ width: "100%", height: "100%" }}
-//         >
-//           {pins.map((pin, index) => (
-//             <Marker
-//               key={pin._id || `pin-${index}`}
-//               latitude={pin.latitude}
-//               longitude={pin.longitude}
-//               anchor="bottom"
-//             >
-//               <div
-//                 onClick={(e) => {
-//                   e.stopPropagation();
-//                   setSelectedPin(index);
-//                 }}
-//                 style={{ fontSize: "24px", cursor: "pointer" }}
-//                 title={pin.siteName || `Pin #${index + 1}`}
-//               >
-//                 📍
-//               </div>
-//             </Marker>
-//           ))}
-//         </Map>
-
-//         {selectedPin !== null && pins[selectedPin] && (
-//           <AdminPinCard
-//             pin={pins[selectedPin]}
-//             selectedPinIndex={selectedPin}
-//             updatePinField={updatePinField}
-//             handleFormSubmit={handleFormSubmit}
-//             handleDeletePin={handleDeletePin}
-//             handleGlbUpload={handleGlbUpload}
-//             previewGlb={previewGlb}
-//             handleFacadeUpload={handleFacadeUpload}
-//             handleRemoveFacade={handleRemoveFacade}
-//             onClose={() => setSelectedPin(null)}
-//           />
-//         )}
-
-//         {showAddPinModal && (
-//           <AddPinModal
-//             isAddingPin={isAddingPin}
-//             setIsAddingPin={setIsAddingPin}
-//             setShowManualAdd={setShowManualAdd}
-//             setShowAddPinModal={setShowAddPinModal}
-//           />
-//         )}
-
-//         {showManualAdd && (
-//           <ManualAddModal
-//             manualCoords={manualCoords}
-//             setManualCoords={setManualCoords}
-//             addPinFromCoords={addPinFromCoords}
-//             setShowManualAdd={setShowManualAdd}
-//             setShowAddPinModal={setShowAddPinModal}
-//           />
-//         )}
-
-//         {/* Floating Toolbar */}
-//         <div className="absolute top-6 right-6 z-[9999] flex items-end space-x-3">
-//           {/* Map Legend Panel */}
-//           {showLegend && (
-//             <div className="absolute right-full mr-3 top-0 bg-white rounded-lg shadow-md w-52 p-4 text-gray-800 animate-fadeIn">
-//               <h4 className="font-semibold mb-3 text-lg border-b pb-1">
-//                 Map Legend
-//               </h4>
-//               <ul className="space-y-2 text-sm">
-//                 <li className="flex items-center space-x-2">
-//                   <span>📍</span> <span>Pin</span>
-//                 </li>
-//               </ul>
-//             </div>
-//           )}
-
-//           {/* Toolbar + Save Mask */}
-//           <div className="flex flex-col items-end space-y-2">
-//             {/* Toolbar Core */}
-//             <div className="bg-white rounded-lg shadow-md flex flex-col overflow-hidden relative z-[9999]">
-//               {/* Legend Toggle */}
-//               <button
-//                 onClick={() => setShowLegend((prev) => !prev)}
-//                 title="Map Legend"
-//                 className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
-//                   showLegend ? "bg-blue-50 text-blue-600" : "text-gray-700"
-//                 }`}
-//               >
-//                 <FontAwesomeIcon icon={faInfo} />
-//               </button>
-
-//               {/* Pin Mode Toggle - Now opens modal */}
-//               <button
-//                 onClick={() => setShowAddPinModal(true)}
-//                 title="Add Pin"
-//                 className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
-//                   isAddingPin ? "bg-blue-50 text-blue-600" : "text-gray-700"
-//                 }`}
-//               >
-//                 <FontAwesomeIcon icon={isAddingPin ? faMapPin : faPlus} />
-//               </button>
-
-//               {/* Mask Mode Toggle */}
-//               <button
-//                 onClick={isMaskingMode ? exitMaskEditing : enableMaskEditing}
-//                 title={
-//                   isMaskingMode ? "Exit Mask Editing" : "Enable Mask Editing"
-//                 }
-//                 className={`p-3 w-full text-xl transition-colors hover:bg-gray-100 ${
-//                   isMaskingMode ? "bg-red-50 text-red-600" : "text-gray-700"
-//                 }`}
-//               >
-//                 <FontAwesomeIcon
-//                   icon={isMaskingMode ? faXmark : faCropSimple}
-//                 />
-//               </button>
-//             </div>
-
-//             {/* Save Mask Button */}
-//             {isMaskingMode && (
-//               <div className="bg-white rounded-lg shadow-md overflow-hidden relative z-[9999] w-full">
-//                 <button
-//                   onClick={saveMask}
-//                   title="Save Mask"
-//                   className="p-3 w-full text-xl transition-colors hover:bg-gray-100 bg-green-50 text-green-700"
-//                 >
-//                   <FontAwesomeIcon icon={faFloppyDisk} />
-//                 </button>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-
-//         <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-10">
-//           Tour Map
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
+// components/adminComponents/AdminPinCard.jsx
+import React, { Suspense, useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
+import { Lightbulb, Search, X } from "lucide-react";
+import axios from "axios";
+// Extract base URL from VITE_API_BASE_URL (remove /api suffix if present)
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
+  : "http://localhost:5000";
+
+// 3D Model Preview Component
+const ModelPreview = ({ url }) => {
+  const { scene } = useGLTF(url, true);
+  // Rotate to match Blender's coordinate system: -Y front, X right, Z up
+  return <primitive object={scene} scale={0.5} rotation={[0, 0, 0]} />;
+};
+
+const AdminPinCard = ({
+  pin,
+  selectedPinIndex,
+  updatePinField,
+  handleFormSubmit,
+  handleArchive,
+  handleGlbUpload,
+  handleFacadeUpload,
+  handleRemoveFacade,
+  handleRemoveGlb,
+  handleMediaUpload,
+  handleRemoveMedia,
+  previewGlb,
+  onClose,
+  categories = [],
+  fetchCategories,
+  validationErrors = {},
+  setValidationErrors,
+}) => {
+  if (!pin) return null;
+
+  // Language toggle state
+  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  
+  // Category search state
+  const [categorySearch, setCategorySearch] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  
+  // English sections
+  const [descriptionSections, setDescriptionSections] = useState([]);
+  // Tagalog sections
+  const [tagalogSections, setTagalogSections] = useState([]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showCategoryDropdown && !e.target.closest('.category-dropdown-container')) {
+        setShowCategoryDropdown(false);
+        setCategorySearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCategoryDropdown]);
+
+  useEffect(() => {
+    // Initialize English sections
+    if (pin.siteDescription) {
+      const sections = pin.siteDescription.split('\n\n').filter(s => s.trim());
+      setDescriptionSections(sections.length > 0 ? sections : ['']);
+    } else {
+      setDescriptionSections(['']);
+    }
+    
+    // Initialize Tagalog sections
+    if (pin.siteDescriptionTagalog) {
+      const sections = pin.siteDescriptionTagalog.split('\n\n').filter(s => s.trim());
+      setTagalogSections(sections.length > 0 ? sections : ['']);
+    } else {
+      setTagalogSections(['']);
+    }
+  }, [pin._id]);
+
+  // English section handlers
+  const addEnglishSection = () => {
+    setDescriptionSections([...descriptionSections, '']);
+  };
+
+  const removeEnglishSection = (index) => {
+    if (descriptionSections.length > 1) {
+      const newSections = descriptionSections.filter((_, i) => i !== index);
+      setDescriptionSections(newSections);
+      updatePinField(selectedPinIndex, 'siteDescription', newSections.join('\n\n'));
+    }
+  };
+
+  const updateEnglishSection = (index, value) => {
+    const newSections = [...descriptionSections];
+    newSections[index] = value;
+    setDescriptionSections(newSections);
+    updatePinField(selectedPinIndex, 'siteDescription', newSections.join('\n\n'));
+  };
+
+  // Tagalog section handlers
+  const addTagalogSection = () => {
+    setTagalogSections([...tagalogSections, '']);
+  };
+
+  const removeTagalogSection = (index) => {
+    if (tagalogSections.length > 1) {
+      const newSections = tagalogSections.filter((_, i) => i !== index);
+      setTagalogSections(newSections);
+      updatePinField(selectedPinIndex, 'siteDescriptionTagalog', newSections.join('\n\n'));
+    }
+  };
+
+  const updateTagalogSection = (index, value) => {
+    const newSections = [...tagalogSections];
+    newSections[index] = value;
+    setTagalogSections(newSections);
+    updatePinField(selectedPinIndex, 'siteDescriptionTagalog', newSections.join('\n\n'));
+  };
+
+  // Category handlers
+  const filteredCategories = categories.filter(cat =>
+    cat.name.toLowerCase().includes(categorySearch.toLowerCase())
+  );
+
+  const handleAddNewCategory = async () => {
+    if (!categorySearch.trim()) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/categories`,
+        { name: categorySearch.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (fetchCategories) {
+        await fetchCategories();
+      }
+      
+      // Set the newly created category
+      updatePinField(selectedPinIndex, "category", res.data._id);
+      setCategorySearch('');
+      setShowCategoryDropdown(false);
+    } catch (err) {
+      console.error("Error creating category:", err);
+      alert(err.response?.data?.message || "Failed to create category");
+    }
+  };
+
+  const selectedCategory = categories.find(cat => cat._id === pin.category);
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center p-4 pointer-events-none">
+      <div className="w-full max-w-[900px] max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col border border-gray-100 animate-fade-in pointer-events-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center p-5 border-b border-gray-100 rounded-t-2xl bg-gradient-to-r from-blue-50 to-indigo-50">
+        <h2 className="text-xl font-bold text-gray-800">Pin Details</h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100"
+        >
+          <span className="text-2xl">✕</span>
+        </button>
+      </div>
+
+      {/* Scrollable Form */}
+      <form
+        onSubmit={(e) => handleFormSubmit(e, selectedPinIndex)}
+        className="flex-1 overflow-y-auto p-6 space-y-6"
+      >
+        {/* Site Name */}
+        <div>
+          <label className="block text-base font-semibold text-gray-700 mb-2">
+            Site Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={pin.siteName || ""}
+            onChange={(e) => {
+              updatePinField(selectedPinIndex, "siteName", e.target.value);
+              if (setValidationErrors) {
+                setValidationErrors(prev => ({ ...prev, siteName: "" }));
+              }
+            }}
+            className={`w-full border rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+              validationErrors.siteName ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Enter site name"
+          />
+          {validationErrors.siteName && (
+            <p className="text-red-500 text-sm mt-1">
+              {validationErrors.siteName}
+            </p>
+          )}
+        </div>
+
+        {/* Category */}
+        <div className="relative category-dropdown-container">
+          <label className="block text-base font-semibold text-gray-700 mb-2">
+            Category <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <div
+              className={`w-full border rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between ${
+                validationErrors.category ? 'border-red-500' : 'border-gray-300'
+              }`}
+              style={{ borderColor: '#d1d5db' }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f04e37'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+            >
+              <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
+                {selectedCategory ? selectedCategory.name : "Choose Category"}
+              </span>
+              <Search className="w-5 h-5 text-gray-400" />
+            </div>
+            
+            {showCategoryDropdown && (
+              <div className="absolute z-50 w-full mt-2 bg-white border-2 rounded-xl shadow-lg max-h-64 overflow-hidden flex flex-col" style={{ borderColor: '#f9c5bd' }}>
+                <div className="p-3 border-b border-gray-200">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      placeholder="Search or add new category..."
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      onFocus={(e) => { e.target.style.borderColor = '#f04e37'; e.target.style.boxShadow = '0 0 0 3px rgba(240, 78, 55, 0.1)'; }}
+                      onBlur={(e) => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none'; }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                
+                <div className="overflow-y-auto max-h-48">
+                  {filteredCategories.length > 0 ? (
+                    filteredCategories.map((cat) => (
+                      <div
+                        key={cat._id}
+                        className="px-4 py-2.5 cursor-pointer text-sm transition"
+                        style={pin.category === cat._id ? { backgroundColor: '#fef2f0', color: '#f04e37', fontWeight: '500' } : { color: '#374151' }}
+                        onMouseEnter={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = '#fef2f0'; }}
+                        onMouseLeave={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        onClick={() => {
+                          updatePinField(selectedPinIndex, "category", cat._id);
+                          if (setValidationErrors) {
+                            setValidationErrors(prev => ({ ...prev, category: "" }));
+                          }
+                          setShowCategoryDropdown(false);
+                          setCategorySearch('');
+                        }}
+                      >
+                        {cat.name}
+                      </div>
+                    ))
+                  ) : categorySearch.trim() ? (
+                    <div
+                      className="px-4 py-3 hover:bg-green-50 cursor-pointer text-sm text-green-700 font-medium border-t border-green-200 bg-green-50/50"
+                      onClick={handleAddNewCategory}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="mr-2" />
+                      Add "{categorySearch}"
+                    </div>
+                  ) : (
+                    <div className="px-4 py-3 text-sm text-gray-500 italic">
+                      No categories found
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          {validationErrors.category && (
+            <p className="text-red-500 text-sm mt-1">
+              {validationErrors.category}
+            </p>
+          )}
+        </div>
+
+        {/* Site Description - Language Toggle with Sections */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-base font-semibold text-gray-700">
+              Site Description <span className="text-red-500">*</span>
+            </label>
+            {/* Language Toggle Slider */}
+            <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setSelectedLanguage('english')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                  selectedLanguage === 'english'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedLanguage('tagalog')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                  selectedLanguage === 'tagalog'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Tagalog
+              </button>
+            </div>
+          </div>
+          
+          {/* English Description Sections */}
+          {selectedLanguage === 'english' && (
+            <div className="animate-fadeIn">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-600">
+                  English Description (Sections)
+                </label>
+                <button
+                  type="button"
+                  onClick={addEnglishSection}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                  Add Section
+                </button>
+              </div>
+              <div className="space-y-3">
+                {descriptionSections.map((section, index) => (
+                  <div key={index} className="relative">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Section {index + 1}
+                        </label>
+                        <textarea
+                          value={section}
+                          onChange={(e) => updateEnglishSection(index, e.target.value)}
+                          className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          rows="4"
+                          placeholder={`Enter English section ${index + 1}`}
+                        />
+                      </div>
+                      {descriptionSections.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEnglishSection(index)}
+                          className="mt-6 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                          title="Remove section"
+                        >
+                          <FontAwesomeIcon icon={faMinus} className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+                <Lightbulb className="w-3.5 h-3.5" />
+                <p>Each section will be a separate paragraph</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Tagalog Description Sections */}
+          {selectedLanguage === 'tagalog' && (
+            <div className="animate-fadeIn">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-600">
+                  Tagalog Description (Mga Seksyon)
+                </label>
+                <button
+                  type="button"
+                  onClick={addTagalogSection}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white text-xs font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                  Add Section
+                </button>
+              </div>
+              <div className="space-y-3">
+                {tagalogSections.map((section, index) => (
+                  <div key={index} className="relative">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Section {index + 1}
+                        </label>
+                        <textarea
+                          value={section}
+                          onChange={(e) => updateTagalogSection(index, e.target.value)}
+                          className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          rows="4"
+                          placeholder={`Enter Tagalog section ${index + 1}`}
+                        />
+                      </div>
+                      {tagalogSections.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeTagalogSection(index)}
+                          className="mt-6 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                          title="Remove section"
+                        >
+                          <FontAwesomeIcon icon={faMinus} className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+                <Lightbulb className="w-3.5 h-3.5" />
+                <p>Each section will be a separate paragraph</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Status Indicators */}
+          <div className="flex gap-2 mt-3">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              (pin.siteDescription || '').trim() 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                (pin.siteDescription || '').trim() ? 'bg-green-500' : 'bg-gray-400'
+              }`}></span>
+              English: {(pin.siteDescription || '').trim() ? `${descriptionSections.length} section(s)` : 'Empty'}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${
+              (pin.siteDescriptionTagalog || '').trim() 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-gray-100 text-gray-500'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                (pin.siteDescriptionTagalog || '').trim() ? 'bg-green-500' : 'bg-gray-400'
+              }`}></span>
+              Tagalog: {(pin.siteDescriptionTagalog || '').trim() ? `${tagalogSections.length} sections` : 'Empty'}
+            </div>
+          </div>
+          {validationErrors.siteDescription && (
+            <p className="text-red-500 text-sm mt-2">
+              {validationErrors.siteDescription}
+            </p>
+          )}
+        </div>
+        {/* 2D Facade Landmark */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            2D Facade Image <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-col space-y-3">
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  handleFacadeUpload(e, selectedPinIndex);
+                  if (setValidationErrors) {
+                    setValidationErrors(prev => ({ ...prev, facadeUrl: "" }));
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200 ${
+                validationErrors.facadeUrl ? 'border-red-500' : 'border-gray-300'
+              }`}>
+                <FontAwesomeIcon
+                  icon={faUpload}
+                  className="text-gray-400 text-lg mb-2"
+                />
+                <p className="text-sm text-gray-600">
+                  {pin.facadeUrl
+                    ? "Replace Facade Image"
+                    : "Upload Facade Image"}
+                </p>
+              </div>
+            </div>
+            {pin.facadeUrl && (
+              <div className="w-full h-40 relative rounded-lg overflow-hidden border border-gray-200">
+                <img
+                  src={
+                    pin.facadeUrl.startsWith('http') 
+                      ? pin.facadeUrl 
+                      : pin.facadeUrl.includes('s3.amazonaws.com')
+                        ? pin.facadeUrl
+                        : `${BACKEND_URL}${pin.facadeUrl}`
+                  }
+                  alt="Facade preview"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFacade(selectedPinIndex)}
+                  className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow hover:bg-red-600 transition"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            {validationErrors.facadeUrl && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.facadeUrl}
+              </p>
+            )}
+          </div>
+        </div>
+        {/* Media Files Upload */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Media Files (Images/Videos) <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-col space-y-3">
+            <div className="relative">
+              <input
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={(e) => {
+                  handleMediaUpload(e, selectedPinIndex);
+                  if (setValidationErrors) {
+                    setValidationErrors(prev => ({ ...prev, mediaFiles: "" }));
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200 ${
+                validationErrors.mediaFiles ? 'border-red-500' : 'border-gray-300'
+              }`}>
+                <FontAwesomeIcon
+                  icon={faUpload}
+                  className="text-gray-400 text-lg mb-2"
+                />
+                <p className="text-sm text-gray-600">
+                  {pin.mediaFiles && pin.mediaFiles.length > 0
+                    ? "Add More Media Files"
+                    : "Upload Images/Videos"}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select multiple files (Max 10)
+                </p>
+              </div>
+            </div>
+            
+            {/* Media Files Preview */}
+            {pin.mediaFiles && pin.mediaFiles.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {pin.mediaFiles.map((media, index) => {
+                  // Priority: S3 URL > HTTP URL > Local path
+                  const mediaUrl = media.url?.startsWith('http') 
+                    ? media.url 
+                    : media.url?.includes('s3.amazonaws.com')
+                      ? media.url
+                      : `${BACKEND_URL}${media.url}`;
+                  
+                  return (
+                    <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
+                      {media.type === "video" ? (
+                        <video
+                          src={mediaUrl}
+                          className="w-full h-32 object-cover"
+                          controls
+                        >
+                          <track kind="captions" />
+                        </video>
+                      ) : (
+                        <img
+                          src={mediaUrl}
+                          alt={`Media ${index + 1}`}
+                          className="w-full h-32 object-cover"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedia(selectedPinIndex, index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow hover:bg-red-600 transition"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {validationErrors.mediaFiles && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.mediaFiles}
+              </p>
+            )}
+          </div>
+        </div>
+        {/* 3D Model Section */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            3D Model (.glb)
+          </label>
+          <div className="flex flex-col space-y-3">
+            {/* File Upload */}
+            <div className="relative">
+              <input
+                type="file"
+                accept=".glb"
+                onChange={(e) => handleGlbUpload(e, selectedPinIndex)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+                <FontAwesomeIcon
+                  icon={faUpload}
+                  className="text-gray-400 text-lg mb-2"
+                />
+                <p className="text-sm text-gray-600">
+                  {pin.glbUrl ? "Replace 3D Model" : "Upload GLB File"}
+                </p>
+              </div>
+            </div>
+            {/* Live 3D Model Preview */}
+            {pin.glbUrl && (
+              <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
+                <Canvas>
+                  <Suspense fallback={null}>
+                    <ambientLight intensity={1.2} />
+                    <directionalLight position={[10, 10, 10]} intensity={1.5} />
+                    <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+                    <Bounds fit clip observe margin={0.8}>
+                      <Center>
+                        <ModelPreview
+                          url={
+                            pin.glbUrl
+                              ? pin.glbUrl.startsWith('http') 
+                                ? pin.glbUrl 
+                                : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
+                              : null
+                          }
+                        />
+                      </Center>
+                    </Bounds>
+                    <OrbitControls
+                      enableZoom={true}
+                      minPolarAngle={Math.PI / 3}
+                      maxPolarAngle={Math.PI / 2}
+                    />
+                  </Suspense>
+                </Canvas>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveGlb(selectedPinIndex)}
+                  className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-md shadow hover:bg-red-600 transition"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* AR Link */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              AR Experience
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <div className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={pin.arEnabled || false}
+                  onChange={(e) =>
+                    updatePinField(
+                      selectedPinIndex,
+                      "arEnabled",
+                      e.target.checked
+                    )
+                  }
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </div>
+              <span className="text-sm text-gray-600">
+                {pin.arEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </label>
+          </div>
+          <input
+            type="text"
+            value={pin.arLink || ""}
+            onChange={(e) =>
+              updatePinField(selectedPinIndex, "arLink", e.target.value)
+            }
+            className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            placeholder="https://example.com/ar-link"
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            This link will only be visible to tourists if enabled.
+          </p>
+        </div>
+        
+        {/* Entrance Fee Configuration */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Entrance Fee
+          </label>
+          <select
+            value={pin.feeType || "none"}
+            onChange={(e) => {
+              const newFeeType = e.target.value;
+              updatePinField(selectedPinIndex, "feeType", newFeeType);
+              
+              if (newFeeType === "none") {
+                updatePinField(selectedPinIndex, "feeAmount", null);
+              }
+            }}
+            className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          >
+            <option value="none">None (Free Entry)</option>
+            <option value="fort_santiago">Inside Fort Santiago</option>
+            <option value="custom_fee">Custom Entrance Fee</option>
+          </select>
+          
+          {/* Fee Amount Input - Show only when Fort Santiago or Custom Fee is selected */}
+          {(pin.feeType === "fort_santiago" || pin.feeType === "custom_fee") && (
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Regular Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={pin.feeAmount || ""}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? null : Number(e.target.value);
+                      updatePinField(selectedPinIndex, "feeAmount", value);
+                    }}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter regular price"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Discounted Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={pin.feeAmountDiscounted || ""}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? null : Number(e.target.value);
+                      updatePinField(selectedPinIndex, "feeAmountDiscounted", value);
+                    }}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700 font-medium mb-1">
+                  Discounted Price Information
+                </p>
+                <p className="text-xs text-blue-600">
+                  Discounted price applies to Students, PWD (Persons with Disabilities), and Senior Citizens. Leave blank if no discount is available.
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">
+                {pin.feeType === "fort_santiago" 
+                  ? "Leave prices empty to use the default Fort Santiago entrance fee message" 
+                  : "Specify the entrance fee amounts for this site"}
+              </p>
+            </div>
+          )}
+          
+          <p className="text-xs text-gray-500 mt-2">
+            Configure the entrance fee information for this site.
+          </p>
+        </div>
+        
+        {/* Site Status */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Site Status
+          </label>
+          <select
+            value={pin.status || "active"}
+            onChange={(e) =>
+              updatePinField(selectedPinIndex, "status", e.target.value)
+            }
+            className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          
+          {/* Reason for Inactive Status */}
+          {pin.status === "inactive" && (
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for Unavailability
+              </label>
+              <select
+                value={pin.inactiveReason || ""}
+                onChange={(e) =>
+                  updatePinField(selectedPinIndex, "inactiveReason", e.target.value)
+                }
+                className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              >
+                <option value="">Select a reason</option>
+                <option value="under_construction">Under Construction</option>
+                <option value="temporarily_closed">Temporarily Closed</option>
+                <option value="maintenance">Under Maintenance</option>
+                <option value="no_longer_exists">No Longer Exists</option>
+                <option value="restricted_access">Restricted Access</option>
+                <option value="safety_concerns">Safety Concerns</option>
+                <option value="other">Other</option>
+              </select>
+              
+              {/* Additional notes for "Other" reason */}
+              {pin.inactiveReason === "other" && (
+                <textarea
+                  value={pin.inactiveReasonDetails || ""}
+                  onChange={(e) =>
+                    updatePinField(selectedPinIndex, "inactiveReasonDetails", e.target.value)
+                  }
+                  className="w-full border border-gray-200 rounded-xl p-3 mt-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  rows="2"
+                  placeholder="Please specify the reason..."
+                />
+              )}
+              {validationErrors.inactiveReasonDetails && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.inactiveReasonDetails}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Footer Buttons */}
+        <div className="pt-4 flex justify-between">
+          <button
+            type="button"
+            onClick={() => handleArchive(pin._id)}
+            className="px-5 py-2.5 bg-orange-500 text-white text-sm font-medium rounded-xl hover:bg-orange-600 transition-colors duration-200 flex items-center gap-2 shadow-sm hover:shadow-md"
+          >
+            <FontAwesomeIcon icon={faTrash} />
+            Archive
+          </button>
+
+          <button
+            type="submit"
+            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
+          >
+            <FontAwesomeIcon icon={faCheck} />
+            Save Changes
+          </button>
+        </div>
+      </form>
+      
+      </div>
+    </div>
+  );
+};
+
+export default AdminPinCard;

@@ -13,9 +13,10 @@ import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n";
 
 // PWA Components
-import OfflineIndicator from "./components/shared/OfflineIndicator";
+import ConnectionStatus from "./components/shared/ConnectionStatus";
 import PWAInstallPrompt from "./components/shared/PWAInstallPrompt";
 import LazyLoadErrorBoundary from "./components/shared/LazyLoadErrorBoundary";
+import AuthPersistence from "./components/AuthPersistence";
 
 import SignupForm from "./components/loginComponents/signupForm";
 import LoginPage from "./components/loginComponents/loginPage";
@@ -166,9 +167,11 @@ export default function App() {
       <I18nextProvider i18n={i18n}>
         <UserProvider>
           <Router>
-            <AnimatedRoutes />
-            <OfflineIndicator />
-            <PWAInstallPrompt />
+            <AuthPersistence>
+              <AnimatedRoutes />
+              <ConnectionStatus />
+              <PWAInstallPrompt />
+            </AuthPersistence>
           </Router>
         </UserProvider>
       </I18nextProvider>

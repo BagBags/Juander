@@ -96,7 +96,11 @@ const MediaCarousel = ({ mediaFiles = [], className = "" }) => {
             >
               {media.type === "video" ? (
                 <video
-                  src={media.url}
+                  src={
+                    media.url.startsWith('http') 
+                      ? media.url 
+                      : `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5000"}${media.url}`
+                  }
                   className="w-full h-full object-contain"
                   controls
                   playsInline
@@ -107,7 +111,11 @@ const MediaCarousel = ({ mediaFiles = [], className = "" }) => {
                 </video>
               ) : (
                 <img
-                  src={media.url}
+                  src={
+                    media.url.startsWith('http') 
+                      ? media.url 
+                      : `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5000"}${media.url}`
+                  }
                   alt={`Media ${index + 1}`}
                   className="w-full h-full object-contain"
                   draggable="false"

@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
-const { SUPER_ADMIN_EMAIL } = require("../config/superAdmin");
+const { SUPER_ADMIN_EMAIL, isSuperAdmin } = require("../config/superAdmin");
 
 // For routes that require normal admin access
 exports.verifyAdmin = async (req, res, next) => {
@@ -17,7 +17,7 @@ exports.verifyAdmin = async (req, res, next) => {
     if (!user) return res.status(401).json({ message: "User not found" });
 
     // Super admin also counts as admin
-    if (user.role !== "admin" && user.email !== SUPER_ADMIN_EMAIL) {
+    if (user.role !== "admin" && !isSuperAdmin(user.email)) {
       return res.status(403).json({ message: "Admins only" });
     }
 
@@ -66,7 +66,7 @@ exports.verifySuperAdmin = async (req, res, next) => {
     const user = await User.findById(decoded.id).select("-password");
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    if (user.email !== SUPER_ADMIN_EMAIL) {
+    if (!isSuperAdmin(user.email)) {
       return res.status(403).json({ message: "Super Admin access required" });
     }
 

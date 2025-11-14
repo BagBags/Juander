@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend Connection Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .test { margin: 20px 0; padding: 15px; background: #2a2a2a; border-left: 4px solid #00ff00; }
+        .pass { border-left-color: #00ff00; }
+        .fail { border-left-color: #ff0000; color: #ff0000; }
+        .info { border-left-color: #ffaa00; color: #ffaa00; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: monospace;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #00cc00; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Backend Connection Test</h1>
+    <p>Testing connection to: <code>http://192.168.100.10:5000</code></p>
+
+    <div id="results"></div>
+
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button onclick="location.href='/'">Go to App</button>
+
+    <script>
+        const API_BASE = 'http://192.168.100.10:5000';
+        const results = document.getElementById('results');
+
+        function addResult(title, message, status) {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.innerHTML = `<strong>${title}</strong><br>${message}`;
+            results.appendChild(div);
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                addResult(
+                    'Health Check',
+                    `Status: ${data.status}<br>MongoDB: ${data.mongodb}<br>Response: <pre>${JSON.stringify(data, null, 2)}</pre>`,
+                    'pass'
+                );
+            } catch (error) {
+                addResult('Health Check', `Failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function testCORS() {
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    addResult('CORS Check', 'CORS headers are correctly configured', 'pass');
+                } else {
+                    addResult('CORS Check', `Status: ${response.status}`, 'fail');
+                }
+            } catch (error) {
+                addResult('CORS Check', `CORS Error: ${error.message}`, 'fail');
+            }
+        }
+
+        async function testServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                if (registrations.length === 0) {
+                    addResult('Service Worker', 'No service workers registered (Good for dev)', 'pass');
+                } else {
+                    addResult('Service Worker', `${registrations.length} service worker(s) found (Should be 0)`, 'fail');
+                }
+            } else {
+                addResult('Service Worker', 'Service Worker API not available', 'info');
+            }
+        }
+
+        async function testCache() {
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                if (cacheNames.length === 0) {
+                    addResult('Cache Storage', 'No caches found (Good for dev)', 'pass');
+                } else {
+                    addResult('Cache Storage', `${cacheNames.length} cache(s) found: ${cacheNames.join(', ')}`, 'fail');
+                }
+            } else {
+                addResult('Cache Storage', 'Cache API not available', 'info');
+            }
+        }
+
+        async function testNetwork() {
+            addResult('Network Status', `navigator.onLine: ${navigator.onLine}`, navigator.onLine ? 'pass' : 'fail');
+        }
+
+        async function testEnv() {
+            addResult(
+                'Environment',
+                `Protocol: ${window.location.protocol}<br>Host: ${window.location.host}<br>Origin: ${window.location.origin}`,
+                'info'
+            );
+        }
+
+        async function runAllTests() {
+            results.innerHTML = '<div class="test info">Running tests...</div>';
+            await testEnv();
+            await testNetwork();
+            await testServiceWorker();
+            await testCache();
+            await testCORS();
+            await testHealth();
+        }
+
+        // Auto-run on load
+        window.onload = runAllTests;
+    </script>
+</body>
+</html>

@@ -67,6 +67,9 @@ router.post("/", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Created chatbot entry with tags: ${newEntry.tags.join(", ")}`,
+      role: "admin",
+      targetType: "other",
+      targetId: newEntry._id,
     });
 
     res.status(201).json(newEntry);
@@ -92,6 +95,9 @@ router.put("/:id", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Updated chatbot entry (ID: ${entry._id})`,
+      role: "admin",
+      targetType: "other",
+      targetId: entry._id,
     });
 
     res.json(entry);
@@ -119,6 +125,9 @@ router.put("/:id/archive", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Archived chatbot entry (ID: ${entry._id})`,
+      role: "admin",
+      targetType: "other",
+      targetId: entry._id,
     });
 
     res.json(entry);
@@ -147,6 +156,9 @@ router.put("/:id/restore", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Restored chatbot entry (ID: ${entry._id})`,
+      role: "admin",
+      targetType: "other",
+      targetId: entry._id,
     });
 
     res.json(entry);
@@ -174,6 +186,9 @@ router.delete("/:id", async (req, res) => {
       action: `Permanently deleted chatbot entry with keywords: ${entry.keywords.join(
         ", "
       )}`,
+      role: "admin",
+      targetType: "other",
+      targetId: entry._id,
     });
 
     res.json({ message: "Entry deleted" });

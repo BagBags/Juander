@@ -5,6 +5,8 @@ import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
 import axios from "axios";
 import { useParams } from "react-router-dom";
+import NotificationModal from "../../shared/NotificationModal";
+import QRScanner from "../QRScannerSimple";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
@@ -19,10 +21,12 @@ export default function SiteModalFullScreen({
   reviewsLoading = false,
   simulateGoToNextSite,
   isGuestMode = false,
+  onReviewSubmitted,
 }) {
   const { t } = useTranslation();
   const { itineraryId } = useParams();
   const [showAR, setShowAR] = useState(false);
+  const [scannedArUrl, setScannedArUrl] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [userLanguage, setUserLanguage] = useState('english');
@@ -32,6 +36,7 @@ export default function SiteModalFullScreen({
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
   const [userReviews, setUserReviews] = useState([]);
   const [editingReviewId, setEditingReviewId] = useState(null);
   const [reviewImages, setReviewImages] = useState([]);
@@ -48,13 +53,26 @@ export default function SiteModalFullScreen({
     const fetchUserLanguage = async () => {
       try {
         const token = localStorage.getItem('token');
+        const isGuest = localStorage.getItem('guest') === 'true';
+        
+        // Check for guest language first
+        if (isGuest) {
+          const guestLang = localStorage.getItem('guestLanguage') || 'en';
+          setUserLanguage(guestLang === 'tl' ? 'tagalog' : 'english');
+          return;
+        }
+        
+        // For logged-in users, fetch from backend
         if (token) {
           const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/user`,
+            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/me`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const language = response.data.language || 'english';
-          setUserLanguage(language.toLowerCase());
+          const language = response.data.language || 'en';
+          // Convert 'en' or 'tl' to 'english' or 'tagalog'
+          setUserLanguage(language === 'tl' ? 'tagalog' : 'english');
+        } else {
+          setUserLanguage('english');
         }
       } catch (error) {
         console.error('Failed to fetch user language:', error);
@@ -107,7 +125,8 @@ export default function SiteModalFullScreen({
             `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/site/${selectedPin._id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const myReviews = response.data.filter(r => r.userId._id === userId);
+          const reviewsData = response.data.reviews || response.data;
+          const myReviews = reviewsData.filter(r => r.userId._id === userId);
           setUserReviews(myReviews);
         }
       } catch (error) {
@@ -120,7 +139,7 @@ export default function SiteModalFullScreen({
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
     if (files.length + reviewImages.length > 5) {
-      alert("You can upload maximum 5 images");
+      setNotification({ isOpen: true, title: "Upload Limit", message: "You can upload maximum 5 images", type: "warning" });
       return;
     }
 
@@ -146,24 +165,108 @@ export default function SiteModalFullScreen({
     e.preventDefault();
     
     if (rating === 0) {
-      alert("Please select a rating");
+      setNotification({ isOpen: true, title: "Rating Required", message: "Please select a rating", type: "warning" });
       return;
+    }
+
+    // Check for inappropriate content using OpenAI Moderation API
+    if (reviewText) {
+      try {
+        const token = localStorage.getItem("token");
+        const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+        
+        const moderationResponse = await axios.post(
+          `${BACKEND_URL}/api/openai/moderate`,
+          { input: reviewText },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        // OpenAI returns results in results[0]
+        const result = moderationResponse.data.results?.[0];
+        console.log("Moderation API Response:", moderationResponse.data);
+        console.log("Moderation Result:", result);
+        
+        if (result && result.flagged) {
+          const categories = Object.entries(result.categories)
+            .filter(([_, value]) => value)
+            .map(([key]) => key);
+            
+          let warningMessage = "⚠️ Your review contains inappropriate content";
+          if (categories.length > 0) {
+            warningMessage += ` (${categories.join(", ")})`;
+          }
+          warningMessage += ". Please revise your review.";
+          
+          setNotification({ isOpen: true, title: "Content Warning", message: warningMessage, type: "warning" });
+          console.log("Flagged categories:", result.categories);
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking content moderation:", err);
+        
+        // Always apply basic profanity check as fallback when moderation API fails
+        const basicProfanityList = ["fuck", "shit", "ass", "bitch", "sex", "porn", "dick", "pussy", "cock", "damn", "hell"];
+        const containsProfanity = basicProfanityList.some(word => 
+          reviewText.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (containsProfanity) {
+          setNotification({ isOpen: true, title: "Inappropriate Content", message: "Your review contains inappropriate content. Please revise it.", type: "warning" });
+          return;
+        }
+        
+        // Check if it's a rate limit error
+        if (err.response && 
+            err.response.status === 500 && 
+            err.response.data && 
+            err.response.data.details === "Too Many Requests") {
+          
+          setNotification({ isOpen: true, title: "High Traffic", message: "We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.", type: "info" });
+          console.log("OpenAI rate limit reached, proceeding with submission after profanity check");
+        } else {
+          // For other errors, warn user but allow submission after profanity check
+          console.warn("Moderation API unavailable, used fallback profanity filter");
+        }
+      }
     }
 
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
       
-      // Upload images first if any
-      let uploadedImageUrls = [];
-      if (reviewImages.length > 0) {
+      if (editingReviewId) {
+        // For editing, send as JSON (no file upload on edit)
+        await axios.put(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${editingReviewId}`,
+          {
+            rating: rating,
+            reviewText: reviewText.trim(),
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setNotification({ isOpen: true, title: "Success", message: "Review updated successfully!", type: "success" });
+      } else {
+        // For creating, send as FormData with photos
         const formData = new FormData();
+        formData.append("siteId", selectedPin._id);
+        formData.append("itineraryId", itineraryId);
+        formData.append("rating", rating);
+        formData.append("reviewText", reviewText.trim());
+        
+        // Append photos if any
         reviewImages.forEach((image) => {
           formData.append("photos", image);
         });
 
-        const uploadResponse = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/upload-photos`,
+        await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews`,
           formData,
           {
             headers: {
@@ -172,37 +275,7 @@ export default function SiteModalFullScreen({
             },
           }
         );
-        uploadedImageUrls = uploadResponse.data.photos;
-      }
-
-      if (editingReviewId) {
-        await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${editingReviewId}`,
-          {
-            rating: rating,
-            reviewText: reviewText.trim(),
-            photos: uploadedImageUrls,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        alert("Review updated successfully!");
-      } else {
-        await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews`,
-          {
-            siteId: selectedPin._id,
-            itineraryId: itineraryId,
-            rating: rating,
-            reviewText: reviewText.trim(),
-            photos: uploadedImageUrls,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        alert("Review submitted successfully!");
+        setNotification({ isOpen: true, title: "Success", message: "Review submitted successfully!", type: "success" });
       }
 
       // Reset form
@@ -219,11 +292,17 @@ export default function SiteModalFullScreen({
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const userId = JSON.parse(localStorage.getItem("user"))?._id;
-      const myReviews = response.data.filter(r => r.userId._id === userId);
+      const reviewsData = response.data.reviews || response.data;
+      const myReviews = reviewsData.filter(r => r.userId._id === userId);
       setUserReviews(myReviews);
+      
+      // Refresh parent component's reviews
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
     } catch (err) {
       console.error("Error submitting review:", err);
-      alert(err.response?.data?.error || "Failed to submit review");
+      setNotification({ isOpen: true, title: "Error", message: err.response?.data?.error || "Failed to submit review", type: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -249,26 +328,28 @@ export default function SiteModalFullScreen({
         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${reviewId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Review deleted successfully!");
+      setNotification({ isOpen: true, title: "Success", message: "Review deleted successfully!", type: "success" });
       
       // Refresh user reviews
       setUserReviews(userReviews.filter(r => r._id !== reviewId));
     } catch (err) {
       console.error("Error deleting review:", err);
-      alert("Failed to delete review");
+      setNotification({ isOpen: true, title: "Error", message: "Failed to delete review", type: "error" });
     }
   };
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-gradient-to-b from-gray-50 to-white overflow-y-auto"
-      style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
+      className="fixed inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
     >
       {/* Modern Header with Close Button */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 py-4 flex items-center justify-between shadow-sm z-10">
+      <div 
+        className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 flex items-center justify-between shadow-sm z-10"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)',
+          paddingBottom: '16px'
+        }}
+      >
         <div>
           <h2 className="text-lg font-bold text-gray-900">Site Information</h2>
           <p className="text-xs text-gray-500 mt-0.5">Explore the details</p>
@@ -286,22 +367,46 @@ export default function SiteModalFullScreen({
       </div>
 
       {/* Content */}
-      <div className="px-5 py-6 pb-20 max-w-3xl mx-auto">
+      <div 
+        className="flex-1 overflow-y-auto px-5 py-6 max-w-3xl mx-auto w-full"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 80px)'
+        }}
+      >
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
-          <div className="flex flex-col h-[70vh]">
-            <iframe
-              src={selectedPin.arLink}
-              title="AR Mode"
-              className="flex-1 w-full rounded-lg border border-gray-200"
-              allow="camera; gyroscope; accelerometer; fullscreen"
-            />
-            <button
-              onClick={() => setShowAR(false)}
-              className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
-            >
-              Exit AR Mode
-            </button>
+          <div className="h-[70vh] rounded-xl overflow-hidden">
+            {scannedArUrl ? (
+              <div className="flex flex-col h-full">
+                <iframe
+                  src={scannedArUrl}
+                  title="AR Experience"
+                  className="flex-1 w-full"
+                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; autoplay *; fullscreen *"
+                  allowFullScreen
+                />
+                <button
+                  onClick={() => {
+                    setShowAR(false);
+                    setScannedArUrl(null);
+                  }}
+                  className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
+                >
+                  Exit AR Experience
+                </button>
+              </div>
+            ) : (
+              <QRScanner
+                onScanSuccess={(url) => {
+                  setScannedArUrl(url);
+                  ttsService.speak(t('tts_qrScanned') || "QR Code scanned successfully");
+                }}
+                onClose={() => {
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                }}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -390,17 +495,33 @@ export default function SiteModalFullScreen({
                         </p>
                         {selectedPin.feeAmount ? (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
-                            <p className="text-sm font-semibold text-gray-800">
-                              Fort Santiago Entrance Fee: <span className="text-[#f04e37]">₱{selectedPin.feeAmount}</span>
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              Purchase tickets at the Fort Santiago entrance.
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Fort Santiago Entrance Fee:
+                              </p>
+                              <span className="text-[#f04e37] font-bold text-lg">₱{selectedPin.feeAmount}</span>
+                            </div>
+                            {selectedPin.feeAmountDiscounted && (
+                              <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
+                                <p className="text-xs font-medium text-gray-700">
+                                  Student/PWD/Senior Citizen:
+                                </p>
+                                <span className="text-green-600 font-bold text-base">₱{selectedPin.feeAmountDiscounted}</span>
+                              </div>
+                            )}
+                            <div className="bg-white/60 p-2 rounded-md mt-2">
+                              <p className="text-xs text-gray-700 font-medium">
+                                Payment will be upon entrance at the gate. This will give you access to all sites within Fort Santiago.
+                              </p>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700 mb-2">
                               Please check the current entrance fee at the Fort Santiago entrance.
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Payment at the gate will give you access to all sites within Fort Santiago.
                             </p>
                           </div>
                         )}
@@ -412,9 +533,20 @@ export default function SiteModalFullScreen({
                         </p>
                         {selectedPin.feeAmount ? (
                           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
-                            <p className="text-sm font-semibold text-gray-800">
-                              Entrance Fee: <span className="text-blue-700">₱{selectedPin.feeAmount}</span>
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Entrance Fee:
+                              </p>
+                              <span className="text-blue-700 font-bold text-lg">₱{selectedPin.feeAmount}</span>
+                            </div>
+                            {selectedPin.feeAmountDiscounted && (
+                              <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
+                                <p className="text-xs font-medium text-gray-700">
+                                  Student/PWD/Senior Citizen:
+                                </p>
+                                <span className="text-green-600 font-bold text-base">₱{selectedPin.feeAmountDiscounted}</span>
+                              </div>
+                            )}
                             <p className="text-xs text-gray-600 mt-1">
                               Please have the fee ready when visiting this site.
                             </p>
@@ -555,7 +687,7 @@ export default function SiteModalFullScreen({
             </div>
 
             {/* AR Mode Button - Modern Design */}
-            {selectedPin.arEnabled && selectedPin.arLink && (
+            {selectedPin.arEnabled && (
               <button
                 onClick={() => {
                   setShowAR(true);
@@ -565,10 +697,10 @@ export default function SiteModalFullScreen({
                 style={{ background: 'linear-gradient(to right, #f04e37, #d9442f)' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d9442f, #c23d2a)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f04e37, #d9442f)'}
-                aria-label="View in AR Mode"
+                aria-label="Scan QR Code for AR"
               >
                 <Glasses className="w-5 h-5" />
-                <span>Experience in AR Mode</span>
+                <span>Scan QR Code for AR</span>
               </button>
             )}
 
@@ -908,28 +1040,18 @@ export default function SiteModalFullScreen({
                 </div>
               </div>
             </div>
-
-            {/* Next Stop Button - marks current site as visited and navigates to next */}
-            {currentPinIndex < pinsLength - 1 && (
-              <button
-                onClick={() => {
-                  // Mark current site as visited before navigating
-                  if (simulateGoToNextSite) {
-                    simulateGoToNextSite();
-                  } else {
-                    goToNextStop();
-                  }
-                  ttsService.speak(t('tts_navigatingNext'));
-                }}
-                className="w-full bg-[#f04e37] hover:bg-[#d9442f] text-white px-6 py-4 text-lg font-bold rounded-lg shadow-lg transition-all duration-200 active:scale-95"
-                aria-label="Mark as visited and go to next site"
-              >
-                Next →
-              </button>
-            )}
           </>
         )}
       </div>
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
+      />
     </div>
   );
 }

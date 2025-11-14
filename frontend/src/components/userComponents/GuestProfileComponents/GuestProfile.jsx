@@ -1,9 +1,10 @@
 // GuestProfilePage.jsx
 import React, { useEffect } from "react";
-import { FaUser, FaBirthdayCake, FaVenusMars } from "react-icons/fa";
+import { FaUser, FaBirthdayCake, FaVenusMars, FaUserCircle, FaTiktok } from "react-icons/fa";
 import { MdLanguage, MdSettings } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
+import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -14,7 +15,7 @@ export default function GuestProfilePage() {
 
   // Load guest language preference on mount
   useEffect(() => {
-    const savedLang = sessionStorage.getItem("guestLanguage");
+    const savedLang = localStorage.getItem("guestLanguage");
     if (savedLang) {
       i18n.changeLanguage(savedLang);
     }
@@ -53,23 +54,28 @@ export default function GuestProfilePage() {
     },
     {
       icon: <MdSettings />,
-      label: t("settings") || "Settings",
+      label: t("Settings") || "Settings",
       to: "/GuestProfile/GuestSettings",
       disabled: false,
     },
   ];
 
   const handleLogout = () => {
-    // Clear sessionStorage for guest users
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("guest");
+    // Clear localStorage for guest users
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("guest");
+    localStorage.removeItem("guestLanguage");
+    localStorage.removeItem("guestHideFortSantiagoModal");
+    localStorage.removeItem("guestReplayTutorial");
     // Also clear any guest-related data
-    Object.keys(sessionStorage).forEach(key => {
+    Object.keys(localStorage).forEach(key => {
       if (key.startsWith("guest_")) {
-        sessionStorage.removeItem(key);
+        localStorage.removeItem(key);
       }
     });
+    // Clear sessionStorage as well
+    sessionStorage.clear();
     navigate("/"); // Redirect to login/homepage
   };
 
@@ -98,13 +104,11 @@ export default function GuestProfilePage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
           
-          <div className="relative w-28 h-28 z-10">
+          <div className="relative w-28 h-28 z-10 flex items-center justify-center">
             <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
-            <img
-              src={"https://i.pravatar.cc/200?img=12"}
-              alt="Guest Profile"
-              className="w-full h-full rounded-full border-4 border-white object-cover shadow-2xl relative"
-            />
+            <div className="w-full h-full rounded-full border-4 border-white flex items-center justify-center shadow-2xl relative">
+              <FaUserCircle className="w-20 h-20 text-white" />
+            </div>
           </div>
           
           <div className="z-10">
@@ -112,7 +116,7 @@ export default function GuestProfilePage() {
             <h1 className="text-3xl font-bold leading-tight mb-1">Guest User</h1>
             <div className="flex items-center gap-2 mt-2">
               <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-xs">👤</span>
+                <FaUser className="text-xs text-white" />
               </div>
               <p className="text-xs text-white/80">Exploring Mode</p>
             </div>
@@ -165,9 +169,67 @@ export default function GuestProfilePage() {
           {t("createAccount")}
         </button>
 
+        {/* Social Media Icons */}
+        <div className="mt-12 mb-4 flex items-center justify-center gap-4">
+          <a
+            href="https://www.facebook.com/share/17YomjzorW/?mibextid=wwXIfr"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Facebook"
+          >
+            <Facebook className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.instagram.com/intramurosph?igsh=MXUwb3o0YTBkN3cycw=="
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Instagram"
+          >
+            <Instagram className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.tiktok.com/@intramurosph?_r=1&_t=ZS-91HcteutvZR"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="TikTok"
+          >
+            <FaTiktok className="w-5 h-5" />
+          </a>
+          <a
+            href="https://youtube.com/@intramurosadministration?si=NxzDejo3UOFWI6x3"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="YouTube"
+          >
+            <Youtube className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.linkedin.com/company/intramuros-administration/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="LinkedIn"
+          >
+            <Linkedin className="w-5 h-5" />
+          </a>
+          <a
+            href="https://x.com/intramuros?s=21"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="X (Twitter)"
+          >
+            <Twitter className="w-5 h-5" />
+          </a>
+        </div>
+
         {/* Footer */}
-        <p className="mt-12 mb-8 text-xs text-center text-gray-400">
-          © 2025 Intramuros Administration. All rights reserved.
+        <p className="mb-8 text-xs text-center text-gray-400">
+          © 2025 {t("intramurosAdmin")}. All rights reserved.
         </p>
       </div>
     </motion.div>

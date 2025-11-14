@@ -1,0 +1,98 @@
+/* Pulse animation for user marker (Google Maps style) */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.5);
+  }
+}
+
+/* Custom styling for Mapbox GeolocateControl */
+
+/* Style the geolocate button */
+.mapboxgl-ctrl-geolocate {
+  width: 40px !important;
+  height: 40px !important;
+  background-color: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s ease !important;
+}
+
+.mapboxgl-ctrl-geolocate:hover {
+  background-color: #f8f9fa !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Active state (tracking) */
+.mapboxgl-ctrl-geolocate.mapboxgl-ctrl-geolocate-active {
+  background-color: #3b82f6 !important;
+}
+
+.mapboxgl-ctrl-geolocate.mapboxgl-ctrl-geolocate-active:hover {
+  background-color: #2563eb !important;
+}
+
+/* Waiting state */
+.mapboxgl-ctrl-geolocate.mapboxgl-ctrl-geolocate-waiting {
+  background-color: #f59e0b !important;
+}
+
+/* Icon color */
+.mapboxgl-ctrl-geolocate .mapboxgl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23333' d='M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 1 1 0-7z'/%3E%3Ccircle fill='%23333' cx='10' cy='10' r='2'/%3E%3C/svg%3E") !important;
+}
+
+.mapboxgl-ctrl-geolocate.mapboxgl-ctrl-geolocate-active .mapboxgl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Cpath fill='%23fff' d='M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 1 1 0-7z'/%3E%3Ccircle fill='%23fff' cx='10' cy='10' r='2'/%3E%3C/svg%3E") !important;
+}
+
+/* User location dot (blue dot with pulse) */
+.mapboxgl-user-location-dot {
+  background-color: #3b82f6 !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 3px solid white !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 0 rgba(59, 130, 246, 0.4) !important;
+  animation: pulse 2s infinite !important;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Accuracy circle */
+.mapboxgl-user-location-accuracy-circle {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border: 2px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Heading indicator (blue cone/beam) */
+.mapboxgl-user-location-heading {
+  fill: rgba(59, 130, 246, 0.7) !important;
+  stroke: rgba(59, 130, 246, 0.9) !important;
+  stroke-width: 2 !important;
+}
+
+/* Remove default mapbox control group styling conflicts */
+.mapboxgl-ctrl-group {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mapboxgl-ctrl-group > button {
+  background-color: white !important;
+  border-radius: 8px !important;
+}

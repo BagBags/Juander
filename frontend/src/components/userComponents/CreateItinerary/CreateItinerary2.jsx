@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import { X } from "lucide-react";
 import ConfirmModal from "../../shared/ConfirmModal";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function CreateItineraryPage() {
   const [selected, setSelected] = useState([]);
@@ -24,9 +25,14 @@ export default function CreateItineraryPage() {
   const [descriptionToggles, setDescriptionToggles] = useState({});
   const [showMyItineraries, setShowMyItineraries] = useState(false);
   const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
+
+  const showNotification = (type, title, message) => {
+    setNotification({ isOpen: true, type, title, message });
+  };
 
   useEffect(() => {
     fetchSites();
@@ -38,7 +44,7 @@ export default function CreateItineraryPage() {
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins`);
       setSites(res.data);
     } catch {
-      alert("Failed to load sites");
+      showNotification('error', 'Error', 'Failed to load sites');
     }
   };
 
@@ -50,7 +56,7 @@ export default function CreateItineraryPage() {
       );
       setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
     } catch {
-      alert("Failed to load itineraries");
+      showNotification('error', 'Error', 'Failed to load itineraries');
     }
   };
 
@@ -75,7 +81,7 @@ export default function CreateItineraryPage() {
       setImageUrl(res.data.imageUrl); // Save returned URL
     } catch (err) {
       console.error("Upload failed", err);
-      alert("Image upload failed");
+      showNotification('error', 'Upload Failed', 'Image upload failed');
     }
   };
 
@@ -103,7 +109,7 @@ export default function CreateItineraryPage() {
       setShowDeleteImageModal(false);
     } catch (err) {
       console.error("Failed to delete image:", err);
-      alert("Failed to delete image");
+      showNotification('error', 'Error', 'Failed to delete image');
     }
   };
 
@@ -115,8 +121,10 @@ export default function CreateItineraryPage() {
     );
 
   const handleSave = async () => {
-    if (!itineraryName.trim() || selected.length === 0)
-      return alert("Enter name & select sites");
+    if (!itineraryName.trim() || selected.length === 0) {
+      showNotification('warning', 'Incomplete Information', 'Please enter a name and select at least one site');
+      return;
+    }
 
     const payload = {
       name: itineraryName.trim(),
@@ -142,7 +150,7 @@ export default function CreateItineraryPage() {
       resetForm();
       fetchItineraries();
     } catch {
-      alert("Failed to save itinerary");
+      showNotification('error', 'Error', 'Failed to save itinerary');
     }
   };
 
@@ -152,7 +160,7 @@ export default function CreateItineraryPage() {
       await axios.delete(`${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/${id}`, config);
       setUserItineraries(userItineraries.filter((i) => i._id !== id));
     } catch {
-      alert("Failed to delete itinerary");
+      showNotification('error', 'Error', 'Failed to delete itinerary');
     }
   };
 
@@ -193,7 +201,7 @@ export default function CreateItineraryPage() {
       
       {/* === STICKY BACKHEADER === */}
       <div 
-        className="sticky top-0 z-40 bg-[#f04e37]"
+        className="sticky top-0 z-20 bg-[#f04e37] border-b border-white/20"
         style={{
           paddingTop: "max(env(safe-area-inset-top), 16px)",
           paddingBottom: "8px",
@@ -201,7 +209,7 @@ export default function CreateItineraryPage() {
           paddingRight: "16px"
         }}
       >
-        <BackHeader title="Create Itinerary" className="text-white" />
+        <BackHeader title="Create Itinerary" />
       </div>
 
       <MainLayout includeSideButtons={false}>
@@ -678,6 +686,15 @@ function ItineraryCard({
           })}
         </div>
       )}
+      
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </div>
   );
 }

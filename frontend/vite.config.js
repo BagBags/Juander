@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { visualizer } from "rollup-plugin-visualizer";
+import fs from "fs";
+import path from "path";
 
 export default defineConfig({
   base: '', // Empty string for relative paths
@@ -44,7 +46,26 @@ export default defineConfig({
         // Ensure all JS chunks are cached (including lazy-loaded ones)
         globDirectory: 'dist',
         cleanupOutdatedCaches: true,
+        // Skip waiting to activate new service worker immediately
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
+          // Chatbot API calls - Bot entries and OpenAI
+          {
+            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai).*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'chatbot-api-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day for chatbot responses
+              },
+              networkTimeoutSeconds: 30, // Longer timeout for OpenAI API
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // Guest API calls - Public endpoints only (pins, reviews)
           {
             urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
@@ -165,7 +186,7 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true, // Enable in development for testing
+        enabled: false, // Disable in development to avoid offline cache issues
         type: 'module',
       },
     }),
@@ -197,6 +218,9 @@ export default defineConfig({
     },
   },
   server: {
+    host: 'localhost',
+    port: 5173,
+    cors: true,
     proxy: {
       "/api": {
         target: "http://localhost:5000",

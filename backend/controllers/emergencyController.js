@@ -1,5 +1,6 @@
 const EmergencyContact = require("../models/emergencyModel");
 const Log = require("../models/logModel"); // import Log model
+const { deleteFromS3 } = require("../middleware/upload");
 
 // CREATE
 exports.createContact = async (req, res) => {
@@ -10,7 +11,7 @@ exports.createContact = async (req, res) => {
       name: req.body.name,
       contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
       position: req.body.position ?? count,
-      icon: req.file ? `/uploads/emergency/${req.file.filename}` : null,
+      icon: req.file ? (req.file.location || `/uploads/emergency/${req.file.filename}`) : null,
     });
 
     res.status(201).json(contact);
@@ -27,7 +28,7 @@ exports.updateContact = async (req, res) => {
       name: req.body.name,
       contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
     };
-    if (req.file) updatedData.icon = `/uploads/emergency/${req.file.filename}`;
+    if (req.file) updatedData.icon = req.file.location || `/uploads/emergency/${req.file.filename}`;
 
     const updated = await EmergencyContact.findByIdAndUpdate(
       req.params.id,
@@ -86,6 +87,9 @@ exports.archiveContact = async (req, res) => {
     await Log.create({
       adminName,
       action: `Archived emergency contact: "${contact.name}"`,
+      role: "admin",
+      targetType: "other",
+      targetId: contact._id,
     });
 
     res.status(200).json(contact);
@@ -115,6 +119,9 @@ exports.restoreContact = async (req, res) => {
     await Log.create({
       adminName,
       action: `Restored emergency contact: "${contact.name}"`,
+      role: "admin",
+      targetType: "other",
+      targetId: contact._id,
     });
 
     res.status(200).json(contact);
@@ -128,6 +135,16 @@ exports.restoreContact = async (req, res) => {
 exports.deleteContact = async (req, res) => {
   try {
     const deleted = await EmergencyContact.findByIdAndDelete(req.params.id);
+    
+    // Delete icon from S3 if it exists
+    if (deleted && deleted.icon) {
+      try {
+        await deleteFromS3(deleted.icon);
+        console.log(`✅ Deleted icon from S3: ${deleted.icon}`);
+      } catch (fileErr) {
+        console.error("❌ Error deleting icon from S3:", fileErr);
+      }
+    }
 
     // Log action
     const adminName = req.user
@@ -137,6 +154,9 @@ exports.deleteContact = async (req, res) => {
       await Log.create({
         adminName,
         action: `Permanently deleted emergency contact: "${deleted.name}"`,
+        role: "admin",
+        targetType: "other",
+        targetId: deleted._id,
       });
     }
 
@@ -171,6 +191,8 @@ exports.reorderContacts = async (req, res) => {
     await Log.create({
       adminName,
       action: `Reordered emergency contact agencies`,
+      role: "admin",
+      targetType: "other",
     });
 
     res.status(200).json(updatedContacts);

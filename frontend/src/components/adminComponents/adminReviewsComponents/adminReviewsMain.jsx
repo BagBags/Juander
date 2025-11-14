@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Star, Trash2, Eye, Search, Filter, Calendar, MapPin, User } from "lucide-react";
 import ConfirmModal from "../../shared/ConfirmModal";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function AdminReviewsMain() {
   const [reviews, setReviews] = useState([]);
@@ -25,6 +26,7 @@ export default function AdminReviewsMain() {
     onConfirm: null,
     loading: false,
   });
+  const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
 
   useEffect(() => {
     fetchReviews();
@@ -126,11 +128,26 @@ export default function AdminReviewsMain() {
             }
           );
           
+          // Log the action
+          try {
+            await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/logs`,
+              {
+                action: `Deleted review for ${review.siteId?.siteName || "Unknown Site"} by ${review.userId?.firstName || "Unknown"} ${review.userId?.lastName || "User"}`,
+              },
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+          } catch (logErr) {
+            console.error("Error logging action:", logErr);
+          }
+          
           setReviews((prev) => prev.filter((r) => r._id !== review._id));
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error("Error deleting review:", err);
-          alert("Failed to delete review");
+          setNotification({ isOpen: true, title: "Error", message: "Failed to delete review", type: "error" });
           setConfirmModal((prev) => ({ ...prev, loading: false }));
         }
       },
@@ -439,6 +456,15 @@ export default function AdminReviewsMain() {
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
         loading={confirmModal.loading}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
       />
     </div>
   );

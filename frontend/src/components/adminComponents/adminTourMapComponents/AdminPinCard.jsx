@@ -1,5 +1,5 @@
 // components/adminComponents/AdminPinCard.jsx
-import React, { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect, Component } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faCheck, faUpload, faPlus, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { Canvas } from "@react-three/fiber";
@@ -9,7 +9,30 @@ import axios from "axios";
 // Extract base URL from VITE_API_BASE_URL (remove /api suffix if present)
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
-  : "https://d3des4qdhz53rp.cloudfront.net";
+  : "http://localhost:5000";
+
+// Error Boundary for 3D Model
+class ModelErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.log('3D model failed to load in pin card, skipping:', error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // Don't render anything on error
+    }
+    return this.props.children;
+  }
+}
 
 // 3D Model Preview Component
 const ModelPreview = ({ url }) => {
@@ -34,8 +57,17 @@ const AdminPinCard = ({
   onClose,
   categories = [],
   fetchCategories,
+  validationErrors = {},
+  setValidationErrors,
 }) => {
   if (!pin) return null;
+
+  // Normalize category to ID on mount if it's a populated object
+  useEffect(() => {
+    if (pin.category && typeof pin.category === 'object' && pin.category._id) {
+      updatePinField(selectedPinIndex, "category", pin.category._id);
+    }
+  }, []);
 
   // Language toggle state
   const [selectedLanguage, setSelectedLanguage] = useState('english');
@@ -149,7 +181,9 @@ const AdminPinCard = ({
     }
   };
 
-  const selectedCategory = categories.find(cat => cat._id === pin.category);
+  // Handle both populated category (object) and category ID (string)
+  const categoryId = typeof pin.category === 'object' ? pin.category?._id : pin.category;
+  const selectedCategory = categories.find(cat => cat._id === categoryId);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4 pointer-events-none">
@@ -173,34 +207,46 @@ const AdminPinCard = ({
         {/* Site Name */}
         <div>
           <label className="block text-base font-semibold text-gray-700 mb-2">
-            Site Name
+            Site Name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={pin.siteName || ""}
-            onChange={(e) =>
-              updatePinField(selectedPinIndex, "siteName", e.target.value)
-            }
-            className="w-full border border-gray-300 rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+            onChange={(e) => {
+              updatePinField(selectedPinIndex, "siteName", e.target.value);
+              if (setValidationErrors) {
+                setValidationErrors(prev => ({ ...prev, siteName: "" }));
+              }
+            }}
+            className={`w-full border rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+              validationErrors.siteName ? 'border-red-500' : 'border-gray-300'
+            }`}
             placeholder="Enter site name"
           />
+          {validationErrors.siteName && (
+            <p className="text-red-500 text-sm mt-1">
+              {validationErrors.siteName}
+            </p>
+          )}
         </div>
 
         {/* Category */}
         <div className="relative category-dropdown-container">
           <label className="block text-base font-semibold text-gray-700 mb-2">
-            Category
+            Category <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <div
-              className="w-full border border-gray-300 rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between"
+              className={`w-full border rounded-xl p-4 text-base transition-all duration-200 cursor-pointer bg-white flex items-center justify-between ${
+                validationErrors.category ? 'border-red-500' : 'border-gray-300'
+              }`}
               style={{ borderColor: '#d1d5db' }}
               onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f04e37'}
               onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
               onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
             >
               <span className={selectedCategory ? "text-gray-800" : "text-gray-400"}>
-                {selectedCategory ? selectedCategory.name : "Select a category"}
+                {selectedCategory ? selectedCategory.name : "Choose Category"}
               </span>
               <Search className="w-5 h-5 text-gray-400" />
             </div>
@@ -224,28 +270,19 @@ const AdminPinCard = ({
                 </div>
                 
                 <div className="overflow-y-auto max-h-48">
-                  {/* None option */}
-                  <div
-                    className="px-4 py-2.5 hover:bg-gray-100 cursor-pointer text-sm text-gray-600 border-b border-gray-100"
-                    onClick={() => {
-                      updatePinField(selectedPinIndex, "category", null);
-                      setShowCategoryDropdown(false);
-                      setCategorySearch('');
-                    }}
-                  >
-                    <span className="italic">None</span>
-                  </div>
-                  
                   {filteredCategories.length > 0 ? (
                     filteredCategories.map((cat) => (
                       <div
                         key={cat._id}
                         className="px-4 py-2.5 cursor-pointer text-sm transition"
-                        style={pin.category === cat._id ? { backgroundColor: '#fef2f0', color: '#f04e37', fontWeight: '500' } : { color: '#374151' }}
-                        onMouseEnter={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = '#fef2f0'; }}
-                        onMouseLeave={(e) => { if (pin.category !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        style={categoryId === cat._id ? { backgroundColor: '#fef2f0', color: '#f04e37', fontWeight: '500' } : { color: '#374151' }}
+                        onMouseEnter={(e) => { if (categoryId !== cat._id) e.currentTarget.style.backgroundColor = '#fef2f0'; }}
+                        onMouseLeave={(e) => { if (categoryId !== cat._id) e.currentTarget.style.backgroundColor = 'transparent'; }}
                         onClick={() => {
                           updatePinField(selectedPinIndex, "category", cat._id);
+                          if (setValidationErrors) {
+                            setValidationErrors(prev => ({ ...prev, category: "" }));
+                          }
                           setShowCategoryDropdown(false);
                           setCategorySearch('');
                         }}
@@ -270,17 +307,10 @@ const AdminPinCard = ({
               </div>
             )}
           </div>
-          
-          {selectedCategory && (
-            <button
-              type="button"
-              onClick={() => {
-                updatePinField(selectedPinIndex, "category", null);
-              }}
-              className="absolute right-12 top-[46px] text-gray-400 hover:text-red-500 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {validationErrors.category && (
+            <p className="text-red-500 text-sm mt-1">
+              {validationErrors.category}
+            </p>
           )}
         </div>
 
@@ -288,7 +318,7 @@ const AdminPinCard = ({
         <div>
           <div className="flex items-center justify-between mb-3">
             <label className="block text-base font-semibold text-gray-700">
-              Site Description
+              Site Description <span className="text-red-500">*</span>
             </label>
             {/* Language Toggle Slider */}
             <div className="flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
@@ -446,21 +476,33 @@ const AdminPinCard = ({
               Tagalog: {(pin.siteDescriptionTagalog || '').trim() ? `${tagalogSections.length} sections` : 'Empty'}
             </div>
           </div>
+          {validationErrors.siteDescription && (
+            <p className="text-red-500 text-sm mt-2">
+              {validationErrors.siteDescription}
+            </p>
+          )}
         </div>
         {/* 2D Facade Landmark */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            2D Facade Image
+            2D Facade Image <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             <div className="relative">
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleFacadeUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleFacadeUpload(e, selectedPinIndex);
+                  if (setValidationErrors) {
+                    setValidationErrors(prev => ({ ...prev, facadeUrl: "" }));
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200 ${
+                validationErrors.facadeUrl ? 'border-red-500' : 'border-gray-300'
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -475,7 +517,13 @@ const AdminPinCard = ({
             {pin.facadeUrl && (
               <div className="w-full h-40 relative rounded-lg overflow-hidden border border-gray-200">
                 <img
-                  src={pin.facadeUrl.startsWith('http') ? pin.facadeUrl : `${BACKEND_URL}${pin.facadeUrl}`}
+                  src={
+                    pin.facadeUrl.startsWith('http') 
+                      ? pin.facadeUrl 
+                      : pin.facadeUrl.includes('s3.amazonaws.com')
+                        ? pin.facadeUrl
+                        : `${BACKEND_URL}${pin.facadeUrl}`
+                  }
                   alt="Facade preview"
                   className="w-full h-full object-cover"
                 />
@@ -488,12 +536,17 @@ const AdminPinCard = ({
                 </button>
               </div>
             )}
+            {validationErrors.facadeUrl && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.facadeUrl}
+              </p>
+            )}
           </div>
         </div>
         {/* Media Files Upload */}
         <div className="border-t border-gray-200 pt-4 mt-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Media Files (Images/Videos)
+            Media Files (Images/Videos) <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-col space-y-3">
             <div className="relative">
@@ -501,10 +554,17 @@ const AdminPinCard = ({
                 type="file"
                 accept="image/*,video/*"
                 multiple
-                onChange={(e) => handleMediaUpload(e, selectedPinIndex)}
+                onChange={(e) => {
+                  handleMediaUpload(e, selectedPinIndex);
+                  if (setValidationErrors) {
+                    setValidationErrors(prev => ({ ...prev, mediaFiles: "" }));
+                  }
+                }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200">
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center hover:border-blue-400 transition-colors duration-200 ${
+                validationErrors.mediaFiles ? 'border-red-500' : 'border-gray-300'
+              }`}>
                 <FontAwesomeIcon
                   icon={faUpload}
                   className="text-gray-400 text-lg mb-2"
@@ -524,8 +584,10 @@ const AdminPinCard = ({
             {pin.mediaFiles && pin.mediaFiles.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 {pin.mediaFiles.map((media, index) => {
-                  // Check if URL is already absolute (starts with http:// or https://)
-                  const mediaUrl = media.url?.startsWith('http') ? media.url : `${BACKEND_URL}${media.url}`;
+                  // S3 URL or local path
+                  const mediaUrl = media.url?.startsWith('http') 
+                    ? media.url 
+                    : `${BACKEND_URL}${media.url}`;
                   
                   return (
                     <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200">
@@ -534,6 +596,7 @@ const AdminPinCard = ({
                           src={mediaUrl}
                           className="w-full h-32 object-cover"
                           controls
+                          crossOrigin="anonymous"
                         >
                           <track kind="captions" />
                         </video>
@@ -555,6 +618,11 @@ const AdminPinCard = ({
                   );
                 })}
               </div>
+            )}
+            {validationErrors.mediaFiles && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.mediaFiles}
+              </p>
             )}
           </div>
         </div>
@@ -584,21 +652,22 @@ const AdminPinCard = ({
             </div>
             {/* Live 3D Model Preview */}
             {pin.glbUrl && (
-              <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
-                <Canvas>
-                  <Suspense fallback={null}>
-                    <ambientLight intensity={1.2} />
-                    <directionalLight position={[10, 10, 10]} intensity={1.5} />
-                    <directionalLight position={[-5, 5, -5]} intensity={0.5} />
-                    <Bounds fit clip observe margin={0.8}>
-                      <Center>
-                        <ModelPreview
-                          url={
-                            pin.glbUrl
-                              ? pin.glbUrl.startsWith('http') 
-                                ? pin.glbUrl 
-                                : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
-                              : null
+              <ModelErrorBoundary>
+                <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
+                  <Canvas>
+                    <Suspense fallback={null}>
+                      <ambientLight intensity={1.2} />
+                      <directionalLight position={[10, 10, 10]} intensity={1.5} />
+                      <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+                      <Bounds fit clip observe margin={0.8}>
+                        <Center>
+                          <ModelPreview
+                            url={
+                              pin.glbUrl
+                                ? pin.glbUrl.startsWith('http') 
+                                  ? pin.glbUrl 
+                                  : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
+                                : null
                           }
                         />
                       </Center>
@@ -618,6 +687,7 @@ const AdminPinCard = ({
                   Remove
                 </button>
               </div>
+              </ModelErrorBoundary>
             )}
           </div>
         </div>
@@ -648,17 +718,8 @@ const AdminPinCard = ({
               </span>
             </label>
           </div>
-          <input
-            type="text"
-            value={pin.arLink || ""}
-            onChange={(e) =>
-              updatePinField(selectedPinIndex, "arLink", e.target.value)
-            }
-            className="w-full border border-gray-200 rounded-xl p-3 mt-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            placeholder="https://example.com/ar-link"
-          />
           <p className="text-xs text-gray-500 mt-2">
-            This link will only be visible to tourists if enabled.
+            Enable AR experience for this site. Tourists will be able to scan a QR code to access AR features.
           </p>
         </div>
         
@@ -686,26 +747,55 @@ const AdminPinCard = ({
           
           {/* Fee Amount Input - Show only when Fort Santiago or Custom Fee is selected */}
           {(pin.feeType === "fort_santiago" || pin.feeType === "custom_fee") && (
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                {pin.feeType === "fort_santiago" ? "Fort Santiago Entrance Fee (₱)" : "Custom Entrance Fee (₱)"}
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={pin.feeAmount || ""}
-                onChange={(e) => {
-                  const value = e.target.value === "" ? null : Number(e.target.value);
-                  updatePinField(selectedPinIndex, "feeAmount", value);
-                }}
-                className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                placeholder="Enter fee amount (optional)"
-              />
-              <p className="text-xs text-gray-500 mt-1">
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Regular Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={pin.feeAmount || ""}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? null : Number(e.target.value);
+                      updatePinField(selectedPinIndex, "feeAmount", value);
+                    }}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter regular price"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Discounted Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={pin.feeAmountDiscounted || ""}
+                    onChange={(e) => {
+                      const value = e.target.value === "" ? null : Number(e.target.value);
+                      updatePinField(selectedPinIndex, "feeAmountDiscounted", value);
+                    }}
+                    className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700 font-medium mb-1">
+                  Discounted Price Information
+                </p>
+                <p className="text-xs text-blue-600">
+                  Discounted price applies to Students, PWD (Persons with Disabilities), and Senior Citizens. Leave blank if no discount is available.
+                </p>
+              </div>
+              <p className="text-xs text-gray-500">
                 {pin.feeType === "fort_santiago" 
-                  ? "Leave empty to use the default Fort Santiago entrance fee message" 
-                  : "Specify the entrance fee amount for this site"}
+                  ? "Leave prices empty to use the default Fort Santiago entrance fee message" 
+                  : "Specify the entrance fee amounts for this site"}
               </p>
             </div>
           )}
@@ -765,6 +855,11 @@ const AdminPinCard = ({
                   rows="2"
                   placeholder="Please specify the reason..."
                 />
+              )}
+              {validationErrors.inactiveReasonDetails && (
+                <p className="text-red-500 text-sm mt-1">
+                  {validationErrors.inactiveReasonDetails}
+                </p>
               )}
             </div>
           )}

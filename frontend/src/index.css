@@ -13,22 +13,45 @@
     --safe-area-inset-right: env(safe-area-inset-right, 0px);
   }
 
+  html {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    /* PWA: Ensure proper rendering on all devices */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* GPU acceleration for smooth scrolling */
+    -webkit-overflow-scrolling: touch;
+  }
+
   body {
     font-family: "Poppins", sans-serif;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-  }
-  
-  html {
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
+    /* IMPORTANT: Do NOT add safe-area padding to body */
+    /* Safe areas are handled by individual components (BackHeader, etc.) */
+    /* This prevents double-padding and layout issues */
+    
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior-y: none;
+    /* Smooth rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   /* Prevent iOS zoom on input focus */
   input, textarea, select {
     font-size: 16px !important;
+  }
+  
+  /* PWA: Full viewport height accounting for safe areas */
+  #root {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    /* Ensure content respects safe areas */
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -53,7 +76,6 @@
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-    color-adjust: exact !important;
   }
 }
 

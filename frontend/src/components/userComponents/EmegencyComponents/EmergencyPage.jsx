@@ -51,19 +51,22 @@ export default function EmergencyPage() {
 
       {/* Sticky Back Header */}
       <div 
-        className="sticky top-0 bg-gradient-to-b from-red-500/95 to-transparent backdrop-blur-sm z-20 w-full"
+        className="sticky top-0 z-20 border-b border-white/20"
         style={{
+          background: "linear-gradient(to right, #ef4444, #f04e37)",
           paddingTop: "max(env(safe-area-inset-top), 16px)",
           paddingBottom: "8px",
           paddingLeft: "16px",
           paddingRight: "16px"
         }}
       >
-        <BackHeader title={<span className="text-white">Emergency Hotlines</span>} className="text-white" />
+        <div className="text-white">
+          <BackHeader title="Emergency Hotlines" />
+        </div>
       </div>
 
       <MainLayout includeSideButtons={false}>
-        <div className="w-full max-w-4xl mx-auto px-4 py-8">
+        <div className="w-full max-w-4xl mx-auto px-4 pt-6 pb-8">
           {/* Hero Section */}
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-2xl mb-4 animate-pulse">

@@ -59,18 +59,10 @@ export default function ManagePhotobooth() {
   const fetchFilters = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`, axiosConfig);
-      const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
       
-      // Resolve image URLs
-      const filtersWithUrls = res.data.map(f => ({
-        ...f,
-        image: f.image && !f.image.startsWith('http') 
-          ? `${BACKEND_URL}${f.image.startsWith('/') ? '' : '/'}${f.image}`
-          : f.image
-      }));
-      
-      setFilters(filtersWithUrls);
-      setSortedFilters(filtersWithUrls);
+      // Use S3 URLs directly from backend
+      setFilters(res.data);
+      setSortedFilters(res.data);
     } catch (err) {
       console.error(err);
     }
@@ -80,18 +72,10 @@ export default function ManagePhotobooth() {
   const fetchArchivedFilters = async () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters/archived`, axiosConfig);
-      const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
       
-      // Resolve image URLs
-      const filtersWithUrls = res.data.map(f => ({
-        ...f,
-        image: f.image && !f.image.startsWith('http') 
-          ? `${BACKEND_URL}${f.image.startsWith('/') ? '' : '/'}${f.image}`
-          : f.image
-      }));
-      
-      setArchivedFilters(filtersWithUrls);
-      setSortedArchivedFilters(filtersWithUrls);
+      // Use S3 URLs directly from backend
+      setArchivedFilters(res.data);
+      setSortedArchivedFilters(res.data);
     } catch (err) {
       console.error(err);
     }

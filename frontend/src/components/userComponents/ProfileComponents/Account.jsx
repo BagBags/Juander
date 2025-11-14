@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, Trash2, CheckCircle2, XCircle, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 export default function Account() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [user, setUser] = useState({
     firstName: "",
@@ -21,6 +23,7 @@ export default function Account() {
   const [otpStep, setOtpStep] = useState(false);
   const [otpTimeLeft, setOtpTimeLeft] = useState(0);
   const [otpMessage, setOtpMessage] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
   const otpRefs = useRef([]);
   const otpLength = 6;
 
@@ -30,6 +33,18 @@ export default function Account() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [notif, setNotif] = useState(null);
+  
+  // Notification helper
+  const notify = (type, message) => {
+    setNotif({ type, message });
+    setTimeout(() => setNotif(null), 3000);
+  };
+  
+  // Deactivation states
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [deactivating, setDeactivating] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -67,6 +82,13 @@ export default function Account() {
       return () => clearInterval(timer);
     }
   }, [otpStep, otpTimeLeft]);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [resendCooldown]);
 
   const formatTime = (secs) => {
     const mins = Math.floor(secs / 60);
@@ -128,6 +150,7 @@ export default function Account() {
       setOtpTimeLeft(600);
       setOtpSent(true);
       setOtpMessage(t("otpSentToNewEmail"));
+      setResendCooldown(60); // 60 second cooldown for resend
     } catch (err) {
       console.error(err);
       setOtpMessage(err.response?.data?.message || t("otpSendFailed"));
@@ -170,6 +193,23 @@ export default function Account() {
     } catch (err) {
       console.error(err);
       setOtpMessage(err.response?.data?.message || t("emailUpdateFailed"));
+    }
+  };
+
+  const handleResendEmailOtp = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-email-verification-otp`,
+        { email: user.email },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setOtpMessage(t("otpSentToNewEmail"));
+      setResendCooldown(60); // 60 second cooldown
+    } catch (err) {
+      console.error(err);
+      setOtpMessage(err.response?.data?.message || t("otpSendFailed"));
     }
   };
 
@@ -247,13 +287,44 @@ export default function Account() {
       setShowPassword(false);
       setShowConfirm(false);
       setErrors({});
-      setSuccessMessage(t("profileUpdated"));
+      notify("success", t("profileUpdated"));
       setOtpMessage("");
     } catch (err) {
       console.error("Update error:", err);
-      setOtpMessage(err.response?.data?.message || t("profileUpdateFailed"));
+      notify("error", err.response?.data?.message || t("profileUpdateFailed"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (confirmationText !== "DELETE") {
+      alert("Please type DELETE to confirm account deactivation");
+      return;
+    }
+
+    setDeactivating(true);
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/deactivate-account`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { confirmationText },
+        }
+      );
+
+      // Clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      
+      // Show success notification and redirect
+      notify("success", "Your account has been successfully deactivated. All your itineraries and reviews have been deleted.");
+      setTimeout(() => navigate("/"), 2000); // Delay navigation to show notification
+    } catch (err) {
+      console.error("Deactivation error:", err);
+      notify("error", err.response?.data?.message || "Failed to deactivate account");
+    } finally {
+      setDeactivating(false);
     }
   };
 
@@ -263,14 +334,36 @@ export default function Account() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
+      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden relative"
     >
+      {/* Professional Notification System */}
+      {notif && (
+        <div
+          className={`absolute top-4 left-1/2 z-[10000] w-auto min-w-[300px] max-w-md px-4 py-3 rounded-xl shadow-lg border animate-slideDown ${
+            notif.type === "success"
+              ? "bg-green-50 border-green-300 text-green-800"
+              : notif.type === "error"
+              ? "bg-red-50 border-red-300 text-red-800"
+              : "bg-blue-50 border-blue-300 text-blue-800"
+          }`}
+          style={{ transform: 'translateX(-50%)' }}
+        >
+          <div className="flex items-center gap-3">
+            {notif.type === "success" ? (
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+            ) : notif.type === "error" ? (
+              <XCircle className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <Info className="w-5 h-5 flex-shrink-0" />
+            )}
+            <p className="text-sm font-medium leading-relaxed">{notif.message}</p>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {successMessage && (
-              <p className="text-green-600 text-sm mb-2">{successMessage}</p>
-            )}
 
             {/* First Name */}
             <div>
@@ -281,7 +374,7 @@ export default function Account() {
                 name="firstName"
                 value={user.firstName}
                 onChange={handleChange}
-                placeholder={t("firstNamePlaceholder")}
+                placeholder="Enter your first name"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.firstName
                     ? "border-red-400 focus:ring-red-500"
@@ -303,7 +396,7 @@ export default function Account() {
                 name="lastName"
                 value={user.lastName}
                 onChange={handleChange}
-                placeholder={t("lastNamePlaceholder")}
+                placeholder="Enter your last name"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.lastName
                     ? "border-red-400 focus:ring-red-500"
@@ -326,7 +419,7 @@ export default function Account() {
                 type="email"
                 value={user.email}
                 onChange={handleChange}
-                placeholder={t("emailPlaceholder")}
+                placeholder="your.email@example.com"
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
                   errors.email
                     ? "border-red-400 focus:ring-red-500"
@@ -386,6 +479,24 @@ export default function Account() {
                   >
                     {t("verifyOtp")}
                   </button>
+
+                  {/* Resend OTP Button */}
+                  <div className="text-center mt-3">
+                    <button
+                      type="button"
+                      onClick={handleResendEmailOtp}
+                      disabled={resendCooldown > 0}
+                      className={`text-sm font-medium ${
+                        resendCooldown > 0
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-[#cf3325] hover:underline"
+                      }`}
+                    >
+                      {resendCooldown > 0
+                        ? `Resend OTP in ${resendCooldown}s`
+                        : "Resend OTP"}
+                    </button>
+                  </div>
                   {otpMessage && (
                     <p
                       className={`text-sm mt-2 ${
@@ -440,7 +551,7 @@ export default function Account() {
                         type={showPassword ? "text" : "password"}
                         value={user.password}
                         onChange={handleChange}
-                        placeholder={t("newPasswordPlaceholder")}
+                        placeholder="Enter new password"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
                           errors.password
                             ? "border-red-400 focus:ring-red-500"
@@ -463,13 +574,9 @@ export default function Account() {
                           <Eye size={18} />
                         )}
                       </button>
-                      {errors.password ? (
+                      {errors.password && (
                         <p className="text-xs text-red-600 mt-1">
                           {errors.password}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {t("passwordHint")}
                         </p>
                       )}
                     </div>
@@ -484,7 +591,7 @@ export default function Account() {
                         type={showConfirm ? "text" : "password"}
                         value={user.confirmPassword}
                         onChange={handleChange}
-                        placeholder={t("confirmNewPasswordPlaceholder")}
+                        placeholder="Re-enter new password"
                         className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
                           errors.confirmPassword
                             ? "border-red-400 focus:ring-red-500"
@@ -533,6 +640,98 @@ export default function Account() {
             </button>
           </form>
         </div>
+
+        {/* Deactivate Account Section */}
+        <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-800 mb-2 text-base">
+                Deactivate Account
+              </h3>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                Permanently delete your account and all associated data. This action cannot be undone.
+                All your itineraries and reviews will be permanently deleted.
+              </p>
+              <button
+                onClick={() => setShowDeactivateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
+                <Trash2 size={18} />
+                Deactivate Account
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Deactivation Confirmation Modal */}
+        {showDeactivateModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+                <h2 className="text-xl font-bold text-gray-800">
+                  Confirm Account Deactivation
+                </h2>
+              </div>
+
+              <div className="mb-6 space-y-3">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  This action will permanently delete:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 ml-2">
+                  <li>Your account and profile</li>
+                  <li>All your itineraries</li>
+                  <li>All your reviews</li>
+                  <li>All associated data</li>
+                </ul>
+                <p className="text-sm font-semibold text-red-600 mt-4">
+                  This action cannot be undone!
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type <span className="font-bold text-red-600">DELETE</span> to confirm:
+                </label>
+                <input
+                  type="text"
+                  value={confirmationText}
+                  onChange={(e) => setConfirmationText(e.target.value)}
+                  placeholder="Type DELETE"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  disabled={deactivating}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeactivateModal(false);
+                    setConfirmationText("");
+                  }}
+                  disabled={deactivating}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeactivateAccount}
+                  disabled={confirmationText !== "DELETE" || deactivating}
+                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deactivating ? "Deactivating..." : "Deactivate"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
           ©2025 Intramuros Administration

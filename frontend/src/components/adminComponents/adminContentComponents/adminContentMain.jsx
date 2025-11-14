@@ -32,7 +32,7 @@ export default function AdminContentMain() {
     },
     {
       title: "Reviews",
-      iconPath: "/icons/Reviews.svg",
+      iconPath: "/icons/Reviews.png",
       route: "/AdminReviews",
     },
   ];

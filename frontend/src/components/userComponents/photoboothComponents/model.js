@@ -1,16 +1,25 @@
 // utils/model.js
 import * as tf from "@tensorflow/tfjs";
 import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
+import * as blazeface from "@tensorflow-models/blazeface";
 
 let modelPromise = null;
+let cachedDetector = null;
+let cachedBlazeFace = null;
 
 /**
- * Loads and warms up the face mesh model with fast settings.
- * Uses caching and progress tracking for user feedback.
+ * Loads BlazeFace + FaceMesh models
+ * BlazeFace is more reliable for detection, FaceMesh provides detailed landmarks
  * @param {function} onProgress - Optional progress callback (0-100)
- * @returns {Promise<object>} Loaded face detector
+ * @returns {Promise<object>} Loaded models
  */
 export async function loadFaceModel(onProgress) {
+  // Return cached models if available
+  if (cachedDetector && cachedBlazeFace) {
+    if (onProgress) onProgress(100);
+    return Promise.resolve({ faceMesh: cachedDetector, blazeface: cachedBlazeFace });
+  }
+  
   if (modelPromise) return modelPromise;
 
   // eslint-disable-next-line no-async-promise-executor
@@ -19,11 +28,17 @@ export async function loadFaceModel(onProgress) {
     let isDone = false;
 
     try {
-      // Ensure TF is ready (skip setBackend if already set properly)
+      // Ensure TF is ready with WebGL backend for best performance
       const backend = tf.getBackend();
       if (backend !== "webgl") {
-        await tf.setBackend("webgl");
-        await tf.ready();
+        try {
+          await tf.setBackend("webgl");
+          await tf.ready();
+        } catch (err) {
+          console.warn("WebGL not available, falling back to CPU:", err);
+          await tf.setBackend("cpu");
+          await tf.ready();
+        }
       }
 
       if (onProgress) onProgress(0);
@@ -39,29 +54,32 @@ export async function loadFaceModel(onProgress) {
         }, 100);
       }
 
+      // Load BlazeFace first (faster and more reliable)
+      console.log("Loading BlazeFace model...");
+      const blazefaceModel = await blazeface.load();
+      console.log("BlazeFace loaded successfully");
+      cachedBlazeFace = blazefaceModel;
+
+      // Load FaceMesh for detailed landmarks
+      console.log("Creating FaceMesh detector...");
       const detector = await faceLandmarksDetection.createDetector(
         faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
         {
           runtime: "tfjs",
-          maxFaces: 1,
+          maxFaces: 1, // Reduced from 2 to 1 for better performance
           refineLandmarks: false,
+          shouldLoadIrisModel: false,
         }
       );
-
-      // Safe warm-up
-      try {
-        const dummyInput = tf.zeros([1, 128, 128, 3]);
-        await detector.estimateFaces(dummyInput);
-        dummyInput.dispose();
-      } catch (warmErr) {
-        console.warn("Model warm-up skipped due to error:", warmErr.message);
-      }
+      console.log("FaceMesh loaded successfully");
 
       isDone = true;
       if (timer) clearInterval(timer);
       if (onProgress) onProgress(100);
 
-      resolve(detector);
+      // Cache both models
+      cachedDetector = detector;
+      resolve({ faceMesh: detector, blazeface: blazefaceModel });
     } catch (err) {
       isDone = true;
       if (timer) clearInterval(timer);

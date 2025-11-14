@@ -20,6 +20,14 @@ const GpsConsentModal = ({ isOpen, onEnable, onDecline, errorMessage }) => {
             We use your location for turn-by-turn directions, nearby detection, and centering the map. Your location is only used to guide your tour.
           </p>
 
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-gray-800">
+            <strong>Permissions needed:</strong>
+            <ul className="mt-2 ml-4 list-disc space-y-1">
+              <li>GPS location for navigation</li>
+              <li>Device orientation for compass heading</li>
+            </ul>
+          </div>
+
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-gray-800">
             This map requires GPS to function. If your GPS isn’t working or you prefer not to use it, you can explore with Tour Map features from the homepage.
           </div>

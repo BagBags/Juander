@@ -1,13 +1,19 @@
-import React, { Suspense, lazy, useState, useEffect } from "react";
-import { Volume2, X, Star, Info, Tag, Glasses } from "lucide-react";
+import React, { Suspense, useState, useEffect, lazy } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
+import { X, MapPin, Clock, DollarSign, Glasses, ChevronDown, ChevronUp, Tag, Info, Volume2, Star } from "lucide-react";
 import ttsService from "../../../utils/textToSpeech";
-import MediaCarousel from "../../shared/MediaCarousel";
+import { useTranslation } from "react-i18next";
+import { FaStar } from "react-icons/fa";
+import QRScanner from "../QRScannerSimple";
 import axios from "axios";
+import MediaCarousel from "../../shared/MediaCarousel";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
 const SiteCard = ({ pin, onClose, distance }) => {
   const [showAR, setShowAR] = useState(false);
+  const [scannedArUrl, setScannedArUrl] = useState(null);
   const [siteReviews, setSiteReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -20,13 +26,28 @@ const SiteCard = ({ pin, onClose, distance }) => {
     const fetchUserLanguage = async () => {
       try {
         const token = localStorage.getItem('token');
+        const isGuest = localStorage.getItem('guest') === 'true';
+        
+        // Check for guest language first
+        if (isGuest) {
+          const guestLang = localStorage.getItem('guestLanguage') || 'en';
+          setUserLanguage(guestLang === 'tl' ? 'tagalog' : 'english');
+          return;
+        }
+        
+        // For logged-in users, fetch from backend
         if (token) {
           const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/user`,
+            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/me`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const language = response.data.language || 'english';
-          setUserLanguage(language.toLowerCase());
+          const language = response.data.language || 'en';
+          // Convert 'en' or 'tl' to 'english' or 'tagalog'
+          const convertedLang = language === 'tl' ? 'tagalog' : 'english';
+          console.log('🌐 [SiteCard] Backend language:', language, '→ Converted:', convertedLang);
+          setUserLanguage(convertedLang);
+        } else {
+          setUserLanguage('english');
         }
       } catch (error) {
         console.error('Failed to fetch user language:', error);
@@ -79,7 +100,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-gradient-to-b from-gray-50 to-white overflow-y-auto"
+      className="absolute inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white overflow-y-auto"
       style={{
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
@@ -108,20 +129,38 @@ const SiteCard = ({ pin, onClose, distance }) => {
 
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
-          <div className="flex flex-col h-[70vh]">
-            <iframe
-              src={pin.arLink}
-              title="AR Mode"
-              className="flex-1 w-full rounded-lg border border-gray-200"
-              allow="camera *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; fullscreen *"
-              allowFullScreen
-            />
-            <button
-              onClick={() => setShowAR(false)}
-              className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
-            >
-              Exit AR Mode
-            </button>
+          <div className="h-[70vh] rounded-xl overflow-hidden">
+            {scannedArUrl ? (
+              <div className="flex flex-col h-full">
+                <iframe
+                  src={scannedArUrl}
+                  title="AR Experience"
+                  className="flex-1 w-full"
+                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; autoplay *; fullscreen *"
+                  allowFullScreen
+                />
+                <button
+                  onClick={() => {
+                    setShowAR(false);
+                    setScannedArUrl(null);
+                  }}
+                  className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
+                >
+                  Exit AR Experience
+                </button>
+              </div>
+            ) : (
+              <QRScanner
+                onScanSuccess={(url) => {
+                  setScannedArUrl(url);
+                  ttsService.speak("QR Code scanned successfully");
+                }}
+                onClose={() => {
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                }}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -210,17 +249,33 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         </p>
                         {pin.feeAmount ? (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
-                            <p className="text-sm font-semibold text-gray-800">
-                              Fort Santiago Entrance Fee: <span className="text-[#f04e37]">₱{pin.feeAmount}</span>
-                            </p>
-                            <p className="text-xs text-gray-600 mt-1">
-                              Purchase tickets at the Fort Santiago entrance.
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Fort Santiago Entrance Fee:
+                              </p>
+                              <span className="text-[#f04e37] font-bold text-lg">₱{pin.feeAmount}</span>
+                            </div>
+                            {pin.feeAmountDiscounted && (
+                              <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
+                                <p className="text-xs font-medium text-gray-700">
+                                  Student/PWD/Senior Citizen:
+                                </p>
+                                <span className="text-green-600 font-bold text-base">₱{pin.feeAmountDiscounted}</span>
+                              </div>
+                            )}
+                            <div className="bg-white/60 p-2 rounded-md mt-2">
+                              <p className="text-xs text-gray-700 font-medium">
+                                Payment will be upon entrance at the gate. This will give you access to all sites within Fort Santiago.
+                              </p>
+                            </div>
                           </div>
                         ) : (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700 mb-2">
                               Please check the current entrance fee at the Fort Santiago entrance.
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              Payment at the gate will give you access to all sites within Fort Santiago.
                             </p>
                           </div>
                         )}
@@ -232,9 +287,20 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         </p>
                         {pin.feeAmount ? (
                           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
-                            <p className="text-sm font-semibold text-gray-800">
-                              Entrance Fee: <span className="text-blue-700">₱{pin.feeAmount}</span>
-                            </p>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-sm font-semibold text-gray-800">
+                                Entrance Fee:
+                              </p>
+                              <span className="text-blue-700 font-bold text-lg">₱{pin.feeAmount}</span>
+                            </div>
+                            {pin.feeAmountDiscounted && (
+                              <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
+                                <p className="text-xs font-medium text-gray-700">
+                                  Student/PWD/Senior Citizen:
+                                </p>
+                                <span className="text-green-600 font-bold text-base">₱{pin.feeAmountDiscounted}</span>
+                              </div>
+                            )}
                             <p className="text-xs text-gray-600 mt-1">
                               Please have the fee ready when visiting this site.
                             </p>
@@ -305,7 +371,14 @@ const SiteCard = ({ pin, onClose, distance }) => {
             {/* Read Description Button - Modern Design */}
             <button
               onClick={() => {
-                const description = pin.description || "No description available";
+                let description = '';
+                if (userLanguage === 'tagalog' && pin.siteDescriptionTagalog) {
+                  description = pin.siteDescriptionTagalog;
+                } else if (userLanguage === 'english' && pin.siteDescription) {
+                  description = pin.siteDescription;
+                } else {
+                  description = pin.description || pin.siteDescription || pin.siteDescriptionTagalog || "No description available";
+                }
                 ttsService.enable(); // Enable TTS
                 ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
               }}
@@ -325,6 +398,13 @@ const SiteCard = ({ pin, onClose, distance }) => {
                 <div className="text-base leading-relaxed text-gray-700 space-y-4">
                   {(() => {
                     let description = '';
+                    console.log('📝 [SiteCard] Rendering description:', {
+                      userLanguage,
+                      hasTagalog: !!pin.siteDescriptionTagalog,
+                      hasEnglish: !!pin.siteDescription,
+                      tagalogPreview: pin.siteDescriptionTagalog?.substring(0, 50),
+                      englishPreview: pin.siteDescription?.substring(0, 50)
+                    });
                     if (userLanguage === 'tagalog' && pin.siteDescriptionTagalog) {
                       description = pin.siteDescriptionTagalog;
                     } else if (userLanguage === 'english' && pin.siteDescription) {
@@ -382,20 +462,20 @@ const SiteCard = ({ pin, onClose, distance }) => {
             </div>
 
             {/* AR Mode Button - Modern Design */}
-            {pin.arEnabled && pin.arLink && (
+            {pin.arEnabled && (
               <button
                 onClick={() => {
                   setShowAR(true);
-                  ttsService.speak("Opening AR Mode");
+                  ttsService.speak("Opening AR Scanner");
                 }}
                 className="w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(to right, #f04e37, #d9442f)' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d9442f, #c23d2a)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f04e37, #d9442f)'}
-                aria-label="View in AR Mode"
+                aria-label="Scan QR Code for AR"
               >
                 <Glasses className="w-5 h-5" />
-                <span>Experience in AR Mode</span>
+                <span>Scan QR Code for AR</span>
               </button>
             )}
 

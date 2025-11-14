@@ -49,8 +49,9 @@ router.post("/upload-ar", upload.single("arModel"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-  const filePath = `/uploads/arModels/${req.file.filename}`;
-  return res.json({ url: filePath });
+  // multer-s3 provides req.file.location (S3 URL)
+  const fileUrl = req.file.location || `/uploads/arModels/${req.file.filename}`;
+  return res.json({ url: fileUrl });
 });
 
 // 👇 Temporary facade upload (doesn't save to DB, only uploads file)
@@ -58,8 +59,9 @@ router.post("/upload-facade-temp", upload.single("facade"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-  const filePath = `/uploads/facades/${req.file.filename}`;
-  return res.json({ url: filePath });
+  // multer-s3 provides req.file.location (S3 URL)
+  const fileUrl = req.file.location || `/uploads/facades/${req.file.filename}`;
+  return res.json({ url: fileUrl });
 });
 
 router.post("/:id/upload-facade", upload.single("facade"), async (req, res) => {
@@ -67,8 +69,8 @@ router.post("/:id/upload-facade", upload.single("facade"), async (req, res) => {
     const pin = await Pin.findById(req.params.id);
     if (!pin) return res.status(404).json({ msg: "Pin not found" });
 
-    // ✅ Save with the facades folder
-    pin.facadeUrl = `/uploads/facades/${req.file.filename}`;
+    // multer-s3 provides req.file.location (S3 URL)
+    pin.facadeUrl = req.file.location || `/uploads/facades/${req.file.filename}`;
     await pin.save();
 
     res.json({ success: true, facadeUrl: pin.facadeUrl });
@@ -131,15 +133,15 @@ router.delete("/:id/remove-glb", async (req, res) => {
   }
 });
 
-// 👇 Upload Media Files (Images/Videos)
+// Upload Media Files (Images/Videos)
 router.post("/upload-media", (req, res) => {
   upload.array("mediaFiles", 10)(req, res, (err) => {
     if (err) {
       console.error("Upload error:", err);
       if (err.code === "LIMIT_FILE_SIZE") {
-        return res.status(413).json({ 
-          message: "File too large. Maximum size is 50MB per file.",
-          error: err.message 
+        return res.status(400).json({
+          message: "File too large. Maximum size is 50MB",
+          error: "LIMIT_FILE_SIZE"
         });
       }
       return res.status(400).json({ 
@@ -152,8 +154,9 @@ router.post("/upload-media", (req, res) => {
       return res.status(400).json({ message: "No files uploaded" });
     }
     
+    // multer-s3 provides file.location (S3 URL)
     const uploadedFiles = req.files.map((file) => ({
-      url: `/uploads/media/${file.filename}`,
+      url: file.location || `/uploads/media/${file.filename}`,
       type: file.mimetype.startsWith("video/") ? "video" : "image",
     }));
     
@@ -173,14 +176,21 @@ router.delete("/:id/remove-media/:index", async (req, res) => {
     }
 
     const mediaFile = pin.mediaFiles[index];
-    const filePath = path.join(
-      __dirname,
-      "..",
-      mediaFile.url.replace(/^\//, "")
-    );
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    
+    // Delete from S3 if it's an S3 URL, otherwise delete from local filesystem
+    if (mediaFile.url.startsWith('http')) {
+      // S3 URL - use deleteFromS3
+      await deleteFromS3(mediaFile.url);
+    } else {
+      // Local path - use filesystem
+      const filePath = path.join(
+        __dirname,
+        "..",
+        mediaFile.url.replace(/^\//, "")
+      );
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     pin.mediaFiles.splice(index, 1);

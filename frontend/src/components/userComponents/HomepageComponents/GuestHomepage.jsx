@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import LogoHeader from "./logoHeader";
 import { useNavigate } from "react-router-dom";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import TourProvider, { useTour } from "../../TourComponents/TourProvider";
 import { guestTourSteps } from "../../TourComponents/tourSteps";
+import ModernLoader from "../../shared/ModernLoader";
+import { Compass, UserPlus } from "lucide-react";
 
 export default function GuestHomepage() {
   return (
@@ -20,19 +22,88 @@ function GuestHomepageContent() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { startTour } = useTour();
-  const [bgLoaded, setBgLoaded] = React.useState(false);
+  const [bgLoaded, setBgLoaded] = useState(false);
+  const [componentsLoaded, setComponentsLoaded] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Preload background image
+  // Optimized preloading with progress tracking
   useEffect(() => {
-    const bgImage = new Image();
-    bgImage.src = '/JuanderBGWeb.svg';
-    bgImage.onload = () => setBgLoaded(true);
-    bgImage.onerror = () => setBgLoaded(true); // Show content even if image fails
+    let mounted = true;
+    let progressLocked = false; // Prevent progress from going backwards
+    
+    const updateProgress = (value) => {
+      if (!progressLocked && mounted) {
+        setLoadingProgress(prev => Math.max(prev, value)); // Never go backwards
+      }
+    };
+    
+    const loadResources = async () => {
+      try {
+        // Step 1: Initial load (20%)
+        updateProgress(20);
+        
+        // Step 2: Load background (50%)
+        const isMobile = window.innerWidth < 640;
+        const bgImage = new Image();
+        bgImage.src = isMobile ? '/icons/BGEnhanced4.png' : '/JuanderBGWeb.svg';
+        
+        await new Promise((resolve) => {
+          bgImage.onload = resolve;
+          bgImage.onerror = resolve;
+          setTimeout(resolve, 2000); // Timeout fallback
+        });
+        
+        if (!mounted) return;
+        setBgLoaded(true);
+        updateProgress(50);
+
+        // Step 3: Preload logo (70%)
+        const logo = new Image();
+        logo.src = '/icons/logo.png';
+        await new Promise((resolve) => {
+          logo.onload = resolve;
+          logo.onerror = resolve;
+          setTimeout(resolve, 1000); // Timeout fallback
+        });
+        
+        if (!mounted) return;
+        updateProgress(70);
+
+        // Step 4: Wait for components (85%)
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!mounted) return;
+        updateProgress(85);
+
+        // Step 5: Final preparations (100%)
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (!mounted) return;
+        updateProgress(100);
+        progressLocked = true; // Lock at 100%
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!mounted) return;
+        setComponentsLoaded(true);
+      } catch (error) {
+        console.error('Error loading resources:', error);
+        if (mounted) {
+          setBgLoaded(true);
+          updateProgress(100);
+          progressLocked = true;
+          setComponentsLoaded(true);
+        }
+      }
+    };
+
+    loadResources();
+    return () => { 
+      mounted = false;
+      progressLocked = true; // Prevent any updates after unmount
+    };
   }, []);
 
   // Load guest language preference on mount
   useEffect(() => {
-    const savedLang = sessionStorage.getItem("guestLanguage");
+    const savedLang = localStorage.getItem("guestLanguage");
     if (savedLang) {
       i18n.changeLanguage(savedLang);
     }
@@ -45,31 +116,27 @@ function GuestHomepageContent() {
 
   // Auto-start guest tutorial when flagged from GuestSettings
   useEffect(() => {
-    const replay = sessionStorage.getItem("guestReplayTutorial") === "true";
+    const replay = localStorage.getItem("guestReplayTutorial") === "true";
     if (replay) {
       setTimeout(() => {
         startTour();
-        sessionStorage.removeItem("guestReplayTutorial");
+        localStorage.removeItem("guestReplayTutorial");
       }, 800);
     }
   }, [startTour]);
 
+  // Don't render until components are loaded
+  if (!componentsLoaded) {
+    return <ModernLoader progress={loadingProgress} />;
+  }
+
   return (
     <>
-      {/* Loading Screen */}
-      {!bgLoaded && (
-        <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[#f04e37] font-semibold text-lg">Loading...</p>
-          </div>
-        </div>
-      )}
       
       <div
-        className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative"
+        className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative
+          bg-[url('/icons/BGEnhanced4.png')] sm:bg-[url('/JuanderBG3.png')]"
         style={{
-          backgroundImage: "url('/JuanderBGWeb.svg')",
           backgroundColor: "#d9d9d9",
           backgroundSize: "cover",
           backgroundPosition: "center",
@@ -82,58 +149,82 @@ function GuestHomepageContent() {
         }}
       >
         {/* Logo Header */}
-        <div className="w-full mt-10 flex justify-center px-4">
+        <div className="w-full mt-6 flex justify-center px-4">
         <LogoHeader />
       </div>
 
-      {/* Title */}
-      <div className="mt-40 sm:mt-26 md:mt-40 lg:mt-48 text-center relative z-10 px-4">
-        <h5
-          className="text-[38px] sm:text-[56px] md:text-[68px] 
-             font-poppins font-extrabold tracking-tight leading-[1.1] 
-             text-[#f5f5dc] drop-shadow-[0_4px_10px_rgba(0,0,0,0.45)]"
+      {/* Title with modern, clean styling */}
+      <div className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6">
+        <h1
+          className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
+             font-bold tracking-tight leading-[1.1] 
+             text-white
+             drop-shadow-[0_2px_20px_rgba(0,0,0,0.3)]
+             mb-3"
         >
           {t("homepageTitle")}
-        </h5>
+        </h1>
+        <p className="text-sm sm:text-base md:text-lg text-white/95 font-normal
+           drop-shadow-[0_2px_12px_rgba(0,0,0,0.25)]
+           max-w-sm mx-auto">
+          Discover the historic walled city
+        </p>
       </div>
 
       {/* Side Buttons - Using shared component with guest filter */}
       <SideButtons userType="guest" />
 
-      {/* Explore Button (Mobile Only) */}
+      {/* Explore Button (Mobile Only) - Ultra Modern */}
       <button
         onClick={() => navigate("/GuestItinerary")}
         className="absolute lg:top-[83%] lg:bottom-auto 
         left-1/2 -translate-x-1/2
-        bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
-        w-40 sm:w-40 lg:w-52 
-        h-12 sm:h-12 lg:h-14 
-        text-sm sm:text-base lg:text-lg 
-        hover:bg-yellow-500 focus:outline-none transition duration-200
+        bg-white/95 backdrop-blur-md
+        text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl
+        w-48 sm:w-52 lg:w-56 
+        h-14 sm:h-16 lg:h-16 
+        text-lg sm:text-xl lg:text-xl 
+        hover:bg-[#f04e37]
+        hover:text-white
+        hover:shadow-[0_8px_32px_rgba(240,78,55,0.4)]
+        hover:-translate-y-0.5
+        active:translate-y-0
+        focus:outline-none 
+        transition-all duration-300 ease-out
+        border border-white/50
+        flex items-center justify-center gap-2
         block md:hidden"
         style={{
-          bottom: "calc(env(safe-area-inset-bottom) + 40px)",
+          bottom: "calc(env(safe-area-inset-bottom) + 50px)",
         }}
       >
-        Explore
+        <Compass className="w-5 h-5" />
+        <span>Start Tour</span>
       </button>
 
-      {/* Sign Up to Explore Button (Desktop Only) */}
+      {/* Explore Button (Desktop Only) - Matching Homepage Style */}
       <button
-        onClick={() => navigate("/login")}
-        className="absolute lg:top-[83%] lg:bottom-auto 
+        onClick={() => navigate("/TourMap")}
+        className="fixed bottom-16 lg:fixed lg:bottom-16
         left-1/2 -translate-x-1/2
-        bg-white text-black font-semibold shadow-md rounded-lg sm:rounded-xl lg:rounded-2xl 
-        w-40 sm:w-40 lg:w-52 
-        h-12 sm:h-12 lg:h-14 
-        text-sm sm:text-base lg:text-lg 
-        hover:bg-yellow-500 focus:outline-none transition duration-200
-        hidden md:block"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom) + 40px)",
-        }}
+        bg-white/95 backdrop-blur-md
+        text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl
+        w-48 sm:w-52 lg:w-56
+        h-14 sm:h-16 lg:h-16
+        text-lg sm:text-xl lg:text-xl
+        hover:bg-[#f04e37]
+        hover:text-white
+        hover:shadow-[0_8px_32px_rgba(240,78,55,0.4)]
+        hover:-translate-y-0.5
+        active:translate-y-0
+        focus:outline-none 
+        transition-all duration-300 ease-out
+        border border-white/50
+        flex items-center justify-center gap-2 z-40
+        hidden md:flex"
       >
-        Sign up to Explore
+        <Compass className="w-5 h-5" />
+        <span>{t("explore")}</span>
       </button>
 
       {/* Floating Chatbot (Juan Mascot) */}

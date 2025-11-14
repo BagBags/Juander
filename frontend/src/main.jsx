@@ -1,37 +1,43 @@
 // main.jsx
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { registerSW } from "virtual:pwa-register";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import App from "./App.jsx";
+import { registerServiceWorker } from "./registerSW.js";
 
-// Register service worker with update notification
-const updateSW = registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    if (confirm("New content available. Reload to update?")) {
-      updateSW(true);
+// CONDITIONAL SERVICE WORKER CLEANUP - Only in development mode
+// This runs BEFORE React renders to ensure clean state
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+if (isDevelopment && 'serviceWorker' in navigator) {
+  // Unregister all service workers
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    const unregisterPromises = registrations.map(registration => {
+      return registration.unregister();
+    });
+    
+    return Promise.all(unregisterPromises);
+  }).then(() => {
+    // Clear all caches
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            return caches.delete(cacheName);
+          })
+        );
+      });
     }
-  },
-  onOfflineReady() {
-    console.log("✅ App ready to work offline");
-  },
-  onRegistered(registration) {
-    console.log("✅ Service Worker registered");
-    // Check for updates every hour
-    setInterval(() => {
-      registration?.update();
-    }, 60 * 60 * 1000);
-  },
-  onRegisterError(error) {
-    console.error("❌ Service Worker registration failed:", error);
-  },
-});
+  });
+  
+  // Prevent any new service worker registration in dev mode
+  navigator.serviceWorker.register = () => {
+    return Promise.reject(new Error('Service worker disabled in development'));
+  };
+}
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-console.log("Client ID from .env:", clientId); // ← This should log the correct string
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -40,3 +46,6 @@ createRoot(document.getElementById("root")).render(
     </GoogleOAuthProvider>
   </StrictMode>
 );
+
+// Register service worker in production
+registerServiceWorker();

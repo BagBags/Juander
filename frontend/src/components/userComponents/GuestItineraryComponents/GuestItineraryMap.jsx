@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
-import Map, { Marker, Source, Layer } from "react-map-gl";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import Map, { Marker, Source, Layer, GeolocateControl } from "react-map-gl";
+import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import "./GuestItineraryMap.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { MapPin, WifiOff } from "lucide-react";
+import { WifiOff } from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
 import { optimizeRoute, getNextSite, calculateDistance } from "../../../utils/routeOptimizer";
 
@@ -15,14 +18,14 @@ import {
 } from "../TourMap/mapConfig";
 
 // Import separated components
-import ModernUserMarker from "../TourMap/ModernUserMarker";
-import BackHeader from "../BackButton";
 import DirectionsPanel from "../HomepageComponents/DirectionsPanel";
 import MapControlButtons from "../HomepageComponents/MapControlButtons";
 import SitePreviewCard from "../HomepageComponents/SitePreviewCard";
 import SiteModalFullScreen from "../HomepageComponents/SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
+import NotificationModal from "../../shared/NotificationModal";
+import ttsService from "../../../utils/textToSpeech";
 
 export default function GuestItineraryMap() {
   const { itineraryId } = useParams();
@@ -31,6 +34,8 @@ export default function GuestItineraryMap() {
 
   const [pins, setPins] = useState([]);
   const [optimizedPins, setOptimizedPins] = useState([]); // Optimized route order
+  const [hasLoadedProgress, setHasLoadedProgress] = useState(false); // Track if we've loaded saved progress
+  const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [viewState, setViewState] = useState({
     latitude: 14.5896,
     longitude: 120.9747,
@@ -38,8 +43,11 @@ export default function GuestItineraryMap() {
   });
   const [userLocation, setUserLocation] = useState(null);
   const [userHeading, setUserHeading] = useState(0);
-  const lastLocationRef = useRef(null);
-  const locationUpdateThrottle = useRef(null);
+  const lastHeadingRef = useRef(0); // Track last normalized heading
+  const accumulatedRotationRef = useRef(0); // Track accumulated rotation (can go beyond 360)
+  const geolocateControlRef = useRef(null); // Ref for Mapbox GeolocateControl
+  const mapRef = useRef(null);
+  const userMarkerRef = useRef(null); // Custom user marker with heading
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
@@ -67,6 +75,8 @@ export default function GuestItineraryMap() {
   const [isNearby, setIsNearby] = useState(false);
   const [manuallyDismissed, setManuallyDismissed] = useState(false);
   const [visitedSites, setVisitedSites] = useState(new Set());
+  const [skippedSites, setSkippedSites] = useState(new Set());
+  const [activePin, setActivePin] = useState(null); // Pin with active directions
   const [siteReviews, setSiteReviews] = useState([]);
   const [showReviews, setShowReviews] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -74,9 +84,18 @@ export default function GuestItineraryMap() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [fromCache, setFromCache] = useState(false);
 
-  // Use sessionStorage for guest users
-  const token = sessionStorage.getItem("token");
+  // Use localStorage for guest users (for persistence across tabs)
+  const token = localStorage.getItem("token");
   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+  // Stop TTS when component unmounts (user exits the page)
+  useEffect(() => {
+    return () => {
+      // Cancel any ongoing TTS when leaving the page
+      ttsService.cancel();
+      console.log('🔇 TTS stopped on GuestItineraryMap unmount');
+    };
+  }, []);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -143,6 +162,63 @@ export default function GuestItineraryMap() {
     checkGpsPermission();
   }, []);
 
+  /** Continuous location tracking */
+  useEffect(() => {
+    let watchId = null;
+
+    const startLocationTracking = () => {
+      if (!navigator.geolocation) {
+        console.warn("Geolocation not supported");
+        return;
+      }
+
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const newLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+          
+          console.log('📍 Location updated:', newLocation);
+          setUserLocation(newLocation);
+          
+          // Update heading if available from GPS
+          if (position.coords.heading !== null && position.coords.heading !== undefined) {
+            const smoothHeading = normalizeHeading(position.coords.heading);
+            setUserHeading(smoothHeading);
+            console.log('🧭 Heading updated from GPS:', position.coords.heading);
+          }
+          
+          // Don't auto-center the map on location updates to avoid disrupting user interaction
+          // Only update if user hasn't manually moved the map
+        },
+        (error) => {
+          console.error("Location tracking error:", error);
+          if (error.code === error.PERMISSION_DENIED) {
+            setGpsError("Location access denied. Please enable location services.");
+            setShowGpsModal(true);
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 10000, // Accept cached position up to 10 seconds old
+          timeout: 15000, // Wait up to 15 seconds for position
+        }
+      );
+    };
+
+    // Start tracking after a short delay to allow initial GPS check to complete
+    const timeoutId = setTimeout(startLocationTracking, 1000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        console.log('🛑 Location tracking stopped');
+      }
+    };
+  }, []);
+
   /** Fetch mask */
   useEffect(() => {
     const fetchMask = async () => {
@@ -174,7 +250,7 @@ export default function GuestItineraryMap() {
         );
 
         const sites = (res.data.sites || []).filter(
-          (s) => s.latitude && s.longitude
+          (s) => s.latitude && s.longitude && s.status === "active" // Only include active sites
         );
 
         const normalized = sites.map((s) => ({
@@ -182,6 +258,8 @@ export default function GuestItineraryMap() {
           title: s.siteName || s.title || "Site",
           siteName: s.siteName || s.title || "Site",
           description: s.siteDescription || s.description || "",
+          siteDescription: s.siteDescription || s.description || "",
+          siteDescriptionTagalog: s.siteDescriptionTagalog || "",
           mediaType: s.mediaType || "image",
           mediaUrl: resolveUrl(s.mediaUrl),
           mediaFiles: s.mediaFiles?.map((media) => ({
@@ -195,6 +273,7 @@ export default function GuestItineraryMap() {
           category: s.category || null,
           feeType: s.feeType || "none",
           feeAmount: s.feeAmount || null,
+          feeAmountDiscounted: s.feeAmountDiscounted || null,
         }));
 
         setPins(normalized);
@@ -206,68 +285,405 @@ export default function GuestItineraryMap() {
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
 
-  /** Track user location (after consent) - Optimized to prevent blinking */
+  /** Load saved progress from localStorage */
   useEffect(() => {
-    if (showGpsModal) return; // wait for user to enable
+    if (!itineraryId || pins.length === 0 || hasLoadedProgress) return;
     
-    const id = navigator.geolocation.watchPosition(
-      ({ coords }) => {
-        const newLoc = { 
-          latitude: coords.latitude, 
-          longitude: coords.longitude,
-          heading: coords.heading // Get device heading if available
-        };
-        
-        // Only update if location changed significantly (> 5 meters)
-        if (lastLocationRef.current) {
-          const dx = newLoc.latitude - lastLocationRef.current.latitude;
-          const dy = newLoc.longitude - lastLocationRef.current.longitude;
-          const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
+    try {
+      // Try to load saved optimized order from localStorage
+      if (itineraryId) {
+        const orderKey = `guest_optimized_order_${itineraryId}`;
+        const savedOrder = localStorage.getItem(orderKey);
+      
+        if (savedOrder) {
+          const optimizedOrder = JSON.parse(savedOrder);
+          // Reconstruct optimized pins from saved order
+          const restoredPins = optimizedOrder
+            .map(siteId => pins.find(p => p._id === siteId))
+            .filter(Boolean);
           
-          if (distance < 5) {
-            // Update heading even if position hasn't changed much
-            if (coords.heading !== null && coords.heading !== undefined) {
-              setUserHeading(coords.heading);
+          if (restoredPins.length > 0) {
+            setOptimizedPins(restoredPins);
+            console.log('✅ Restored optimized pin order from localStorage');
+            
+            // Load visited sites
+            const visitedKey = `guest_visited_${itineraryId}`;
+            const savedVisited = localStorage.getItem(visitedKey);
+            const visitedSet = savedVisited ? new Set(JSON.parse(savedVisited)) : new Set();
+            if (savedVisited) {
+              setVisitedSites(visitedSet);
+              console.log('✅ Restored visited sites:', Array.from(visitedSet));
             }
-            return; // Don't update location, prevents blinking
+            
+            // Load saved current pin index
+            const indexKey = `guest_current_index_${itineraryId}`;
+            const savedIndex = localStorage.getItem(indexKey);
+            const currentIndex = savedIndex !== null ? parseInt(savedIndex, 10) : 0;
+            
+            // Check completion and position status for modal logic
+            const allCompleted = visitedSet.size === restoredPins.length;
+            const lastIndex = restoredPins.length - 1;
+            const isAtLastSite = currentIndex === lastIndex;
+            
+            if (allCompleted && isAtLastSite) {
+              // CONGRATS MODAL: All sites visited AND at last site
+              console.log('🎉 All sites completed and at last site - show congrats modal!');
+              setNotification({
+                isOpen: true,
+                type: 'success',
+                title: 'Congratulations!',
+                message: 'You have completed all sites in this itinerary! Click Restart to tour again.',
+                confirmText: 'Restart Tour',
+                secondaryText: 'Go back to homepage',
+                action: 'restart',
+              });
+              
+              // Stay at last site
+              setCurrentPinIndex(lastIndex);
+              setSelectedPin(restoredPins[lastIndex]);
+              setActivePin(restoredPins[lastIndex]);
+            } else if (!isAtLastSite && (currentIndex > 0 || visitedSet.size > 0)) {
+              // RESUME/RESTART MODAL: Not at last site AND has progress
+              console.log('📍 Not at last site with progress - show resume/restart modal');
+              
+              // Restore current position first
+              setCurrentPinIndex(currentIndex);
+              const currentPin = restoredPins[currentIndex];
+              setSelectedPin(currentPin);
+              setActivePin(currentPin);
+              
+              // Show resume/restart modal
+              setTimeout(() => {
+                setShowResumeModal(true);
+                console.log('✅ Resume/Restart modal shown');
+              }, 100);
+            } else {
+              // Normal restore - just set position
+              setCurrentPinIndex(currentIndex);
+              const currentPin = restoredPins[currentIndex];
+              setSelectedPin(currentPin);
+              setActivePin(currentPin);
+              console.log('✅ Restored current pin index:', currentIndex);
+            }
+            
+            setHasLoadedProgress(true);
+            return;
           }
         }
-        
-        lastLocationRef.current = newLoc;
-        setUserLocation(newLoc);
-        
-        // Update heading
-        if (coords.heading !== null && coords.heading !== undefined) {
-          setUserHeading(coords.heading);
-        }
-        
-        // Throttle view state updates to prevent excessive map movements
-        if (locationUpdateThrottle.current) {
-          clearTimeout(locationUpdateThrottle.current);
-        }
-        
-        locationUpdateThrottle.current = setTimeout(() => {
-          setViewState((v) => ({ 
-            ...v, 
-            latitude: newLoc.latitude, 
-            longitude: newLoc.longitude 
-          }));
-        }, 1000); // Update view every 1 second max
-      },
-      (err) => console.error("GPS error:", err),
-      { 
-        enableHighAccuracy: true, 
-        maximumAge: 1000, // Allow 1 second old positions
-        timeout: 10000 // Increase timeout to 10 seconds
       }
-    );
+      
+      // No saved order, will run optimization in next useEffect
+      setHasLoadedProgress(true);
+    } catch (error) {
+      console.error('Error loading saved progress:', error);
+      setHasLoadedProgress(true);
+    }
+  }, [itineraryId, pins.length, hasLoadedProgress]);
+
+  /** Optimize route when user location or pins change - ONLY if no saved order */
+  useEffect(() => {
+    if (userLocation && pins.length > 0 && optimizedPins.length === 0 && hasLoadedProgress) {
+      // Only optimize if we don't have a saved order - optimize ALL sites
+      console.log('🔄 First time opening itinerary - running optimization (Guest)');
+      console.log('📍 User location:', userLocation);
+      console.log('📍 Total pins:', pins.length);
+      console.log('📍 Visited sites:', Array.from(visitedSites));
+      const optimized = optimizeRoute(userLocation, pins, new Set());
+      console.log('📍 Optimized order:', optimized.map((p, i) => `${i+1}. ${p.siteName || p.title}`));
+      setOptimizedPins(optimized);
+      
+      // Save optimized order to localStorage
+      const orderKey = `guest_optimized_order_${itineraryId}`;
+      const optimizedOrder = optimized.map(pin => pin._id);
+      localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
+      console.log('✅ Created and saved new optimized route (Guest)');
+      
+      // Set first site as current (start from pin 1)
+      setCurrentPinIndex(0);
+      setSelectedPin(optimized[0]);
+      setActivePin(optimized[0]);
+      
+      // Save initial current index
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, '0');
+    }
+  }, [userLocation, pins.length, optimizedPins.length, hasLoadedProgress]);
+
+  /** Handle GeolocateControl events */
+  const handleGeolocate = useCallback((e) => {
+    // Update user location when geolocate control gets position
+    const newLoc = {
+      latitude: e.coords.latitude,
+      longitude: e.coords.longitude
+    };
+    setUserLocation(newLoc);
+  }, []);
+
+  const handleGeolocateError = useCallback((e) => {
+    console.error("Geolocate error:", e);
+    setGpsError("Unable to retrieve your location");
+    setShowGpsModal(true);
+  }, []);
+
+  /** Normalize heading to prevent 360° jumps - uses accumulated rotation */
+  const normalizeHeading = useCallback((newHeading) => {
+    // Normalize incoming heading to 0-360
+    let normalized = newHeading % 360;
+    if (normalized < 0) normalized += 360;
     
-    return () => {
-      navigator.geolocation.clearWatch(id);
-      if (locationUpdateThrottle.current) {
-        clearTimeout(locationUpdateThrottle.current);
+    const lastNormalized = lastHeadingRef.current;
+    
+    // Calculate shortest angular difference
+    let diff = normalized - lastNormalized;
+    
+    // Adjust diff to be in range [-180, 180]
+    if (diff > 180) {
+      diff -= 360;
+    } else if (diff < -180) {
+      diff += 360;
+    }
+    
+    // Add to accumulated rotation (can be any value, not limited to 0-360)
+    accumulatedRotationRef.current += diff;
+    
+    // Update last normalized heading
+    lastHeadingRef.current = normalized;
+    
+    // Return accumulated rotation (this prevents CSS from wrapping)
+    return accumulatedRotationRef.current;
+  }, []);
+
+  /** Track device orientation for heading */
+  useEffect(() => {
+    const handleOrientation = (event) => {
+      let heading = null;
+      
+      // iOS: webkitCompassHeading (most accurate)
+      if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+        heading = event.webkitCompassHeading;
+      }
+      // Android: Calculate from alpha
+      else if (event.alpha !== null && event.alpha !== undefined) {
+        // Get screen orientation
+        const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+        let adjustedAlpha = event.alpha;
+        
+        // Adjust for screen rotation
+        if (screenOrientation === 90) {
+          adjustedAlpha = (event.alpha + 90) % 360;
+        } else if (screenOrientation === -90 || screenOrientation === 270) {
+          adjustedAlpha = (event.alpha - 90 + 360) % 360;
+        } else if (screenOrientation === 180) {
+          adjustedAlpha = (event.alpha + 180) % 360;
+        }
+        
+        // Convert to compass bearing (0° = North)
+        heading = (360 - adjustedAlpha) % 360;
+      }
+      
+      if (heading !== null) {
+        // Normalize to prevent 360° jumps
+        const smoothHeading = normalizeHeading(heading);
+        setUserHeading(smoothHeading);
       }
     };
+
+    // Auto-add listeners for non-iOS devices
+    window.addEventListener('deviceorientationabsolute', handleOrientation, { passive: true });
+    window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+
+    return () => {
+      window.removeEventListener('deviceorientationabsolute', handleOrientation);
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
+  }, [normalizeHeading]);
+
+  /** Fallback: Request orientation permission when geolocate button is clicked (iOS 13+) */
+  useEffect(() => {
+    if (!mapRef.current) return;
+    
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    const requestOrientationPermission = async () => {
+      // Only for iOS 13+ that requires permission
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          await DeviceOrientationEvent.requestPermission();
+        } catch (error) {
+          console.log('Orientation permission request:', error);
+        }
+      }
+    };
+
+    // Attach click listener to geolocate button
+    const setupGeolocateListener = () => {
+      setTimeout(() => {
+        const geolocateButton = document.querySelector('.mapboxgl-ctrl-geolocate');
+        if (geolocateButton) {
+          geolocateButton.addEventListener('click', requestOrientationPermission);
+        }
+      }, 500);
+    };
+
+    if (map.loaded()) {
+      setupGeolocateListener();
+    } else {
+      map.on('load', setupGeolocateListener);
+    }
+
+    return () => {
+      const geolocateButton = document.querySelector('.mapboxgl-ctrl-geolocate');
+      if (geolocateButton) {
+        geolocateButton.removeEventListener('click', requestOrientationPermission);
+      }
+    };
+  }, []);
+
+  /** Create custom user marker with heading cone using Mapbox GL JS */
+  useEffect(() => {
+    if (!mapRef.current || !userLocation) return;
+
+    const map = mapRef.current.getMap();
+    if (!map) return;
+
+    // Remove existing marker if any
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+    }
+
+    // Create marker element (Google Maps style)
+    const el = document.createElement('div');
+    el.className = 'custom-user-marker';
+    el.style.cssText = `
+      position: relative;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    
+    // Create beam container (rotates)
+    const beamContainer = document.createElement('div');
+    beamContainer.className = 'heading-beam-container';
+    beamContainer.style.cssText = `
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform: rotate(${userHeading}deg) translateZ(0);
+      transform-origin: center center;
+      transition: transform 0.15s ease-out;
+      will-change: transform;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      perspective: 1000px;
+      -webkit-perspective: 1000px;
+      pointer-events: none;
+    `;
+    
+    // Create direction beam (Google Maps style - wider trapezoid)
+    const beam = document.createElement('div');
+    beam.className = 'heading-cone';
+    beam.style.cssText = `
+      position: absolute;
+      width: 70px;
+      height: 90px;
+      background: linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0));
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%) translateZ(0);
+      -webkit-transform: translateX(-50%) translateZ(0);
+      clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%);
+      -webkit-clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%);
+      filter: blur(1px);
+      -webkit-filter: blur(1px);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      pointer-events: none;
+    `;
+    beamContainer.appendChild(beam);
+    el.appendChild(beamContainer);
+    
+    // Create pulse animation
+    const pulse = document.createElement('div');
+    pulse.style.cssText = `
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      background-color: rgba(59, 130, 246, 0.2);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+      pointer-events: none;
+    `;
+    el.appendChild(pulse);
+    
+    // Create accuracy ring
+    const accuracyRing = document.createElement('div');
+    accuracyRing.style.cssText = `
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-color: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      pointer-events: none;
+    `;
+    el.appendChild(accuracyRing);
+    
+    // Create user dot (Google Maps style)
+    const dot = document.createElement('div');
+    dot.style.cssText = `
+      position: relative;
+      width: 20px;
+      height: 20px;
+      background-color: #3b82f6;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      pointer-events: none;
+    `;
+    el.appendChild(dot);
+
+    // Create and add marker to map
+    const marker = new mapboxgl.Marker({
+      element: el,
+      anchor: 'center'
+    })
+      .setLngLat([userLocation.longitude, userLocation.latitude])
+      .addTo(map);
+
+    userMarkerRef.current = marker;
+
+    return () => {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+      }
+    };
+  }, [userLocation]);
+
+  /** Update heading beam rotation (Google Maps style) */
+  useEffect(() => {
+    if (userMarkerRef.current) {
+      const el = userMarkerRef.current.getElement();
+      const beamContainer = el.querySelector('.heading-beam-container');
+      if (beamContainer) {
+        beamContainer.style.transform = `rotate(${userHeading}deg) translateZ(0)`;
+      }
+    }
+  }, [userHeading]);
+
+  /** Trigger geolocate control on mount and enable watch mode */
+  useEffect(() => {
+    if (geolocateControlRef.current && !showGpsModal) {
+      // Trigger the geolocate control to start tracking
+      const timer = setTimeout(() => {
+        geolocateControlRef.current?.trigger();
+      }, 1000); // Small delay to ensure map is loaded
+      
+      return () => clearTimeout(timer);
+    }
   }, [showGpsModal]);
 
   /** Check if route stays within Intramuros bounds */
@@ -386,24 +802,6 @@ export default function GuestItineraryMap() {
     }
   }, [transportMode]);
 
-  /** Optimize route when user location or pins change */
-  useEffect(() => {
-    if (userLocation && pins.length > 0) {
-      const optimized = optimizeRoute(userLocation, pins, visitedSites);
-      setOptimizedPins(optimized);
-      
-      // Set first unvisited site as current
-      const nextSite = getNextSite(optimized, visitedSites);
-      if (nextSite) {
-        const nextIndex = optimized.findIndex(p => p._id === nextSite._id);
-        if (nextIndex !== -1 && currentPinIndex === 0) {
-          setCurrentPinIndex(nextIndex);
-          setSelectedPin(nextSite);
-        }
-      }
-    }
-  }, [userLocation, pins, visitedSites]);
-
   /** Build route to current pin */
   useEffect(() => {
     if (userLocation && optimizedPins.length > 0 && optimizedPins[currentPinIndex]) {
@@ -415,7 +813,7 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     if (!userLocation || optimizedPins.length === 0) return;
 
-    const radius = 50; // meters - show preview when within 50m
+    const radius = 10; // meters - show preview when within 10m
 
     const pin = optimizedPins[currentPinIndex];
     if (!pin) return;
@@ -456,21 +854,22 @@ export default function GuestItineraryMap() {
       }
     });
 
-    setCurrentStepIndex(closestIdx);
+    // Only update if step actually changed to prevent unnecessary rerenders and TTS rapid-fire
+    setCurrentStepIndex((prevIdx) => prevIdx === closestIdx ? prevIdx : closestIdx);
   }, [userLocation, steps]);
 
-  /** Mark site as visited - Guest users store in sessionStorage */
+  /** Mark site as visited - Guest users store in localStorage */
   const markSiteAsVisited = async (pin) => {
     if (!pin || !pin._id || visitedSites.has(pin._id)) return;
 
     try {
-      // For guest users, store visited sites in sessionStorage
+      // For guest users, store visited sites in localStorage
       const visitedKey = `guest_visited_${itineraryId}`;
-      const existingVisited = JSON.parse(sessionStorage.getItem(visitedKey) || "[]");
+      const existingVisited = JSON.parse(localStorage.getItem(visitedKey) || "[]");
       
       if (!existingVisited.includes(pin._id)) {
         existingVisited.push(pin._id);
-        sessionStorage.setItem(visitedKey, JSON.stringify(existingVisited));
+        localStorage.setItem(visitedKey, JSON.stringify(existingVisited));
       }
 
       setVisitedSites((prev) => new Set(prev).add(pin._id));
@@ -478,6 +877,37 @@ export default function GuestItineraryMap() {
     } catch (err) {
       console.error("Error marking site as visited:", err);
     }
+  };
+
+  /** Clear saved progress and restart - Guest mode */
+  const handleRestartItinerary = () => {
+    if (!userLocation || pins.length === 0) return;
+    
+    // Re-run optimization from current location - optimize ALL sites
+    const optimized = optimizeRoute(userLocation, pins, new Set());
+    setOptimizedPins(optimized);
+    
+    // Save new optimized order
+    const orderKey = `guest_optimized_order_${itineraryId}`;
+    const optimizedOrder = optimized.map(pin => pin._id);
+    localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
+    
+    // Go to first site in NEW optimized order (keep visited flags)
+    setCurrentPinIndex(0);
+    if (optimized.length > 0) {
+      const firstPin = optimized[0];
+      setSelectedPin(firstPin);
+      setActivePin(firstPin);
+      if (userLocation) {
+        buildRoute(userLocation, firstPin);
+      }
+    }
+    
+    // Reset current index to 0
+    const indexKey = `guest_current_index_${itineraryId}`;
+    localStorage.setItem(indexKey, '0');
+    
+    console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags (Guest)');
   };
 
   /** Fetch reviews for current site */
@@ -507,14 +937,19 @@ export default function GuestItineraryMap() {
     // Immediately add to visited sites Set
     setVisitedSites((prev) => new Set(prev).add(currentPin._id));
 
-    // Mark as visited in sessionStorage (async, but we don't wait)
+    // Mark as visited in localStorage (async, but we don't wait)
     markSiteAsVisited(currentPin);
 
     // Close the modal first
     setShowFullModal(false);
 
     // Show confirmation
-    alert(`✅ Site "${currentPin.siteName}" marked as visited!`);
+    setNotification({
+      isOpen: true,
+      type: 'success',
+      title: 'Site Visited!',
+      message: `"${currentPin.siteName}" has been marked as visited.`
+    });
 
     // Go to next site, passing the site we just marked as done
     goToNextStop(currentPin._id);
@@ -538,7 +973,109 @@ export default function GuestItineraryMap() {
     }
   }, [selectedPin]);
 
-  /** Go to next stop - follows optimized route order */
+  // Skip current site and move to next
+  const handleSkipSite = useCallback(() => {
+    if (!activePin) return;
+    
+    const newSkipped = new Set(skippedSites);
+    newSkipped.add(activePin._id);
+    setSkippedSites(newSkipped);
+    
+    // Move to next site
+    const nextIndex = currentPinIndex + 1;
+    if (nextIndex < optimizedPins.length) {
+      setCurrentPinIndex(nextIndex);
+      const nextPin = optimizedPins[nextIndex];
+      setActivePin(nextPin);
+      setSelectedPin(nextPin);
+      if (userLocation) {
+        buildRoute(userLocation, nextPin);
+      }
+      
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, nextIndex.toString());
+    }
+  }, [activePin, currentPinIndex, optimizedPins, skippedSites, userLocation]);
+
+  // Go to previous site
+  const handlePrevSite = useCallback(() => {
+    const prevIndex = currentPinIndex - 1;
+    if (prevIndex >= 0) {
+      setCurrentPinIndex(prevIndex);
+      const prevPin = optimizedPins[prevIndex];
+      setActivePin(prevPin);
+      setSelectedPin(prevPin);
+      if (userLocation) {
+        buildRoute(userLocation, prevPin);
+      }
+      
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, prevIndex.toString());
+    }
+  }, [currentPinIndex, optimizedPins, userLocation, itineraryId]);
+
+  // Go to next site (marks current as visited)
+  const handleNextSite = useCallback(async () => {
+    // Mark current site as visited before moving to next / ending tour
+    const currentPin = optimizedPins[currentPinIndex];
+    const updatedVisited = new Set(visitedSites);
+    if (currentPin && !updatedVisited.has(currentPin._id)) {
+      updatedVisited.add(currentPin._id);
+      setVisitedSites(updatedVisited);
+      
+      // Save to localStorage
+      const visitedKey = `guest_visited_${itineraryId}`;
+      localStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
+      
+      // Save to permanent visited-sites record
+      await markSiteAsVisited(currentPin);
+    }
+
+    const isLastSite = optimizedPins.length > 0 && currentPinIndex === optimizedPins.length - 1;
+
+    // If this is the last site, treat Next as "End Tour"
+    if (isLastSite) {
+      const allCompleted = updatedVisited.size === optimizedPins.length;
+
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, currentPinIndex.toString());
+
+      if (allCompleted) {
+        setNotification({
+          isOpen: true,
+          type: 'success',
+          title: 'Congratulations!',
+          message: 'You have completed all sites in this itinerary! Click Restart to tour again.',
+          confirmText: 'Restart Tour',
+          secondaryText: 'Go back to homepage',
+          action: 'restart',
+        });
+      }
+
+      return;
+    }
+
+    // Normal next-site behavior
+    const nextIndex = currentPinIndex + 1;
+    if (nextIndex < optimizedPins.length) {
+      setCurrentPinIndex(nextIndex);
+      const nextPin = optimizedPins[nextIndex];
+      setActivePin(nextPin);
+      setSelectedPin(nextPin);
+      if (userLocation) {
+        buildRoute(userLocation, nextPin);
+      }
+      
+      // Save current index to localStorage
+      const indexKey = `guest_current_index_${itineraryId}`;
+      localStorage.setItem(indexKey, nextIndex.toString());
+    }
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, itineraryId]);
+
+  /** Go to next stop - follows optimized route order (no re-optimization) */
   const goToNextStop = (justVisitedSiteId = null) => {
     if (!userLocation || optimizedPins.length === 0) return;
 
@@ -551,42 +1088,57 @@ export default function GuestItineraryMap() {
     const updatedVisited = new Set(visitedSites);
     if (justVisitedSiteId) {
       updatedVisited.add(justVisitedSiteId);
+      setVisitedSites(updatedVisited);
+      
+      // Save to localStorage
+      const visitedKey = `guest_visited_${itineraryId}`;
+      localStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
     }
 
-    // Re-optimize route with updated visited sites
-    const reoptimized = optimizeRoute(userLocation, pins, updatedVisited);
-    setOptimizedPins(reoptimized);
-
-    // Get next unvisited site from optimized route
-    const nextPin = getNextSite(reoptimized, updatedVisited);
+    // Get next unvisited site from existing optimized route (don't re-optimize)
+    const nextPin = getNextSite(optimizedPins, updatedVisited);
 
     if (!nextPin) {
       // No more sites left
       console.log('🎉 All sites visited!');
-      alert('🎉 All sites visited! Great job!');
+      setNotification({
+        isOpen: true,
+        type: 'success',
+        title: 'Congratulations!',
+        message: 'All sites visited! Great job!'
+      });
       setSelectedPin(null);
       setRoute(null);
       setSteps([]);
       return;
     }
 
-    const nextIndex = reoptimized.findIndex(p => p._id === nextPin._id);
-    console.log('✅ Next site (optimized):', nextPin.siteName, 'at index', nextIndex);
+    const nextIndex = optimizedPins.findIndex(p => p._id === nextPin._id);
+    console.log('✅ Next site:', nextPin.siteName, 'at index', nextIndex);
 
-    // Update current site to next in optimized order
+    // Update current site to next in original optimized order
     setCurrentPinIndex(nextIndex);
     setSelectedPin(nextPin);
     setManuallyDismissed(false); // Reset manual dismissal for new site
 
     if (userLocation) buildRoute(userLocation, nextPin);
+    
+    // Save current index to localStorage
+    const indexKey = `guest_current_index_${itineraryId}`;
+    localStorage.setItem(indexKey, nextIndex.toString());
   };
 
+  // Memoize onMove handler to prevent unnecessary re-renders
+  const handleMapMove = useCallback((evt) => {
+    setViewState(evt.viewState);
+  }, []);
+
   return (
-    <div className="w-full h-screen relative">
+    <div className="w-full h-screen flex flex-col overflow-hidden">
       <GpsConsentModal
         isOpen={showGpsModal}
         errorMessage={gpsError}
-        onEnable={() => {
+        onEnable={async () => {
           if (gpsPermissionDenied) {
             // If permission was denied, show instructions to enable in settings
             setGpsError(
@@ -595,6 +1147,47 @@ export default function GuestItineraryMap() {
             return;
           }
           
+          // Request device orientation permission first (iOS 13+)
+          if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+              const orientationPermission = await DeviceOrientationEvent.requestPermission();
+              if (orientationPermission === 'granted') {
+                // Add orientation listeners
+                const handleOrientation = (event) => {
+                  let heading = null;
+                  
+                  if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+                    heading = event.webkitCompassHeading;
+                  } else if (event.alpha !== null && event.alpha !== undefined) {
+                    const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+                    let adjustedAlpha = event.alpha;
+                    
+                    if (screenOrientation === 90) {
+                      adjustedAlpha = (event.alpha + 90) % 360;
+                    } else if (screenOrientation === -90 || screenOrientation === 270) {
+                      adjustedAlpha = (event.alpha - 90 + 360) % 360;
+                    } else if (screenOrientation === 180) {
+                      adjustedAlpha = (event.alpha + 180) % 360;
+                    }
+                    
+                    heading = (360 - adjustedAlpha) % 360;
+                  }
+                  
+                  if (heading !== null) {
+                    const smoothHeading = normalizeHeading(heading);
+                    setUserHeading(smoothHeading);
+                  }
+                };
+
+                window.addEventListener('deviceorientationabsolute', handleOrientation, { passive: true });
+                window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+              }
+            } catch (error) {
+              console.error('Error requesting device orientation permission:', error);
+            }
+          }
+          
+          // Then request GPS location
           if (navigator?.geolocation) {
             navigator.geolocation.getCurrentPosition(
               () => {
@@ -627,29 +1220,65 @@ export default function GuestItineraryMap() {
           navigate("/guest-homepage", { replace: true });
         }}
       />
-      {/* Back Header */}
-      <div 
-        className="absolute top-0 left-0 w-full z-30 pointer-events-auto bg-white/95 backdrop-blur-md shadow-sm"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
-        }}
-      >
-        <BackHeader title={<span className="text-black">Guest Itinerary Map</span>} />
-      </div>
+      
+      {/* Header - Rendered via Portal */}
+      {createPortal(
+        <div 
+          className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
+          style={{
+            paddingTop: 'max(env(safe-area-inset-top), 16px)',
+            paddingBottom: '8px',
+            paddingLeft: '16px',
+            paddingRight: '16px',
+            pointerEvents: 'auto'
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
+              onClick={() => {
+                if (location.key !== "default") {
+                  navigate(-1);
+                } else {
+                  navigate("/");
+                }
+              }}
+              aria-label="Go back"
+              style={{
+                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                color: 'inherit'
+              }}
+            >
+              ‹
+            </button>
+            <h1 
+              className="font-bold text-xl truncate"
+              style={{
+                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                margin: 0,
+                padding: 0
+              }}
+            >
+              Guest Itinerary Map
+            </h1>
+          </div>
+        </div>,
+        document.body
+      )}
 
-      {!showGpsModal && (
-        <Map
-        {...viewState}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle="mapbox://styles/mapbox/streets-v11"
-        onMove={(evt) => setViewState(evt.viewState)}
-        maxBounds={INTRAMUROS_BOUNDS}
-        attributionControl={false}
-        className="w-full h-full"
-      >
+      {/* Map Container - Takes remaining height */}
+      <div className="flex-1 relative overflow-hidden">
+        {!showGpsModal && (
+          <Map
+            ref={mapRef}
+            {...viewState}
+            mapboxAccessToken={MAPBOX_TOKEN}
+            mapStyle="mapbox://styles/mapbox/streets-v11"
+            onMove={handleMapMove}
+            maxBounds={INTRAMUROS_BOUNDS}
+            attributionControl={false}
+            style={{ width: '100%', height: '100%' }}
+          >
         {/* Greyed out area */}
         {inverseMask && (
           <Source id="inverse-mask" type="geojson" data={inverseMask}>
@@ -672,13 +1301,23 @@ export default function GuestItineraryMap() {
           </Source>
         )}
 
-        {/* User marker - Modern GPS style */}
-        {userLocation && (
-          <ModernUserMarker 
-            userLocation={userLocation} 
-            heading={userHeading}
-          />
-        )}
+        {/* Mapbox Geolocate Control (button only, custom marker used) */}
+        <GeolocateControl
+          ref={geolocateControlRef}
+          position="top-right"
+          positionOptions={{
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+          }}
+          trackUserLocation={true}
+          showUserHeading={false}
+          showAccuracyCircle={false}
+          showUserLocation={false}
+          fitBoundsOptions={{ maxZoom: 18 }}
+          onGeolocate={handleGeolocate}
+          onError={handleGeolocateError}
+        />
 
         {/* Site markers - numbered by optimized route */}
         {optimizedPins.map((pin, idx) => {
@@ -692,32 +1331,24 @@ export default function GuestItineraryMap() {
             onClick={(e) => {
               e.originalEvent.stopPropagation();
               setSelectedPin(pin);
-              setCurrentPinIndex(idx);
               setShowFullModal(false); // Show preview card first
-              if (userLocation) buildRoute(userLocation, pin);
+              // Only build route if this is the active pin or no active pin set
+              if (!activePin || activePin._id === pin._id) {
+                setCurrentPinIndex(idx);
+                setActivePin(pin);
+                if (userLocation) buildRoute(userLocation, pin);
+              }
             }}
           >
-            <div className="relative flex flex-col items-center">
-              {/* Pin Icon */}
-              <MapPin
-                className={`w-6 h-6 cursor-pointer ${
-                  idx === currentPinIndex
-                    ? "text-blue-600 animate-pulse"
-                    : isVisited
-                    ? "text-gray-400"
-                    : "text-red-500"
-                }`}
-              />
-              {/* Number Badge - shows optimized order */}
-              <div className={`absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-lg ${
-                idx === currentPinIndex
-                  ? "bg-blue-600 text-white"
-                  : isVisited
-                  ? "bg-gray-400 text-white"
-                  : "bg-white text-red-500 border-2 border-red-500"
-              }`}>
-                {idx + 1}
-              </div>
+            {/* Number Badge - shows optimized order (never changes) */}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg cursor-pointer transition-all ${
+              idx === currentPinIndex
+                ? "bg-blue-600 text-white animate-pulse scale-110"
+                : isVisited
+                ? "bg-green-500 text-white"
+                : "bg-red-500 text-white"
+            }`}>
+              {idx + 1}
             </div>
           </Marker>
         )})}
@@ -732,12 +1363,12 @@ export default function GuestItineraryMap() {
             />
           </Source>
         )}
-        </Map>
-      )}
+          </Map>
+        )}
 
-      {/* Directions Panel */}
-      {!showGpsModal && (
-        <DirectionsPanel
+        {/* Directions Panel */}
+        {!showGpsModal && (
+          <DirectionsPanel
         steps={steps}
         currentStepIndex={currentStepIndex}
         setCurrentStepIndex={setCurrentStepIndex}
@@ -746,12 +1377,18 @@ export default function GuestItineraryMap() {
         arrivalTime={arrivalTime}
         transportMode={transportMode}
         isRouting={isRouting}
-        />
-      )}
+        onPrevSite={handlePrevSite}
+        onSkipSite={handleSkipSite}
+        onNextSite={handleNextSite}
+        hasPrevSite={currentPinIndex > 0}
+        hasNextSite={currentPinIndex < optimizedPins.length - 1}
+        isLastSite={currentPinIndex === optimizedPins.length - 1}
+          />
+        )}
 
-      {/* Control Buttons */}
-      {!showGpsModal && !showFullModal && (
-        <MapControlButtons
+        {/* Control Buttons */}
+        {!showGpsModal && !showFullModal && (
+          <MapControlButtons
           userLocation={userLocation}
           selectedPin={selectedPin}
           pins={optimizedPins}
@@ -764,12 +1401,12 @@ export default function GuestItineraryMap() {
           setShowTransportPanel={setShowTransportPanel}
           transportMode={transportMode}
           setTransportMode={setTransportMode}
-        />
-      )}
+          />
+        )}
 
-      {/* Site Preview Card */}
-      {(!showGpsModal && selectedPin && !showFullModal) && (
-        <SitePreviewCard
+        {/* Site Preview Card */}
+        {(!showGpsModal && selectedPin && !showFullModal) && (
+          <SitePreviewCard
           selectedPin={selectedPin}
           distance={distance}
           isNearby={isNearby}
@@ -778,12 +1415,12 @@ export default function GuestItineraryMap() {
             setSelectedPin(null);
             setManuallyDismissed(true);
           }}
-        />
-      )}
+          />
+        )}
 
-      {/* Site Modal - Full Screen */}
-      {(!showGpsModal && selectedPin && showFullModal) && (
-        <SiteModalFullScreen
+        {/* Site Modal - Full Screen */}
+        {(!showGpsModal && selectedPin && showFullModal) && (
+          <SiteModalFullScreen
           selectedPin={selectedPin}
           onClose={() => {
             setShowFullModal(false);
@@ -797,11 +1434,41 @@ export default function GuestItineraryMap() {
           reviewsLoading={reviewsLoading}
           simulateGoToNextSite={simulateGoToNextSite}
           isGuestMode={true}
-        />
-      )}
+          />
+        )}
 
-      {/* Floating Chatbot */}
-      <FloatingChatbot />
+        {/* Floating Chatbot */}
+        <FloatingChatbot />
+        
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          confirmText={notification.confirmText || 'OK'}
+          onConfirm={
+            notification.action === 'restart'
+              ? handleRestartItinerary
+              : undefined
+          }
+          secondaryText={notification.secondaryText}
+          onSecondary={
+            notification.action === 'restart'
+              ? () => navigate('/GuestHomepage')
+              : undefined
+          }
+        />
+        
+        {/* Hidden restart button for testing - can be removed or styled properly */}
+        {/* <button 
+          onClick={handleRestartItinerary}
+          className="absolute bottom-20 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg"
+        >
+          Restart Route
+        </button> */}
+      </div>
     </div>
   );
 }

@@ -46,11 +46,32 @@ const OnlineRequiredModal = ({ isOpen, onClose, message, showLoginOption = true 
     onClose();
   };
 
+  // If online, show as floating notification instead of full modal
+  if (isOnline) {
+    return (
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] animate-slide-down">
+        <div className="bg-green-500 text-white rounded-lg shadow-2xl px-6 py-4 flex items-center gap-3 max-w-md">
+          <Wifi className="w-6 h-6" />
+          <div>
+            <h2 className="text-lg font-bold">Connection Restored!</h2>
+            <p className="text-sm text-white/90">You are back online</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-2 text-white hover:bg-white/20 rounded-full p-1 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className={`p-6 ${isOnline ? 'bg-green-500' : 'bg-red-500'} text-white relative`}>
+        <div className="p-6 bg-red-500 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1 transition"
@@ -59,17 +80,13 @@ const OnlineRequiredModal = ({ isOpen, onClose, message, showLoginOption = true 
           </button>
           
           <div className="flex items-center gap-3">
-            {isOnline ? (
-              <Wifi className="w-8 h-8" />
-            ) : (
-              <WifiOff className="w-8 h-8" />
-            )}
+            <WifiOff className="w-8 h-8" />
             <div>
               <h2 className="text-xl font-bold">
-                {isOnline ? 'Connection Restored!' : 'No Internet Connection'}
+                No Internet Connection
               </h2>
               <p className="text-sm text-white/90">
-                {isOnline ? 'You are back online' : 'Please check your connection'}
+                Please check your connection
               </p>
             </div>
           </div>
@@ -77,51 +94,7 @@ const OnlineRequiredModal = ({ isOpen, onClose, message, showLoginOption = true 
 
         {/* Body */}
         <div className="p-6">
-          {isOnline ? (
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800 text-sm">
-                  ✓ Internet connection detected! You can now access all features.
-                </p>
-              </div>
-
-              {showLoginOption && (
-                <div className="space-y-3">
-                  <p className="text-gray-700 font-medium">
-                    Would you like to login to access all features?
-                  </p>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={handleLogin}
-                      className="flex items-center justify-center gap-2 bg-[#f04e37] text-white font-semibold py-3 px-4 rounded-lg hover:bg-[#d43e2a] transition shadow-md"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      Login
-                    </button>
-                    
-                    <button
-                      onClick={handleContinueGuest}
-                      className="bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-200 transition"
-                    >
-                      Continue as Guest
-                    </button>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-                    <p className="text-xs text-blue-800">
-                      <strong>Logged in users can:</strong>
-                      <br />• Create personal itineraries
-                      <br />• Save favorite sites
-                      <br />• Post reviews
-                      <br />• Access trip history
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
+          <div className="space-y-4">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <p className="text-red-800 font-medium mb-2">
                   {message || 'This feature requires an internet connection'}
@@ -148,8 +121,7 @@ const OnlineRequiredModal = ({ isOpen, onClose, message, showLoginOption = true 
               >
                 Continue Browsing Offline
               </button>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

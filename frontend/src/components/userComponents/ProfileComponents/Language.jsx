@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function Language() {
   const { t, i18n } = useTranslation();
@@ -12,6 +13,7 @@ export default function Language() {
   ];
 
   const [selected, setSelected] = useState("");
+  const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
 
   // Fetch saved language from backend
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function Language() {
         sessionStorage.getItem("token") || localStorage.getItem("token");
 
       if (!token) {
-        alert("Not logged in!");
+        setNotification({ isOpen: true, title: "Authentication Required", message: "Not logged in!", type: "warning" });
         return;
       }
 
@@ -60,7 +62,7 @@ export default function Language() {
       i18n.changeLanguage(selected);
       localStorage.setItem("language", selected);
 
-      alert("Language saved!");
+      setNotification({ isOpen: true, title: "Success", message: "Language saved!", type: "success" });
     } catch (err) {
       console.error("Error saving language:", err.response?.data || err);
     }
@@ -114,6 +116,15 @@ export default function Language() {
           {t("continue")}
         </button>
       </div>
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
+      />
     </motion.div>
   );
 }

@@ -45,6 +45,9 @@ router.post("/", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Created category: ${newCategory.name}`,
+      role: "admin",
+      targetType: "other",
+      targetId: newCategory._id,
     });
 
     res.status(201).json(newCategory);
@@ -83,6 +86,9 @@ router.put("/:id", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Updated category (ID: ${category._id})`,
+      role: "admin",
+      targetType: "other",
+      targetId: category._id,
     });
 
     res.json(category);
@@ -105,6 +111,9 @@ router.delete("/:id", async (req, res) => {
     await Log.create({
       adminName: getAdminName(req),
       action: `Deleted category: ${category.name}`,
+      role: "admin",
+      targetType: "other",
+      targetId: category._id,
     });
 
     res.json({ message: "Category deleted" });
