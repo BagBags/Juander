@@ -24,5 +24,13 @@
     "nodemailer": "^7.0.5",
     "react-joyride": "^2.9.3",
     "react-webcam": "^7.2.0"
+  },
+  "scripts": {
+    "test": "mocha \"tests/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=index,inlineAssets=true,overwrite=true"
+  },
+  "devDependencies": {
+    "mocha": "^11.7.5",
+    "mochawesome": "^7.1.4",
+    "selenium-webdriver": "^4.38.0"
   }
 }
