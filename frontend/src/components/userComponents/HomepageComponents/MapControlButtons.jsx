@@ -65,19 +65,13 @@ export default function MapControlButtons({
     if (needsCompassPermission && !compassPermissionGranted) {
       await requestCompassPermission();
     } else {
-      // Smoothly center to user location using react-map-gl's transition props
+      // Just center to user location
       if (userLocation) {
-        setViewState((prev) => ({
-          // Preserve existing bearing/pitch/other view parameters
-          ...prev,
+        setViewState({
           latitude: userLocation.latitude,
           longitude: userLocation.longitude,
-          // Keep current zoom if it's already closer than 16 to avoid jarring jumps
-          zoom: Math.max(prev?.zoom || 16, 16),
-          // Enable a short, efficient animation
-          transitionDuration: 800,
-          transitionEasing: (t) => t,
-        }));
+          zoom: 16,
+        });
       }
     }
   };

@@ -8,16 +8,17 @@ export default function AdminMap() {
   const toggleSidebar = () => setIsExpanded((prev) => !prev);
 
   return (
-    <div className="min-h-screen">
+    <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
       <AdminSidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
 
       {/* Main Content */}
-      <main 
-        className={`min-h-screen transition-all duration-300 ${
+      <main
+        className={`transition-all duration-300 flex-1 p-0 ${
           isExpanded ? "ml-80" : "ml-20"
         }`}
       >
+        {/* Pass isExpanded to child */}
         <AdminTourMap isExpanded={isExpanded} />
       </main>
     </div>

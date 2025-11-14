@@ -25,7 +25,6 @@ import SiteModalFullScreen from "../HomepageComponents/SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import NotificationModal from "../../shared/NotificationModal";
-import ttsService from "../../../utils/textToSpeech";
 
 export default function GuestItineraryMap() {
   const { itineraryId } = useParams();
@@ -87,15 +86,6 @@ export default function GuestItineraryMap() {
   // Use localStorage for guest users (for persistence across tabs)
   const token = localStorage.getItem("token");
   const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-
-  // Stop TTS when component unmounts (user exits the page)
-  useEffect(() => {
-    return () => {
-      // Cancel any ongoing TTS when leaving the page
-      ttsService.cancel();
-      console.log('🔇 TTS stopped on GuestItineraryMap unmount');
-    };
-  }, []);
 
   // Monitor online/offline status
   useEffect(() => {
@@ -320,50 +310,24 @@ export default function GuestItineraryMap() {
             const savedIndex = localStorage.getItem(indexKey);
             const currentIndex = savedIndex !== null ? parseInt(savedIndex, 10) : 0;
             
-            // Check completion and position status for modal logic
-            const allCompleted = visitedSet.size === restoredPins.length;
-            const lastIndex = restoredPins.length - 1;
-            const isAtLastSite = currentIndex === lastIndex;
-            
-            if (allCompleted && isAtLastSite) {
-              // CONGRATS MODAL: All sites visited AND at last site
-              console.log('🎉 All sites completed and at last site - show congrats modal!');
-              setNotification({
-                isOpen: true,
-                type: 'success',
-                title: 'Congratulations!',
-                message: 'You have completed all sites in this itinerary! Click Restart to tour again.',
-                confirmText: 'Restart Tour',
-                secondaryText: 'Go back to homepage',
-                action: 'restart',
-              });
-              
-              // Stay at last site
-              setCurrentPinIndex(lastIndex);
-              setSelectedPin(restoredPins[lastIndex]);
-              setActivePin(restoredPins[lastIndex]);
-            } else if (!isAtLastSite && (currentIndex > 0 || visitedSet.size > 0)) {
-              // RESUME/RESTART MODAL: Not at last site AND has progress
-              console.log('📍 Not at last site with progress - show resume/restart modal');
-              
-              // Restore current position first
-              setCurrentPinIndex(currentIndex);
-              const currentPin = restoredPins[currentIndex];
-              setSelectedPin(currentPin);
-              setActivePin(currentPin);
-              
-              // Show resume/restart modal
-              setTimeout(() => {
-                setShowResumeModal(true);
-                console.log('✅ Resume/Restart modal shown');
-              }, 100);
-            } else {
-              // Normal restore - just set position
+            // Restore current pin position
+            if (currentIndex >= 0 && currentIndex < restoredPins.length) {
               setCurrentPinIndex(currentIndex);
               const currentPin = restoredPins[currentIndex];
               setSelectedPin(currentPin);
               setActivePin(currentPin);
               console.log('✅ Restored current pin index:', currentIndex);
+            } else {
+              // Fallback to first unvisited site
+              const nextSite = getNextSite(restoredPins, visitedSet);
+              if (nextSite) {
+                const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
+                if (nextIndex !== -1) {
+                  setCurrentPinIndex(nextIndex);
+                  setSelectedPin(nextSite);
+                  setActivePin(nextSite);
+                }
+              }
             }
             
             setHasLoadedProgress(true);
@@ -1018,7 +982,7 @@ export default function GuestItineraryMap() {
 
   // Go to next site (marks current as visited)
   const handleNextSite = useCallback(async () => {
-    // Mark current site as visited before moving to next / ending tour
+    // Mark current site as visited before moving to next
     const currentPin = optimizedPins[currentPinIndex];
     const updatedVisited = new Set(visitedSites);
     if (currentPin && !updatedVisited.has(currentPin._id)) {
@@ -1033,32 +997,6 @@ export default function GuestItineraryMap() {
       await markSiteAsVisited(currentPin);
     }
 
-    const isLastSite = optimizedPins.length > 0 && currentPinIndex === optimizedPins.length - 1;
-
-    // If this is the last site, treat Next as "End Tour"
-    if (isLastSite) {
-      const allCompleted = updatedVisited.size === optimizedPins.length;
-
-      // Save current index to localStorage
-      const indexKey = `guest_current_index_${itineraryId}`;
-      localStorage.setItem(indexKey, currentPinIndex.toString());
-
-      if (allCompleted) {
-        setNotification({
-          isOpen: true,
-          type: 'success',
-          title: 'Congratulations!',
-          message: 'You have completed all sites in this itinerary! Click Restart to tour again.',
-          confirmText: 'Restart Tour',
-          secondaryText: 'Go back to homepage',
-          action: 'restart',
-        });
-      }
-
-      return;
-    }
-
-    // Normal next-site behavior
     const nextIndex = currentPinIndex + 1;
     if (nextIndex < optimizedPins.length) {
       setCurrentPinIndex(nextIndex);
@@ -1382,7 +1320,6 @@ export default function GuestItineraryMap() {
         onNextSite={handleNextSite}
         hasPrevSite={currentPinIndex > 0}
         hasNextSite={currentPinIndex < optimizedPins.length - 1}
-        isLastSite={currentPinIndex === optimizedPins.length - 1}
           />
         )}
 
@@ -1447,18 +1384,6 @@ export default function GuestItineraryMap() {
           type={notification.type}
           title={notification.title}
           message={notification.message}
-          confirmText={notification.confirmText || 'OK'}
-          onConfirm={
-            notification.action === 'restart'
-              ? handleRestartItinerary
-              : undefined
-          }
-          secondaryText={notification.secondaryText}
-          onSecondary={
-            notification.action === 'restart'
-              ? () => navigate('/GuestHomepage')
-              : undefined
-          }
         />
         
         {/* Hidden restart button for testing - can be removed or styled properly */}

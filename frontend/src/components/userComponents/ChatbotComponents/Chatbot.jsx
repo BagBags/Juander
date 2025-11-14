@@ -14,7 +14,6 @@ export default function Chatbot() {
   const messagesEndRef = useRef(null);
   const sessionId = useRef(uuidv4());
   const lastBotMessageRef = useRef("");
-  const chatContainerRef = useRef(null);
 
   // Get user-specific localStorage key
   const getUserKey = (baseKey) => {
@@ -450,16 +449,15 @@ TUNGKOL SA IYO:
 PAANO KA SUMAGOT (RAG Framework):
 1. BASAHIN ang Knowledge Base na ibinigay sa ibaba
 2. HANAPIN ang relevant na impormasyon para sa tanong
-3. SAGUTIN ang tanong gamit ang nahanap mong impormasyon pero huwag sumagot ng napakahaba, sumagot ng saktuhan at tama 
+3. SAGUTIN ang tanong gamit ang nahanap mong impormasyon
 4. Kung may kaugnayan sa Knowledge Base, gamitin ito para sumagot
 5. Kung walang direktang sagot, gamitin ang related information para magbigay ng helpful na tugon
 6. Maging natural at conversational - huwag masyadong strict
 7. Kung talagang walang kaugnayan sa Intramuros o Knowledge Base, aminin na hindi mo alam at mag-alok ng tulong sa iba pang tanong
-8. Wag kang magbibigay ng mga suggestions na wala naman sa iyong knowledge base
-9. Wag kang mag sasabi na tutulong ka sa ibang bagay, dapat kung ano lang ang katanungan na tungkol lamang sa intramuros ang iyong sasagutin.
+
 IMPORTANTE:
 - Sumagot ng FILIPINO kahit English ang keywords
-- Magbigay ng complete details (oras, presyo, lokasyon) 
+- Magbigay ng complete details (oras, presyo, lokasyon)
 - Maging friendly at approachable
 - Okay lang mag-elaborate base sa available information`
         : `You are Juan, a friendly tour guide chatbot for Intramuros, Manila. Answer in ENGLISH.
@@ -472,12 +470,12 @@ ABOUT YOU:
 HOW TO ANSWER (RAG Framework):
 1. READ the Knowledge Base provided below
 2. FIND relevant information for the question
-3. ANSWER the question using the information you found but do not answer it too long, make it brief
+3. ANSWER the question using the information you found
 4. If there's related information in the Knowledge Base, use it to answer
 5. If there's no direct answer, use related information to provide a helpful response
 6. Be natural and conversational - don't be overly strict
 7. If the question is truly unrelated to Intramuros or the Knowledge Base, admit you don't know and offer to help with other questions
-8. Do not provide suggestions or recommendations that is not based on your knowledge base
+
 IMPORTANT:
 - Provide complete details (hours, prices, locations)
 - Be friendly and approachable
@@ -704,33 +702,8 @@ IMPORTANT:
     }, 100);
   };
 
-  // Handle zoom reset on touch end
-  useEffect(() => {
-    const handleTouchEnd = () => {
-      // Reset zoom by setting viewport meta tag
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        const currentContent = viewport.getAttribute('content');
-        // Force reset by temporarily changing and restoring
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0');
-        setTimeout(() => {
-          viewport.setAttribute('content', currentContent);
-        }, 10);
-      }
-    };
-
-    const container = chatContainerRef.current;
-    if (container) {
-      container.addEventListener('touchend', handleTouchEnd);
-      return () => {
-        container.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, []);
-
   return (
     <div
-      ref={chatContainerRef}
       className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
       style={{
         paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",

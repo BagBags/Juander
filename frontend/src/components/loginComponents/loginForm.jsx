@@ -1,10 +1,10 @@
+import { GoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import i18n from "/src/i18n.js";
 import { saveAuth, clearAuth } from "../../utils/authStorage";
-import GoogleSSOButton from "../shared/GoogleSSOButton";
 
 export default function LoginForm({ toggleForm }) {
   const navigate = useNavigate();
@@ -331,10 +331,15 @@ export default function LoginForm({ toggleForm }) {
 
           {/* Google Login */}
           <div className="w-full">
-            <GoogleSSOButton
+            <GoogleLogin
               onSuccess={handleGoogleLoginSuccess}
               onError={() => setError("Google login failed.")}
-              text="signin_with"
+              useOneTap
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="100%"
+              logo_alignment="left"
             />
           </div>
 

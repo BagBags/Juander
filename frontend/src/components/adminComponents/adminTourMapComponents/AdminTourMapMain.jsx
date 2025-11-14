@@ -71,7 +71,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default function AdminTourMapMain({ isExpanded }) {
+export default function AdminTourMapMain() {
   const [viewState, setViewState] = useState({
     latitude: 40.5896,
     longitude: 120.9747,
@@ -241,26 +241,6 @@ export default function AdminTourMapMain({ isExpanded }) {
     };
     fetchData();
   }, []);
-
-  // Professional UX solution: Pure CSS transitions without map movement
-  useEffect(() => {
-    const map = adminMapRef.current?.getMap?.();
-    if (map) {
-      // Apply smooth CSS transitions to map container only
-      const mapContainer = map.getContainer();
-      if (mapContainer) {
-        mapContainer.style.transition = 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)';
-        mapContainer.style.willChange = 'auto';
-        
-        // Clean up transition after animation completes
-        const cleanup = setTimeout(() => {
-          mapContainer.style.willChange = 'auto';
-        }, 300);
-        
-        return () => clearTimeout(cleanup);
-      }
-    }
-  }, [isExpanded]);
 
   // ---------- Mask Editing ----------
   const enableMaskEditing = async () => {
@@ -905,8 +885,8 @@ export default function AdminTourMapMain({ isExpanded }) {
         loading={confirmModal.loading}
       />
       
-      <div className="w-full h-screen bg-gray-100">
-      <div className="relative w-full h-full bg-white overflow-hidden">
+      <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
+      <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
         {loading && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[10000] bg-white/90 border border-gray-200 px-3 py-1 rounded shadow">
             Loading…
@@ -954,23 +934,13 @@ export default function AdminTourMapMain({ isExpanded }) {
         {/* Map */}
         <Map
           ref={adminMapRef}
-          initialViewState={{
-            latitude: 14.5906,
-            longitude: 120.9747,
-            zoom: 16,
-            bearing: 45,
-            minZoom: 5
-          }}
+          initialViewState={{ ...viewState, minZoom: 15.5 }}
           maxBounds={INTRAMUROS_BOUNDS}
           mapboxAccessToken={MAPBOX_TOKEN}
+          onMove={(evt) => setViewState(evt.viewState)}
           onClick={handleMapClick}
           mapStyle="mapbox://styles/mapbox/streets-v11"
-          style={{ 
-            width: "100%", 
-            height: "100%",
-            transition: "all 300ms cubic-bezier(0.4, 0, 0.2, 1)",
-            willChange: "transform"
-          }}
+          style={{ width: "100%", height: "100%" }}
         >
           {/* Inverse Mask Overlay - Dark outside bounds */}
           {inverseMask && (

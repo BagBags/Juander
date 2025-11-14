@@ -14,9 +14,6 @@ export default function NotificationModal({
   confirmText = "OK",
   autoClose = false,
   autoCloseDuration = 3000,
-  onConfirm,
-  secondaryText,
-  onSecondary,
 }) {
   React.useEffect(() => {
     if (isOpen && autoClose) {
@@ -82,49 +79,14 @@ export default function NotificationModal({
           <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Button */}
         <div className="px-8 pb-8">
-          {secondaryText ? (
-            <div className="flex flex-col gap-3">
-              {/* Primary action (e.g. Restart Tour) */}
-              <button
-                onClick={() => {
-                  if (onConfirm) {
-                    onConfirm();
-                  }
-                  onClose();
-                }}
-                className={`w-full px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
-              >
-                {confirmText}
-              </button>
-
-              {/* Secondary action (e.g. Go back to homepage) */}
-              <button
-                onClick={() => {
-                  if (onSecondary) {
-                    onSecondary();
-                  }
-                  onClose();
-                }}
-                className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-xl transition-colors"
-              >
-                {secondaryText}
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                if (onConfirm) {
-                  onConfirm();
-                }
-                onClose();
-              }}
-              className={`w-full px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
-            >
-              {confirmText}
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className={`w-full px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
+          >
+            {confirmText}
+          </button>
         </div>
       </div>
     </div>

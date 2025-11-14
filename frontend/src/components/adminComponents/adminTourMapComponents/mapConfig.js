@@ -7,8 +7,8 @@ export const MAPBOX_TOKEN =
 export const directionsClient = mbxDirections({ accessToken: MAPBOX_TOKEN });
 
 export const INTRAMUROS_BOUNDS = [
-  [120.965, 14.5820], // southwest (expanded a bit more)
-  [120.985, 14.6000], // northeast (expanded a bit more)
+  [120.968, 14.5833], // southwest (slightly left)
+  [120.982, 14.5985], // northeast (slightly higher & right)
 ];
 
 export const initialMaskFeature = {

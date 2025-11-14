@@ -504,37 +504,24 @@ export default function TripArchivesPage() {
                     </div>
                     <div>
                       <div 
-                        className="text-sm text-gray-600 space-y-1" 
-                        style={{ 
-                          overflow: 'hidden', 
-                          width: '100%', 
-                          wordBreak: 'break-word',
-                          display: '-webkit-box',
-                          WebkitLineClamp: expandedDescriptions[`place-desc-${index}`] ? 'unset' : '2',
-                          WebkitBoxOrient: 'vertical',
-                          lineHeight: '1.4',
-                          maxHeight: expandedDescriptions[`place-desc-${index}`] ? 'none' : '2.8em'
-                        }}
+                        className={`text-sm text-gray-600 space-y-1 ${expandedDescriptions[`place-desc-${index}`] ? '' : 'line-clamp-2'}`} 
+                        style={{ overflow: 'hidden', width: '100%', wordBreak: 'break-word' }}
                       >
                         {site.siteId?.siteDescription ? (
-                          expandedDescriptions[`place-desc-${index}`] ? (
-                            site.siteId.siteDescription.split('\n\n').map((paragraph, idx) => (
-                              <p key={idx} className="mb-2 last:mb-0">{paragraph.trim()}</p>
-                            ))
-                          ) : (
-                            <p>{site.siteId.siteDescription}</p>
-                          )
+                          site.siteId.siteDescription.split('\n\n').map((paragraph, idx) => (
+                            <p key={idx} style={{ overflow: 'hidden', textOverflow: 'ellipsis', wordBreak: 'break-word' }}>{paragraph.trim()}</p>
+                          ))
                         ) : (
                           <p>No description available</p>
                         )}
                       </div>
-                      {site.siteId?.siteDescription && site.siteId.siteDescription.length > 100 && (
+                      {site.siteId?.siteDescription && site.siteId.siteDescription.length > 150 && (
                         <button
                           onClick={() => setExpandedDescriptions(prev => ({
                             ...prev,
                             [`place-desc-${index}`]: !prev[`place-desc-${index}`]
                           }))}
-                          className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium transition-colors duration-200 block"
+                          className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
                         >
                           {expandedDescriptions[`place-desc-${index}`] ? "See less" : "See more"}
                         </button>
@@ -657,28 +644,19 @@ export default function TripArchivesPage() {
                                 {renderStars(existingReview.rating)}
                               </div>
                               <div className="mb-3">
-                                <div 
-                                  className="text-sm text-gray-600"
-                                  style={{ 
-                                    overflow: 'hidden', 
-                                    width: '100%', 
-                                    wordBreak: 'break-word',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: expandedDescriptions[`review-desc-${index}`] ? 'unset' : '3',
-                                    WebkitBoxOrient: 'vertical',
-                                    lineHeight: '1.4',
-                                    maxHeight: expandedDescriptions[`review-desc-${index}`] ? 'none' : '4.2em'
-                                  }}
+                                <p 
+                                  className={`text-sm text-gray-600 ${expandedDescriptions[`review-desc-${index}`] ? '' : 'line-clamp-3'}`}
+                                  style={{ overflow: 'hidden', width: '100%', wordBreak: 'break-word' }}
                                 >
                                   {existingReview.reviewText || "No review text"}
-                                </div>
-                                {existingReview.reviewText && existingReview.reviewText.length > 120 && (
+                                </p>
+                                {existingReview.reviewText && existingReview.reviewText.length > 150 && (
                                   <button
                                     onClick={() => setExpandedDescriptions(prev => ({
                                       ...prev,
                                       [`review-desc-${index}`]: !prev[`review-desc-${index}`]
                                     }))}
-                                    className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium transition-colors duration-200 block"
+                                    className="text-xs text-[#f04e37] hover:text-orange-600 mt-1 font-medium"
                                   >
                                     {expandedDescriptions[`review-desc-${index}`] ? "See less" : "See more"}
                                   </button>

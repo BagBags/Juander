@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { X } from "lucide-react";
 import Chatbot from "./Chatbot";
 import Draggable from "react-draggable";
@@ -61,17 +61,8 @@ export default function FloatingChatbot() {
       // When closing, snap back to hidden position on left
       setPosition(draggedPosition);
       setIsOpen(false);
-      // Stop any ongoing TTS
-      window.speechSynthesis.cancel();
     }
   };
-
-  // Stop TTS when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      window.speechSynthesis.cancel();
-    }
-  }, [isOpen]);
 
   return (
     <>
