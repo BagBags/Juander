@@ -4,6 +4,7 @@ import axios from "axios";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import { WifiOff, X, Compass } from "lucide-react";
+import { useTour } from "../../TourComponents/TourContext";
 import ModernLoader from "../../shared/ModernLoader";
 
 // Lazy load heavy components
@@ -147,10 +148,10 @@ export default function Homepage() {
     };
   }, []);
 
-  // Announce page load
-  useEffect(() => {
-    ttsService.speak(t('tts_welcome'));
-  }, [t]);
+  // Remove non-itinerary TTS announcements
+  // Intentionally no TTS here to keep voice guidance exclusive to itinerary maps
+
+  // Autostart moved into a child inside TourProvider to ensure hook context
 
   // Fetch logged-in tourist info
   useEffect(() => {
@@ -203,7 +204,9 @@ export default function Homepage() {
 
   return (
     <Suspense fallback={<ModernLoader progress={loadingProgress} />}>
-      <TourProvider steps={homepageTourSteps} userRole="tourist">
+      <TourProvider steps={homepageTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={true}>
+        {/* Autostart inside Provider to satisfy hook context */}
+        <HomepageTourAutostart />
       
       <div
         className="
@@ -255,4 +258,18 @@ export default function Homepage() {
       </TourProvider>
     </Suspense>
   );
+}
+
+function HomepageTourAutostart() {
+  const { startTour, isTourRunning } = useTour();
+  useEffect(() => {
+    const replay = localStorage.getItem("touristReplayTutorial") === "true";
+    if (replay && !isTourRunning) {
+      setTimeout(() => {
+        startTour();
+        try { localStorage.removeItem("touristReplayTutorial"); } catch {}
+      }, 800);
+    }
+  }, [startTour]);
+  return null;
 }

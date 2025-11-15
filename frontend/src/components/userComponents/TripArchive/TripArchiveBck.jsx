@@ -6,6 +6,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Filter } from "bad-words";
 import { Camera, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import NotificationModal from "../../shared/NotificationModal";
 
 const filter = new Filter();
 filter.addWords(
@@ -38,6 +40,7 @@ filter.addWords(
 );
 
 export default function TripArchivesPage() {
+  const { t } = useTranslation();
   const [visitedSites, setVisitedSites] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [selectedSite, setSelectedSite] = useState(null);
@@ -48,12 +51,22 @@ export default function TripArchivesPage() {
   const [loading, setLoading] = useState(true);
   const [reviewPhotos, setReviewPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    autoClose: false,
+    autoCloseDuration: 2000,
+  });
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
-  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+  const BACKEND_URL =
+    import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+    "http://localhost:5000";
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -85,12 +98,17 @@ export default function TripArchivesPage() {
     fetchData();
   }, []);
 
-  const renderStars = (rating, interactive = false, onHover = null, onClick = null) =>
+  const renderStars = (
+    rating,
+    interactive = false,
+    onHover = null,
+    onClick = null
+  ) =>
     Array.from({ length: 5 }, (_, i) => (
       <FaStar
         key={i}
         className={`${
-          i < (interactive ? (hoverRating || rating) : rating)
+          i < (interactive ? hoverRating || rating : rating)
             ? "text-yellow-400"
             : "text-gray-300"
         } ${interactive ? "cursor-pointer" : ""}`}
@@ -108,18 +126,20 @@ export default function TripArchivesPage() {
 
   const handleOpenReviewModal = (site) => {
     setSelectedSite(site);
-    
+
     // Check if review already exists for this site
     const existingReview = reviews.find(
-      (r) => r.siteId?._id === site.siteId?._id && r.itineraryId?._id === site.itineraryId?._id
+      (r) =>
+        r.siteId?._id === site.siteId?._id &&
+        r.itineraryId?._id === site.itineraryId?._id
     );
-    
+
     if (existingReview) {
       setRating(existingReview.rating);
       setReviewText(existingReview.reviewText || "");
       // Load existing photos if available
       if (existingReview.photos && existingReview.photos.length > 0) {
-        setPhotoPreviewUrls(existingReview.photos.map(p => resolveUrl(p)));
+        setPhotoPreviewUrls(existingReview.photos.map((p) => resolveUrl(p)));
       } else {
         setPhotoPreviewUrls([]);
       }
@@ -129,7 +149,7 @@ export default function TripArchivesPage() {
       setPhotoPreviewUrls([]);
     }
     setReviewPhotos([]);
-    
+
     setShowReviewModal(true);
   };
 
@@ -142,36 +162,57 @@ export default function TripArchivesPage() {
     const filesToAdd = files.slice(0, remainingSlots);
 
     // Create preview URLs
-    const newPreviewUrls = filesToAdd.map(file => URL.createObjectURL(file));
-    setPhotoPreviewUrls(prev => [...prev, ...newPreviewUrls]);
-    setReviewPhotos(prev => [...prev, ...filesToAdd]);
+    const newPreviewUrls = filesToAdd.map((file) => URL.createObjectURL(file));
+    setPhotoPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+    setReviewPhotos((prev) => [...prev, ...filesToAdd]);
   };
 
   const handleRemovePhoto = (index) => {
-    setPhotoPreviewUrls(prev => prev.filter((_, i) => i !== index));
-    setReviewPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotoPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+    setReviewPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitReview = async () => {
     if (!selectedSite || rating === 0) {
-      alert("Please select a rating");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Select a rating",
+        message: "Please select a rating before submitting.",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
       return;
     }
 
     // Check for profanity in review text
     if (reviewText && filter.isProfane(reviewText)) {
-      alert("⚠️ Please avoid using inappropriate language in your review.");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Inappropriate language",
+        message:
+          "Please avoid using inappropriate language in your review.",
+        autoClose: true,
+        autoCloseDuration: 2500,
+      });
       return;
     }
 
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      formData.append("itineraryId", selectedSite.itineraryId?._id || selectedSite.itineraryId);
-      formData.append("siteId", selectedSite.siteId?._id || selectedSite.siteId);
+      formData.append(
+        "itineraryId",
+        selectedSite.itineraryId?._id || selectedSite.itineraryId
+      );
+      formData.append(
+        "siteId",
+        selectedSite.siteId?._id || selectedSite.siteId
+      );
       formData.append("rating", rating);
       formData.append("reviewText", reviewText);
-      
+
       // Append photos
       reviewPhotos.forEach((photo) => {
         formData.append("photos", photo);
@@ -204,11 +245,23 @@ export default function TripArchivesPage() {
       setReviewText("");
       setReviewPhotos([]);
       setPhotoPreviewUrls([]);
-      
-      alert(response.data.message);
+
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Review submitted",
+        message: response.data.message || "Your review was submitted.",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
     } catch (err) {
       console.error("Error submitting review:", err);
-      alert("Failed to submit review");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Submit failed",
+        message: "Failed to submit review",
+      });
     }
   };
 
@@ -219,14 +272,26 @@ export default function TripArchivesPage() {
 
     try {
       await axios.delete(`${BACKEND_URL}/api/reviews/${reviewId}`, config);
-      
+
       // Remove review from state
       setReviews(reviews.filter((r) => r._id !== reviewId));
-      
-      alert("Review deleted successfully");
+
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Review deleted",
+        message: "Review deleted successfully",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
     } catch (err) {
       console.error("Error deleting review:", err);
-      alert("Failed to delete review");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Delete failed",
+        message: "Failed to delete review",
+      });
     }
   };
 
@@ -236,7 +301,6 @@ export default function TripArchivesPage() {
       <div className="pt-4 z-10 sticky top-0 bg-[#f04e37] w-full">
         <BackHeader title="Trip Archives" />
       </div>
-
       <MainLayout includeSideButtons={false}>
         <div className="w-full max-w-xl">
           {/* Page content */}
@@ -246,7 +310,9 @@ export default function TripArchivesPage() {
             {loading ? (
               <p className="text-white">Loading visited sites...</p>
             ) : visitedSites.length === 0 ? (
-              <p className="text-white">No visited sites yet. Start exploring!</p>
+              <p className="text-white">
+                No visited sites yet. Start exploring!
+              </p>
             ) : (
               <div className="flex flex-col items-center gap-6">
                 {visitedSites.map((site, index) => (
@@ -270,9 +336,9 @@ export default function TripArchivesPage() {
                         {site.itineraryId?.name || "Unknown Itinerary"}
                       </p>
                       <p className="text-xs mt-1 text-gray-600 line-clamp-2">
-                        {site.siteId?.siteDescription || "No description available"}
+                        {site.siteId?.siteDescription ||
+                          "No description available"}
                       </p>
-                   
                     </div>
                   </div>
                 ))}
@@ -315,7 +381,8 @@ export default function TripArchivesPage() {
                               {site.siteId?.siteName || "Unknown Site"}
                             </h3>
                             <p className="text-xs text-gray-600">
-                              Visited: {new Date(site.visitedAt).toLocaleDateString()}
+                              Visited:{" "}
+                              {new Date(site.visitedAt).toLocaleDateString()}
                             </p>
                             {existingReview ? (
                               <>
@@ -323,21 +390,25 @@ export default function TripArchivesPage() {
                                   {renderStars(existingReview.rating)}
                                 </div>
                                 <p className="text-xs text-gray-500 line-clamp-3">
-                                  {existingReview.reviewText || "No review text"}
+                                  {existingReview.reviewText ||
+                                    "No review text"}
                                 </p>
                                 {/* Display review photos */}
-                                {existingReview.photos && existingReview.photos.length > 0 && (
-                                  <div className="flex gap-1 mt-2 overflow-x-auto">
-                                    {existingReview.photos.map((photo, idx) => (
-                                      <img
-                                        key={idx}
-                                        src={resolveUrl(photo)}
-                                        alt={`Review photo ${idx + 1}`}
-                                        className="w-16 h-16 object-cover rounded border border-gray-300"
-                                      />
-                                    ))}
-                                  </div>
-                                )}
+                                {existingReview.photos &&
+                                  existingReview.photos.length > 0 && (
+                                    <div className="flex gap-1 mt-2 overflow-x-auto">
+                                      {existingReview.photos.map(
+                                        (photo, idx) => (
+                                          <img
+                                            key={idx}
+                                            src={resolveUrl(photo)}
+                                            alt={`Review photo ${idx + 1}`}
+                                            className="w-16 h-16 object-cover rounded border border-gray-300"
+                                          />
+                                        )
+                                      )}
+                                    </div>
+                                  )}
                                 <div className="flex gap-2 mt-2">
                                   <button
                                     onClick={() => handleOpenReviewModal(site)}
@@ -346,7 +417,9 @@ export default function TripArchivesPage() {
                                     Edit Review
                                   </button>
                                   <button
-                                    onClick={() => handleDeleteReview(existingReview._id)}
+                                    onClick={() =>
+                                      handleDeleteReview(existingReview._id)
+                                    }
                                     className="text-xs text-red-600 hover:underline"
                                   >
                                     Delete Review
@@ -372,7 +445,6 @@ export default function TripArchivesPage() {
           </div>
         </div>
       </MainLayout>
-
       {/* Review Modal */}
       {showReviewModal && selectedSite && (
         <div className="fixed inset-0 bg-[#f04e37] bg-opacity-95 flex items-center justify-center z-50 px-4">
@@ -380,7 +452,7 @@ export default function TripArchivesPage() {
             <h3 className="text-xl font-bold text-[#f04e37] mb-4">
               Review: {selectedSite.siteId?.siteName}
             </h3>
-            
+
             <div className="mb-4">
               <p className="text-sm text-gray-700 mb-2">Rating:</p>
               <div className="flex gap-1">
@@ -401,8 +473,10 @@ export default function TripArchivesPage() {
 
             {/* Photo Upload Section */}
             <div className="mb-4">
-              <p className="text-sm text-gray-700 mb-2">Add Photos (optional, max 5):</p>
-              
+              <p className="text-sm text-gray-700 mb-2">
+                Add Photos (optional, max 5):
+              </p>
+
               {/* Photo Preview Grid */}
               {photoPreviewUrls.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mb-3">
@@ -430,7 +504,9 @@ export default function TripArchivesPage() {
                 <label className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-gray-300 rounded-lg p-4 cursor-pointer hover:border-[#f04e37] hover:bg-gray-50 transition">
                   <Camera className="w-5 h-5 text-gray-500" />
                   <span className="text-sm text-gray-600">
-                    {photoPreviewUrls.length === 0 ? "Upload Photos" : `Add More (${5 - photoPreviewUrls.length} left)`}
+                    {photoPreviewUrls.length === 0
+                      ? "Upload Photos"
+                      : `Add More (${5 - photoPreviewUrls.length} left)`}
                   </span>
                   <input
                     type="file"
@@ -467,10 +543,19 @@ export default function TripArchivesPage() {
           </div>
         </div>
       )}
-
-      <p className="mt-10 text-xs text-center text-white opacity-70">
-        ©2025 Intramuros Administration
+      <p className="mb-8 text-xs text-center text-gray-400">
+        © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+        College of Information and Computing Sciences.
       </p>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        autoClose={notification.autoClose}
+        autoCloseDuration={notification.autoCloseDuration}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, memo } from "react";
+import React, { useEffect, useRef, useState, memo } from "react";
 import { ChevronLeft, ChevronRight, SkipForward, Clock } from "lucide-react";
-import { announceDirectionStep } from "../../../utils/textToSpeech";
+import ttsService, { announceDirectionStep } from "../../../utils/textToSpeech";
+import { useLocation } from "react-router-dom";
 
 const DirectionsPanel = memo(function DirectionsPanel({
   steps,
@@ -11,6 +12,9 @@ const DirectionsPanel = memo(function DirectionsPanel({
   arrivalTime,
   transportMode,
   isRouting,
+  // New: user geolocation and active pin for arrival message
+  userLocation,
+  activePin,
   onPrevSite,
   onSkipSite,
   onNextSite,
@@ -18,22 +22,149 @@ const DirectionsPanel = memo(function DirectionsPanel({
   hasNextSite,
   isLastSite = false,
 }) {
-  const lastAnnouncedStep = useRef(-1);
+  // Track the last spoken displayed instruction to avoid repeats
+  const lastSpokenInstructionRef = useRef("");
+  const location = useLocation();
+  const isAllowedRoute = location.pathname.startsWith("/TouristItineraryMap/") || location.pathname.startsWith("/GuestItineraryMap/");
 
-  // Announce direction changes immediately when step updates
+  // Displayed instruction is locked near waypoints to avoid flicker
+  const [displayInstruction, setDisplayInstruction] = useState("");
+  const isLockedRef = useRef(false);
+  const lockedStepIndexRef = useRef(null);
+
+  // Per-step one-time prompt flags
+  const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spokenFinal: false, arrivalSpoken: false });
+
+  // Helper: distance in meters between user and target [lng, lat]
+  const distanceToTarget = (userLoc, waypoint) => {
+    if (!userLoc || !waypoint || waypoint.length < 2) return Infinity;
+    const R = 6371000; // Earth radius in meters
+    const toRad = (v) => (v * Math.PI) / 180;
+    const [lng2, lat2] = waypoint;
+    const lat1 = userLoc.latitude;
+    const lng1 = userLoc.longitude;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Helper: build turn phrase based on step
+  const buildTurnPhrase = (step, prefix = "") => {
+    const modifier = step?.maneuver?.modifier || ""; // left|right|straight
+    const instruction = step?.maneuver?.instruction || "";
+    // Try to extract street name from instruction
+    const intoIdx = instruction.toLowerCase().indexOf(" into ");
+    const ontoIdx = instruction.toLowerCase().indexOf(" onto ");
+    const toIdx = instruction.toLowerCase().indexOf(" to ");
+    const cutIdx = intoIdx >= 0 ? intoIdx + 6 : ontoIdx >= 0 ? ontoIdx + 6 : toIdx >= 0 ? toIdx + 4 : -1;
+    const streetName = cutIdx >= 0 ? instruction.substring(cutIdx).trim() : instruction.replace(/^(turn|continue)\s+/i, '').trim();
+    const dirWord = modifier === "left" ? "left" : modifier === "right" ? "right" : "straight";
+    const action = dirWord === "straight" ? "Continue straight" : `Turn ${dirWord}`;
+    return `${prefix}${action} into ${streetName}`.trim();
+  };
+
+  // Initialize display instruction and manage lock across step changes
   useEffect(() => {
-    if (steps.length > 0 && steps[currentStepIndex]) {
-      // Only announce if step actually changed
-      if (currentStepIndex === lastAnnouncedStep.current) {
-        return;
+    if (!steps || steps.length === 0) return;
+    const currentStep = steps[currentStepIndex];
+    const instruction = currentStep?.maneuver?.instruction || "Follow route";
+
+    // Reset prompt flags for new step
+    if (promptFlagsRef.current.stepIndex !== currentStepIndex) {
+      promptFlagsRef.current = { stepIndex: currentStepIndex, spoken100: false, spoken50: false, spokenFinal: false, arrivalSpoken: false };
+    }
+
+    // Unlock when moving to a new step
+    if (lockedStepIndexRef.current !== null && lockedStepIndexRef.current !== currentStepIndex) {
+      isLockedRef.current = false;
+      lockedStepIndexRef.current = null;
+    }
+
+    // Only update displayed instruction if not locked
+    if (!isLockedRef.current) {
+      setDisplayInstruction(instruction);
+    }
+
+    return () => {
+      // No-op: unmount cancellation handled in dedicated effects below
+    };
+  }, [currentStepIndex, steps, isAllowedRoute]);
+
+  // Speak only when the displayed instruction changes (Waze-style behavior)
+  const displayedText = displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
+  useEffect(() => {
+    if (!isAllowedRoute || !ttsService.isEnabled) return;
+    if (isLockedRef.current) return; // don't speak while locked near waypoint
+    if (!displayedText) return;
+
+    if (displayedText !== lastSpokenInstructionRef.current) {
+      announceDirectionStep(displayedText, currentStepIndex + 1, steps.length);
+      lastSpokenInstructionRef.current = displayedText;
+    }
+  }, [displayedText, isAllowedRoute, currentStepIndex, steps.length]);
+
+  // Cancel speech when leaving itinerary pages
+  useEffect(() => {
+    if (!isAllowedRoute) {
+      ttsService.cancel();
+    }
+  }, [isAllowedRoute]);
+
+  // Always cancel on unmount
+  useEffect(() => {
+    return () => {
+      ttsService.cancel();
+    };
+  }, []);
+
+  // Distance-based prompts and 10m lock near waypoint
+  useEffect(() => {
+    if (!isAllowedRoute || !ttsService.isEnabled) return;
+    if (!userLocation || !steps || steps.length === 0) return;
+
+    const step = steps[currentStepIndex];
+    const wp = step?.maneuver?.location;
+    const dist = distanceToTarget(userLocation, wp);
+    const isArriveStep = (step?.maneuver?.type || "").toLowerCase() === "arrive";
+    const flags = promptFlagsRef.current;
+
+    // 10-meter lock: prevent rapid-fire when very close to waypoint
+    if (dist <= 10) {
+      if (!isLockedRef.current) {
+        isLockedRef.current = true;
+        lockedStepIndexRef.current = currentStepIndex;
       }
 
-      // Announce immediately when step changes
-      const instruction = steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
-      announceDirectionStep(instruction, currentStepIndex + 1, steps.length);
-      lastAnnouncedStep.current = currentStepIndex;
+      // Arrival announcement (only on arrival step) or destination proximity
+      if (!flags.arrivalSpoken && isArriveStep) {
+        const name = activePin?.siteName || "your destination";
+        ttsService.speak(`You have arrived at ${name}.`);
+        flags.arrivalSpoken = true;
+      }
+      // Do not speak other prompts while locked
+      return;
     }
-  }, [currentStepIndex, steps]);
+
+    // If outside lock radius, normal behavior resumes; emit distance prompts once per step
+    if (dist <= 100 && !flags.spoken100 && !isArriveStep) {
+      const phrase = buildTurnPhrase(step, "In 100 meters, ");
+      ttsService.speak(phrase);
+      flags.spoken100 = true;
+    }
+    if (dist <= 50 && !flags.spoken50 && !isArriveStep) {
+      const phrase = buildTurnPhrase(step, "In 50 meters, ");
+      ttsService.speak(phrase);
+      flags.spoken50 = true;
+    }
+    // Final turn instruction very near the waypoint (but outside the lock threshold)
+    if (dist <= 12 && !flags.spokenFinal && !isArriveStep) {
+      const finalPhrase = buildTurnPhrase(step);
+      ttsService.speak(finalPhrase);
+      flags.spokenFinal = true;
+    }
+  }, [userLocation, steps, currentStepIndex, isAllowedRoute, activePin]);
 
   if (steps.length === 0) return null;
 
@@ -71,7 +202,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
       <div className="text-center mb-3" aria-live="polite">
         <p className="text-base font-medium text-[#f04e37]">
-          {steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
+          {displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
         </p>
       </div>
 
@@ -100,7 +231,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <button
           onClick={onPrevSite}
           disabled={!hasPrevSite}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+          className={`direction-prev-btn flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
             hasPrevSite
               ? "bg-gray-200 text-gray-700 hover:bg-gray-300 active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -114,7 +245,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <button
           onClick={onSkipSite}
           disabled={!hasNextSite}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+          className={`direction-skip-btn flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
             hasNextSite
               ? "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -128,7 +259,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <button
           onClick={onNextSite}
           disabled={!hasNextSite}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+          className={`direction-next-btn flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
             hasNextSite
               ? "bg-[#f04e37] text-white hover:bg-[#d9442f] active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

@@ -8,9 +8,10 @@ import { useApi } from "./useApi";
 import MapMarkers from "./MapMarkers";
 import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
-import ttsService from "../../../utils/textToSpeech";
 import { useTranslation } from "react-i18next";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
+import TourMapSearchModal from "./TourMapSearchModal";
+import TourMapControlButtons from "./TourMapControlButtons";
 import "../../../App.css";
 
 // ✅ Axios instance with auth token
@@ -38,6 +39,7 @@ export default function TourMap() {
   const [selectedPin, setSelectedPin] = useState(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW);
   const [showLegend, setShowLegend] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [mapError, setMapError] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -61,10 +63,8 @@ export default function TourMap() {
     };
   }, []);
 
-  // Announce page load
-  useEffect(() => {
-    ttsService.speak(t('tts_tourMapLoaded'));
-  }, [t]);
+  // Remove non-itinerary TTS announcements
+  // No TTS here; voice guidance is exclusive to itinerary maps
 
   // ------------------ Fly to pin ------------------
   const flyToPin = (pinData, callback) => {
@@ -205,6 +205,13 @@ export default function TourMap() {
         <MapLayers mask={mask} inverseMask={inverseMask} route={null} />
       </Map>
 
+      {/* Control Buttons: Search + Legend */}
+      <TourMapControlButtons
+        onOpenSearch={() => setShowSearchModal(true)}
+        showLegend={showLegend}
+        setShowLegend={setShowLegend}
+      />
+
       {/* UI Overlays */}
       <MapOverlays
         selectedPin={selectedPin}
@@ -212,6 +219,15 @@ export default function TourMap() {
         onCloseCard={handleCloseCard}
         showLegend={showLegend}
         setShowLegend={setShowLegend}
+        showLegendButton={false}
+      />
+
+      {/* Search Modal */}
+      <TourMapSearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        pins={pins}
+        onSelectPin={(pin) => openPin(pin)}
       />
 
       {/* Floating Chatbot */}

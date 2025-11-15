@@ -3,7 +3,6 @@ import axios from "axios";
 import Card from "./Card";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
-import ttsService from "../../../utils/textToSpeech";
 import { useTranslation } from "react-i18next";
 import { Phone, AlertCircle } from "lucide-react";
 
@@ -12,21 +11,25 @@ export default function EmergencyPage() {
   const [hotlines, setHotlines] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Announce page load
-  useEffect(() => {
-    ttsService.speak(t('tts_emergencyPage'));
-  }, [t]);
+  // No TTS here; voice guidance is exclusive to itinerary maps
 
   useEffect(() => {
     const fetchHotlines = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`);
+        const res = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/emergency`
+        );
         const transformed = res.data.map((agency) => ({
           title: agency.name,
           icon: agency.icon
             ? agency.icon.startsWith("http")
               ? agency.icon
-              : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${agency.icon}`
+              : `${
+                  import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+                  "http://localhost:5000"
+                }${agency.icon}`
             : null,
           contacts: agency.contactChannels.map((channel) => ({
             label: channel.label,
@@ -46,18 +49,24 @@ export default function EmergencyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div
+      className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       {/* Global TTS Button */}
 
       {/* Sticky Back Header */}
-      <div 
+      <div
         className="sticky top-0 z-20 border-b border-white/20"
         style={{
           background: "linear-gradient(to right, #ef4444, #f04e37)",
           paddingTop: "max(env(safe-area-inset-top), 16px)",
           paddingBottom: "8px",
           paddingLeft: "16px",
-          paddingRight: "16px"
+          paddingRight: "16px",
         }}
       >
         <div className="text-white">
@@ -76,7 +85,8 @@ export default function EmergencyPage() {
               Emergency Contacts
             </h1>
             <p className="text-white/90 text-sm md:text-base max-w-2xl mx-auto">
-              Quick access to emergency services in Intramuros. Tap any number to call immediately.
+              Quick access to emergency services in Intramuros. Tap any number
+              to call immediately.
             </p>
           </div>
 
@@ -84,8 +94,9 @@ export default function EmergencyPage() {
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 mb-8 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-300 flex-shrink-0 mt-0.5" />
             <p className="text-white/90 text-sm">
-              <span className="font-semibold">Important:</span> These hotlines are for emergencies only. 
-              For non-urgent inquiries, please visit the Intramuros Administration office.
+              <span className="font-semibold">Important:</span> These hotlines
+              are for emergencies only. For non-urgent inquiries, please visit
+              the Intramuros Administration office.
             </p>
           </div>
 
@@ -93,7 +104,9 @@ export default function EmergencyPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
-              <p className="text-white/80 text-lg">Loading emergency contacts...</p>
+              <p className="text-white/80 text-lg">
+                Loading emergency contacts...
+              </p>
             </div>
           ) : hotlines.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -108,16 +121,19 @@ export default function EmergencyPage() {
             </div>
           ) : (
             <div className="text-center py-20">
-              <p className="text-white/80 text-lg">No emergency contacts available at the moment.</p>
+              <p className="text-white/80 text-lg">
+                No emergency contacts available at the moment.
+              </p>
             </div>
           )}
         </div>
       </MainLayout>
 
       {/* Footer */}
-      <div className="mt-auto py-6 text-center">
-        <p className="text-white/60 text-xs">
-          © 2025 Intramuros Administration. All rights reserved.
+      <div className="mt-auto text-center px-6 pt-4 pb-8 max-w-4xl mx-auto">
+        <p className="text-xs text-center text-white">
+          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+          College of Information and Computing Sciences.
         </p>
       </div>
     </div>

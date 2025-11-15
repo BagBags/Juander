@@ -74,25 +74,15 @@ export default function SideButtons({ userType = "tourist" }) {
         if (icon.Device === "Mobile") visibilityClass = "block md:hidden";
         else visibilityClass = "block";
 
-        // Determine if this icon should be enlarged (all except hotlines and profile)
-        const shouldEnlarge = icon.label !== "hotlines" && icon.label !== "profile";
-        
-        // Use smaller sizes specifically for PWA mode to prevent overlap
-        const buttonSize = isPWA 
-          ? (shouldEnlarge 
-              ? "w-12 h-12 max-[375px]:w-10 max-[375px]:h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16"
-              : "w-10 h-10 max-[375px]:w-9 max-[375px]:h-9 sm:w-12 sm:h-12 lg:w-14 lg:h-14")
-          : (shouldEnlarge 
-              ? "w-16 h-16 max-[375px]:w-13 max-[375px]:h-13 sm:w-20 sm:h-20 lg:w-20 lg:h-20"
-              : "w-14 h-14 max-[375px]:w-11 max-[375px]:h-11 sm:w-18 sm:h-18 lg:w-18 lg:h-18");
-              
+        // Uniform sizes across all icons for consistency
+        // Use slightly smaller sizes in PWA mode to avoid overlap
+        const buttonSize = isPWA
+          ? "w-12 h-12 max-[375px]:w-10 max-[375px]:h-10 sm:w-14 sm:h-14 lg:w-16 lg:h-16"
+          : "w-16 h-16 max-[375px]:w-14 max-[375px]:h-14 sm:w-20 sm:h-20 lg:w-20 lg:h-20";
+
         const iconSize = isPWA
-          ? (shouldEnlarge
-              ? "w-6 h-6 max-[375px]:w-5 max-[375px]:h-5 sm:w-7 sm:h-7 lg:w-8 lg:h-8"
-              : "w-5 h-5 max-[375px]:w-4 max-[375px]:h-4 sm:w-6 sm:h-6 lg:w-7 lg:h-7")
-          : (shouldEnlarge
-              ? "w-9 h-9 max-[375px]:w-7 max-[375px]:h-7 sm:w-11 sm:h-11 lg:w-11 lg:h-11"
-              : "w-7 h-7 max-[375px]:w-5 max-[375px]:h-5 sm:w-9 sm:h-9 lg:w-9 lg:h-9");
+          ? "w-6 h-6 max-[375px]:w-5 max-[375px]:h-5 sm:w-7 sm:h-7 lg:w-8 lg:h-8"
+          : "w-9 h-9 max-[375px]:w-7 max-[375px]:h-7 sm:w-11 sm:h-11 lg:w-11 lg:h-11";
 
         return (
           <Link

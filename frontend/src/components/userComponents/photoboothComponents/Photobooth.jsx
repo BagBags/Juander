@@ -10,6 +10,13 @@ import { RotateCcw, Download, X } from "lucide-react";
 import PhotoboothSlider from "./photoboothSlider";
 import { baseFilters } from "./basefilter";
 import "../../../Photobooth.css";
+import {
+  setPhotoboothRouteActive,
+  cancelCameraStop,
+  scheduleCameraStop,
+  isPhotoboothRouteActive,
+} from "../../../utils/cameraLifecycle";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function Photobooth() {
   const canvasRef = useRef(null);
@@ -26,6 +33,12 @@ export default function Photobooth() {
   const [capturedImage, setCapturedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const preloadedRef = useRef(new Set());
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   // Load filters from backend (keep base filters immediately)
   useEffect(() => {
@@ -118,6 +131,16 @@ export default function Photobooth() {
     fetchFilters();
     return () => {
       isMounted = false;
+    };
+  }, []);
+
+  // Mark route active and cancel any pending camera stop when Photobooth mounts
+  useEffect(() => {
+    setPhotoboothRouteActive(true);
+    cancelCameraStop();
+    return () => {
+      // Mark route inactive when leaving Photobooth
+      setPhotoboothRouteActive(false);
     };
   }, []);
 
@@ -327,8 +350,15 @@ export default function Photobooth() {
     return () => {
       destroyed = true;
       try {
-        if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy)
-          window.JEELIZFACEFILTER.destroy();
+        // If we're still on Photobooth (effect re-run), destroy immediately.
+        // If leaving the route (unmount), schedule stop after 10 seconds.
+        if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
+          if (isPhotoboothRouteActive()) {
+            window.JEELIZFACEFILTER.destroy();
+          } else {
+            scheduleCameraStop(10000);
+          }
+        }
       } catch {}
     };
   }, [cameraKey]);
@@ -481,16 +511,30 @@ export default function Photobooth() {
           setCapturedImage(fallback);
           setShowPreview(true);
           setTimeout(() => {
-            alert(
-              "Photo captured successfully! Note: Filter overlay couldn't be included due to technical restrictions."
-            );
+            setNotification({
+              isOpen: true,
+              type: "info",
+              title: "Photo captured",
+              message:
+                "Filter overlay couldn't be included due to technical restrictions.",
+            });
           }, 50);
         } catch (e2) {
           console.error("Fallback capture failed:", e2);
-          alert("Unable to capture photo. Please try again.");
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Capture failed",
+            message: "Unable to capture photo. Please try again.",
+          });
         }
       } else {
-        alert("Unable to capture photo. Please try again.");
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Capture failed",
+          message: "Unable to capture photo. Please try again.",
+        });
       }
     }
   }, [detectStateRef, selectedMeta]);
@@ -693,6 +737,13 @@ export default function Photobooth() {
           </div>
         )}
       </div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </div>
   );
 }

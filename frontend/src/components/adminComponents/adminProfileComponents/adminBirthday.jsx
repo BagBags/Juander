@@ -31,9 +31,14 @@ export default function Birthday() {
 
         if (!token) return;
 
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (data?.birthday) {
           const d = new Date(data.birthday);
@@ -65,7 +70,9 @@ export default function Birthday() {
       }
 
       const { data } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/birthday`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/birthday`,
         { month, date, year },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -136,10 +143,7 @@ export default function Birthday() {
           Save
         </button>
       </div>
-
-      <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
-        ©2025 Intramuros Administration
-      </p>
+      image.png
     </motion.div>
   );
 }

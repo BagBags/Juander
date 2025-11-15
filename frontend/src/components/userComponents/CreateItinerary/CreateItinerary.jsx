@@ -2,10 +2,10 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
-import ttsService from "../../../utils/textToSpeech";
 import { useTranslation } from "react-i18next";
 import OnlineRequiredModal from "../../shared/OnlineRequiredModal";
 import ConfirmModal from "../../shared/ConfirmModal";
+import NotificationModal from "../../shared/NotificationModal";
 import {
   FaCheck,
   FaPlus,
@@ -46,10 +46,12 @@ function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
             <div className="w-2 h-2 bg-[#f04e37] rounded-full mt-1.5 flex-shrink-0"></div>
             <div className="flex-1">
               <p className="text-gray-700 text-sm leading-relaxed mb-2">
-                An entrance fee is required to access Fort Santiago and its sites.
+                An entrance fee is required to access Fort Santiago and its
+                sites.
               </p>
               <p className="text-xs text-gray-600 leading-relaxed">
-                Please purchase tickets at the Fort Santiago entrance before visiting.
+                Please purchase tickets at the Fort Santiago entrance before
+                visiting.
               </p>
             </div>
           </div>
@@ -92,13 +94,13 @@ function CategoryFilterButton({ value, onChange, categories }) {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     const onEsc = (e) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onEsc);
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
     return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onEsc);
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
     };
   }, []);
 
@@ -113,17 +115,20 @@ function CategoryFilterButton({ value, onChange, categories }) {
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={value === 'all' ? 'All Categories' : `Category: ${value}`}
+        aria-label={value === "all" ? "All Categories" : `Category: ${value}`}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setOpen((v) => !v);
           }
         }}
         className="w-full h-10 rounded-xl bg-white border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none transition-all relative flex items-center justify-center overflow-hidden"
       >
-        <FilterIcon className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+        <FilterIcon
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+          aria-hidden="true"
+        />
       </button>
       {open && (
         <div
@@ -133,9 +138,11 @@ function CategoryFilterButton({ value, onChange, categories }) {
         >
           <button
             role="option"
-            aria-selected={value === 'all'}
-            onClick={() => handleSelect('all')}
-            className={`w-full text-left px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 ${value === 'all' ? 'bg-gray-100' : ''}`}
+            aria-selected={value === "all"}
+            onClick={() => handleSelect("all")}
+            className={`w-full text-left px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 ${
+              value === "all" ? "bg-gray-100" : ""
+            }`}
           >
             All Categories
           </button>
@@ -145,7 +152,9 @@ function CategoryFilterButton({ value, onChange, categories }) {
               role="option"
               aria-selected={value === name}
               onClick={() => handleSelect(name)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 ${value === name ? 'bg-gray-100' : ''}`}
+              className={`w-full text-left px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 ${
+                value === name ? "bg-gray-100" : ""
+              }`}
             >
               {name}
             </button>
@@ -175,12 +184,18 @@ export default function CreateItineraryPage() {
   // Search and filter state for Available Sites
   const [siteSearchQuery, setSiteSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
 
   useEffect(() => {
-    ttsService.speak(t("tts_createItinerary"));
+    // No TTS here; voice guidance is exclusive to itinerary maps
     fetchSites();
     fetchItineraries();
     fetchUserPreference();
@@ -189,7 +204,9 @@ export default function CreateItineraryPage() {
   const fetchUserPreference = async () => {
     try {
       const res = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/me`,
         config
       );
       setHideFortModalPreference(res.data.hideFortSantiagoModal || false);
@@ -207,7 +224,12 @@ export default function CreateItineraryPage() {
       );
       setSites(res.data);
     } catch {
-      alert("Failed to load sites");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Failed to load sites",
+        message: "Please try again.",
+      });
     }
   };
 
@@ -221,7 +243,12 @@ export default function CreateItineraryPage() {
       );
       setUserItineraries(res.data.filter((i) => !i.isAdminCreated));
     } catch {
-      alert("Failed to load itineraries");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Failed to load itineraries",
+        message: "Please try again.",
+      });
     }
   };
 
@@ -247,7 +274,12 @@ export default function CreateItineraryPage() {
       setImageUrl(res.data.imageUrl);
     } catch (err) {
       console.error("Upload failed", err);
-      alert("Image upload failed");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Image upload failed",
+        message: "Please try again.",
+      });
     }
   };
 
@@ -261,7 +293,7 @@ export default function CreateItineraryPage() {
           }/userItineraries/delete-image`,
           {
             headers: { Authorization: `Bearer ${token}` },
-            data: { imageUrl }
+            data: { imageUrl },
           }
         );
       }
@@ -269,7 +301,12 @@ export default function CreateItineraryPage() {
       setShowDeleteImageModal(false);
     } catch (err) {
       console.error("Failed to delete image:", err);
-      alert("Failed to delete image");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Failed to delete image",
+        message: "Please try again.",
+      });
     }
   };
 
@@ -284,8 +321,12 @@ export default function CreateItineraryPage() {
 
   const toggleSelection = (siteId) => {
     const site = sites.find((s) => s._id === siteId);
-    
-    if (site?.insideFortSantiago && !selected.includes(siteId) && !hideFortModalPreference) {
+
+    if (
+      site?.insideFortSantiago &&
+      !selected.includes(siteId) &&
+      !hideFortModalPreference
+    ) {
       // Only show modal when adding a Fort Santiago site and user hasn't disabled it
       setShowFortModal(true);
     }
@@ -299,7 +340,9 @@ export default function CreateItineraryPage() {
   const handleDontShowAgain = async () => {
     try {
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/fort-santiago-modal`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/fort-santiago-modal`,
         { hideFortSantiagoModal: true },
         config
       );
@@ -321,8 +364,15 @@ export default function CreateItineraryPage() {
       return;
     }
 
-    if (!itineraryName.trim() || selected.length === 0)
-      return alert("Enter name & select sites");
+    if (!itineraryName.trim() || selected.length === 0) {
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Incomplete details",
+        message: "Enter a name and select at least one site.",
+      });
+      return;
+    }
 
     const payload = {
       name: itineraryName.trim(),
@@ -340,7 +390,12 @@ export default function CreateItineraryPage() {
           payload,
           config
         );
-        alert("Itinerary updated successfully");
+        setNotification({
+          isOpen: true,
+          type: "success",
+          title: "Itinerary updated",
+          message: "Your itinerary was updated successfully.",
+        });
       } else {
         await axios.post(
           `${
@@ -349,7 +404,12 @@ export default function CreateItineraryPage() {
           payload,
           config
         );
-        alert("Itinerary created successfully");
+        setNotification({
+          isOpen: true,
+          type: "success",
+          title: "Itinerary created",
+          message: "Your itinerary was created successfully.",
+        });
       }
       resetForm();
       fetchItineraries();
@@ -362,7 +422,12 @@ export default function CreateItineraryPage() {
         );
         setShowOfflineModal(true);
       } else {
-        alert("Failed to save itinerary");
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Failed to save itinerary",
+          message: "Please try again.",
+        });
       }
     }
   };
@@ -391,7 +456,12 @@ export default function CreateItineraryPage() {
         );
         setShowOfflineModal(true);
       } else {
-        alert("Failed to delete itinerary");
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Failed to delete itinerary",
+          message: "Please try again.",
+        });
       }
     }
   };
@@ -429,7 +499,7 @@ export default function CreateItineraryPage() {
           onDontShowAgain={handleDontShowAgain}
         />
       )}
-      
+
       {/* Delete Image Confirmation Modal */}
       <ConfirmModal
         isOpen={showDeleteImageModal}
@@ -440,17 +510,26 @@ export default function CreateItineraryPage() {
         confirmText="Delete Image"
         type="danger"
       />
-      
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
+
       {/* Global TTS Button */}
 
       {/* === STICKY BACKHEADER === */}
-      <div 
+      <div
         className="sticky top-0 z-20 bg-[#f04e37] border-b border-white/20"
         style={{
           paddingTop: "max(env(safe-area-inset-top), 16px)",
           paddingBottom: "8px",
           paddingLeft: "16px",
-          paddingRight: "16px"
+          paddingRight: "16px",
         }}
       >
         <BackHeader title="Itinerary Manager" className="text-white" />
@@ -464,10 +543,13 @@ export default function CreateItineraryPage() {
             <div
               className="absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] bg-white rounded-xl shadow-lg transition-transform duration-300 ease-out"
               style={{
-                transform: activeTab === "create" ? "translateX(0)" : "translateX(calc(100% + 0.75rem))"
+                transform:
+                  activeTab === "create"
+                    ? "translateX(0)"
+                    : "translateX(calc(100% + 0.75rem))",
               }}
             />
-            
+
             {/* Tab Buttons */}
             <div className="relative grid grid-cols-2 gap-1.5">
               <button
@@ -505,9 +587,11 @@ export default function CreateItineraryPage() {
               <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                   <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
-                  {editingItineraryId ? "Update Your Itinerary" : "Create New Itinerary"}
+                  {editingItineraryId
+                    ? "Update Your Itinerary"
+                    : "Create New Itinerary"}
                 </h2>
-                
+
                 <div className="space-y-4">
                   {/* Itinerary Name */}
                   <div>
@@ -588,7 +672,9 @@ export default function CreateItineraryPage() {
                       onClick={handleSave}
                       className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
                     >
-                      {editingItineraryId ? "Update Itinerary" : "Save Itinerary"}
+                      {editingItineraryId
+                        ? "Update Itinerary"
+                        : "Save Itinerary"}
                     </button>
                     {editingItineraryId && (
                       <button
@@ -613,7 +699,15 @@ export default function CreateItineraryPage() {
                   <div className="flex-1">
                     <label className="sr-only">Search Sites</label>
                     <div className="relative">
-                      <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                       </svg>
@@ -631,10 +725,18 @@ export default function CreateItineraryPage() {
                     <CategoryFilterButton
                       value={selectedCategoryFilter}
                       onChange={setSelectedCategoryFilter}
-                      categories={Array.from(new Set((sites || []).map((s) => {
-                        const cat = s.category;
-                        return typeof cat === 'object' ? (cat?.name || '') : '';
-                      }).filter(Boolean))).sort((a,b)=>a.localeCompare(b))}
+                      categories={Array.from(
+                        new Set(
+                          (sites || [])
+                            .map((s) => {
+                              const cat = s.category;
+                              return typeof cat === "object"
+                                ? cat?.name || ""
+                                : "";
+                            })
+                            .filter(Boolean)
+                        )
+                      ).sort((a, b) => a.localeCompare(b))}
                     />
                   </div>
                 </div>
@@ -643,11 +745,19 @@ export default function CreateItineraryPage() {
                 {(() => {
                   const query = siteSearchQuery.trim().toLowerCase();
                   const filtered = (sites || []).filter((s) => {
-                    const name = (s.siteName || '').toLowerCase();
-                    const desc = (s.siteDescription || '').toLowerCase();
-                    const matchesQuery = query ? (name.includes(query) || desc.includes(query)) : true;
-                    const catName = typeof s.category === 'object' ? (s.category?.name || '') : '';
-                    const matchesCategory = selectedCategoryFilter === 'all' ? true : (catName === selectedCategoryFilter);
+                    const name = (s.siteName || "").toLowerCase();
+                    const desc = (s.siteDescription || "").toLowerCase();
+                    const matchesQuery = query
+                      ? name.includes(query) || desc.includes(query)
+                      : true;
+                    const catName =
+                      typeof s.category === "object"
+                        ? s.category?.name || ""
+                        : "";
+                    const matchesCategory =
+                      selectedCategoryFilter === "all"
+                        ? true
+                        : catName === selectedCategoryFilter;
                     return matchesQuery && matchesCategory;
                   });
                   return (
@@ -673,12 +783,22 @@ export default function CreateItineraryPage() {
                   <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
                   My Itineraries
                 </h2>
-                
+
                 {userItineraries.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <svg
+                        className="w-10 h-10 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
                       </svg>
                     </div>
                     <p className="text-gray-500 text-lg font-medium mb-2">
@@ -695,7 +815,10 @@ export default function CreateItineraryPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4" style={{ touchAction: 'pan-y pinch-zoom' }}>
+                  <div
+                    className="space-y-4"
+                    style={{ touchAction: "pan-y pinch-zoom" }}
+                  >
                     {userItineraries.map((itinerary, idx) => (
                       <ItineraryCard
                         key={itinerary._id}
@@ -715,9 +838,10 @@ export default function CreateItineraryPage() {
         </div>
       </MainLayout>
 
-      <footer className="text-center text-xs text-white/60 py-6 mt-auto">
-        ©2025 Intramuros Administration
-      </footer>
+      <p className="mb-8 text-xs text-center text-gray-400">
+        © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+        College of Information and Computing Sciences.
+      </p>
 
       {/* Offline Modal */}
       <OnlineRequiredModal
@@ -761,16 +885,19 @@ function SmoothScrollSiteList({
     <div
       ref={scrollContainerRef}
       className="overflow-y-auto max-h-[600px]"
-      style={{ 
+      style={{
         scrollBehavior: "smooth",
         scrollSnapType: "y mandatory", // Enable vertical scroll snapping
         scrollPaddingTop: "0px", // Snap strictly at the top
         scrollPaddingBottom: "0px",
         overflowX: "hidden", // Prevent horizontal scrolling
-        touchAction: "pan-y pinch-zoom" // Only allow vertical panning and pinch zoom
+        touchAction: "pan-y pinch-zoom", // Only allow vertical panning and pinch zoom
       }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4" style={{ paddingBottom: "300px" }}>
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4"
+        style={{ paddingBottom: "300px" }}
+      >
         {sites.map((site, index) => (
           <SiteCard
             key={site._id}
@@ -913,7 +1040,7 @@ function SiteCard({
         opacity: isMobile ? cardStyle.opacity : 1,
         transform: isMobile ? cardStyle.transform : "scale(1)",
         scrollSnapAlign: "start", // Snap to top of viewport
-        touchAction: "pan-y pinch-zoom" // Only allow vertical panning
+        touchAction: "pan-y pinch-zoom", // Only allow vertical panning
       }}
     >
       <div className="relative mb-3 overflow-hidden rounded-xl group">
@@ -939,17 +1066,22 @@ function SiteCard({
           </div>
         )}
       </div>
-      
+
       <h3 className="font-bold text-gray-800 text-base mb-1 line-clamp-2">
         {site.siteName}
       </h3>
       {/* Category badge: show icon and category name */}
       {(() => {
-        const catName = typeof site.category === 'object' ? (site.category?.name || '') : '';
+        const catName =
+          typeof site.category === "object" ? site.category?.name || "" : "";
         return catName ? (
           <div className="mb-2">
             <span className="inline-flex items-center gap-1.5 bg-orange-100 text-[#f04e37] px-2.5 py-1 rounded-full text-xs font-semibold">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <svg
+                className="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <path d="M20 6h-8l-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 9H6v-2h8v2zm4-4H6V9h12v2z" />
               </svg>
               {catName}
@@ -957,22 +1089,26 @@ function SiteCard({
           </div>
         ) : null;
       })()}
-      
+
       <div className="mb-3">
-        <div 
+        <div
           ref={descriptionRef}
-          className={`text-sm text-gray-600 space-y-1 ${isExpanded ? 'max-h-48 overflow-y-auto pr-2' : 'line-clamp-3'}`} 
-          style={{ 
-            overflow: isExpanded ? 'auto' : 'hidden', 
-            width: '100%', 
-            wordBreak: 'break-word',
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#f04e37 #f3f4f6'
+          className={`text-sm text-gray-600 space-y-1 ${
+            isExpanded ? "max-h-48 overflow-y-auto pr-2" : "line-clamp-3"
+          }`}
+          style={{
+            overflow: isExpanded ? "auto" : "hidden",
+            width: "100%",
+            wordBreak: "break-word",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#f04e37 #f3f4f6",
           }}
         >
           {site.siteDescription ? (
-            site.siteDescription.split('\n\n').map((paragraph, idx) => (
-              <p key={idx} style={{ wordBreak: 'break-word' }}>{paragraph.trim()}</p>
+            site.siteDescription.split("\n\n").map((paragraph, idx) => (
+              <p key={idx} style={{ wordBreak: "break-word" }}>
+                {paragraph.trim()}
+              </p>
             ))
           ) : (
             <p className="text-gray-400 italic">No description available</p>
@@ -993,7 +1129,7 @@ function SiteCard({
           </button>
         )}
       </div>
-      
+
       <button
         onClick={() => toggleSelection(site._id)}
         className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
@@ -1030,7 +1166,10 @@ function ItineraryCard({
     setDescExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
 
   return (
-    <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden" style={{ touchAction: 'pan-y pinch-zoom' }}>
+    <div
+      className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
+      style={{ touchAction: "pan-y pinch-zoom" }}
+    >
       {/* Horizontal Layout */}
       <div className="flex flex-col md:flex-row">
         {/* Image Section */}
@@ -1050,13 +1189,20 @@ function ItineraryCard({
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h3 className="font-bold text-2xl text-gray-800 mb-2">{itinerary.name}</h3>
+              <h3 className="font-bold text-2xl text-gray-800 mb-2">
+                {itinerary.name}
+              </h3>
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center gap-1.5 bg-orange-50 text-[#f04e37] px-3 py-1 rounded-full text-sm font-semibold">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                   </svg>
-                  {itinerary.sites?.length || 0} {itinerary.sites?.length === 1 ? "site" : "sites"}
+                  {itinerary.sites?.length || 0}{" "}
+                  {itinerary.sites?.length === 1 ? "site" : "sites"}
                 </span>
               </div>
             </div>
@@ -1099,11 +1245,13 @@ function ItineraryCard({
           </div>
         </div>
       </div>
-      
+
       {/* Expanded Sites List */}
       {expanded && itinerary.sites?.length > 0 && (
         <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fadeIn">
-          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">Included Sites</h4>
+          <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">
+            Included Sites
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {itinerary.sites.map((site, idx) => {
               const expandedDesc = descExpanded[idx];
@@ -1129,7 +1277,9 @@ function ItineraryCard({
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-1">{site.siteName}</h5>
+                    <h5 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-1">
+                      {site.siteName}
+                    </h5>
                     <p className="text-xs text-gray-500 line-clamp-2">
                       {site.siteDescription || "No description available"}
                     </p>

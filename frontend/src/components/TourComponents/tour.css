@@ -39,9 +39,6 @@
 /* Prevent body overflow during tour */
 body.react-joyride-active {
   overflow: hidden !important;
-  position: fixed !important;
-  width: 100% !important;
-  height: 100% !important;
 }
 
 html.react-joyride-active {
@@ -99,7 +96,30 @@ button[aria-label*="Close"][data-test-id] {
 
 /* Ensure custom tooltip is above everything */
 .react-joyride__tooltip > div {
-  z-index: 10001 !important;
+  z-index: 10010 !important;
+}
+
+/* Ensure floater wrapper itself sits above map layers */
+.__floater {
+  z-index: 10010 !important;
+}
+
+/* Explicitly set tooltip wrapper stacking to avoid being under map containers */
+.react-joyride__tooltip {
+  z-index: 10010 !important;
+  opacity: 1 !important; /* ensure visible if library sets 0 during transitions */
+}
+
+/* Prevent tooltip from remaining transparent due to inline styles */
+.react-joyride__tooltip[style*="opacity: 0"] {
+  opacity: 1 !important;
+}
+
+/* Ensure floater visibility */
+.__floater,
+.__floater__open {
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* Floater positioning */
@@ -118,7 +138,7 @@ button[aria-label*="Close"][data-test-id] {
     max-width: calc(100vw - 24px) !important;
     max-height: calc(100vh - 80px) !important;
   }
-  
+
   .__floater {
     padding: 12px !important;
   }

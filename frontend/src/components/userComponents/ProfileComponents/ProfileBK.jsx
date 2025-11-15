@@ -16,10 +16,7 @@ export default function ProfilePageBK() {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  // Announce page load
-  useEffect(() => {
-    ttsService.speak(t('tts_profilePage'));
-  }, [t]);
+  // No TTS here; voice guidance is exclusive to itinerary maps
 
   // Load user from localStorage
   useEffect(() => {

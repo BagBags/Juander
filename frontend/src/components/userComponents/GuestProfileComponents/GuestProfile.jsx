@@ -1,13 +1,20 @@
 // GuestProfilePage.jsx
 import React, { useEffect } from "react";
-import { FaUser, FaBirthdayCake, FaVenusMars, FaUserCircle, FaTiktok } from "react-icons/fa";
+import {
+  FaUser,
+  FaBirthdayCake,
+  FaVenusMars,
+  FaUserCircle,
+  FaTiktok,
+} from "react-icons/fa";
 import { MdLanguage, MdSettings } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp } from "react-icons/io5";
-import { Facebook, Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Youtube } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { FaXTwitter } from "react-icons/fa6";
 
 export default function GuestProfilePage() {
   const navigate = useNavigate();
@@ -69,7 +76,7 @@ export default function GuestProfilePage() {
     localStorage.removeItem("guestHideFortSantiagoModal");
     localStorage.removeItem("guestReplayTutorial");
     // Also clear any guest-related data
-    Object.keys(localStorage).forEach(key => {
+    Object.keys(localStorage).forEach((key) => {
       if (key.startsWith("guest_")) {
         localStorage.removeItem(key);
       }
@@ -103,17 +110,19 @@ export default function GuestProfilePage() {
           {/* Decorative circles */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-          
+
           <div className="relative w-28 h-28 z-10 flex items-center justify-center">
             <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
             <div className="w-full h-full rounded-full border-4 border-white flex items-center justify-center shadow-2xl relative">
               <FaUserCircle className="w-20 h-20 text-white" />
             </div>
           </div>
-          
+
           <div className="z-10">
             <p className="text-sm text-white/80 mb-1">{t("greetings")}</p>
-            <h1 className="text-3xl font-bold leading-tight mb-1">Guest User</h1>
+            <h1 className="text-3xl font-bold leading-tight mb-1">
+              Guest User
+            </h1>
             <div className="flex items-center gap-2 mt-2">
               <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
                 <FaUser className="text-xs text-white" />
@@ -135,7 +144,9 @@ export default function GuestProfilePage() {
                   <div className="w-12 h-12 bg-gray-200 rounded-xl flex items-center justify-center text-gray-400 shadow-sm">
                     <span className="text-xl">{opt.icon}</span>
                   </div>
-                  <span className="font-semibold text-gray-400">{opt.label}</span>
+                  <span className="font-semibold text-gray-400">
+                    {opt.label}
+                  </span>
                 </div>
                 <IoChevronForwardSharp className="text-gray-300" />
               </div>
@@ -149,7 +160,9 @@ export default function GuestProfilePage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
                     <span className="text-xl">{opt.icon}</span>
                   </div>
-                  <span className="font-semibold text-gray-800 group-hover:text-[#f04e37] transition-colors">{opt.label}</span>
+                  <span className="font-semibold text-gray-800 group-hover:text-[#f04e37] transition-colors">
+                    {opt.label}
+                  </span>
                 </div>
                 <IoChevronForwardSharp className="text-gray-400 group-hover:text-[#f04e37] group-hover:translate-x-1 transition-all" />
               </Link>
@@ -221,15 +234,16 @@ export default function GuestProfilePage() {
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="X (Twitter)"
+            aria-label="X"
           >
-            <Twitter className="w-5 h-5" />
+            <FaXTwitter className="w-5 h-5" />
           </a>
         </div>
 
         {/* Footer */}
         <p className="mb-8 text-xs text-center text-gray-400">
-          © 2025 {t("intramurosAdmin")}. All rights reserved.
+          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+          College of Information and Computing Sciences.
         </p>
       </div>
     </motion.div>

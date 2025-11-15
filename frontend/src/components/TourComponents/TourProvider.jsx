@@ -1,25 +1,36 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Joyride, { ACTIONS, EVENTS, STATUS } from "react-joyride";
 import CustomTourTooltip from "./CustomTourTooltip";
 import { completeTour as apiCompleteTour, getTourStatus } from "../../utils/tourApi";
 import "./tour.css";
+import { TourContext } from "./TourContext";
 
-const TourContext = createContext();
+// TourContext and useTour moved to separate module to keep provider export compatible with Fast Refresh
 
-export const useTour = () => {
-  const context = useContext(TourContext);
-  if (!context) {
-    throw new Error("useTour must be used within TourProvider");
-  }
-  return context;
-};
-
-export default function TourProvider({ children, steps = [], userRole = "tourist" }) {
+export default function TourProvider({ children, steps = [], userRole = "tourist", scrollToFirstStep = true, disableScrolling = false }) {
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [hasCompletedTour, setHasCompletedTour] = useState(true); // Default to true to prevent flash
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [spotlightRect, setSpotlightRect] = useState(null);
+  const startLockRef = useRef(false);
+  const suppressFinishRef = useRef(false);
+
+  // Helper: find the next available step whose target exists in the DOM
+  const findNextAvailableIndex = (fromIndex, direction = 1) => {
+    let i = fromIndex + direction;
+    while (i >= 0 && i < steps.length) {
+      const tgt = steps[i]?.target;
+      if (tgt && typeof tgt === 'string' && document.querySelector(tgt)) {
+        return i;
+      }
+      i += direction;
+    }
+    // If none found in the given direction, return boundary index or null
+    if (i < 0) return 0;
+    if (i >= steps.length) return steps.length - 1;
+    return null;
+  };
 
   // Track screen size changes
   useEffect(() => {
@@ -88,18 +99,40 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
     checkTourStatus();
   }, [userRole]);
 
+  
+
   const handleJoyrideCallback = async (data) => {
     const { action, index, status, type } = data;
+    try {
+      console.log('[Tour] event', { action, index, status, type });
+    } catch {}
 
-    if ([EVENTS.STEP_AFTER, EVENTS.TARGET_NOT_FOUND].includes(type)) {
-      // Update step index
-      setStepIndex(index + (action === ACTIONS.PREV ? -1 : 1));
-    } else if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
-      // Tour finished or skipped
+    if (action === ACTIONS.CLOSE) {
+      setRun(false);
+      setStepIndex(0);
+      try {
+        localStorage.removeItem("guestReplayTutorial");
+        localStorage.removeItem("touristReplayTutorial");
+        localStorage.removeItem("mapTourForceStart");
+      } catch {}
+      if (userRole === "tourist") {
+        try { await apiCompleteTour(); setHasCompletedTour(true); } catch {}
+      }
+      return;
+    }
+
+    // Do not process PREV here to avoid double-handling; handle only on STEP_AFTER
+
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
       setRun(false);
       setStepIndex(0);
 
-      // Mark as completed in database (only if finished, not skipped)
+      try {
+        localStorage.removeItem("guestReplayTutorial");
+        localStorage.removeItem("touristReplayTutorial");
+        localStorage.removeItem("mapTourForceStart");
+      } catch (e) {}
+
       if (status === STATUS.FINISHED && userRole === "tourist") {
         try {
           await apiCompleteTour();
@@ -108,12 +141,71 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
           console.error("Error marking tour as complete:", error);
         }
       }
+      return;
+    }
+
+    if (type === EVENTS.STEP_AFTER) {
+      if (action === ACTIONS.NEXT && index >= steps.length - 1 && !suppressFinishRef.current) {
+        setRun(false);
+        setStepIndex(0);
+        try {
+          localStorage.removeItem("guestReplayTutorial");
+          localStorage.removeItem("touristReplayTutorial");
+          localStorage.removeItem("mapTourForceStart");
+        } catch {}
+        if (userRole === "tourist") {
+          try { await apiCompleteTour(); setHasCompletedTour(true); } catch {}
+        }
+        return;
+      }
+      if (action === ACTIONS.PREV) {
+        if (index <= 0) {
+          return;
+        }
+        const prev = index - 1;
+        setStepIndex(prev);
+        suppressFinishRef.current = true;
+        return;
+      }
+      suppressFinishRef.current = false;
+      const nextIdx = findNextAvailableIndex(index, 1);
+      if (typeof nextIdx === 'number' && nextIdx !== index) {
+        setStepIndex(nextIdx);
+      } else {
+        const targetIndex = index + 1;
+        const clamped = Math.max(0, Math.min(targetIndex, steps.length - 1));
+        setStepIndex(clamped);
+      }
+    } else if (type === EVENTS.TARGET_NOT_FOUND) {
+      if (action === ACTIONS.PREV) {
+        return;
+      }
+      setTimeout(() => {
+        const nextIdx = findNextAvailableIndex(index, 1);
+        if (typeof nextIdx === 'number' && nextIdx !== index) {
+          setStepIndex(nextIdx);
+        } else {
+          const targetIndex = index + 1;
+          const clamped = Math.max(0, Math.min(targetIndex, steps.length - 1));
+          setStepIndex(clamped);
+        }
+      }, 100);
     }
   };
 
   const startTour = () => {
-    setStepIndex(0);
+    if (run) return;
+    if (startLockRef.current) return;
+    startLockRef.current = true;
+    try {
+      localStorage.removeItem("guestReplayTutorial");
+      localStorage.removeItem("touristReplayTutorial");
+      localStorage.removeItem("mapTourForceStart");
+    } catch {}
+    const firstIdx = findNextAvailableIndex(-1, 1);
+    setStepIndex(typeof firstIdx === 'number' ? firstIdx : 0);
     setRun(true);
+    setTimeout(() => { startLockRef.current = false; }, 2000);
   };
 
   // Removed GPS consent gating logic
@@ -124,11 +216,24 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
   };
 
   return (
-    <TourContext.Provider value={{ startTour, stopTour, hasCompletedTour }}>
+    <TourContext.Provider value={{ startTour, stopTour, hasCompletedTour, isTourRunning: run }}>
       {children}
       {/* Custom persistent overlay with SVG mask for rounded spotlight */}
       {run && spotlightRect && (
         <>
+          {/* Interaction shield to prevent background handlers during tour */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 9996,
+              background: 'transparent',
+              pointerEvents: 'auto',
+            }}
+          />
           <svg
             style={{
               position: 'fixed',
@@ -185,12 +290,12 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
         continuous
         showProgress={false}
         showSkipButton
-        scrollToFirstStep
-        disableScrolling={false}
+        scrollToFirstStep={scrollToFirstStep}
+        disableScrolling={disableScrolling}
         disableScrollParentFix
         disableBeacon
         hideBackButton={false}
-        spotlightClicks
+        spotlightClicks={false}
         disableOverlay={false}
         callback={handleJoyrideCallback}
         tooltipComponent={CustomTourTooltip}
@@ -212,7 +317,7 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
           },
         }}
         floaterProps={{
-          disableAnimation: false,
+          disableAnimation: true,
           disableFlip: false,
           hideArrow: true,
           offset: isMobile ? 15 : 20,
@@ -230,7 +335,7 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
               padding: isMobile ? 16 : 24,
             },
             flip: {
-              enabled: true,
+              enabled: false,
               behavior: ['left', 'right', 'top', 'bottom'],
             },
           },

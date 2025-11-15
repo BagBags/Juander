@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { X, MapPin, Navigation, CheckCircle, Clock } from "lucide-react";
 import { announceSiteInfo, announceArrival } from "../../../utils/textToSpeech";
+import { useLocation } from "react-router-dom";
 
 export default function SitePreviewCard({
   selectedPin,
@@ -11,6 +12,8 @@ export default function SitePreviewCard({
   onMarkAsDone,
   isVisited,
 }) {
+  const location = useLocation();
+  const isItineraryMap = location.pathname.startsWith("/TouristItineraryMap/") || location.pathname.startsWith("/GuestItineraryMap/");
   // Get first media file from mediaFiles array
   const firstMedia = selectedPin?.mediaFiles?.[0];
   const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
@@ -23,18 +26,9 @@ export default function SitePreviewCard({
       ? `${BACKEND_URL}${firstMedia.url}` 
       : null;
 
-  // Announce when site info appears or proximity changes
+  // No automatic TTS here; voice guidance only on itinerary maps via DirectionsPanel
   useEffect(() => {
-    if (selectedPin && distance !== null) {
-      const siteName = selectedPin.title || selectedPin.siteName;
-      const distanceKm = (distance / 1000).toFixed(2);
-      
-      if (isNearby) {
-        announceArrival(siteName);
-      } else {
-        announceSiteInfo(siteName, distanceKm, isNearby);
-      }
-    }
+    // Intentionally left blank to avoid speaking outside itinerary maps
   }, [selectedPin?._id, isNearby]);
 
   return (

@@ -32,13 +32,15 @@ export default function CustomTourTooltip({
     return personaImages[i];
   }, [index, step?.avatar, personaImages]);
 
-  // Focus management: focus primary action or container on mount
+  // Focus management: only focus on first step to avoid flicker on move
   useEffect(() => {
-    const next = primaryRef.current;
-    if (next && typeof next.focus === "function") {
-      next.focus();
-    } else if (containerRef.current && typeof containerRef.current.focus === "function") {
-      containerRef.current.focus();
+    if (index === 0) {
+      const next = primaryRef.current;
+      if (next && typeof next.focus === "function") {
+        next.focus();
+      } else if (containerRef.current && typeof containerRef.current.focus === "function") {
+        containerRef.current.focus();
+      }
     }
   }, [index]);
 
@@ -65,9 +67,11 @@ export default function CustomTourTooltip({
       style={{
         padding: 0,
         ...tooltipProps.style,
-        animation: 'fadeIn 0.3s ease-out',
         maxHeight: 'calc(100vh - 120px)',
         overflow: 'visible',
+        zIndex: 10020,
+        willChange: 'transform, opacity',
+        transition: 'transform 180ms ease-out',
       }}
       ref={containerRef}
       role="dialog"
@@ -76,6 +80,7 @@ export default function CustomTourTooltip({
       aria-describedby={contentId}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Floating persona avatar - half body outside modal */}
       {avatarSrc && (
@@ -147,6 +152,9 @@ export default function CustomTourTooltip({
           {index > 0 && (
             <button
               {...backProps}
+              type="button"
+              onClick={(e) => { if (index <= 0) return; backProps?.onClick?.(e); }}
+              onMouseDown={(e) => e.stopPropagation()}
               className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
               aria-label="Go to previous step"
             >
@@ -159,6 +167,9 @@ export default function CustomTourTooltip({
           {!isLastStep && (
             <button
               {...skipProps}
+              type="button"
+              onClick={(e) => { skipProps?.onClick?.(e); }}
+              onMouseDown={(e) => e.stopPropagation()}
               className="px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
               aria-label="Skip the tour"
             >
@@ -168,7 +179,10 @@ export default function CustomTourTooltip({
           
           {/* Primary button */}
           <button
-            {...primaryProps}
+            {...(isLastStep ? closeProps : primaryProps)}
+            type="button"
+            onClick={(e) => { (isLastStep ? closeProps?.onClick : primaryProps?.onClick)?.(e); }}
+            onMouseDown={(e) => e.stopPropagation()}
             className="flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ml-auto"
             aria-label={isLastStep ? "Finish tour" : "Go to next step"}
             ref={primaryRef}

@@ -63,6 +63,12 @@ import TourMap from "./components/userComponents/TourMap/LazyUserMap";
 import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
 import TouristItinerary from "./components/userComponents/HomepageComponents/TouristItinerary";
 import TouristItineraryMap from "./components/userComponents/HomepageComponents/TouristItinerariesMap";
+import ttsService from "./utils/textToSpeech";
+import {
+  setPhotoboothRouteActive,
+  scheduleCameraStop,
+  cancelCameraStop,
+} from "./utils/cameraLifecycle";
 
 // Guest Side
 import GuestHomepage from "./components/userComponents/HomepageComponents/GuestHomepage";
@@ -73,6 +79,8 @@ import TouristProtectedRoute from "./components/TouristProtectedRoute";
 import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
 import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
 import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
+import TourProvider from "./components/TourComponents/TourProvider";
+import { mapTourSteps } from "./components/TourComponents/tourSteps";
 import GuestSettings from "./components/userComponents/GuestProfileComponents/GuestSettings";
 import NotFound from "./components/NotFound";
 import CompleteProfile from "./components/userComponents/CompleteProfile";
@@ -92,10 +100,14 @@ function AnimatedRoutes() {
         {/* Public Pages */}\
         <Route path="/GuestHomepage" element={<GuestHomepage />} />
         <Route path="/GuestItinerary" element={<GuestItinerary />} />
-        <Route
-          path="/GuestItineraryMap/:itineraryId"
-          element={<GuestItineraryMap />}
-        />
+          <Route
+            path="/GuestItineraryMap/:itineraryId"
+            element={
+              <TourProvider steps={mapTourSteps} userRole="guest">
+                <GuestItineraryMap />
+              </TourProvider>
+            }
+          />
         <Route path="/TourMap" element={<TourMap />} />
         <Route path="/Chatbot" element={<Chatbot />} />
         <Route path="/Emergency" element={<EmergencyPage />} />
@@ -137,7 +149,11 @@ function AnimatedRoutes() {
           <Route path="/TouristItinerary" element={<TouristItinerary />} />
           <Route
             path="/TouristItineraryMap/:itineraryId"
-            element={<TouristItineraryMap />}
+            element={
+              <TourProvider steps={mapTourSteps} userRole="tourist">
+                <TouristItineraryMap />
+              </TourProvider>
+            }
           />
           {/* Profile Section with Persistent Header */}
           <Route path="/Profile" element={<ProfileLayout />}>
@@ -159,6 +175,80 @@ function AnimatedRoutes() {
   );
 }
 
+// Global guard: cancel any ongoing speech when not on itinerary map routes
+function TTSCancelOnRouteLeave() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const allowed =
+      location.pathname.startsWith("/TouristItineraryMap/") ||
+      location.pathname.startsWith("/GuestItineraryMap/");
+    if (!allowed) {
+      ttsService.cancel();
+    }
+  }, [location.pathname]);
+
+  // Also cancel on page hide/unload or when tab becomes hidden
+  useEffect(() => {
+    const cancel = () => ttsService.cancel();
+    const onVisibility = () => {
+      if (document.hidden) cancel();
+    };
+    window.addEventListener("pagehide", cancel);
+    window.addEventListener("beforeunload", cancel);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", cancel);
+      window.removeEventListener("beforeunload", cancel);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  return null;
+}
+
+// Camera lifecycle: schedule stop when leaving Photobooth or app becomes hidden
+function CameraLifecycleOnRouteLeave() {
+  const location = useLocation();
+  useEffect(() => {
+    const isPhotobooth =
+      location.pathname === "/Photobooth" ||
+      location.pathname === "/PhotoboothJeeliz";
+    // Update active route flag
+    setPhotoboothRouteActive(isPhotobooth);
+
+    // If we just left Photobooth, schedule camera stop after 10s
+    if (!isPhotobooth) {
+      scheduleCameraStop(10000);
+    } else {
+      // If we're on Photobooth, ensure any pending stop is canceled
+      cancelCameraStop();
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) {
+        // App/tab hidden: if Photobooth is active, schedule stop
+        scheduleCameraStop(10000);
+      } else {
+        // Returned: cancel any pending stop; Photobooth re-init handles itself
+        cancelCameraStop();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", () => scheduleCameraStop(10000));
+    window.addEventListener("beforeunload", () => scheduleCameraStop(10000));
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", () => scheduleCameraStop(10000));
+      window.removeEventListener("beforeunload", () => scheduleCameraStop(10000));
+    };
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     const savedLang = localStorage.getItem("language") || "en";
@@ -171,6 +261,8 @@ export default function App() {
           <Router>
             <AuthPersistence>
               <AnimatedRoutes />
+              <TTSCancelOnRouteLeave />
+              <CameraLifecycleOnRouteLeave />
               <ConnectionStatus />
               <PWAInstallPrompt />
             </AuthPersistence>

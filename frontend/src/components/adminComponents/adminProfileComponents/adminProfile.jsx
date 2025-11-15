@@ -16,7 +16,12 @@ export default function AdminProfile() {
   const { currentAdmin, setCurrentAdmin } = useContext(UserContext);
   const [previewImage, setPreviewImage] = useState(null);
   const [imageError, setImageError] = useState(false);
-  const [notification, setNotification] = useState({ isOpen: false, type: 'info', title: '', message: '' });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
   const navigate = useNavigate();
 
   // Load admin from localStorage
@@ -65,12 +70,18 @@ export default function AdminProfile() {
       const token =
         sessionStorage.getItem("token") || localStorage.getItem("token");
       if (!token) {
-        setNotification({ isOpen: true, type: 'error', title: 'Not Logged In', message: 'Please log in to upload profile picture.' });
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Not Logged In",
+          message: "Please log in to upload profile picture.",
+        });
         return;
       }
 
       // ✅ Use full API URL to bypass CloudFront for uploads
-      const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+      const API_URL =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
       const res = await axios.post(
         `${API_URL}/auth/upload-profile-picture`,
         formData,
@@ -94,7 +105,12 @@ export default function AdminProfile() {
       localStorage.setItem("admin", JSON.stringify(updatedAdmin));
     } catch (err) {
       console.error("Upload failed:", err.response?.data || err.message);
-      setNotification({ isOpen: true, type: 'error', title: 'Upload Failed', message: 'Failed to upload profile picture.' });
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Upload Failed",
+        message: "Failed to upload profile picture.",
+      });
     }
   };
 
@@ -147,23 +163,32 @@ export default function AdminProfile() {
                     : currentAdmin?.profilePicture
                     ? currentAdmin.profilePicture.startsWith("http")
                       ? currentAdmin.profilePicture
-                      : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${currentAdmin.profilePicture}`
-                    : "https://ui-avatars.com/api/?name=" + 
-                      encodeURIComponent(`${currentAdmin?.firstName || 'Admin'} ${currentAdmin?.lastName || ''}`) +
+                      : `${
+                          import.meta.env.VITE_API_BASE_URL?.replace(
+                            "/api",
+                            ""
+                          ) || "http://localhost:5000"
+                        }${currentAdmin.profilePicture}`
+                    : "https://ui-avatars.com/api/?name=" +
+                      encodeURIComponent(
+                        `${currentAdmin?.firstName || "Admin"} ${
+                          currentAdmin?.lastName || ""
+                        }`
+                      ) +
                       "&background=ffffff&color=f04e37&size=200&bold=true"
                 }
                 alt="Profile"
                 className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
                 onError={(e) => {
-                  console.log('Image failed to load, using fallback');
+                  console.log("Image failed to load, using fallback");
                   setImageError(true);
                 }}
                 crossOrigin="anonymous"
               />
             ) : (
               <div className="w-full h-full rounded-full border-4 border-white bg-white flex items-center justify-center text-[#f04e37] font-bold text-3xl shadow-2xl relative">
-                {currentAdmin?.firstName?.[0]?.toUpperCase() || 'A'}
-                {currentAdmin?.lastName?.[0]?.toUpperCase() || ''}
+                {currentAdmin?.firstName?.[0]?.toUpperCase() || "A"}
+                {currentAdmin?.lastName?.[0]?.toUpperCase() || ""}
               </div>
             )}
 
@@ -204,7 +229,6 @@ export default function AdminProfile() {
             )}
           </div>
         </div>
-
         {/* Option Buttons */}
         <div className="mt-6 w-full space-y-3">
           {options.map((opt, index) => (
@@ -217,13 +241,14 @@ export default function AdminProfile() {
                 <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
                   <span className="text-xl">{opt.icon}</span>
                 </div>
-                <span className="font-semibold text-gray-800 group-hover:text-[#f04e37] transition-colors">{opt.label}</span>
+                <span className="font-semibold text-gray-800 group-hover:text-[#f04e37] transition-colors">
+                  {opt.label}
+                </span>
               </div>
               <IoChevronForwardSharp className="text-gray-400 group-hover:text-[#f04e37] group-hover:translate-x-1 transition-all" />
             </Link>
           ))}
         </div>
-
         {/* Logout Button */}
         <button
           onClick={handleLogout}
@@ -231,13 +256,10 @@ export default function AdminProfile() {
         >
           Log out
         </button>
-
         {/* Footer */}
-        <p className="mt-12 mb-8 text-xs text-center text-gray-400">
-          © 2025 Intramuros Administration. All rights reserved.
-        </p>
+        image.png
       </div>
-      
+
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}

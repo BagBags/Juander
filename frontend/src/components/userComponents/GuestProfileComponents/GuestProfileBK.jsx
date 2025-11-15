@@ -59,7 +59,7 @@ export default function GuestProfilePageBK() {
     sessionStorage.removeItem("user");
     sessionStorage.removeItem("guest");
     // Also clear any guest-related data
-    Object.keys(sessionStorage).forEach(key => {
+    Object.keys(sessionStorage).forEach((key) => {
       if (key.startsWith("guest_")) {
         sessionStorage.removeItem(key);
       }
@@ -141,8 +141,9 @@ export default function GuestProfilePageBK() {
         </button>
 
         {/* Footer */}
-        <p className="mt-80 md:mt-30 text-xs text-center text-[#cf3325] opacity-70">
-          ©2025 Intramuros Administration
+        <p className="mb-8 text-xs text-center text-gray-400">
+          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+          College of Information and Computing Sciences.
         </p>
       </div>
     </motion.div>

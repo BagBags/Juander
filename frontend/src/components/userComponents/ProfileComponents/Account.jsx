@@ -4,6 +4,7 @@ import axios from "axios";
 import { Eye, EyeOff, AlertTriangle, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function Account() {
   const { t } = useTranslation();
@@ -33,7 +34,15 @@ export default function Account() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    autoClose: false,
+    autoCloseDuration: 1500,
+  });
+
   // Deactivation states
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [confirmationText, setConfirmationText] = useState("");
@@ -47,9 +56,14 @@ export default function Account() {
       if (!token) return;
       try {
         setLoading(true);
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setUser({
           firstName: res.data.firstName || "",
           lastName: res.data.lastName || "",
@@ -78,7 +92,10 @@ export default function Account() {
 
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+      const timer = setInterval(
+        () => setResendCooldown((prev) => prev - 1),
+        1000
+      );
       return () => clearInterval(timer);
     }
   }, [resendCooldown]);
@@ -135,7 +152,9 @@ export default function Account() {
     }
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-email-verification-otp`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/send-email-verification-otp`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -157,7 +176,9 @@ export default function Account() {
     }
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/verify-email-otp`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/verify-email-otp`,
         { otp },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -176,7 +197,9 @@ export default function Account() {
   const handleSubmitEmailChange = async () => {
     try {
       const res = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/account`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -191,10 +214,12 @@ export default function Account() {
 
   const handleResendEmailOtp = async () => {
     if (resendCooldown > 0) return;
-    
+
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-email-verification-otp`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/send-email-verification-otp`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -260,7 +285,9 @@ export default function Account() {
       }
 
       const res = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/account`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -292,14 +319,23 @@ export default function Account() {
 
   const handleDeactivateAccount = async () => {
     if (confirmationText !== "DELETE") {
-      alert("Please type DELETE to confirm account deactivation");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Confirmation required",
+        message: "Please type DELETE to confirm account deactivation.",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
       return;
     }
 
     setDeactivating(true);
     try {
       await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/deactivate-account`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/deactivate-account`,
         {
           headers: { Authorization: `Bearer ${token}` },
           data: { confirmationText },
@@ -309,13 +345,25 @@ export default function Account() {
       // Clear local storage
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      
-      // Redirect to home
-      alert("Your account has been successfully deactivated. All your itineraries and reviews have been deleted.");
-      navigate("/");
+
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Account deactivated",
+        message:
+          "Your account and all associated data were deleted successfully.",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
+      setTimeout(() => navigate("/"), 2000);
     } catch (err) {
       console.error("Deactivation error:", err);
-      alert(err.response?.data?.message || "Failed to deactivate account");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Failed to deactivate",
+        message: err.response?.data?.message || "Failed to deactivate account",
+      });
     } finally {
       setDeactivating(false);
     }
@@ -623,8 +671,9 @@ export default function Account() {
                 Deactivate Account
               </h3>
               <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                Permanently delete your account and all associated data. This action cannot be undone.
-                All your itineraries and reviews will be permanently deleted.
+                Permanently delete your account and all associated data. This
+                action cannot be undone. All your itineraries and reviews will
+                be permanently deleted.
               </p>
               <button
                 onClick={() => setShowDeactivateModal(true)}
@@ -669,7 +718,8 @@ export default function Account() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type <span className="font-bold text-red-600">DELETE</span> to confirm:
+                  Type <span className="font-bold text-red-600">DELETE</span> to
+                  confirm:
                 </label>
                 <input
                   type="text"
@@ -704,10 +754,20 @@ export default function Account() {
           </div>
         )}
 
-        <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
-          ©2025 Intramuros Administration
+        <p className="mb-8 text-xs text-center text-gray-400">
+          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+          College of Information and Computing Sciences.
         </p>
       </div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        autoClose={notification.autoClose}
+        autoCloseDuration={notification.autoCloseDuration}
+      />
     </motion.div>
   );
 }

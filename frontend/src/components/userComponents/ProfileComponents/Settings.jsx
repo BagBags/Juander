@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
+import NotificationModal from "../../shared/NotificationModal";
 import axios from "axios";
 import { resetTour } from "../../../utils/tourApi";
 
@@ -13,6 +14,9 @@ export default function Settings() {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [tourLoading, setTourLoading] = useState(false);
+  const [homepageTutorialEnabled, setHomepageTutorialEnabled] = useState(false);
+  const [mapTutorialEnabled, setMapTutorialEnabled] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, type: "info", title: "", message: "" });
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -22,7 +26,9 @@ export default function Settings() {
     const fetchUserPreference = async () => {
       try {
         const res = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`,
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
           config
         );
         setShowFortModal(!res.data.hideFortSantiagoModal);
@@ -31,23 +37,28 @@ export default function Settings() {
       }
     };
     fetchUserPreference();
+    // Load switches from localStorage (manual replay flags)
+    setHomepageTutorialEnabled(localStorage.getItem("touristReplayTutorial") === "true");
+    setMapTutorialEnabled(localStorage.getItem("mapTourForceStart") === "true");
   }, []);
 
   const handleToggleFortModal = async () => {
     const newValue = !showFortModal;
     setShowFortModal(newValue);
     setLoading(true);
-    
+
     try {
       await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/fort-santiago-modal`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/fort-santiago-modal`,
         { hideFortSantiagoModal: !newValue },
         config
       );
-      
+
       setSuccessMessage(
-        newValue 
-          ? "Fort Santiago notifications enabled" 
+        newValue
+          ? "Fort Santiago notifications enabled"
           : "Fort Santiago notifications disabled"
       );
     } catch (err) {
@@ -63,20 +74,55 @@ export default function Settings() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
-  const handleReplayTutorial = async () => {
-    setTourLoading(true);
+  const toggleHomepageTutorial = () => {
+    const next = !homepageTutorialEnabled;
+    setHomepageTutorialEnabled(next);
     try {
-      await resetTour();
-      setSuccessMessage("Tutorial reset! Redirecting to homepage...");
-      
-      // Use navigate instead of window.location.href to avoid PWA auth issues
-      setTimeout(() => {
-        navigate("/Homepage");
-      }, 1500);
+      if (next) {
+        localStorage.setItem("touristReplayTutorial", "true");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Homepage Tutorial Enabled",
+          message: "When you go to the Homepage, the guide will start automatically. It will turn off after you finish or skip.",
+        });
+      } else {
+        localStorage.removeItem("touristReplayTutorial");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Homepage Tutorial Disabled",
+          message: "The guide will not auto-start on the Homepage.",
+        });
+      }
     } catch (err) {
-      console.error("Error resetting tour:", err);
-      setSuccessMessage("Failed to reset tutorial. Please try again.");
-      setTourLoading(false);
+      console.error("Error updating homepage tutorial flag:", err);
+    }
+  };
+
+  const toggleMapTutorial = () => {
+    const next = !mapTutorialEnabled;
+    setMapTutorialEnabled(next);
+    try {
+      if (next) {
+        localStorage.setItem("mapTourForceStart", "true");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Map Tutorial Enabled",
+          message: "When you go to the Itinerary Map, the guide will start automatically. It will turn off after you finish or skip.",
+        });
+      } else {
+        localStorage.removeItem("mapTourForceStart");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Map Tutorial Disabled",
+          message: "The guide will not auto-start on the Itinerary Map.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating map tutorial flag:", err);
     }
   };
 
@@ -86,12 +132,14 @@ export default function Settings() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col min-h-full bg-white overflow-hidden"
+      className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md flex flex-col flex-1">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Notification Settings</h2>
-          
+          <h2 className="text-xl font-bold text-gray-800 mb-6">
+            Notification Settings
+          </h2>
+
           {successMessage && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-700">{successMessage}</p>
@@ -108,15 +156,16 @@ export default function Settings() {
                   <BellOff className="w-6 h-6 text-gray-400" />
                 )}
               </div>
-              
+
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-800 mb-2">
                   Fort Santiago Entrance Notice
                 </h3>
                 <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  Show a notification when adding sites inside Fort Santiago to your itinerary.
+                  Show a notification when adding sites inside Fort Santiago to
+                  your itinerary.
                 </p>
-                
+
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative">
                     <input
@@ -126,55 +175,104 @@ export default function Settings() {
                       disabled={loading}
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors ${loading ? 'opacity-50' : ''}`}></div>
+                    <div
+                      className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors ${
+                        loading ? "opacity-50" : ""
+                      }`}
+                    ></div>
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
                   </div>
                   <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                    {loading ? "Updating..." : showFortModal ? "Enabled" : "Disabled"}
+                    {loading
+                      ? "Updating..."
+                      : showFortModal
+                      ? "Enabled"
+                      : "Disabled"}
                   </span>
                 </label>
+                {/* Note under Fort Santiago toggle */}
+                <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    <span className="font-semibold text-gray-700">Note:</span> When enabled, you'll receive a reminder about entrance fees when selecting sites located inside Fort Santiago for your itinerary.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Replay Tutorial Setting */}
+          {/* Tutorial (Homepage) Switch */}
           <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 mt-1">
                 <Play className="w-6 h-6 text-[#f04e37]" />
               </div>
-              
+
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  Replay Tutorial
-                </h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  Restart the interactive tour guide to learn about app features again.
-                </p>
-                
-                <button
-                  onClick={handleReplayTutorial}
-                  disabled={tourLoading}
-                  className="px-4 py-2 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {tourLoading ? "Resetting..." : "Replay Tutorial"}
-                </button>
+                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Homepage)</h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide when you visit the Homepage.</p>
+
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={homepageTutorialEnabled}
+                      onChange={toggleHomepageTutorial}
+                      className="sr-only peer"
+                    />
+                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{homepageTutorialEnabled ? "Enabled" : "Disabled"}</span>
+                </label>
               </div>
             </div>
           </div>
 
-          {/* Info Box */}
-          <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <p className="text-xs text-gray-600 leading-relaxed">
-              <span className="font-semibold text-gray-700">Note:</span> When enabled, 
-              you'll receive a reminder about entrance fees when selecting sites located 
-              inside Fort Santiago for your itinerary.
-            </p>
+          {/* Tutorial (Start Tour) Switch for Map */}
+          <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <Play className="w-6 h-6 text-[#f04e37]" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Start Tour)</h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide on the Itinerary Map when you go there.</p>
+
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={mapTutorialEnabled}
+                      onChange={toggleMapTutorial}
+                      className="sr-only peer"
+                    />
+                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{mapTutorialEnabled ? "Enabled" : "Disabled"}</span>
+                </label>
+              </div>
+            </div>
           </div>
+
+          {/* Removed global note; now shown under the Fort Santiago card */}
         </div>
 
-        <p className="mt-auto pt-8 text-xs text-center text-[#cf3325] opacity-70">
-          ©2025 Intramuros Administration
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          autoClose
+          autoCloseDuration={3000}
+        />
+
+        <p className="mt-auto mb-8 text-xs text-center text-gray-400">
+          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+          College of Information and Computing Sciences.
         </p>
       </div>
     </motion.div>

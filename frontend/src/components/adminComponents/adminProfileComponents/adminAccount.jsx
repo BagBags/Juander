@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function Account() {
   const navigate = useNavigate();
-  
+
   const [user, setUser] = useState({
     firstName: "",
     lastName: "",
@@ -30,14 +30,14 @@ export default function Account() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  
+
   // Deactivation states
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [confirmationText, setConfirmationText] = useState("");
   const [deactivating, setDeactivating] = useState(false);
 
   const token = localStorage.getItem("token");
-  
+
   // Check if current user is super admin
   const isSuperAdmin = user.email === "aaronbagain@gmail.com";
 
@@ -47,9 +47,14 @@ export default function Account() {
       if (!token) return;
       try {
         setLoading(true);
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setUser({
           firstName: res.data.firstName || "",
           lastName: res.data.lastName || "",
@@ -128,7 +133,9 @@ export default function Account() {
     }
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-email-verification-otp`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/send-email-verification-otp`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -149,7 +156,9 @@ export default function Account() {
     }
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/verify-email-otp`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/verify-email-otp`,
         { otp },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -168,7 +177,9 @@ export default function Account() {
   const handleSubmitEmailChange = async () => {
     try {
       const res = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/account`,
         { email: user.email },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -236,7 +247,9 @@ export default function Account() {
       }
 
       const res = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/account`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -275,7 +288,9 @@ export default function Account() {
     setDeactivating(true);
     try {
       await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/deactivate-account`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/deactivate-account`,
         {
           headers: { Authorization: `Bearer ${token}` },
           data: { confirmationText },
@@ -285,9 +300,11 @@ export default function Account() {
       // Clear local storage
       localStorage.removeItem("token");
       localStorage.removeItem("admin");
-      
+
       // Redirect to home
-      alert("Your admin account has been successfully deactivated. A log entry has been created. All your itineraries and reviews have been deleted.");
+      alert(
+        "Your admin account has been successfully deactivated. A log entry has been created. All your itineraries and reviews have been deleted."
+      );
       navigate("/");
     } catch (err) {
       console.error("Deactivation error:", err);
@@ -575,7 +592,6 @@ export default function Account() {
             </button>
           </form>
         </div>
-
         {/* Deactivate Account Section - Hidden for Super Admin */}
         {!isSuperAdmin && (
           <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
@@ -588,8 +604,11 @@ export default function Account() {
                   Deactivate Admin Account
                 </h3>
                 <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  Permanently delete your admin account and all associated data. This action cannot be undone.
-                  A log entry will be created before deletion. All your itineraries and reviews will be permanently deleted, but existing system logs will be preserved.
+                  Permanently delete your admin account and all associated data.
+                  This action cannot be undone. A log entry will be created
+                  before deletion. All your itineraries and reviews will be
+                  permanently deleted, but existing system logs will be
+                  preserved.
                 </p>
                 <button
                   onClick={() => setShowDeactivateModal(true)}
@@ -602,7 +621,6 @@ export default function Account() {
             </div>
           </div>
         )}
-
         {/* Deactivation Confirmation Modal */}
         {showDeactivateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -629,7 +647,8 @@ export default function Account() {
                   <li>All associated data</li>
                 </ul>
                 <p className="text-sm font-semibold text-blue-600 mt-4">
-                  Note: A log entry will be created and existing system logs will be preserved.
+                  Note: A log entry will be created and existing system logs
+                  will be preserved.
                 </p>
                 <p className="text-sm font-semibold text-red-600">
                   This action cannot be undone!
@@ -638,7 +657,8 @@ export default function Account() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type <span className="font-bold text-red-600">DELETE</span> to confirm:
+                  Type <span className="font-bold text-red-600">DELETE</span> to
+                  confirm:
                 </label>
                 <input
                   type="text"
@@ -672,10 +692,7 @@ export default function Account() {
             </motion.div>
           </div>
         )}
-
-        <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
-          2025 Intramuros Administration
-        </p>
+        image.png
       </div>
     </motion.div>
   );

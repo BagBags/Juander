@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function GuestLanguage() {
   const { t, i18n } = useTranslation();
@@ -12,6 +13,12 @@ export default function GuestLanguage() {
   ];
 
   const [selected, setSelected] = useState("");
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   // Load saved language on mount from localStorage
   useEffect(() => {
@@ -31,7 +38,12 @@ export default function GuestLanguage() {
     localStorage.setItem("guestLanguage", selected);
     // Change language immediately in frontend using i18n
     i18n.changeLanguage(selected);
-    alert(`Language set to ${selected === "en" ? "English" : "Tagalog"}`);
+    setNotification({
+      isOpen: true,
+      type: "success",
+      title: "Language Updated",
+      message: `Language set to ${selected === "en" ? "English" : "Tagalog"}`,
+    });
   };
 
   return (
@@ -82,6 +94,14 @@ export default function GuestLanguage() {
           {t("continue")}
         </button>
       </div>
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </motion.div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function Birthday() {
   const { t } = useTranslation();
@@ -9,6 +10,14 @@ export default function Birthday() {
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [year, setYear] = useState("");
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    autoClose: false,
+    autoCloseDuration: 2000,
+  });
 
   const months = [
     "Jan",
@@ -33,9 +42,14 @@ export default function Birthday() {
           sessionStorage.getItem("token") || localStorage.getItem("token");
         if (!token) return;
 
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (data?.birthday) {
           const d = new Date(data.birthday);
@@ -57,29 +71,57 @@ export default function Birthday() {
         sessionStorage.getItem("token") || localStorage.getItem("token");
 
       if (!token) {
-        alert(t("notLoggedIn"));
+        setNotification({
+          isOpen: true,
+          type: "warning",
+          title: t("notLoggedIn"),
+          message: t("pleaseLoginToContinue") || "Please log in to continue.",
+          autoClose: true,
+          autoCloseDuration: 2000,
+        });
         return;
       }
 
       if (!month || !date || !year) {
-        alert(t("completeAllFields"));
+        setNotification({
+          isOpen: true,
+          type: "warning",
+          title: t("completeAllFields"),
+          message: t("fillOutAllFields") || "Fill out all fields.",
+          autoClose: true,
+          autoCloseDuration: 2000,
+        });
         return;
       }
 
       const { data } = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/birthday`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/birthday`,
         { month, date, year },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       console.log("Birthday saved:", data);
-      alert(t("birthdaySavedSuccess"));
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: t("birthdaySavedSuccess"),
+        message: "",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
     } catch (err) {
       console.error(
         "Error saving birthday:",
         err.response?.data || err.message
       );
-      alert(err.response?.data?.message || t("birthdaySaveFailed"));
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: t("birthdaySaveFailed"),
+        message: err.response?.data?.message || "",
+      });
     }
   };
 
@@ -139,9 +181,19 @@ export default function Birthday() {
         </button>
       </div>
 
-      <p className="mt-auto pt-8 text-xs text-center text-[#cf3325] opacity-70">
-        ©2025 Intramuros Administration
+      <p className="mb-8 text-xs text-center text-gray-400">
+        © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+        College of Information and Computing Sciences.
       </p>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        autoClose={notification.autoClose}
+        autoCloseDuration={notification.autoCloseDuration}
+      />
     </motion.div>
   );
 }

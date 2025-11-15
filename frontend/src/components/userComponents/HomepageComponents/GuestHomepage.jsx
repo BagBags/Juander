@@ -5,7 +5,8 @@ import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import SideButtons from "../sideButtons";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
-import TourProvider, { useTour } from "../../TourComponents/TourProvider";
+import TourProvider from "../../TourComponents/TourProvider";
+import { useTour } from "../../TourComponents/TourContext";
 import { guestTourSteps } from "../../TourComponents/tourSteps";
 import ModernLoader from "../../shared/ModernLoader";
 import { Compass, UserPlus } from "lucide-react";
@@ -109,10 +110,7 @@ function GuestHomepageContent() {
     }
   }, [i18n]);
 
-  // Announce page load with TTS
-  useEffect(() => {
-    ttsService.speak(t('tts_welcome'));
-  }, [t]);
+  // No TTS here; voice guidance is exclusive to itinerary maps
 
   // Auto-start guest tutorial when flagged from GuestSettings
   useEffect(() => {
@@ -120,7 +118,7 @@ function GuestHomepageContent() {
     if (replay) {
       setTimeout(() => {
         startTour();
-        localStorage.removeItem("guestReplayTutorial");
+        // Do not clear here; flag will be cleared on finish/skip
       }, 800);
     }
   }, [startTour]);

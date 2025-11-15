@@ -81,7 +81,7 @@ export default function MapControlButtons({
       {/* Voice Guidance Toggle Button */}
       <button
         onClick={handleTTSToggle}
-        className={`p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
+        className={`map-tts-toggle p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
           isTTSEnabled
             ? "bg-green-500 hover:bg-green-600 text-white border-green-600 animate-pulse"
             : "bg-white hover:bg-gray-50 text-gray-700 border-gray-300"
@@ -100,7 +100,7 @@ export default function MapControlButtons({
       {userLocation && !hideRecenterButton && (
         <button
           onClick={handleCenterToUser}
-          className={`p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
+          className={`map-center-btn p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
             needsCompassPermission && !compassPermissionGranted
               ? "bg-blue-500 hover:bg-blue-600 text-white border-blue-600 animate-pulse"
               : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
@@ -112,14 +112,14 @@ export default function MapControlButtons({
         </button>
       )}
 
-      {/* Show Current Destination Button - When preview card is closed */}
-      {!selectedPin && pins[currentPinIndex] && (
+      {/* Show Current Destination Button - Always visible */}
+      {pins[currentPinIndex] && (
         <button
           onClick={() => {
             setSelectedPin(pins[currentPinIndex]);
             setManuallyDismissed(false); // Reset manual dismiss when user wants to see it
           }}
-          className="bg-[#f04e37] hover:bg-[#d9442f] text-white p-3 rounded-full shadow-lg transition-all duration-200 active:scale-95 animate-pulse"
+          className="map-show-destination-btn bg-[#f04e37] hover:bg-[#d9442f] text-white p-3 rounded-full shadow-lg transition-all duration-200 active:scale-95 animate-pulse"
           title="Show current destination"
         >
           <MapPin className="w-5 h-5" />
@@ -131,7 +131,7 @@ export default function MapControlButtons({
         <div className="relative">
           <button
             onClick={() => setShowTransportPanel && setShowTransportPanel((v) => !v)}
-            className="bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-all duration-200 active:scale-95"
+            className="map-transport-button bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-all duration-200 active:scale-95"
             title="Transport mode"
             aria-label="Transport mode"
           >

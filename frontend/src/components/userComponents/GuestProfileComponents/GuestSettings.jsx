@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function GuestSettings() {
   const navigate = useNavigate();
@@ -11,12 +12,18 @@ export default function GuestSettings() {
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [tourLoading, setTourLoading] = useState(false);
+  const [homepageTutorialEnabled, setHomepageTutorialEnabled] = useState(false);
+  const [mapTutorialEnabled, setMapTutorialEnabled] = useState(false);
+  const [notification, setNotification] = useState({ isOpen: false, type: "info", title: "", message: "" });
 
   // Load guest preference from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("guestHideFortSantiagoModal");
     // stored === "true" means hide; we invert for showFortModal
     setShowFortModal(!(stored === "true"));
+    // Load tutorial switches from localStorage
+    setHomepageTutorialEnabled(localStorage.getItem("guestReplayTutorial") === "true");
+    setMapTutorialEnabled(localStorage.getItem("mapTourForceStart") === "true");
   }, []);
 
   const handleToggleFortModal = () => {
@@ -46,22 +53,55 @@ export default function GuestSettings() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
-  const handleReplayTutorial = () => {
-    setTourLoading(true);
+  const toggleHomepageTutorial = () => {
+    const next = !homepageTutorialEnabled;
+    setHomepageTutorialEnabled(next);
     try {
-      // Set a flag for GuestHomepage to auto-start the tour
-      localStorage.setItem("guestReplayTutorial", "true");
-      setSuccessMessage(
-        "Tutorial reset! Returning to guest homepage to replay it."
-      );
-      // Use navigate instead of window.location.href to avoid PWA navigation issues
-      setTimeout(() => {
-        navigate("/GuestHomepage");
-      }, 1500);
+      if (next) {
+        localStorage.setItem("guestReplayTutorial", "true");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Homepage Tutorial Enabled",
+          message: "When you go to the Guest Homepage, the guide will start automatically. It will turn off after you finish or skip.",
+        });
+      } else {
+        localStorage.removeItem("guestReplayTutorial");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Homepage Tutorial Disabled",
+          message: "The guide will not auto-start on the Guest Homepage.",
+        });
+      }
     } catch (err) {
-      console.error("Error setting replay flag:", err);
-      setSuccessMessage("Failed to reset tutorial. Please try again.");
-      setTourLoading(false);
+      console.error("Error updating homepage tutorial flag:", err);
+    }
+  };
+
+  const toggleMapTutorial = () => {
+    const next = !mapTutorialEnabled;
+    setMapTutorialEnabled(next);
+    try {
+      if (next) {
+        localStorage.setItem("mapTourForceStart", "true");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Map Tutorial Enabled",
+          message: "When you go to the Guest Itinerary Map, the guide will start automatically. It will turn off after you finish or skip.",
+        });
+      } else {
+        localStorage.removeItem("mapTourForceStart");
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Map Tutorial Disabled",
+          message: "The guide will not auto-start on the Itinerary Map.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating map tutorial flag:", err);
     }
   };
 
@@ -73,9 +113,11 @@ export default function GuestSettings() {
       transition={{ duration: 0.4 }}
       className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md flex flex-col flex-1">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">Notification Settings</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-6">
+            Notification Settings
+          </h2>
 
           {successMessage && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -99,8 +141,9 @@ export default function GuestSettings() {
                   Fort Santiago Entrance Notice
                 </h3>
                 <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  Show a notification when adding sites inside Fort Santiago to your itinerary.
-                  This setting is currently unavailable in guest mode.
+                  Show a notification when adding sites inside Fort Santiago to
+                  your itinerary. This setting is currently unavailable in guest
+                  mode.
                 </p>
 
                 <label className="flex items-center gap-3 cursor-not-allowed group">
@@ -111,18 +154,29 @@ export default function GuestSettings() {
                       disabled
                       className="sr-only peer"
                     />
-                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors ${loading ? 'opacity-50' : ''}`}></div>
+                    <div
+                      className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors ${
+                        loading ? "opacity-50" : ""
+                      }`}
+                    ></div>
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
                   </div>
                   <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
                     {showFortModal ? "Enabled" : "Disabled"}
                   </span>
                 </label>
+
+                {/* Note under Fort Santiago toggle */}
+                <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    <span className="font-semibold text-gray-700">Note:</span> When enabled, you'll receive a reminder about entrance fees when selecting sites located inside Fort Santiago for your itinerary.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Replay Tutorial Setting */}
+          {/* Tutorial (Homepage) Switch */}
           <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 mt-1">
@@ -130,20 +184,50 @@ export default function GuestSettings() {
               </div>
 
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  Replay Tutorial
-                </h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  Restart the interactive tour guide to learn about app features again.
-                </p>
+                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Homepage)</h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide when you visit the Guest Homepage.</p>
 
-                <button
-                  onClick={handleReplayTutorial}
-                  disabled={tourLoading}
-                  className="px-4 py-2 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {tourLoading ? "Resetting..." : "Replay Tutorial"}
-                </button>
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={homepageTutorialEnabled}
+                      onChange={toggleHomepageTutorial}
+                      className="sr-only peer"
+                    />
+                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{homepageTutorialEnabled ? "Enabled" : "Disabled"}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Tutorial (Start Tour) Switch for Map */}
+          <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <Play className="w-6 h-6 text-[#f04e37]" />
+              </div>
+
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Start Tour)</h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide on the Itinerary Map when you go there.</p>
+
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={mapTutorialEnabled}
+                      onChange={toggleMapTutorial}
+                      className="sr-only peer"
+                    />
+                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{mapTutorialEnabled ? "Enabled" : "Disabled"}</span>
+                </label>
               </div>
             </div>
           </div>
@@ -151,13 +235,27 @@ export default function GuestSettings() {
           {/* Info Box */}
           <div className="mt-6 bg-orange-50 border border-orange-200 rounded-lg p-4">
             <p className="text-xs text-gray-600 leading-relaxed">
-              <span className="font-semibold text-gray-700">Note:</span> Guest preferences are stored on your device and may reset when you clear browser storage or switch devices.
+              <span className="font-semibold text-gray-700">Note:</span> Guest
+              preferences are stored on your device and may reset when you clear
+              browser storage or switch devices.
             </p>
           </div>
         </div>
 
-        <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
-          ©2025 Intramuros Administration
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          autoClose
+          autoCloseDuration={3000}
+        />
+
+        <p className="mt-auto mb-8 text-xs text-center text-gray-400">
+          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
+          College of Information and Computing Sciences.
         </p>
       </div>
     </motion.div>

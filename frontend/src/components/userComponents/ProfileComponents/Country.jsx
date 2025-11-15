@@ -3,12 +3,21 @@ import { countries } from "countries-list";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function CountrySelector() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(""); // store country code
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    autoClose: false,
+    autoCloseDuration: 2000,
+  });
 
   // Fetch current user's country on mount
   useEffect(() => {
@@ -49,9 +58,15 @@ export default function CountrySelector() {
 
   const handleSave = async () => {
     if (!selected) {
-      alert(
-        t("selectCountryFirst") || "Please select a country before saving."
-      );
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: t("selectCountryFirst") || "Select a country first",
+        message: t("pleaseSelectCountryBeforeSaving") ||
+          "Please select a country before saving.",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
       return;
     }
 
@@ -59,7 +74,14 @@ export default function CountrySelector() {
       sessionStorage.getItem("token") || localStorage.getItem("token");
 
     if (!token) {
-      alert(t("notLoggedIn") || "You are not logged in.");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: t("notLoggedIn") || "Not logged in",
+        message: t("pleaseLoginToContinue") || "Please log in to continue.",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
       return;
     }
 
@@ -70,14 +92,22 @@ export default function CountrySelector() {
         { country: countries[selected].name },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert(t("countrySavedSuccess") || "Country saved successfully!");
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: t("countrySavedSuccess") || "Country saved successfully",
+        message: "",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
     } catch (error) {
       console.error("Error saving country:", error.response?.data || error);
-      alert(
-        error.response?.data?.message ||
-          t("countrySaveFailed") ||
-          "Failed to save country"
-      );
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: t("countrySaveFailed") || "Failed to save country",
+        message: error.response?.data?.message || "",
+      });
     } finally {
       setLoading(false);
     }
@@ -159,6 +189,15 @@ export default function CountrySelector() {
           {loading ? t("saving") || "Saving..." : t("save") || "Save"}
         </button>
       </div>
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        autoClose={notification.autoClose}
+        autoCloseDuration={notification.autoCloseDuration}
+      />
     </motion.div>
   );
 }

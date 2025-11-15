@@ -57,14 +57,8 @@ const SiteCard = ({ pin, onClose, distance }) => {
     fetchUserLanguage();
   }, []);
 
-  // Announce site when card opens
+  // Remove non-itinerary TTS announcements; keep cleanup only
   useEffect(() => {
-    if (pin) {
-      const siteName = pin.title || "site";
-      ttsService.speak(`${siteName}`);
-    }
-    
-    // Cleanup: stop TTS when component unmounts (modal closes)
     return () => {
       ttsService.cancel();
     };

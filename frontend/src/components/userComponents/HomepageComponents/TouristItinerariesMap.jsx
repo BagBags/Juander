@@ -27,8 +27,10 @@ import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import NotificationModal from "../../shared/NotificationModal";
 import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
 import ConfirmModal from "../../shared/ConfirmModal";
+import { useTour } from "../../TourComponents/TourContext";
 
 export default function TouristItineraryMap() {
+  const { startTour, isTourRunning } = useTour?.() || { startTour: () => {}, isTourRunning: false };
   const { itineraryId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -56,6 +58,30 @@ export default function TouristItineraryMap() {
   const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
+
+  // Start tour if forced via Settings (must be inside component)
+  useEffect(() => {
+    try {
+      const force = localStorage.getItem("mapTourForceStart");
+      if (force === "true") {
+        if (typeof startTour === "function") startTour();
+      }
+    } catch {}
+  }, [startTour]);
+
+  // Hide/dismiss modals while the tour runs to avoid interruptions
+  useEffect(() => {
+    if (isTourRunning) {
+      try {
+        setShowFullModal(false);
+        setShowResumeModal(false);
+        setShowGpsModal(false);
+        setShowCompletionModal(false);
+        if (typeof setShowFortDrivingModal === 'function') setShowFortDrivingModal(false);
+        setNotification((n) => ({ ...n, isOpen: false }));
+      } catch {}
+    }
+  }, [isTourRunning]);
   const [showTransportPanel, setShowTransportPanel] = useState(false);
 
   // Routing
@@ -1630,6 +1656,8 @@ export default function TouristItineraryMap() {
             arrivalTime={arrivalTime}
             isRouting={isRouting}
             transportMode={transportMode}
+            userLocation={userLocation}
+            activePin={activePin}
             onPrevSite={handlePrevSite}
             onSkipSite={handleSkipSite}
             onNextSite={handleNextSite}
@@ -1657,7 +1685,7 @@ export default function TouristItineraryMap() {
         )}
 
         {/* Site Preview Card */}
-        {selectedPin && !showFullModal && (
+        {selectedPin && !showFullModal && !isTourRunning && (
           <SitePreviewCard
               selectedPin={selectedPin}
               distance={distance}
@@ -1673,7 +1701,7 @@ export default function TouristItineraryMap() {
         )}
 
         {/* Site Modal - Full Screen */}
-        {selectedPin && showFullModal && (
+        {selectedPin && showFullModal && !isTourRunning && (
           <SiteModalFullScreen
               selectedPin={selectedPin}
               onClose={() => {
@@ -1692,28 +1720,30 @@ export default function TouristItineraryMap() {
         )}
 
         {/* Floating Chatbot */}
-        <FloatingChatbot />
+        {!isTourRunning && <FloatingChatbot />}
         
         {/* Notification Modal */}
+        {!isTourRunning && (
         <NotificationModal
           isOpen={notification.isOpen}
           onClose={() => setNotification({ ...notification, isOpen: false })}
           type={notification.type}
           title={notification.title}
           message={notification.message}
-        />
+        />)}
 
         {/* Fort Santiago Driving Restriction Modal */}
+        {!isTourRunning && (
         <ConfirmModal
           isOpen={showFortDrivingModal}
           onClose={() => setShowFortDrivingModal(false)}
           onConfirm={fortModalConfirm}
           title="Fort Santiago – Car Restriction"
           message="Cars cannot enter Fort Santiago. Please find parking and continue using Foot mode to proceed."
-          confirmText="Continue Foot Mode"
+          confirmText="Walk Mode"
           cancelText="Cancel"
           type="warning"
-        />
+        />)}
       </div>
     </div>
   );
