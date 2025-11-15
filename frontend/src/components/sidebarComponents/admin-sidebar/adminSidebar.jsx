@@ -12,6 +12,8 @@ import axios from "axios";
 import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { useContext } from "react";
 import { UserContext } from "../../../contexts/UserContext";
+import { clearAuth } from "../../../utils/authStorage";
+import { clearOfflineCache } from "../../../utils/offlineAwareApi";
 
 export default function AdminSidebar({ isExpanded, toggleSidebar }) {
   const location = useLocation();
@@ -70,9 +72,24 @@ export default function AdminSidebar({ isExpanded, toggleSidebar }) {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    try {
+      clearAuth();
+    } catch (e) {}
+    try {
+      if (window.google?.accounts?.id?.disableAutoSelect) {
+        window.google.accounts.id.disableAutoSelect();
+      }
+    } catch (e) {}
     localStorage.removeItem("admin");
-    navigate("/");
+    localStorage.removeItem("guest");
+    try {
+      localStorage.setItem("logout", String(Date.now()));
+    } catch (e) {}
+    setCurrentAdmin(null);
+    try {
+      clearOfflineCache();
+    } catch (e) {}
+    navigate("/login?loggedOut=1", { replace: true });
   };
 
   return (
