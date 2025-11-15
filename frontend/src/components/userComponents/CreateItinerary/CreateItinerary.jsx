@@ -14,7 +14,7 @@ import {
   FaTrash,
   FaEdit,
 } from "react-icons/fa";
-import { Info, X } from "lucide-react";
+import { Info, X, Filter as FilterIcon } from "lucide-react";
 
 function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -82,6 +82,80 @@ function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
   );
 }
 
+// Icon-only, accessible dropdown for category filtering
+function CategoryFilterButton({ value, onChange, categories }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const onEsc = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, []);
+
+  const handleSelect = (val) => {
+    onChange(val);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={value === 'all' ? 'All Categories' : `Category: ${value}`}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        className="w-full h-10 rounded-xl bg-white border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none transition-all relative flex items-center justify-center overflow-hidden"
+      >
+        <FilterIcon className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Filter by category"
+          className="absolute right-0 mt-2 w-44 max-h-60 overflow-auto rounded-xl border border-gray-200 bg-white shadow-lg z-50 p-1"
+        >
+          <button
+            role="option"
+            aria-selected={value === 'all'}
+            onClick={() => handleSelect('all')}
+            className={`w-full text-left px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 ${value === 'all' ? 'bg-gray-100' : ''}`}
+          >
+            All Categories
+          </button>
+          {categories.map((name) => (
+            <button
+              key={name}
+              role="option"
+              aria-selected={value === name}
+              onClick={() => handleSelect(name)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-gray-900 hover:bg-gray-100 ${value === name ? 'bg-gray-100' : ''}`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CreateItineraryPage() {
   const { t } = useTranslation();
   const [selected, setSelected] = useState([]);
@@ -98,6 +172,9 @@ export default function CreateItineraryPage() {
   const [offlineMessage, setOfflineMessage] = useState("");
   const [hideFortModalPreference, setHideFortModalPreference] = useState(false);
   const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
+  // Search and filter state for Available Sites
+  const [siteSearchQuery, setSiteSearchQuery] = useState("");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -531,15 +608,59 @@ export default function CreateItineraryPage() {
                   <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
                   Available Sites
                 </h2>
-                
-                <SmoothScrollSiteList
-                  sites={sites}
-                  selected={selected}
-                  descriptionToggles={descriptionToggles}
-                  toggleDescription={toggleDescription}
-                  toggleSelection={toggleSelection}
-                  getFullImageUrl={getFullImageUrl}
-                />
+                {/* Search and Category Filter (Category on the right of Search, all breakpoints) */}
+                <div className="flex flex-row items-center gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="sr-only">Search Sites</label>
+                    <div className="relative">
+                      <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      </svg>
+                      <input
+                        type="text"
+                        value={siteSearchQuery}
+                        onChange={(e) => setSiteSearchQuery(e.target.value)}
+                        placeholder="Search by name or description"
+                        className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="w-14 sm:w-16 flex-shrink-0">
+                    <label className="sr-only">Category</label>
+                    <CategoryFilterButton
+                      value={selectedCategoryFilter}
+                      onChange={setSelectedCategoryFilter}
+                      categories={Array.from(new Set((sites || []).map((s) => {
+                        const cat = s.category;
+                        return typeof cat === 'object' ? (cat?.name || '') : '';
+                      }).filter(Boolean))).sort((a,b)=>a.localeCompare(b))}
+                    />
+                  </div>
+                </div>
+
+                {/* Compute filtered sites */}
+                {(() => {
+                  const query = siteSearchQuery.trim().toLowerCase();
+                  const filtered = (sites || []).filter((s) => {
+                    const name = (s.siteName || '').toLowerCase();
+                    const desc = (s.siteDescription || '').toLowerCase();
+                    const matchesQuery = query ? (name.includes(query) || desc.includes(query)) : true;
+                    const catName = typeof s.category === 'object' ? (s.category?.name || '') : '';
+                    const matchesCategory = selectedCategoryFilter === 'all' ? true : (catName === selectedCategoryFilter);
+                    return matchesQuery && matchesCategory;
+                  });
+                  return (
+                    <SmoothScrollSiteList
+                      sites={filtered}
+                      selected={selected}
+                      descriptionToggles={descriptionToggles}
+                      toggleDescription={toggleDescription}
+                      toggleSelection={toggleSelection}
+                      getFullImageUrl={getFullImageUrl}
+                    />
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -819,9 +940,23 @@ function SiteCard({
         )}
       </div>
       
-      <h3 className="font-bold text-gray-800 text-base mb-2 line-clamp-2 min-h-[3rem]">
+      <h3 className="font-bold text-gray-800 text-base mb-1 line-clamp-2">
         {site.siteName}
       </h3>
+      {/* Category badge: show icon and category name */}
+      {(() => {
+        const catName = typeof site.category === 'object' ? (site.category?.name || '') : '';
+        return catName ? (
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1.5 bg-orange-100 text-[#f04e37] px-2.5 py-1 rounded-full text-xs font-semibold">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 6h-8l-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 9H6v-2h8v2zm4-4H6V9h12v2z" />
+              </svg>
+              {catName}
+            </span>
+          </div>
+        ) : null;
+      })()}
       
       <div className="mb-3">
         <div 

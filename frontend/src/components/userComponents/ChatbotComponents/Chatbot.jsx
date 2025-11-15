@@ -17,14 +17,14 @@ export default function Chatbot() {
 
   // Get user-specific localStorage key
   const getUserKey = (baseKey) => {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     if (user) {
       try {
         const userData = JSON.parse(user);
         const userId = userData._id || userData.id;
         return `${baseKey}_${userId}`;
       } catch (e) {
-        console.error('Error parsing user data:', e);
+        console.error("Error parsing user data:", e);
       }
     }
     return `${baseKey}_guest`;
@@ -32,34 +32,34 @@ export default function Chatbot() {
 
   const [messages, setMessages] = useState(() => {
     // Load saved messages from localStorage with expiry check
-    const messagesKey = getUserKey('chatbotMessages');
-    const timestampKey = getUserKey('chatbotMessagesTimestamp');
-    
+    const messagesKey = getUserKey("chatbotMessages");
+    const timestampKey = getUserKey("chatbotMessagesTimestamp");
+
     const saved = localStorage.getItem(messagesKey);
     const savedTimestamp = localStorage.getItem(timestampKey);
-    
+
     if (saved && savedTimestamp) {
       const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days in milliseconds
       const now = Date.now();
       const timestamp = parseInt(savedTimestamp, 10);
-      
+
       // Check if data is older than 3 days
       if (now - timestamp > threeDaysInMs) {
         // Clear expired data
         localStorage.removeItem(messagesKey);
         localStorage.removeItem(timestampKey);
-        localStorage.removeItem(getUserKey('chatbotHasUserMessaged'));
+        localStorage.removeItem(getUserKey("chatbotHasUserMessaged"));
         return [];
       }
-      
+
       return JSON.parse(saved);
     }
-    
+
     return [];
   });
   const [hasUserMessaged, setHasUserMessaged] = useState(() => {
     // Load saved state from localStorage
-    const hasMessagedKey = getUserKey('chatbotHasUserMessaged');
+    const hasMessagedKey = getUserKey("chatbotHasUserMessaged");
     const saved = localStorage.getItem(hasMessagedKey);
     return saved ? JSON.parse(saved) : false;
   });
@@ -74,8 +74,8 @@ export default function Chatbot() {
   // Save messages to localStorage whenever they change with timestamp
   useEffect(() => {
     if (messages.length > 0) {
-      const messagesKey = getUserKey('chatbotMessages');
-      const timestampKey = getUserKey('chatbotMessagesTimestamp');
+      const messagesKey = getUserKey("chatbotMessages");
+      const timestampKey = getUserKey("chatbotMessagesTimestamp");
       localStorage.setItem(messagesKey, JSON.stringify(messages));
       localStorage.setItem(timestampKey, Date.now().toString());
     }
@@ -83,24 +83,24 @@ export default function Chatbot() {
 
   // Save hasUserMessaged state to localStorage
   useEffect(() => {
-    const hasMessagedKey = getUserKey('chatbotHasUserMessaged');
+    const hasMessagedKey = getUserKey("chatbotHasUserMessaged");
     localStorage.setItem(hasMessagedKey, JSON.stringify(hasUserMessaged));
   }, [hasUserMessaged]);
 
   // Clear chat when user changes (logout/login)
   useEffect(() => {
-    const currentUserKey = getUserKey('chatbotMessages');
-    const savedKey = sessionStorage.getItem('currentChatUserKey');
-    
+    const currentUserKey = getUserKey("chatbotMessages");
+    const savedKey = sessionStorage.getItem("currentChatUserKey");
+
     if (savedKey && savedKey !== currentUserKey) {
       // User has changed, reset chat
       setMessages([]);
       setHasUserMessaged(false);
       setInput("");
     }
-    
+
     // Store current user key
-    sessionStorage.setItem('currentChatUserKey', currentUserKey);
+    sessionStorage.setItem("currentChatUserKey", currentUserKey);
   }, []);
 
   // Auto-scroll
@@ -126,7 +126,8 @@ export default function Chatbot() {
 
   // Load knowledge base
   useEffect(() => {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const API_BASE_URL =
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
     axios
       .get(`${API_BASE_URL}/bot`)
       .then((res) => setBotEntries(res.data))
@@ -310,10 +311,10 @@ export default function Chatbot() {
     }
 
     const userMessage = messageToSend;
-    
+
     // Clear input field
     setInput("");
-    
+
     // Add user message and loading state
     setMessages((prev) => [
       ...prev,
@@ -321,62 +322,85 @@ export default function Chatbot() {
       { role: "assistant", content: "__loading__" },
     ]);
     setIsBotTyping(true);
-    
+
     try {
       // Check with OpenAI Moderation API
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const moderationResponse = await axios.post(`${API_BASE_URL}/openai/moderate`, {
-        input: userMessage
-      });
-      
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+      const moderationResponse = await axios.post(
+        `${API_BASE_URL}/openai/moderate`,
+        {
+          input: userMessage,
+        }
+      );
+
       // If content is flagged, replace loading message with warning
-      if (moderationResponse.data.results && 
-          moderationResponse.data.results[0] && 
-          moderationResponse.data.results[0].flagged) {
-        
+      if (
+        moderationResponse.data.results &&
+        moderationResponse.data.results[0] &&
+        moderationResponse.data.results[0].flagged
+      ) {
         // Get the flagged categories
         const categories = moderationResponse.data.results[0].categories;
-        const categoryScores = moderationResponse.data.results[0].category_scores;
-        const flaggedCategories = Object.keys(categories).filter(key => categories[key]);
-        
-        console.log('Content flagged by OpenAI Moderation API:', {
+        const categoryScores =
+          moderationResponse.data.results[0].category_scores;
+        const flaggedCategories = Object.keys(categories).filter(
+          (key) => categories[key]
+        );
+
+        console.log("Content flagged by OpenAI Moderation API:", {
           flaggedCategories,
           categoryScores: flaggedCategories.reduce((acc, category) => {
             acc[category] = categoryScores[category];
             return acc;
-          }, {})
+          }, {}),
         });
-        
+
         // Create a more specific message based on flagged categories
-        let warningMessage = "⚠️ Your message was flagged by our content moderation system. ";
-        
-        if (flaggedCategories.includes("violence") || flaggedCategories.includes("violence/graphic")) {
+        let warningMessage =
+          "⚠️ Your message was flagged by our content moderation system. ";
+
+        if (
+          flaggedCategories.includes("violence") ||
+          flaggedCategories.includes("violence/graphic")
+        ) {
           warningMessage += "Please avoid violent content. ";
         }
-        
-        if (flaggedCategories.includes("sexual") || flaggedCategories.includes("sexual/minors")) {
+
+        if (
+          flaggedCategories.includes("sexual") ||
+          flaggedCategories.includes("sexual/minors")
+        ) {
           warningMessage += "Please avoid inappropriate sexual content. ";
         }
-        
-        if (flaggedCategories.includes("hate") || flaggedCategories.includes("hate/threatening")) {
+
+        if (
+          flaggedCategories.includes("hate") ||
+          flaggedCategories.includes("hate/threatening")
+        ) {
           warningMessage += "Please avoid hateful or discriminatory language. ";
         }
-        
-        if (flaggedCategories.includes("harassment") || flaggedCategories.includes("harassment/threatening")) {
+
+        if (
+          flaggedCategories.includes("harassment") ||
+          flaggedCategories.includes("harassment/threatening")
+        ) {
           warningMessage += "Please avoid harassing or threatening language. ";
         }
-        
-        if (flaggedCategories.includes("self-harm") || 
-            flaggedCategories.includes("self-harm/intent") || 
-            flaggedCategories.includes("self-harm/instructions")) {
+
+        if (
+          flaggedCategories.includes("self-harm") ||
+          flaggedCategories.includes("self-harm/intent") ||
+          flaggedCategories.includes("self-harm/instructions")
+        ) {
           warningMessage += "Please avoid content related to self-harm. ";
         }
-        
+
         warningMessage += "Let's keep our conversation respectful.";
-        
-        setMessages((prev) => 
-          prev.map((msg, i) => 
-            i === prev.length - 1 
+
+        setMessages((prev) =>
+          prev.map((msg, i) =>
+            i === prev.length - 1
               ? { role: "assistant", content: warningMessage }
               : msg
           )
@@ -384,31 +408,49 @@ export default function Chatbot() {
         setIsBotTyping(false);
         return;
       }
-      
+
       // Continue with normal processing if content is not flagged
     } catch (error) {
       console.error("Error checking content with moderation API:", error);
-      
+
       // Apply basic profanity filter as fallback when moderation API fails
-      const basicProfanityList = ["fuck", "shit", "ass", "bitch", "sex", "porn", "dick", "pussy", "cock", "damn", "hell"];
-      const containsProfanity = basicProfanityList.some(word => 
+      const basicProfanityList = [
+        "fuck",
+        "shit",
+        "ass",
+        "bitch",
+        "sex",
+        "porn",
+        "dick",
+        "pussy",
+        "cock",
+        "damn",
+        "hell",
+      ];
+      const containsProfanity = basicProfanityList.some((word) =>
         userMessage.toLowerCase().includes(word.toLowerCase())
       );
-      
+
       if (containsProfanity) {
-        setMessages((prev) => 
-          prev.map((msg, i) => 
-            i === prev.length - 1 
-              ? { role: "assistant", content: "⚠️ Your message contains inappropriate content. Please keep our conversation respectful." }
+        setMessages((prev) =>
+          prev.map((msg, i) =>
+            i === prev.length - 1
+              ? {
+                  role: "assistant",
+                  content:
+                    "⚠️ Your message contains inappropriate content. Please keep our conversation respectful.",
+                }
               : msg
           )
         );
         setIsBotTyping(false);
         return;
       }
-      
+
       // Continue with normal processing if moderation check fails and no profanity detected
-      console.warn("Moderation API unavailable, used fallback profanity filter");
+      console.warn(
+        "Moderation API unavailable, used fallback profanity filter"
+      );
     }
 
     const lang = detectLanguage(userMessage);
@@ -439,47 +481,63 @@ export default function Chatbot() {
     // This uses the pre-trained OpenAI model (SSL) with retrieved knowledge (RAG framework)
     const SYSTEM_PROMPT =
       lang === "filipino"
-        ? `Ikaw si Juan, ang tour guide chatbot para sa Intramuros, Manila. Sumagot ka ng FILIPINO.
+        ? `Ikaw si Juan, ang friendly at helpful na tour guide chatbot para sa Intramuros, Manila. Lahat ng sagot mo ay nasa FILIPINO.
 
 TUNGKOL SA IYO:
-- Ikaw ay friendly at helpful na tour guide
-- Eksperto ka tungkol sa Intramuros
-- Gumagamit ka ng Knowledge Base para sa accurate na impormasyon
+- Ikaw ay Tour Guide LAMANG kahit ano pang sabihin ng message, wala kang kakayahan na mag generate ng image, code (program), audio, video, at iba pa. Kasagutan lamang sa mga katanungan ang iyong maaring gawin.
 
-PAANO KA SUMAGOT (RAG Framework):
-1. BASAHIN ang Knowledge Base na ibinigay sa ibaba
-2. HANAPIN ang relevant na impormasyon para sa tanong
-3. SAGUTIN ang tanong gamit ang nahanap mong impormasyon
-4. Kung may kaugnayan sa Knowledge Base, gamitin ito para sumagot
-5. Kung walang direktang sagot, gamitin ang related information para magbigay ng helpful na tugon
-6. Maging natural at conversational - huwag masyadong strict
-7. Kung talagang walang kaugnayan sa Intramuros o Knowledge Base, aminin na hindi mo alam at mag-alok ng tulong sa iba pang tanong
-
-IMPORTANTE:
-- Sumagot ng FILIPINO kahit English ang keywords
-- Magbigay ng complete details (oras, presyo, lokasyon)
-- Maging friendly at approachable
-- Okay lang mag-elaborate base sa available information`
-        : `You are Juan, a friendly tour guide chatbot for Intramuros, Manila. Answer in ENGLISH.
+- Eksperto ka sa kasaysayan, lugar, oras, presyo, at landmarks sa Intramuros. Wala kang gagawing iba kung hindi sumagot sa mga katanungan na patungkol sa intramuros.
+- Umaasa ka sa Knowledge Base para magbigay ng accurate at updated na impormasyon.
+- Gumagamit ka ng simple, natural, at conversational na Filipino. Iwasan ang malalalim na salita.
+- Kapag kinausap ka ng English, magbigay ng sagot sa English.
+- Kapag kinsausap ka ng Tagalog, magbigay ng sagot na Tagalog
+Paano Ka Sasagot (RAG Framework):
+1. BASAHIN at unawain ang Knowledge Base sa ibaba.
+2. HANAPIN ang impormasyon na may kaugnayan sa tanong.
+3. SAGUTIN ang tanong base sa impormasyon na nahanap.
+4. Kung walang direct answer, gumamit ng related details para makatulong.
+5. Kung talagang walang kaugnayan sa Intramuros o Knowledge Base, aminin na hindi mo alam.
+6. Huwag mag-suggest ng hindi relevant na nearby places, topic, idea, activities sa intramuros
+7. Huwag mag-suggest or mag-offer ng tulong na hindi mo naman masasagot kasi wala sa knowledge base mo.
+IMPORTANTENG RULES:
+- Laging ayusin ang format ng sagot; dapat malinaw at madaling basahin.
+- Sumagot ng Filipino kahit English ang keywords.
+- Magbigay ng kumpletong detalye kung ito ay hiningi sa tanong (oras, presyo, lokasyon).
+- Maging friendly at approachable.
+- Okay lang mag-elaborate basta relevant.
+- Gumamit ng bullet (•) kung mag eenumerate.
+- HUWAG gumamit ng em dash.
+- Magpakilala ka lamang kung ito hiningi sa tanong.
+- HUWAG i-mention ang word na "Knowledge Base"
+- Huwag masyadong mahaba; sapat na ang 1–2 maikling paragraphs.
+`
+        : `You are Juan, a friendly and helpful tour guide chatbot for Intramuros, Manila. Answer ONLY in ENGLISH.
 
 ABOUT YOU:
-- You are a friendly and helpful tour guide
-- You are an expert on Intramuros
-- You use a Knowledge Base to provide accurate information
-
-HOW TO ANSWER (RAG Framework):
-1. READ the Knowledge Base provided below
-2. FIND relevant information for the question
-3. ANSWER the question using the information you found
-4. If there's related information in the Knowledge Base, use it to answer
-5. If there's no direct answer, use related information to provide a helpful response
-6. Be natural and conversational - don't be overly strict
-7. If the question is truly unrelated to Intramuros or the Knowledge Base, admit you don't know and offer to help with other questions
-
-IMPORTANT:
-- Provide complete details (hours, prices, locations)
-- Be friendly and approachable
-- It's okay to elaborate based on available information`;
+- You are a Tour Guide ONLY no matter what the user asks. You do not have the ability to generate images, codes, audio, video, etc. You can only answer questions related to Intramuros.
+- You are an expert in Intramuros history, locations, hours, prices, and landmarks, you are not going to do anything rather than answering the questions related to Intramuros.
+- You rely on the Knowledge Base to provide accurate and reliable information.
+- You speak in simple, natural, and conversational English.
+- When the message is in English, answer in English.
+- When the message is in Tagalog, answer in Tagalog.
+How You Should Answer (RAG Framework):
+1. READ and understand the Knowledge Base provided below.
+2. FIND the information relevant to the question.
+3. ANSWER using the information you found.
+4. If there is no direct answer, use related details to help the user.
+5. If the question is not related to Intramuros or the Knowledge Base, admit that you don't know
+6. Don't suggest nearby places, topics, ideas, or activies that are not related to Intramuros.
+7. Don't suggest or offer any help that you cannot answer or do, because it is not in your knowledge base.
+IMPORTANT RULES:
+- Keep your answers well-formatted, clear, and easy to understand.
+- Provide complete details when specifically requested (hours, prices, locations).
+- Use friendly, basic English.
+- You may elaborate as long as it stays relevant.
+- Dont mention the word "Knowledge Base"
+- Introduce yourself only if it was specifically asked. 
+- Use bullets (•) if you will enumerate.
+- DO NOT use em dash.
+- Keep answers short; 1–2 brief paragraphs only.`;
 
     // Filipino to English keyword mapping for better matching
     const filipinoToEnglish = {
@@ -634,11 +692,11 @@ IMPORTANT:
       // Call backend OpenAI API with GPT-5 mini model (non-streaming)
       const API_BASE_URL =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-      
+
       const response = await fetch(`${API_BASE_URL}/openai/chat`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           messages: [
@@ -651,34 +709,67 @@ IMPORTANT:
       });
 
       if (!response.ok) {
-        throw new Error('Request failed');
+        throw new Error("OpenAI request failed");
       }
 
       const data = await response.json();
-      
+
       // Update the last message with the response
       setMessages((prev) =>
         prev.map((msg, i) =>
-          i === prev.length - 1 
+          i === prev.length - 1
             ? { role: "assistant", content: data.message }
             : msg
         )
       );
     } catch (err) {
       console.error("OpenAI API error:", err);
-      setMessages((prev) =>
-        prev.map((msg, i) =>
-          i === prev.length - 1
-            ? {
-                role: "assistant",
-                content:
-                  lang === "filipino"
-                    ? "Pasensya na, nagkaproblema si Juan. Pakisubukang muli."
-                    : "Sorry, Juan ran into a problem. Please try again.",
-              }
-            : msg
-        )
-      );
+
+      // Fallback: try Gemini via backend proxy
+      try {
+        const API_BASE_URL =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+        const geminiRes = await fetch(`${API_BASE_URL}/gemini/chat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            system: fullPrompt,
+            user: userMessage,
+          }),
+        });
+
+        if (!geminiRes.ok) {
+          throw new Error("Gemini request failed");
+        }
+
+        const geminiData = await geminiRes.json();
+
+        setMessages((prev) =>
+          prev.map((msg, i) =>
+            i === prev.length - 1
+              ? { role: "assistant", content: geminiData.message }
+              : msg
+          )
+        );
+      } catch (fallbackErr) {
+        console.error("Gemini fallback error:", fallbackErr);
+        setMessages((prev) =>
+          prev.map((msg, i) =>
+            i === prev.length - 1
+              ? {
+                  role: "assistant",
+                  content:
+                    lang === "filipino"
+                      ? "Pasensya na, nagkaproblema si Juan. Pakisubukang muli."
+                      : "Sorry, Juan ran into a problem. Please try again.",
+                }
+              : msg
+          )
+        );
+      }
     } finally {
       setIsBotTyping(false);
     }
@@ -718,66 +809,94 @@ IMPORTANT:
       `}</style>
       <div className="flex-1 overflow-y-auto mb-4 p-4 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm space-y-4">
         {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex ${
+              msg.role === "user" ? "justify-end" : "justify-start"
+            }`}
+          >
             <div
-              key={i}
-              className={`flex ${
-                msg.role === "user" ? "justify-end" : "justify-start"
+              className={`flex items-end gap-2 max-w-[85%] ${
+                msg.role === "user" ? "flex-row-reverse" : "flex-row"
               }`}
             >
-              <div className={`flex items-end gap-2 max-w-[85%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                {/* Avatar for assistant messages */}
-                {msg.role === "assistant" && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#f04e37] to-[#e03d2d] flex items-center justify-center shadow-md mb-1">
-                    <span className="text-white text-sm font-bold">J</span>
-                  </div>
-                )}
-                
-                <div className={`relative ${msg.role === "user" ? "" : "flex-1"}`}>
-                  <div
-                    className={`px-4 py-2 rounded-2xl shadow-md transition-all duration-300 animate-fadeIn ${
-                      msg.role === "user"
-                        ? "bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none"
-                        : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none pr-10"
-                    }`}
-                    style={{ whiteSpace: "pre-wrap" }}
-                  >
-                    {msg.content === "__loading__" ? (
-                      <div className="flex items-center gap-1">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse" style={{ animationDelay: '0ms', animationDuration: '1.4s' }} />
-                          <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse" style={{ animationDelay: '200ms', animationDuration: '1.4s' }} />
-                          <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse" style={{ animationDelay: '400ms', animationDuration: '1.4s' }} />
-                        </div>
-                        <span className="text-xs text-gray-500 ml-1">Juan is typing</span>
+              {/* Avatar for assistant messages */}
+              {msg.role === "assistant" && (
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#f04e37] to-[#e03d2d] flex items-center justify-center shadow-md mb-1">
+                  <span className="text-white text-sm font-bold">J</span>
+                </div>
+              )}
+
+              <div
+                className={`relative ${msg.role === "user" ? "" : "flex-1"}`}
+              >
+                <div
+                  className={`px-4 py-2 rounded-2xl shadow-md transition-all duration-300 animate-fadeIn ${
+                    msg.role === "user"
+                      ? "bg-gradient-to-r from-[#f04e37] to-[#f04e37] text-white rounded-br-none"
+                      : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none pr-10"
+                  }`}
+                  style={{ whiteSpace: "pre-wrap" }}
+                >
+                  {msg.content === "__loading__" ? (
+                    <div className="flex items-center gap-1">
+                      <div className="flex gap-1">
+                        <div
+                          className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse"
+                          style={{
+                            animationDelay: "0ms",
+                            animationDuration: "1.4s",
+                          }}
+                        />
+                        <div
+                          className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse"
+                          style={{
+                            animationDelay: "200ms",
+                            animationDuration: "1.4s",
+                          }}
+                        />
+                        <div
+                          className="w-2 h-2 bg-[#f04e37] rounded-full animate-pulse"
+                          style={{
+                            animationDelay: "400ms",
+                            animationDuration: "1.4s",
+                          }}
+                        />
                       </div>
-                    ) : (
-                      msg.content
-                    )}
-                  </div>
-                  
-                  {/* Speaker button inside assistant bubble */}
-                  {msg.role === "assistant" && msg.content !== "__loading__" && (
-                    <button
-                      onClick={() => speakMessage(msg.content, i)}
-                      className={`absolute top-2 right-2 p-1 rounded-full transition-all ${
-                        speakingMessageIndex === i
-                          ? "bg-[#f04e37]/10 text-[#f04e37]"
-                          : "text-gray-400 hover:text-[#f04e37] hover:bg-gray-100/50"
-                      }`}
-                      title="Listen to message"
-                    >
-                      <FontAwesomeIcon icon={faVolumeUp} className="w-3 h-3" />
-                    </button>
+                      <span className="text-xs text-gray-500 ml-1">
+                        Juan is typing
+                      </span>
+                    </div>
+                  ) : (
+                    msg.content
                   )}
                 </div>
+
+                {/* Speaker button inside assistant bubble */}
+                {msg.role === "assistant" && msg.content !== "__loading__" && (
+                  <button
+                    onClick={() => speakMessage(msg.content, i)}
+                    className={`absolute top-2 right-2 p-1 rounded-full transition-all ${
+                      speakingMessageIndex === i
+                        ? "bg-[#f04e37]/10 text-[#f04e37]"
+                        : "text-gray-400 hover:text-[#f04e37] hover:bg-gray-100/50"
+                    }`}
+                    title="Listen to message"
+                  >
+                    <FontAwesomeIcon icon={faVolumeUp} className="w-3 h-3" />
+                  </button>
+                )}
               </div>
             </div>
-          ))}
-        
+          </div>
+        ))}
+
         {/* Vertical Quick Questions - Show only if no user messages yet */}
         {!hasUserMessaged && messages.length === 0 && (
           <div className="space-y-3 animate-fadeIn">
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide px-2">Quick Questions:</p>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide px-2">
+              Quick Questions:
+            </p>
             <div className="grid grid-cols-1 gap-2">
               {quickQuestions.map((question, idx) => (
                 <button
@@ -785,17 +904,22 @@ IMPORTANT:
                   onClick={() => handleQuickQuestion(question)}
                   className="text-left px-4 py-3 bg-white border-2 border-gray-200 rounded-xl text-sm text-gray-700 hover:border-[#f04e37] hover:bg-[#fff5f3] transition-all duration-200 shadow-sm hover:shadow-md group"
                 >
-                  <span className="group-hover:text-[#f04e37] transition-colors">{question}</span>
+                  <span className="group-hover:text-[#f04e37] transition-colors">
+                    {question}
+                  </span>
                 </button>
               ))}
             </div>
           </div>
         )}
-        
+
         {/* Horizontal Scrollable Quick Questions - Show only after user has messaged */}
         {hasUserMessaged && (
           <div className="mt-4 overflow-hidden">
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div
+              className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
               {quickQuestions.map((question, idx) => (
                 <button
                   key={idx}
@@ -808,10 +932,10 @@ IMPORTANT:
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
-      
+
       <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md">
         <button
           onClick={toggleListening}
@@ -840,7 +964,7 @@ IMPORTANT:
           }}
           disabled={isBotTyping || isListening}
           className="flex-grow bg-transparent outline-none px-2 py-1 text-base"
-          style={{ fontSize: '16px' }}
+          style={{ fontSize: "16px" }}
           placeholder={
             isBotTyping
               ? "Juan is typing..."

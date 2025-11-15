@@ -74,7 +74,7 @@ export default function Language() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[calc(100dvh-4rem)] bg-white"
+      className="flex flex-col min-h-full bg-white overflow-hidden"
     >
       {/* Main content */}
       <div className="flex-1 px-6 py-8 overflow-y-auto">

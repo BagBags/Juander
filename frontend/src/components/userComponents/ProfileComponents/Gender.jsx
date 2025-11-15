@@ -79,7 +79,7 @@ export default function Gender() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden"
     >
       <div className="w-full max-w-md mt-6 flex flex-col gap-6">
         <div className="text-center">

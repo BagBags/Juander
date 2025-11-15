@@ -89,7 +89,7 @@ export default function Birthday() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden"
     >
       <div className="w-full max-w-md mt-6 flex flex-col gap-6">
         <h2 className="text-lg font-semibold text-center">
@@ -139,7 +139,7 @@ export default function Birthday() {
         </button>
       </div>
 
-      <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
+      <p className="mt-auto pt-8 text-xs text-center text-[#cf3325] opacity-70">
         ©2025 Intramuros Administration
       </p>
     </motion.div>

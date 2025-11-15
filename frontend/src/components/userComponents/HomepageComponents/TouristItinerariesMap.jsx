@@ -25,6 +25,8 @@ import GpsConsentModal from "../../shared/GpsConsentModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import NotificationModal from "../../shared/NotificationModal";
+import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
+import ConfirmModal from "../../shared/ConfirmModal";
 
 export default function TouristItineraryMap() {
   const { itineraryId } = useParams();
@@ -52,6 +54,7 @@ export default function TouristItineraryMap() {
   const [savedProgress, setSavedProgress] = useState(null);
   const [itineraryName, setItineraryName] = useState("");
   const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
   const [showTransportPanel, setShowTransportPanel] = useState(false);
 
@@ -83,6 +86,8 @@ export default function TouristItineraryMap() {
   const [showReviews, setShowReviews] = useState(false);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [isSimulatingHome, setIsSimulatingHome] = useState(false);
+  const [showFortDrivingModal, setShowFortDrivingModal] = useState(false);
+  const [fortModalConfirm, setFortModalConfirm] = useState(null);
 
   // Get fresh config for each API call to avoid stale token
   const getConfig = useCallback(() => {
@@ -226,20 +231,55 @@ export default function TouristItineraryMap() {
   // Go to previous site
   const handlePrevSite = useCallback(() => {
     const prevIndex = currentPinIndex - 1;
+    const prevPin = prevIndex >= 0 ? optimizedPins[prevIndex] : null;
+
+    // Guard: If prev site is Fort Santiago and transport is car, show modal and block
+    if (prevPin && prevPin.feeType === "fort_santiago" && transportMode === "driving") {
+      setFortModalConfirm(() => () => {
+        setTransportMode('walking');
+        setShowFortDrivingModal(false);
+        setTimeout(() => {
+          // Retry prev navigation under Foot mode
+          const pi = currentPinIndex - 1;
+          if (pi >= 0) {
+            setCurrentPinIndex(pi);
+            const pp = optimizedPins[pi];
+            setActivePin(pp);
+            setSelectedPin(pp);
+            if (userLocation) {
+              buildRoute(userLocation, pp);
+            }
+            saveProgress(pi, visitedSites, skippedSites, userLocation, optimizedPins);
+          }
+        }, 0);
+      });
+      setShowFortDrivingModal(true);
+      return;
+    }
+
     if (prevIndex >= 0) {
       setCurrentPinIndex(prevIndex);
-      const prevPin = optimizedPins[prevIndex];
-      setActivePin(prevPin);
-      setSelectedPin(prevPin);
+      const prevPin2 = optimizedPins[prevIndex];
+      setActivePin(prevPin2);
+      setSelectedPin(prevPin2);
       if (userLocation) {
-        buildRoute(userLocation, prevPin);
+        buildRoute(userLocation, prevPin2);
       }
       saveProgress(prevIndex, visitedSites, skippedSites, userLocation, optimizedPins);
     }
-  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, skippedSites]);
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, skippedSites, transportMode]);
 
   // Go to next site (marks current as visited)
   const handleNextSite = useCallback(async () => {
+    // Compute next site and guard Fort Santiago when in car mode
+    const nextIndex = currentPinIndex + 1;
+    const nextPin = nextIndex < optimizedPins.length ? optimizedPins[nextIndex] : null;
+
+    if (nextPin && nextPin.feeType === "fort_santiago" && transportMode === "driving") {
+      setShowFortDrivingModal(true);
+      return;
+    }
+
     // Mark current site as visited before moving to next
     const currentPin = optimizedPins[currentPinIndex];
     const updatedVisited = new Set(visitedSites);
@@ -251,18 +291,29 @@ export default function TouristItineraryMap() {
       await markSiteAsVisited(currentPin);
     }
 
-    const nextIndex = currentPinIndex + 1;
     if (nextIndex < optimizedPins.length) {
       setCurrentPinIndex(nextIndex);
-      const nextPin = optimizedPins[nextIndex];
-      setActivePin(nextPin);
-      setSelectedPin(nextPin);
+      const np = optimizedPins[nextIndex];
+      setActivePin(np);
+      setSelectedPin(np);
       if (userLocation) {
-        buildRoute(userLocation, nextPin);
+        buildRoute(userLocation, np);
       }
       saveProgress(nextIndex, updatedVisited, skippedSites, userLocation, optimizedPins);
+    } else {
+      // Last site: mark as visited and end tour
+      // Persist final progress including the just-visited site
+      try {
+        saveProgress(currentPinIndex, updatedVisited, skippedSites, userLocation, optimizedPins);
+      } catch (e) {
+        console.error('Failed to save final progress on end tour:', e);
+      }
+      setShowCompletionModal(true);
+      setSelectedPin(null);
+      setRoute(null);
+      setSteps([]);
     }
-  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, skippedSites]);
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, skippedSites, transportMode]);
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -531,20 +582,15 @@ export default function TouristItineraryMap() {
           setOptimizedPins(restoredPins);
           console.log('✅ Restored optimized pin order from saved progress');
           
-          // Check if all sites are completed
+          // Check if all sites are completed, and if we are actually at the last pin
           const allCompleted = visitedSites && visitedSites.length === restoredPins.length;
-          
-          if (allCompleted) {
-            // All sites visited - show completion notification
-            console.log('🎉 All sites completed!');
-            setNotification({
-              isOpen: true,
-              type: 'success',
-              title: 'Congratulations!',
-              message: 'You have completed all sites in this itinerary! Click Restart to tour again.'
-            });
-            
-            // Stay at last site, don't auto-reset
+          const isAtLastPin = typeof currentPinIndex === 'number' && currentPinIndex >= restoredPins.length - 1;
+
+          if (allCompleted && isAtLastPin) {
+            // All sites visited AND currently at last pin - show completion modal
+            console.log('🎉 All sites completed (at last pin)!');
+            setShowCompletionModal(true);
+
             const lastIndex = restoredPins.length - 1;
             setCurrentPinIndex(lastIndex);
             setSelectedPin(restoredPins[lastIndex]);
@@ -724,13 +770,13 @@ export default function TouristItineraryMap() {
     console.log('✅ Resume confirmed - state already restored');
   };
 
-  // Handle restart - re-optimize from current location, go to pin 1, keep visited flags
+  // Handle restart - re-optimize from current location, go to pin 1, keep visited/skipped
   const handleRestartProgress = async () => {
     if (userLocation && pins.length > 0) {
       // Re-run optimization from user's CURRENT location (not original)
       const optimized = optimizeRoute(userLocation, pins, visitedSites);
       setOptimizedPins(optimized);
-      
+
       // Go to first site in NEW optimized order
       setCurrentPinIndex(0);
       if (optimized.length > 0) {
@@ -740,10 +786,9 @@ export default function TouristItineraryMap() {
         if (userLocation) {
           buildRoute(userLocation, firstPin);
         }
-        // Save NEW optimized order with current visited/skipped flags (don't reset flags)
-        // Pass optimized array directly to ensure new order is saved
+        // Save NEW optimized order while keeping existing visited/skipped for persistence
         await saveProgress(0, visitedSites, skippedSites, userLocation, optimized);
-        console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags');
+        console.log('✅ Restart: Re-optimized from current location, kept visited/skipped, set to pin #1');
       }
     }
     
@@ -1367,6 +1412,7 @@ export default function TouristItineraryMap() {
         onResume={handleResumeProgress}
         onRestart={handleRestartProgress}
         onClose={() => setShowResumeModal(false)}
+        showRestart={currentPinIndex > 0}
         currentSiteName={
           savedProgress && 
           optimizedPins.length > 0 && 
@@ -1374,6 +1420,15 @@ export default function TouristItineraryMap() {
             ? optimizedPins[savedProgress.currentPinIndex]?.siteName || optimizedPins[savedProgress.currentPinIndex]?.title
             : null
         }
+      />
+
+      {/* Completion Modal */}
+      <ItineraryCompletionModal
+        isOpen={showCompletionModal}
+        onRestart={handleRestartProgress}
+        onClose={() => setShowCompletionModal(false)}
+        itineraryName={itineraryName}
+        totalSites={optimizedPins.length || pins.length}
       />
 
       <GpsConsentModal
@@ -1579,7 +1634,8 @@ export default function TouristItineraryMap() {
             onSkipSite={handleSkipSite}
             onNextSite={handleNextSite}
             hasPrevSite={currentPinIndex > 0}
-            hasNextSite={currentPinIndex < optimizedPins.length - 1}
+            hasNextSite={true}
+            isLastSite={currentPinIndex >= optimizedPins.length - 1}
         />
 
         {/* Control Buttons */}
@@ -1645,6 +1701,18 @@ export default function TouristItineraryMap() {
           type={notification.type}
           title={notification.title}
           message={notification.message}
+        />
+
+        {/* Fort Santiago Driving Restriction Modal */}
+        <ConfirmModal
+          isOpen={showFortDrivingModal}
+          onClose={() => setShowFortDrivingModal(false)}
+          onConfirm={fortModalConfirm}
+          title="Fort Santiago – Car Restriction"
+          message="Cars cannot enter Fort Santiago. Please find parking and continue using Foot mode to proceed."
+          confirmText="Continue Foot Mode"
+          cancelText="Cancel"
+          type="warning"
         />
       </div>
     </div>

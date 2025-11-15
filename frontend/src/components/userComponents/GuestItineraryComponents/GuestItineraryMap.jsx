@@ -25,6 +25,9 @@ import SiteModalFullScreen from "../HomepageComponents/SiteModalFullScreen";
 import GpsConsentModal from "../../shared/GpsConsentModal";
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import NotificationModal from "../../shared/NotificationModal";
+import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
+import ConfirmModal from "../../shared/ConfirmModal";
+import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
 
 export default function GuestItineraryMap() {
   const { itineraryId } = useParams();
@@ -35,6 +38,8 @@ export default function GuestItineraryMap() {
   const [optimizedPins, setOptimizedPins] = useState([]); // Optimized route order
   const [hasLoadedProgress, setHasLoadedProgress] = useState(false); // Track if we've loaded saved progress
   const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [itineraryName, setItineraryName] = useState(location.state?.itinerary?.name || "");
   const [viewState, setViewState] = useState({
     latitude: 14.5896,
     longitude: 120.9747,
@@ -82,6 +87,10 @@ export default function GuestItineraryMap() {
   const [isSimulatingHome, setIsSimulatingHome] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [fromCache, setFromCache] = useState(false);
+  const [showFortDrivingModal, setShowFortDrivingModal] = useState(false);
+  const [fortModalConfirm, setFortModalConfirm] = useState(null);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [savedProgress, setSavedProgress] = useState(null);
 
   // Use localStorage for guest users (for persistence across tabs)
   const token = localStorage.getItem("token");
@@ -329,6 +338,16 @@ export default function GuestItineraryMap() {
                 }
               }
             }
+
+            // Save progress data for modal actions
+            setSavedProgress({
+              currentPinIndex: currentIndex,
+              visitedSites: Array.from(visitedSet),
+              optimizedOrder,
+            });
+
+            // Show Resume/Restart modal
+            setTimeout(() => setShowResumeModal(true), 100);
             
             setHasLoadedProgress(true);
             return;
@@ -847,8 +866,8 @@ export default function GuestItineraryMap() {
   const handleRestartItinerary = () => {
     if (!userLocation || pins.length === 0) return;
     
-    // Re-run optimization from current location - optimize ALL sites
-    const optimized = optimizeRoute(userLocation, pins, new Set());
+    // Re-run optimization from current location, preserving visited sites (consistent with tourist)
+    const optimized = optimizeRoute(userLocation, pins, visitedSites);
     setOptimizedPins(optimized);
     
     // Save new optimized order
@@ -870,8 +889,19 @@ export default function GuestItineraryMap() {
     // Reset current index to 0
     const indexKey = `guest_current_index_${itineraryId}`;
     localStorage.setItem(indexKey, '0');
+
+    // Note: Guest mode persists to localStorage only; server persistence is for Tourist flows
     
     console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags (Guest)');
+    setShowResumeModal(false);
+  };
+
+  // Handle resume - state already restored, just close modal and rebuild route
+  const handleResumeProgress = () => {
+    if (userLocation && activePin) {
+      buildRoute(userLocation, activePin);
+    }
+    setShowResumeModal(false);
   };
 
   /** Fetch reviews for current site */
@@ -965,23 +995,61 @@ export default function GuestItineraryMap() {
   // Go to previous site
   const handlePrevSite = useCallback(() => {
     const prevIndex = currentPinIndex - 1;
+    const prevPin = prevIndex >= 0 ? optimizedPins[prevIndex] : null;
+
+    // Guard: If prev site is Fort Santiago and transport is car, show modal and block
+    if (prevPin && prevPin.feeType === "fort_santiago" && transportMode === "driving") {
+      setFortModalConfirm(() => () => {
+        setTransportMode('walking');
+        setShowFortDrivingModal(false);
+        setTimeout(() => {
+          // Retry prev navigation under Foot mode
+          const pi = currentPinIndex - 1;
+          if (pi >= 0) {
+            setCurrentPinIndex(pi);
+            const pp = optimizedPins[pi];
+            setActivePin(pp);
+            setSelectedPin(pp);
+            if (userLocation) {
+              buildRoute(userLocation, pp);
+            }
+            
+            // Save current index to localStorage
+            const indexKey = `guest_current_index_${itineraryId}`;
+            localStorage.setItem(indexKey, pi.toString());
+          }
+        }, 0);
+      });
+      setShowFortDrivingModal(true);
+      return;
+    }
+
     if (prevIndex >= 0) {
       setCurrentPinIndex(prevIndex);
-      const prevPin = optimizedPins[prevIndex];
-      setActivePin(prevPin);
-      setSelectedPin(prevPin);
+      const prevPin2 = optimizedPins[prevIndex];
+      setActivePin(prevPin2);
+      setSelectedPin(prevPin2);
       if (userLocation) {
-        buildRoute(userLocation, prevPin);
+        buildRoute(userLocation, prevPin2);
       }
       
       // Save current index to localStorage
       const indexKey = `guest_current_index_${itineraryId}`;
       localStorage.setItem(indexKey, prevIndex.toString());
     }
-  }, [currentPinIndex, optimizedPins, userLocation, itineraryId]);
+  }, [currentPinIndex, optimizedPins, userLocation, itineraryId, transportMode]);
 
   // Go to next site (marks current as visited)
   const handleNextSite = useCallback(async () => {
+    // Compute next site and guard Fort Santiago when in car mode
+    const nextIndex = currentPinIndex + 1;
+    const nextPin = nextIndex < optimizedPins.length ? optimizedPins[nextIndex] : null;
+
+    if (nextPin && nextPin.feeType === "fort_santiago" && transportMode === "driving") {
+      setShowFortDrivingModal(true);
+      return;
+    }
+
     // Mark current site as visited before moving to next
     const currentPin = optimizedPins[currentPinIndex];
     const updatedVisited = new Set(visitedSites);
@@ -997,21 +1065,26 @@ export default function GuestItineraryMap() {
       await markSiteAsVisited(currentPin);
     }
 
-    const nextIndex = currentPinIndex + 1;
     if (nextIndex < optimizedPins.length) {
       setCurrentPinIndex(nextIndex);
-      const nextPin = optimizedPins[nextIndex];
-      setActivePin(nextPin);
-      setSelectedPin(nextPin);
+      const np = optimizedPins[nextIndex];
+      setActivePin(np);
+      setSelectedPin(np);
       if (userLocation) {
-        buildRoute(userLocation, nextPin);
+        buildRoute(userLocation, np);
       }
       
       // Save current index to localStorage
       const indexKey = `guest_current_index_${itineraryId}`;
       localStorage.setItem(indexKey, nextIndex.toString());
+    } else {
+      // Last site: mark visited and end tour
+      setShowCompletionModal(true);
+      setSelectedPin(null);
+      setRoute(null);
+      setSteps([]);
     }
-  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, itineraryId]);
+  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, itineraryId, transportMode]);
 
   /** Go to next stop - follows optimized route order (no re-optimization) */
   const goToNextStop = (justVisitedSiteId = null) => {
@@ -1039,12 +1112,7 @@ export default function GuestItineraryMap() {
     if (!nextPin) {
       // No more sites left
       console.log('🎉 All sites visited!');
-      setNotification({
-        isOpen: true,
-        type: 'success',
-        title: 'Congratulations!',
-        message: 'All sites visited! Great job!'
-      });
+      setShowCompletionModal(true);
       setSelectedPin(null);
       setRoute(null);
       setSteps([]);
@@ -1073,6 +1141,20 @@ export default function GuestItineraryMap() {
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
+      {/* Resume/Restart Modal */}
+      <ResumeItineraryModal
+        isOpen={showResumeModal}
+        onResume={handleResumeProgress}
+        onRestart={handleRestartItinerary}
+        onClose={() => setShowResumeModal(false)}
+        currentSiteName={
+          savedProgress && 
+          optimizedPins.length > 0 && 
+          savedProgress.currentPinIndex < optimizedPins.length
+            ? optimizedPins[savedProgress.currentPinIndex]?.siteName || optimizedPins[savedProgress.currentPinIndex]?.title
+            : null
+        }
+      />
       <GpsConsentModal
         isOpen={showGpsModal}
         errorMessage={gpsError}
@@ -1319,7 +1401,8 @@ export default function GuestItineraryMap() {
         onSkipSite={handleSkipSite}
         onNextSite={handleNextSite}
         hasPrevSite={currentPinIndex > 0}
-        hasNextSite={currentPinIndex < optimizedPins.length - 1}
+        hasNextSite={true}
+        isLastSite={currentPinIndex >= optimizedPins.length - 1}
           />
         )}
 
@@ -1385,6 +1468,27 @@ export default function GuestItineraryMap() {
           title={notification.title}
           message={notification.message}
         />
+
+      {/* Fort Santiago Driving Restriction Modal */}
+      <ConfirmModal
+        isOpen={showFortDrivingModal}
+        onClose={() => setShowFortDrivingModal(false)}
+        onConfirm={fortModalConfirm}
+        title="Fort Santiago – Car Restriction"
+        message="Cars cannot enter Fort Santiago. Please find parking and continue using Foot mode to proceed."
+        confirmText="Continue Foot Mode"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* Completion Modal */}
+      <ItineraryCompletionModal
+        isOpen={showCompletionModal}
+        onRestart={handleRestartItinerary}
+        onClose={() => setShowCompletionModal(false)}
+        itineraryName={itineraryName}
+        totalSites={optimizedPins.length || pins.length}
+      />
         
         {/* Hidden restart button for testing - can be removed or styled properly */}
         {/* <button 

@@ -18,7 +18,15 @@ export default function ProfileLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col text-sm relative">
+    <div
+      className="bg-white flex flex-col text-sm relative"
+      style={{
+        // Lock layout to viewport to prevent body scroll bounce
+        height: '100dvh',
+        overflow: 'hidden',
+        overscrollBehavior: 'none'
+      }}
+    >
       {/* BackHeader with safe-area support */}
       <div 
         className="sticky top-0 z-20 bg-white border-b border-gray-200"
@@ -32,8 +40,11 @@ export default function ProfileLayout() {
         <BackHeader title={getTitle()} />
       </div>
 
-      {/* Centered page content */}
-      <div className="flex-1 flex justify-center px-4 md:px-0" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* Centered page content, scroll only if needed */}
+      <div
+        className="flex-1 flex justify-center px-4 md:px-0 overflow-y-auto"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)", WebkitOverflowScrolling: 'touch' }}
+      >
         <div className="w-full max-w-md mt-4">
           <Outlet />
         </div>

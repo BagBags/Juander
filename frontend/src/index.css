@@ -59,6 +59,30 @@
   .font-poppins {
     font-family: "Poppins", sans-serif;
   }
+  
+  /* Icon-only select: hide trigger text, keep dropdown options readable */
+  .icon-only-select {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important; /* Ensure Chrome/Safari hide value */
+    text-shadow: none !important;
+    text-indent: -9999px; /* Move visible value off-canvas */
+    font-size: 0 !important; /* Robustly hide any glyphs in trigger */
+    line-height: 1 !important;
+  }
+  .icon-only-select:focus {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    text-shadow: none !important;
+    text-indent: -9999px;
+    font-size: 0 !important;
+    line-height: 1 !important;
+  }
+  .icon-only-select option,
+  .icon-only-select optgroup {
+    color: #111827 !important; /* Tailwind gray-900 */
+    -webkit-text-fill-color: #111827 !important;
+    font-size: 14px !important;
+  }
 }
 
 /* Print styles */

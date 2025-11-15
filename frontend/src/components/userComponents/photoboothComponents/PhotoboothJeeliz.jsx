@@ -622,43 +622,27 @@ export default function PhotoboothJeeliz() {
 
         {/* ✅ Preview Modal */}
         {showPreview && capturedImage && (
-          <div className="absolute inset-0 bg-black z-50 flex flex-col">
-            {/* Header with close button */}
-            <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
-              <h2 className="text-white text-lg font-semibold">Preview</h2>
-              <button
-                onClick={retakePhoto}
-                className="text-white hover:text-gray-300 transition-colors"
-              >
+          <div className="preview-modal">
+            <div className="preview-header">
+              <h2 className="preview-title">Preview</h2>
+              <button onClick={retakePhoto} className="preview-close" aria-label="Close preview">
                 <X size={28} />
               </button>
             </div>
 
-            {/* Preview Image - Full height */}
-            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-              <img
-                src={capturedImage}
-                alt="Captured"
-                className="max-w-full max-h-full object-contain rounded-lg"
-              />
+            <div className="preview-image-wrapper">
+              <img src={capturedImage} alt="Captured" className="preview-image" />
             </div>
 
-            {/* Action Buttons - Fixed at bottom */}
-            <div className="p-6 bg-gradient-to-t from-black/90 to-transparent">
-              <div className="flex gap-3 max-w-md mx-auto">
-                <button
-                  onClick={retakePhoto}
-                  className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-white py-4 rounded-xl hover:bg-gray-700 transition-all active:scale-95"
-                >
+            <div className="preview-actions">
+              <div className="action-bar">
+                <button onClick={retakePhoto} className="btn btn-secondary">
                   <RotateCcw size={20} />
-                  <span className="font-medium">Retake</span>
+                  <span>Retake</span>
                 </button>
-                <button
-                  onClick={saveImage}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-4 rounded-xl hover:bg-red-600 transition-all active:scale-95 shadow-lg"
-                >
+                <button onClick={saveImage} className="btn btn-primary">
                   <Download size={20} />
-                  <span className="font-medium">Save</span>
+                  <span>Save</span>
                 </button>
               </div>
             </div>

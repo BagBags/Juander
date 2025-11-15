@@ -205,6 +205,25 @@ function ItineraryCard({ itinerary, navigate }) {
   
   const imageSrc = getImageUrl(itinerary.imageUrl);
 
+  // Determine completion for Guest mode based on localStorage progress
+  const isCompleted = (() => {
+    try {
+      const visitedKey = `guest_visited_${itinerary._id}`;
+      const stored = localStorage.getItem(visitedKey);
+      if (!stored) return false;
+      const visitedIds = JSON.parse(stored) || [];
+      const activeSiteIds = (itinerary.sites || [])
+        .filter((s) => s?.status !== "inactive")
+        .map((s) => s?._id)
+        .filter(Boolean);
+      if (activeSiteIds.length === 0) return false;
+      // Completed when all active sites are included in visitedIds
+      return activeSiteIds.every((id) => visitedIds.includes(id));
+    } catch (_) {
+      return false;
+    }
+  })();
+
   return (
     <div
       className="bg-white rounded-3xl shadow-lg overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
@@ -243,8 +262,21 @@ function ItineraryCard({ itinerary, navigate }) {
       </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
-        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0">
+        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0 flex items-center gap-2">
           {itinerary.name}
+          {isCompleted && (
+            // Filled check-circle icon
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5 text-green-600 drop-shadow-sm"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M12,2A10,10 0,1,0 22,12A10,10 0,0,0 12,2M10,17L5,12L6.41,10.59L10,14.17L17.59,6.58L19,8L10,17Z"
+              />
+            </svg>
+          )}
         </h2>
         
         {itinerary.description && (

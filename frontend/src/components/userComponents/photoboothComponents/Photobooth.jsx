@@ -78,12 +78,13 @@ export default function Photobooth() {
                   const apiOrigin = new URL(API_BASE, window.location.href)
                     .origin;
                   const targetUrl = imageUrl; // absolute remote URL to fetch
+                  // If API is on a different origin, use absolute API_BASE; otherwise use same-origin relative path
                   imageUrl =
                     apiOrigin !== ORIGIN
-                      ? `/api/photobooth/filters/proxy?url=${encodeURIComponent(
+                      ? `${API_BASE}/photobooth/filters/proxy?url=${encodeURIComponent(
                           targetUrl
                         )}`
-                      : `${API_BASE}/photobooth/filters/proxy?url=${encodeURIComponent(
+                      : `/api/photobooth/filters/proxy?url=${encodeURIComponent(
                           targetUrl
                         )}`;
                 }
@@ -358,57 +359,17 @@ export default function Photobooth() {
     setCapturedImage(null);
   }, []);
 
-  const saveImage = useCallback(async () => {
+  const saveImage = useCallback(() => {
     if (!capturedImage) return;
-    const filename = `photobooth-${Date.now()}.png`;
-
-    const dataURLtoBlob = (dataUrl) => {
-      try {
-        const [header, data] = dataUrl.split(",");
-        const mimeMatch = header.match(/:(.*?);/);
-        const mime = mimeMatch ? mimeMatch[1] : "image/png";
-        const byteString = atob(data);
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        return new Blob([ab], { type: mime });
-      } catch {
-        return null;
-      }
-    };
-
-    try {
-      const blob = dataURLtoBlob(capturedImage);
-      if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], filename, { type: blob.type })] })) {
-        const file = new File([blob], filename, { type: blob.type });
-        await navigator.share({ files: [file], title: "Juander Photobooth", text: "Photo" });
-      } else if (blob && navigator.share) {
-        const file = new File([blob], filename, { type: blob.type });
-        await navigator.share({ files: [file], title: "Juander Photobooth" });
-      } else {
-        // Fallback to local download
-        const url = capturedImage;
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        link.click();
-      }
-    } catch (err) {
-      // Fallback if share failed
-      try {
-        const link = document.createElement("a");
-        link.href = capturedImage;
-        link.download = filename;
-        link.click();
-      } catch {}
-    }
+    const link = document.createElement("a");
+    link.href = capturedImage;
+    link.download = `photobooth-${Date.now()}.png`;
+    link.click();
     setShowPreview(false);
     setCapturedImage(null);
   }, [capturedImage]);
 
-  const capturePhoto = useCallback(() => {
+  const capturePhoto = useCallback(async () => {
     const baseCanvas = canvasRef.current; // Jeeliz canvas
     if (!baseCanvas) return;
 
@@ -431,7 +392,8 @@ export default function Photobooth() {
         img &&
         img.getAttribute &&
         img.getAttribute("data-cors-ready") === "true";
-      if (img && container && isCorsReady) {
+      // Helper to compute position and draw a given image element
+      const drawWithContainerTransform = (imageEl) => {
         const contRect = container.getBoundingClientRect();
         const camRect = document
           .querySelector(".camera-view")
@@ -468,8 +430,36 @@ export default function Photobooth() {
           ctx.save();
           ctx.translate(x + w / 2, y + h / 2);
           ctx.rotate(angle);
-          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+          ctx.drawImage(imageEl, -w / 2, -h / 2, w, h);
           ctx.restore();
+        }
+      };
+
+      if (img && container && isCorsReady) {
+        drawWithContainerTransform(img);
+      } else if (img && container) {
+        // Try to load a CORS-safe version via backend proxy and draw it
+        try {
+          const currentSrc = img.getAttribute("src") || "";
+          const origin = window.location.origin;
+          let proxySrc = currentSrc;
+          if (!currentSrc.includes("/photobooth/filters/proxy")) {
+            const rawUrl = selectedMeta?.originalImage || currentSrc;
+            const encoded = encodeURIComponent(rawUrl);
+            proxySrc = `${origin}/photobooth/filters/proxy?url=${encoded}`;
+          }
+          const tmpImg = new Image();
+          tmpImg.crossOrigin = "anonymous";
+          const loaded = await new Promise((resolve, reject) => {
+            tmpImg.onload = () => resolve(true);
+            tmpImg.onerror = () => reject(new Error("Proxy overlay load failed"));
+            tmpImg.src = proxySrc;
+          });
+          if (loaded) {
+            drawWithContainerTransform(tmpImg);
+          }
+        } catch (loadErr) {
+          console.warn("Could not load CORS-safe overlay via proxy:", loadErr);
         }
       }
 
@@ -505,6 +495,18 @@ export default function Photobooth() {
     }
   }, [detectStateRef, selectedMeta]);
 
+  // Prevent page scrolling when Photobooth is active (PWA-friendly)
+  useEffect(() => {
+    try {
+      document.body.classList.add("photobooth-active");
+    } catch (_) {}
+    return () => {
+      try {
+        document.body.classList.remove("photobooth-active");
+      } catch (_) {}
+    };
+  }, []);
+
   return (
     <div className="photobooth-container">
       <div className="phone-frame">
@@ -515,6 +517,7 @@ export default function Photobooth() {
             paddingBottom: "12px",
             paddingLeft: "16px",
             paddingRight: "16px",
+            display: showPreview ? "none" : "block",
           }}
         >
           <div className="flex items-center justify-between gap-3">
@@ -578,18 +581,25 @@ export default function Photobooth() {
                   ref={overlayImgRef}
                   src={selectedMeta.image}
                   alt="overlay"
+                  crossOrigin="anonymous"
                   data-category={selectedMeta?.category || "general"}
                   loading="eager"
                   decoding="async"
                   fetchpriority="high"
                   onLoad={(e) => {
+                    const src = e.currentTarget.getAttribute("src") || "";
+                    // Trust our backend proxy path as CORS-ready
+                    if (src.includes("/photobooth/filters/proxy")) {
+                      e.currentTarget.setAttribute("data-cors-ready", "true");
+                      return;
+                    }
+                    // Fallback: small canvas test
                     try {
                       const testCanvas = document.createElement("canvas");
                       testCanvas.width = 1;
                       testCanvas.height = 1;
                       const tctx = testCanvas.getContext("2d");
                       tctx.drawImage(e.currentTarget, 0, 0, 1, 1);
-                      // Will throw if image is not CORS-enabled
                       testCanvas.toDataURL();
                       e.currentTarget.setAttribute("data-cors-ready", "true");
                     } catch {
@@ -658,38 +668,25 @@ export default function Photobooth() {
 
         {/* Preview Modal */}
         {showPreview && capturedImage && (
-          <div className="absolute inset-0 bg-black z-50 flex flex-col">
-            <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
-              <h2 className="text-white text-lg font-semibold">Preview</h2>
-              <button
-                onClick={retakePhoto}
-                className="text-white hover:text-gray-300 transition-colors"
-              >
+          <div className="preview-modal">
+            <div className="preview-header">
+              <h2 className="preview-title">Preview</h2>
+              <button onClick={retakePhoto} className="preview-close" aria-label="Close preview">
                 <X size={28} />
               </button>
             </div>
-            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-              <img
-                src={capturedImage}
-                alt="Captured"
-                className="max-w-full max-h-full object-contain rounded-lg"
-              />
+            <div className="preview-image-wrapper">
+              <img src={capturedImage} alt="Captured" className="preview-image" />
             </div>
-            <div className="p-6 bg-gradient-to-t from-black/90 to-transparent">
-              <div className="flex gap-3 max-w-md mx-auto">
-                <button
-                  onClick={retakePhoto}
-                  className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-white py-4 rounded-xl hover:bg-gray-700 transition-all active:scale-95"
-                >
+            <div className="preview-actions">
+              <div className="action-bar">
+                <button onClick={retakePhoto} className="btn btn-secondary">
                   <RotateCcw size={20} />
-                  <span className="font-medium">Retake</span>
+                  <span>Retake</span>
                 </button>
-                <button
-                  onClick={saveImage}
-                  className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-4 rounded-xl hover:bg-red-600 transition-all active:scale-95 shadow-lg"
-                >
+                <button onClick={saveImage} className="btn btn-primary">
                   <Download size={20} />
-                  <span className="font-medium">Save to Gallery</span>
+                  <span>Save</span>
                 </button>
               </div>
             </div>

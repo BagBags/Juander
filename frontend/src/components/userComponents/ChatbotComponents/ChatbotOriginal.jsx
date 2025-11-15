@@ -3,7 +3,13 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { Filter } from "bad-words";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperPlane, faVolumeUp, faVolumeMute, faMicrophone, faStop } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPaperPlane,
+  faVolumeUp,
+  faVolumeMute,
+  faMicrophone,
+  faStop,
+} from "@fortawesome/free-solid-svg-icons";
 
 const filter = new Filter();
 filter.addWords(
@@ -64,7 +70,7 @@ export default function Chatbot() {
   // Auto-speak new bot messages
   useEffect(() => {
     if (!ttsEnabled) return;
-    
+
     const lastMessage = messages[messages.length - 1];
     if (
       lastMessage &&
@@ -108,24 +114,25 @@ export default function Chatbot() {
 
   // Initialize Speech Recognition
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US'; // Default to English, will be updated dynamically
-      
+      recognitionRef.current.lang = "en-US"; // Default to English, will be updated dynamically
+
       recognitionRef.current.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsListening(false);
       };
-      
+
       recognitionRef.current.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+        console.error("Speech recognition error:", event.error);
         setIsListening(false);
       };
-      
+
       recognitionRef.current.onend = () => {
         setIsListening(false);
       };
@@ -197,31 +204,31 @@ export default function Chatbot() {
 
   const speakMessage = (text, messageIndex) => {
     if (!text || text === "__loading__") return;
-    
+
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
-    
+
     const utterance = new SpeechSynthesisUtterance(text);
-    
+
     // Detect language and set appropriate voice
     const lang = detectLanguage(text);
     utterance.lang = lang === "filipino" ? "fil-PH" : "en-US";
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
-    
+
     utterance.onstart = () => {
       setSpeakingMessageIndex(messageIndex);
     };
-    
+
     utterance.onend = () => {
       setSpeakingMessageIndex(null);
     };
-    
+
     utterance.onerror = () => {
       setSpeakingMessageIndex(null);
     };
-    
+
     window.speechSynthesis.speak(utterance);
   };
 
@@ -241,26 +248,30 @@ export default function Chatbot() {
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+      alert(
+        "Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari."
+      );
       return;
     }
-    
+
     if (isListening) {
       recognitionRef.current.stop();
       setIsListening(false);
     } else {
       // Detect language preference from last message or default to English
-      const lastUserMessage = messages.filter(m => m.role === 'user').slice(-1)[0];
+      const lastUserMessage = messages
+        .filter((m) => m.role === "user")
+        .slice(-1)[0];
       if (lastUserMessage) {
         const lang = detectLanguage(lastUserMessage.content);
-        recognitionRef.current.lang = lang === 'filipino' ? 'fil-PH' : 'en-US';
+        recognitionRef.current.lang = lang === "filipino" ? "fil-PH" : "en-US";
       }
-      
+
       try {
         recognitionRef.current.start();
         setIsListening(true);
       } catch (error) {
-        console.error('Error starting speech recognition:', error);
+        console.error("Error starting speech recognition:", error);
       }
     }
   };
@@ -386,7 +397,10 @@ export default function Chatbot() {
           }`}
           title={ttsEnabled ? "Disable voice" : "Enable voice"}
         >
-          <FontAwesomeIcon icon={ttsEnabled ? faVolumeUp : faVolumeMute} className="mr-1" />
+          <FontAwesomeIcon
+            icon={ttsEnabled ? faVolumeUp : faVolumeMute}
+            className="mr-1"
+          />
           {ttsEnabled ? "Voice On" : "Voice Off"}
         </button>
       </div>

@@ -86,7 +86,7 @@ export default function Settings() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[calc(100dvh-4rem)] bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden"
     >
       <div className="w-full max-w-md">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
@@ -173,7 +173,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <p className="mt-20 text-xs text-center text-[#cf3325] opacity-70">
+        <p className="mt-auto pt-8 text-xs text-center text-[#cf3325] opacity-70">
           ©2025 Intramuros Administration
         </p>
       </div>

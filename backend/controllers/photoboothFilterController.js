@@ -251,14 +251,19 @@ const proxyImage = async (req, res) => {
     const { url } = req.query;
     if (!url) return res.status(400).json({ message: "Missing url query param" });
 
-    const response = await axios.get(url, { responseType: "arraybuffer", timeout: 15000 });
-    const contentType = response.headers["content-type"] || "image/png";
+  const response = await axios.get(url, { responseType: "arraybuffer", timeout: 15000 });
+  const contentType = response.headers["content-type"] || "image/png";
 
-    res.setHeader("Content-Type", contentType);
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    if (response.headers.etag) res.setHeader("ETag", response.headers.etag);
-    if (response.headers["last-modified"]) res.setHeader("Last-Modified", response.headers["last-modified"]);
-    res.send(Buffer.from(response.data));
+  res.setHeader("Content-Type", contentType);
+  // Enable CORS for canvas drawing with crossOrigin="anonymous"
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Timing-Allow-Origin", "*");
+  // Allow browsers to treat this as shareable across origins
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  if (response.headers.etag) res.setHeader("ETag", response.headers.etag);
+  if (response.headers["last-modified"]) res.setHeader("Last-Modified", response.headers["last-modified"]);
+  res.send(Buffer.from(response.data));
   } catch (err) {
     console.error("❌ Proxy image failed:", err?.message || err);
     res.status(502).json({ message: "Proxy fetch failed" });

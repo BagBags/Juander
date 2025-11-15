@@ -1,7 +1,7 @@
 import React from "react";
 import { Play, RotateCcw, X } from "lucide-react";
 
-export default function ResumeItineraryModal({ isOpen, onResume, onRestart, onClose, currentSiteName }) {
+export default function ResumeItineraryModal({ isOpen, onResume, onRestart, onClose, currentSiteName, showRestart = true }) {
   if (!isOpen) return null;
 
   return (
@@ -42,13 +42,15 @@ export default function ResumeItineraryModal({ isOpen, onResume, onRestart, onCl
             </button>
 
             {/* Restart Button */}
-            <button
-              onClick={onRestart}
-              className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-200 active:scale-95 transition-all"
-            >
-              <RotateCcw className="w-5 h-5" />
-              Restart from Beginning
-            </button>
+            {showRestart && (
+              <button
+                onClick={onRestart}
+                className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-200 active:scale-95 transition-all"
+              >
+                <RotateCcw className="w-5 h-5" />
+                Restart from Beginning
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -503,18 +503,20 @@ export default function SignupForm({ toggleForm }) {
         <hr className="flex-1 border-gray-300" />
       </div>
 
-      {/* Google Login */}
-      <div className="w-full">
-        <GoogleLogin
-          onSuccess={handleGoogleSignup}
-          onError={() => setErrors({ general: "Google sign-up error" })}
-          width="100%"
-          text="signup_with"
-          theme="outline"
-          size="large"
-          shape="rectangular"
-          logo_alignment="left"
-        />
+      {/* Google Login - stabilized container to prevent shrink on load */}
+      <div className="w-full flex justify-center">
+        <div className="w-full sm:w-[360px] min-w-[280px] flex-shrink-0">
+          <GoogleLogin
+            onSuccess={handleGoogleSignup}
+            onError={() => setErrors({ general: "Google sign-up error" })}
+            width="100%"
+            text="signup_with"
+            theme="outline"
+            size="large"
+            shape="rectangular"
+            logo_alignment="left"
+          />
+        </div>
       </div>
 
       <p className="text-xs sm:text-sm text-center text-gray-700">

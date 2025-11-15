@@ -16,6 +16,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
   onNextSite,
   hasPrevSite,
   hasNextSite,
+  isLastSite = false,
 }) {
   const lastAnnouncedStep = useRef(-1);
 
@@ -123,7 +124,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
           Skip
         </button>
 
-        {/* Next Site Button */}
+        {/* Next/End Tour Button */}
         <button
           onClick={onNextSite}
           disabled={!hasNextSite}
@@ -133,7 +134,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
-          Next Site
+          {isLastSite ? "End Tour" : "Next Site"}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

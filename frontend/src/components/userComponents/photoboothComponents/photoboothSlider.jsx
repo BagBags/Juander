@@ -22,8 +22,13 @@ export default function PhotoboothSlider({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  const filterSize = isMobile ? 60 : 70;
-  const captureSize = isMobile ? 70 : 80;
+  // Snapchat-like: active center filter is larger than inactive ones
+  const inactiveSize = isMobile ? 64 : 76;
+  const activeSize = isMobile ? 84 : 100;
+  const containerHeight = activeSize + 24;
+  const marginX = isMobile ? 8 : 12;
+  // Slightly larger center capture circle to emphasize active
+  const captureSize = isMobile ? 84 : 96;
 
   useEffect(() => {
     const carousel = carouselRef.current;
@@ -86,7 +91,7 @@ export default function PhotoboothSlider({
       style={{
         position: "relative",
         width: "100%",
-        height: `${filterSize + 20}px`,
+        height: `${containerHeight}px`,
         display: "flex",
         alignItems: "center",
         ...style,
@@ -97,6 +102,7 @@ export default function PhotoboothSlider({
         style={{
           width: "100%",
           overflowX: "scroll",
+          overflowY: "hidden",
           display: "flex",
           padding: "10px 0",
           scrollSnapType: "x mandatory",
@@ -104,8 +110,11 @@ export default function PhotoboothSlider({
           scrollbarWidth: "none",
           height: "100%",
           alignItems: "center",
-          paddingLeft: `calc(50% - ${filterSize / 2}px)`,
-          paddingRight: `calc(50% - ${filterSize / 2}px)`,
+          overscrollBehaviorX: "contain",
+          overscrollBehaviorY: "none",
+          // Center uses active size so the selected thumbnail aligns perfectly in the middle
+          paddingLeft: `calc(50% - ${activeSize / 2}px)`,
+          paddingRight: `calc(50% - ${activeSize / 2}px)`,
         }}
         className="hide-scrollbar"
       >
@@ -114,13 +123,19 @@ export default function PhotoboothSlider({
             key={filter.id}
             style={{
               flex: "0 0 auto",
-              width: `${filterSize}px`,
-              height: `${filterSize}px`,
-              margin: isMobile ? "0 6px" : "0 10px",
+              width:
+                filter.id === selectedFilterId
+                  ? `${activeSize}px`
+                  : `${inactiveSize}px`,
+              height:
+                filter.id === selectedFilterId
+                  ? `${activeSize}px`
+                  : `${inactiveSize}px`,
+              margin: `0 ${marginX}px`,
               borderRadius: "50%",
               border:
                 filter.id === selectedFilterId
-                  ? "3px solid #f04e37"
+                  ? "4px solid #fff" // bold white ring for active, Snapchat style
                   : "2px solid #ccc",
               scrollSnapAlign: "center",
               position: "relative",
@@ -131,6 +146,11 @@ export default function PhotoboothSlider({
               alignItems: "center",
               justifyContent: "center",
               transition: "all 0.2s ease",
+              boxShadow:
+                filter.id === selectedFilterId
+                  ? "0 0 0 2px rgba(255,255,255,0.6), 0 6px 16px rgba(0,0,0,0.35)"
+                  : "none",
+              zIndex: filter.id === selectedFilterId ? 1 : 0,
             }}
             onClick={() => {
               setSelectedFilterId(filter.id);
@@ -152,6 +172,7 @@ export default function PhotoboothSlider({
             <img
               src={filter.image}
               alt={filter.label}
+              crossOrigin="anonymous"
               loading="lazy"
               decoding="async"
               style={{
@@ -162,6 +183,13 @@ export default function PhotoboothSlider({
               }}
               onError={(e) => {
                 console.warn(`Failed to load filter image: ${filter.label}`);
+                // If proxy path failed and we have originalImage, try it
+                const currentSrc = e.currentTarget.getAttribute('src') || '';
+                const original = filter.originalImage;
+                if (original && currentSrc.includes('/photobooth/filters/proxy')) {
+                  e.currentTarget.setAttribute('src', original);
+                  return;
+                }
                 e.target.style.opacity = '0.5';
               }}
             />
@@ -194,12 +222,13 @@ export default function PhotoboothSlider({
       <button
         onClick={onCapture}
         disabled={!webcamReady}
-        className="absolute left-1/2 -translate-x-1/2 rounded-full border-4 border-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
         style={{
           pointerEvents: "auto",
           background: "transparent",
           width: `${captureSize}px`,
           height: `${captureSize}px`,
+          zIndex: 20,
         }}
       >
         {/* Inner ring for depth */}

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import Chatbot from "./Chatbot";
 import Draggable from "react-draggable";
@@ -9,6 +9,7 @@ export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: -30, y: 550 }); // Start peeking from left
   const [draggedPosition, setDraggedPosition] = useState({ x: -30, y: 550 });
+  const [vvOffset, setVvOffset] = useState({ x: 0, y: 0 });
 
   const nodeRef = useRef(null);
   const wasDragged = useRef(false);
@@ -63,6 +64,49 @@ export default function FloatingChatbot() {
       setIsOpen(false);
     }
   };
+
+  // Lock body scroll while modal is open and track VisualViewport offsets for zoom/pan
+  useEffect(() => {
+    let prevOverflow = "";
+    let prevTouchAction = "";
+    let prevOverscroll = "";
+
+    if (isOpen) {
+      // Prevent background scroll/overscroll while modal is active
+      prevOverflow = document.body.style.overflow;
+      prevTouchAction = document.body.style.touchAction;
+      prevOverscroll = document.body.style.overscrollBehavior;
+      document.body.style.overflow = "hidden";
+      document.body.style.touchAction = "none";
+      document.body.style.overscrollBehavior = "none";
+    }
+
+    const vv = window.visualViewport;
+    const updateOffset = () => {
+      if (!vv) return;
+      // Align modal to the center of the visual viewport
+      setVvOffset({ x: Math.round(vv.offsetLeft || 0), y: Math.round(vv.offsetTop || 0) });
+    };
+
+    if (vv) {
+      vv.addEventListener("resize", updateOffset);
+      vv.addEventListener("scroll", updateOffset);
+      updateOffset();
+    }
+
+    return () => {
+      if (vv) {
+        vv.removeEventListener("resize", updateOffset);
+        vv.removeEventListener("scroll", updateOffset);
+      }
+      // Restore body styles
+      if (isOpen) {
+        document.body.style.overflow = prevOverflow || "";
+        document.body.style.touchAction = prevTouchAction || "";
+        document.body.style.overscrollBehavior = prevOverscroll || "";
+      }
+    };
+  }, [isOpen]);
 
   return (
     <>
@@ -138,8 +182,10 @@ export default function FloatingChatbot() {
           style={{
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            transform: `translate(calc(-50% + ${vvOffset.x}px), calc(-50% + ${vvOffset.y}px))`,
             position: "fixed",
+            willChange: "transform",
+            overscrollBehavior: "contain",
           }}
           className="bg-white shadow-2xl flex flex-col z-[60]
                      w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem]

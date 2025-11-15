@@ -468,17 +468,17 @@ export default function TripArchivesPage() {
                   ? visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter)
                   : visitedSites.filter(s => selectedItineraryFilter === "all" || s.itineraryId?._id === selectedItineraryFilter).slice(0, 4)
                 ).map((site, index) => (
-                  <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
+                  <SiteCard key={site?._id || `${site.siteId?._id || 'site'}-${index}`} site={site} resolveUrl={resolveUrl}>
                     <div className="mb-2" style={{ overflow: 'hidden', width: '100%' }}>
                       <div className="flex items-center gap-2 text-sm text-gray-600" style={{ minWidth: 0, width: '100%' }}>
                         <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
                         <span 
-                          className={expandedItineraries[`place-${index}`] ? "break-words" : "truncate"}
+                          className={expandedItineraries[`place-${site?._id || site.siteId?._id || index}`] ? "break-words" : "truncate"}
                           style={{ 
-                            overflow: expandedItineraries[`place-${index}`] ? 'visible' : 'hidden',
+                            overflow: expandedItineraries[`place-${site?._id || site.siteId?._id || index}`] ? 'visible' : 'hidden',
                             textOverflow: 'ellipsis',
-                            whiteSpace: expandedItineraries[`place-${index}`] ? 'normal' : 'nowrap',
-                            wordBreak: expandedItineraries[`place-${index}`] ? 'break-word' : 'normal',
+                            whiteSpace: expandedItineraries[`place-${site?._id || site.siteId?._id || index}`] ? 'normal' : 'nowrap',
+                            wordBreak: expandedItineraries[`place-${site?._id || site.siteId?._id || index}`] ? 'break-word' : 'normal',
                             minWidth: 0,
                             maxWidth: '100%'
                           }}
@@ -490,11 +490,11 @@ export default function TripArchivesPage() {
                         <button
                           onClick={() => setExpandedItineraries(prev => ({
                             ...prev,
-                            [`place-${index}`]: !prev[`place-${index}`]
+                            [`place-${site?._id || site.siteId?._id || index}`]: !prev[`place-${site?._id || site.siteId?._id || index}`]
                           }))}
                           className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
                         >
-                          {expandedItineraries[`place-${index}`] ? "See less" : "See more"}
+                          {expandedItineraries[`place-${site?._id || site.siteId?._id || index}`] ? "See less" : "See more"}
                         </button>
                       )}
                     </div>
@@ -503,27 +503,36 @@ export default function TripArchivesPage() {
                       <span>Visited: {new Date(site.visitedAt).toLocaleDateString()}</span>
                     </div>
                     <div>
-                      <div 
-                        className={`text-sm text-gray-600 space-y-1 ${expandedDescriptions[`place-desc-${index}`] ? '' : 'line-clamp-2'}`} 
-                        style={{ overflow: 'hidden', width: '100%', wordBreak: 'break-word' }}
-                      >
-                        {site.siteId?.siteDescription ? (
-                          site.siteId.siteDescription.split('\n\n').map((paragraph, idx) => (
-                            <p key={idx} style={{ overflow: 'hidden', textOverflow: 'ellipsis', wordBreak: 'break-word' }}>{paragraph.trim()}</p>
-                          ))
-                        ) : (
-                          <p>No description available</p>
-                        )}
-                      </div>
-                      {site.siteId?.siteDescription && site.siteId.siteDescription.length > 150 && (
+                      {expandedDescriptions[`place-desc-${site?._id || site.siteId?._id || index}`] ? (
+                        <div 
+                          className="text-sm text-gray-600 space-y-2"
+                          style={{ width: '100%', wordBreak: 'break-word' }}
+                        >
+                          {(site.siteId?.siteDescription || 'No description available')
+                            .split('\n\n')
+                            .map((paragraph, idx) => (
+                              <p key={idx}>{paragraph.trim()}</p>
+                            ))}
+                        </div>
+                      ) : (
+                        <p 
+                          className="text-sm text-gray-600"
+                          style={{ overflow: 'hidden', width: '100%', wordBreak: 'break-word' }}
+                        >
+                          {((site.siteId?.siteDescription?.length || 0) > 200)
+                            ? `${site.siteId.siteDescription.slice(0, 200)}...`
+                            : (site.siteId?.siteDescription || 'No description available')}
+                        </p>
+                      )}
+                      {(site.siteId?.siteDescription?.length || 0) > 200 && (
                         <button
                           onClick={() => setExpandedDescriptions(prev => ({
                             ...prev,
-                            [`place-desc-${index}`]: !prev[`place-desc-${index}`]
+                            [`place-desc-${site?._id || site.siteId?._id || index}`]: !prev[`place-desc-${site?._id || site.siteId?._id || index}`]
                           }))}
                           className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
                         >
-                          {expandedDescriptions[`place-desc-${index}`] ? "See less" : "See more"}
+                          {expandedDescriptions[`place-desc-${site?._id || site.siteId?._id || index}`] ? "See less" : "See more"}
                         </button>
                       )}
                     </div>
@@ -604,17 +613,17 @@ export default function TripArchivesPage() {
                       );
 
                       return (
-                        <SiteCard key={index} site={site} resolveUrl={resolveUrl}>
+                        <SiteCard key={site?._id || `${site.siteId?._id || 'site'}-${index}`} site={site} resolveUrl={resolveUrl}>
                           <div className="mb-2" style={{ overflow: 'hidden', width: '100%' }}>
                             <div className="flex items-center gap-2 text-sm text-gray-600" style={{ minWidth: 0, width: '100%' }}>
                               <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
                               <span 
-                                className={expandedItineraries[`review-${index}`] ? "break-words" : "truncate"}
+                                className={expandedItineraries[`review-${site?._id || site.siteId?._id || index}`] ? "break-words" : "truncate"}
                                 style={{ 
-                                  overflow: expandedItineraries[`review-${index}`] ? 'visible' : 'hidden',
+                                  overflow: expandedItineraries[`review-${site?._id || site.siteId?._id || index}`] ? 'visible' : 'hidden',
                                   textOverflow: 'ellipsis',
-                                  whiteSpace: expandedItineraries[`review-${index}`] ? 'normal' : 'nowrap',
-                                  wordBreak: expandedItineraries[`review-${index}`] ? 'break-word' : 'normal',
+                                  whiteSpace: expandedItineraries[`review-${site?._id || site.siteId?._id || index}`] ? 'normal' : 'nowrap',
+                                  wordBreak: expandedItineraries[`review-${site?._id || site.siteId?._id || index}`] ? 'break-word' : 'normal',
                                   minWidth: 0,
                                   maxWidth: '100%'
                                 }}
@@ -626,11 +635,11 @@ export default function TripArchivesPage() {
                               <button
                                 onClick={() => setExpandedItineraries(prev => ({
                                   ...prev,
-                                  [`review-${index}`]: !prev[`review-${index}`]
+                                  [`review-${site?._id || site.siteId?._id || index}`]: !prev[`review-${site?._id || site.siteId?._id || index}`]
                                 }))}
                                 className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
                               >
-                                {expandedItineraries[`review-${index}`] ? "See less" : "See more"}
+                                {expandedItineraries[`review-${site?._id || site.siteId?._id || index}`] ? "See less" : "See more"}
                               </button>
                             )}
                           </div>

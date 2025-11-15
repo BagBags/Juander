@@ -183,7 +183,32 @@ export default function TouristItineraryMain() {
         const adminItineraries = res.data.filter((i) => i.isAdminCreated);
         const userItineraries = res.data.filter((i) => !i.isAdminCreated);
 
-        setItineraries({ admin: adminItineraries, user: userItineraries });
+        // Fetch completion status for each itinerary based on itinerary progress
+        const computeStatuses = async (list) => {
+          const token = localStorage.getItem("token");
+          const headers = { Authorization: `Bearer ${token}` };
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+          const results = await Promise.all(
+            list.map(async (it) => {
+              try {
+                const progressRes = await axios.get(`${baseUrl}/itinerary-progress/${it._id}`, { headers });
+                const visitedCount = (progressRes.data?.visitedSites || []).length;
+                const activeSitesCount = (it.sites || []).filter((s) => s.status === "active").length;
+                const isCompleted = activeSitesCount > 0 && visitedCount >= activeSitesCount;
+                return { ...it, isCompleted };
+              } catch (e) {
+                return { ...it, isCompleted: false };
+              }
+            })
+          );
+          return results;
+        };
+
+        const adminWithStatus = await computeStatuses(adminItineraries);
+        const userWithStatus = await computeStatuses(userItineraries);
+
+        setItineraries({ admin: adminWithStatus, user: userWithStatus });
       } catch (err) {
         console.error("Failed to fetch itineraries:", err);
       }
@@ -643,8 +668,21 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
       </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
-        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0">
+        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0 flex items-center gap-2">
           {itinerary.name}
+          {itinerary.isCompleted && (
+            // Filled check-circle icon (Material Design path)
+            <svg
+              viewBox="0 0 24 24"
+              className="w-5 h-5 text-green-600 drop-shadow-sm"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M12,2A10,10 0,1,0 22,12A10,10 0,0,0 12,2M10,17L5,12L6.41,10.59L10,14.17L17.59,6.58L19,8L10,17Z"
+              />
+            </svg>
+          )}
         </h2>
         
         {itinerary.description && (
