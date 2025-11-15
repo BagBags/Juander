@@ -55,6 +55,84 @@
             gap: 20px;
             margin-bottom: 30px;
         }
+
+        .summary-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 24px;
+            align-items: stretch;
+        }
+
+        .summary-main {
+            flex: 0 0 260px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            text-align: center;
+        }
+
+        .summary-chart {
+            width: 140px;
+            height: 140px;
+            border-radius: 9999px;
+            margin: 0 auto 12px auto;
+            box-shadow: inset 0 0 0 8px #f9fafb;
+        }
+
+        .summary-main h2 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+
+        .summary-percentage {
+            font-size: 2.6rem;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 4px;
+        }
+
+        .summary-subtitle {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .summary-details {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            display: grid;
+            gap: 8px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+
+        .summary-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .summary-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 9999px;
+        }
+
+        .dot-pass { background: #10b981; }
+        .dot-fail { background: #ef4444; }
+        .dot-pending { background: #f59e0b; }
         
         .stat-card {
             background: rgba(255, 255, 255, 0.95);
@@ -96,6 +174,40 @@
         .test-suites {
             display: grid;
             gap: 20px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .feature-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .feature-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+
+        .feature-body {
+            margin-top: 10px;
+            display: grid;
+            gap: 12px;
         }
         
         .suite-card {
@@ -271,11 +383,45 @@
                 </div>
                 <div class="env-item">
                     <i class="fas fa-calendar env-icon"></i>
-                    <span><strong>Date:</strong> 11/15/2025, 12:01:57 AM</span>
+                    <span><strong>Date:</strong> 11/15/2025, 1:15:02 PM</span>
                 </div>
                 <div class="env-item">
                     <i class="fas fa-robot env-icon"></i>
                     <span><strong>Framework:</strong> Selenium + Mocha</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-panel">
+            <div class="summary-main">
+                <h2>Overall Result</h2>
+                <div 
+                  class="summary-chart"
+                  style="background: conic-gradient(
+                    #10b981 0 50%,
+                    #ef4444 50% 100%,
+                    #f59e0b 100% 100%
+                  );">
+                </div>
+                <div class="summary-percentage">50%</div>
+                <div class="summary-subtitle">12 of 24 tests passed</div>
+            </div>
+            <div class="summary-details">
+                <div class="summary-row">
+                    <div class="summary-label"><span class="summary-dot dot-pass"></span> Passed</div>
+                    <div>12 (50%)</div>
+                </div>
+                <div class="summary-row">
+                    <div class="summary-label"><span class="summary-dot dot-fail"></span> Failed</div>
+                    <div>12 (50%)</div>
+                </div>
+                <div class="summary-row">
+                    <div class="summary-label"><span class="summary-dot dot-pending"></span> Pending</div>
+                    <div>0 (0%)</div>
+                </div>
+                <div class="summary-row">
+                    <div class="summary-label"><i class="fas fa-stopwatch"></i> Duration</div>
+                    <div>242s</div>
                 </div>
             </div>
         </div>
@@ -305,504 +451,536 @@
         
         <div class="test-suites">
             
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Admin Authentication and Authorization
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <div class="feature-title">
+                            <i class="fas fa-layer-group"></i> Homepage / Admin
                         </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 2</span>
-                            <span><i class="fas fa-times"></i> 0</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">enforces authentication by redirecting unauthorized users to login page</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 5260ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">allows authenticated users to access AdminHome</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 1114ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Admin Content Management Access Control
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 1</span>
-                            <span><i class="fas fa-times"></i> 0</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">allows authenticated admin to access content management features</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10193ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - Add Pin without Site Name
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 1</span>
-                            <span><i class="fas fa-times"></i> 0</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">shows validation message when saving without site name</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 11998ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - Add Site via Tap to Place
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 0</span>
-                            <span><i class="fas fa-times"></i> 1</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">successfully adds a new site with all required fields</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 13070ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10103ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - Delete Site
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 0</span>
-                            <span><i class="fas fa-times"></i> 1</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">creates a test site then permanently deletes it</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 13157ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10160ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - FUNCTIONAL Business Logic Tests
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 5</span>
-                            <span><i class="fas fa-times"></i> 0</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">FUNCTIONAL: validates admin authentication workflow enforces security</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 4744ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">FUNCTIONAL: validates admin login workflow with credential validation</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 4166ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">FUNCTIONAL: validates admin role-based access control to tour management</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 13800ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">FUNCTIONAL: validates production environment configuration and deployment</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 2736ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">FUNCTIONAL: validates user session management and security tokens</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 12929ms
-                                    </div>
-                                    
-                                </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - Manage Pins Panel Tests
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 0</span>
-                            <span><i class="fas fa-times"></i> 5</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">displays Active and Archived tabs with correct counts</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 13118ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10127ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">search functionality works in Active tab</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 11011ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10146ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">status filter works correctly</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10854ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10019ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">switches between Active and Archived tabs correctly</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 11017ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10137ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">displays pin information correctly in cards</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10890ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10081ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - Core Functionality and User Workflows
-                        </div>
-                        <div class="suite-stats">
-                            <span><i class="fas fa-check"></i> 0</span>
-                            <span><i class="fas fa-times"></i> 5</span>
-                            <span><i class="fas fa-clock"></i> 0</span>
-                        </div>
-                    </div>
-                    <div class="suite-body">
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">enables admin to access all tour map management functions</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 13237ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10224ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">provides pin creation workflow with multiple input methods</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10959ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10133ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">opens and navigates Manage Pins panel correctly</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10994ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10152ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">toggles Map Legend correctly</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10842ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10029ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">opens Manual Add modal from Add Pin modal</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 10877ms
-                                    </div>
-                                    
-                                        <div class="error-details">
-                                            <strong>Error:</strong> TimeoutError: Wait timed out after 10066ms
-                                        </div>
-                                    
-                                </div>
-                                <div class="test-status status-failing">
-                                    <i class="fas fa-times"></i> Failed
-                                </div>
-                            </div>
-                        
-                    </div>
-                </div>
-            
-                <div class="suite-card">
-                    <div class="suite-header">
-                        <div class="suite-title">
-                            <i class="fas fa-folder-open"></i> Tour Map - Production Validation Tests
-                        </div>
-                        <div class="suite-stats">
+                        <div class="feature-stats">
                             <span><i class="fas fa-check"></i> 3</span>
                             <span><i class="fas fa-times"></i> 0</span>
                             <span><i class="fas fa-clock"></i> 0</span>
                         </div>
                     </div>
-                    <div class="suite-body">
+                    <div class="feature-body">
                         
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">validates admin can login and access Tour Map page</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 9716ms
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Admin Authentication and Authorization
                                     </div>
-                                    
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 2</span>
+                                        <span><i class="fas fa-times"></i> 0</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
                                 </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">enforces authentication by redirecting unauthorized users to login page</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 5260ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">allows authenticated users to access AdminHome</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 1114ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
                                 </div>
                             </div>
                         
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">validates production environment is accessible with admin credentials</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 6159ms
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Admin Content Management Access Control
                                     </div>
-                                    
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 1</span>
+                                        <span><i class="fas fa-times"></i> 0</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
                                 </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">allows authenticated admin to access content management features</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10193ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
                                 </div>
                             </div>
                         
-                            <div class="test-item">
-                                <div class="test-info">
-                                    <div class="test-title">validates production authentication security</div>
-                                    <div class="test-duration">
-                                        <i class="fas fa-stopwatch"></i> 3069ms
+                    </div>
+                </div>
+            
+                <div class="feature-card">
+                    <div class="feature-header">
+                        <div class="feature-title">
+                            <i class="fas fa-layer-group"></i> Tour Map
+                        </div>
+                        <div class="feature-stats">
+                            <span><i class="fas fa-check"></i> 9</span>
+                            <span><i class="fas fa-times"></i> 12</span>
+                            <span><i class="fas fa-clock"></i> 0</span>
+                        </div>
+                    </div>
+                    <div class="feature-body">
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - Add Pin without Site Name
                                     </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 1</span>
+                                        <span><i class="fas fa-times"></i> 0</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">shows validation message when saving without site name</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 11998ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
                                     
                                 </div>
-                                <div class="test-status status-passing">
-                                    <i class="fas fa-check"></i> Passed
+                            </div>
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - Add Site via Tap to Place
+                                    </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 0</span>
+                                        <span><i class="fas fa-times"></i> 1</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">successfully adds a new site with all required fields</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 13070ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10103ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                </div>
+                            </div>
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - Delete Site
+                                    </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 0</span>
+                                        <span><i class="fas fa-times"></i> 1</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">creates a test site then permanently deletes it</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 13157ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10160ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                </div>
+                            </div>
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - FUNCTIONAL Business Logic Tests
+                                    </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 5</span>
+                                        <span><i class="fas fa-times"></i> 0</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">FUNCTIONAL: validates admin authentication workflow enforces security</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 4744ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">FUNCTIONAL: validates admin login workflow with credential validation</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 4166ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">FUNCTIONAL: validates admin role-based access control to tour management</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 13800ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">FUNCTIONAL: validates production environment configuration and deployment</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 2736ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">FUNCTIONAL: validates user session management and security tokens</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 12929ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                </div>
+                            </div>
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - Manage Pins Panel Tests
+                                    </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 0</span>
+                                        <span><i class="fas fa-times"></i> 5</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">displays Active and Archived tabs with correct counts</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 13118ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10127ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">search functionality works in Active tab</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 11011ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10146ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">status filter works correctly</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10854ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10019ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">switches between Active and Archived tabs correctly</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 11017ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10137ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">displays pin information correctly in cards</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10890ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10081ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                </div>
+                            </div>
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - Core Functionality and User Workflows
+                                    </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 0</span>
+                                        <span><i class="fas fa-times"></i> 5</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">enables admin to access all tour map management functions</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 13237ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10224ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">provides pin creation workflow with multiple input methods</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10959ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10133ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">opens and navigates Manage Pins panel correctly</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10994ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10152ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">toggles Map Legend correctly</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10842ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10029ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">opens Manual Add modal from Add Pin modal</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 10877ms
+                                                </div>
+                                                
+                                                    <div class="error-details">
+                                                        <strong>Error:</strong> TimeoutError: Wait timed out after 10066ms
+                                                    </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-failing">
+                                                <i class="fas fa-times"></i> Failed
+                                            </div>
+                                        </div>
+                                    
+                                </div>
+                            </div>
+                        
+                            <div class="suite-card">
+                                <div class="suite-header">
+                                    <div class="suite-title">
+                                        <i class="fas fa-folder-open"></i> Tour Map - Production Validation Tests
+                                    </div>
+                                    <div class="suite-stats">
+                                        <span><i class="fas fa-check"></i> 3</span>
+                                        <span><i class="fas fa-times"></i> 0</span>
+                                        <span><i class="fas fa-clock"></i> 0</span>
+                                    </div>
+                                </div>
+                                <div class="suite-body">
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">validates admin can login and access Tour Map page</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 9716ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">validates production environment is accessible with admin credentials</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 6159ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="test-item">
+                                            <div class="test-info">
+                                                <div class="test-title">validates production authentication security</div>
+                                                <div class="test-duration">
+                                                    <i class="fas fa-stopwatch"></i> 3069ms
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="test-status status-passing">
+                                                <i class="fas fa-check"></i> Passed
+                                            </div>
+                                        </div>
+                                    
                                 </div>
                             </div>
                         
