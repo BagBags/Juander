@@ -50,6 +50,21 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         runtimeCaching: [
+          // Photobooth filter images proxied through our backend
+          {
+            urlPattern: /\/api\/photobooth\/filters\/proxy\?.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'photobooth-filter-images',
+              expiration: {
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           // Chatbot API calls - Bot entries and OpenAI
           {
             urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai).*/i,

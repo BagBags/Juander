@@ -13,16 +13,15 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
 
   const getSizeConfig = () => ({
     eyes: {
-      widthRatio: 1.5,      // Reduced width for better fit
-      heightRatio: 0.5,     // Slightly reduced height
+      widthRatio: 1.2,      // Reduced width for better fit
+      heightRatio: 0.3,     // Slightly reduced height
       anchorPoint: 'eyes',  // Anchor to eyes
-      verticalOffset: -0.12,
     },
     head: {
-      widthRatio: 2.2,      // Reduced width for better proportions
-      heightRatio: 1.4,     // Reduced height for better fit
+      widthRatio: 1.8,      // Reduced width for better proportions
+      heightRatio: 1.1,     // Reduced height for better fit
       anchorPoint: 'top',   // Anchor to top of head
-      verticalOffset: -0.5, // Slightly closer to forehead
+      verticalOffset: -0.3, // Slightly closer to forehead
     },
     frame: {
       useFullScreen: true,  // Special flag for full screen frames
@@ -237,14 +236,10 @@ const Overlays = ({ faces, videoDims, selectedValue, selectedMeta }) => {
             y: eyeCenterY + offsetY,
           };
         } else if (anchorPoint === 'eyes' || category === "eyes") {
-          const eyeCenterX = (leftEye.x + rightEye.x) / 2;
-          const eyeCenterY = (leftEye.y + rightEye.y) / 2;
-          const offsetAmount = currentFaceHeight * (verticalOffset || 0);
-          const offsetX = -Math.sin(angleRad) * offsetAmount;
-          const offsetY = Math.cos(angleRad) * offsetAmount;
+          // Position precisely between eyes for glasses
           rawCenter = {
-            x: eyeCenterX + offsetX,
-            y: eyeCenterY + offsetY,
+            x: (leftEye.x + rightEye.x) / 2,
+            y: (leftEye.y + rightEye.y) / 2,
           };
         } else if (category === "frame") {
           // Position centered on entire face for regular frames

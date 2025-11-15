@@ -6,6 +6,8 @@ const { verifyAdmin } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.get("/", controller.getFilters);
+// Proxy remote filter images through our backend (same-origin for canvas safety)
+router.get("/proxy", controller.proxyImage);
 router.get("/archived", verifyAdmin, controller.getArchivedFilters);
 
 // Serve filter image by ID

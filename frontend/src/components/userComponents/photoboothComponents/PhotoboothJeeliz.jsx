@@ -1,0 +1,523 @@
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import axios from "axios";
+import { RotateCcw, Download, X } from "lucide-react";
+import PhotoboothSlider from "./photoboothSlider";
+import { baseFilters } from "./basefilter";
+import "../../../Photobooth.css";
+
+export default function PhotoboothJeeliz() {
+  const canvasRef = useRef(null);
+  const overlayRef = useRef(null);
+  const overlayImgRef = useRef(null);
+
+  const [jeelizReady, setJeelizReady] = useState(false);
+  const detectStateRef = useRef(null);
+
+  const [filters, setFilters] = useState(baseFilters);
+  const [filtersLoading, setFiltersLoading] = useState(true);
+  const [selectedFilterId, setSelectedFilterId] = useState(null);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const preloadedRef = useRef(new Set());
+
+  // Load filters from backend (keep base filters immediately)
+  useEffect(() => {
+    let isMounted = true;
+    const fetchFilters = async () => {
+      setFiltersLoading(true);
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/photobooth/filters`,
+          { timeout: 8000 }
+        );
+        if (!isMounted) return;
+        if (res.data && res.data.length > 0) {
+          const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+          const ORIGIN = window.location.origin;
+          const normalized = res.data.map((f) => {
+            let imageUrl = f.image || f.imageUrl;
+            let originalUrl = imageUrl;
+            if (imageUrl) {
+              if (!/^https?:\/\//i.test(imageUrl)) {
+                // Backend-relative path -> make absolute against backend host
+                const BACKEND_HOST = API_BASE.replace(/\/?api$/, "");
+                imageUrl = `${BACKEND_HOST}${imageUrl.startsWith("/") ? "" : "/"}${imageUrl}`;
+                originalUrl = imageUrl;
+              }
+              // Fix URL encoding for S3/CloudFront paths (spaces, unicode, etc.)
+              try {
+                if (/s3\.[^/]+\.amazonaws\.com|cloudfront\.net/i.test(imageUrl)) {
+                  const u = new URL(imageUrl);
+                  const parts = u.pathname.split('/').map(p => encodeURIComponent(decodeURIComponent(p)));
+                  const encoded = `${u.protocol}//${u.host}${parts.join('/')}`;
+                  imageUrl = encoded;
+                  originalUrl = encoded;
+                }
+              } catch {}
+              // If remote and not same-origin, route through our proxy for same-origin canvas drawing
+              try {
+                const urlObj = new URL(imageUrl);
+                const isRemote = urlObj.origin !== ORIGIN;
+                if (isRemote) {
+                  const apiOrigin = new URL(API_BASE, window.location.href).origin;
+                  const targetUrl = imageUrl; // absolute remote URL to fetch
+                  imageUrl = (apiOrigin !== ORIGIN)
+                    ? `/api/photobooth/filters/proxy?url=${encodeURIComponent(targetUrl)}`
+                    : `${API_BASE}/photobooth/filters/proxy?url=${encodeURIComponent(targetUrl)}`;
+                }
+              } catch {}
+            }
+            return {
+              ...f,
+              label: f.label || f.name,
+              value: f.value || f.name?.toLowerCase().replace(/\s+/g, "-") || `filter-${Date.now()}`,
+              image: imageUrl,
+              originalImage: originalUrl,
+              category: f.category || "general",
+              id: f._id || f.id || f.value || `filter-${Date.now()}-${Math.random()}`,
+            };
+          });
+          setFilters([...baseFilters, ...normalized]);
+        }
+      } catch {
+        // ignore, keep baseFilters
+      } finally {
+        if (isMounted) setFiltersLoading(false);
+      }
+    };
+    fetchFilters();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const repeatedFilters = useMemo(
+    () => filters.map((f, i) => ({ ...f, id: f.id || f._id || f.value || `filter-${i}` })),
+    [filters]
+  );
+
+  const selectedMeta = repeatedFilters.find((f) => f.id === selectedFilterId);
+
+  // Prefetch helpers to speed up loading
+  const preloadImage = useCallback((url) => {
+    if (!url || preloadedRef.current.has(url)) return Promise.resolve();
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => { preloadedRef.current.add(url); resolve(); };
+      img.onerror = () => resolve();
+      img.decoding = 'async';
+      img.loading = 'eager';
+      img.src = url;
+    });
+  }, []);
+
+  // Prefetch first batch after filters load
+  useEffect(() => {
+    if (!repeatedFilters.length) return;
+    const firstBatch = repeatedFilters.slice(0, 8).map(f => f.image).filter(Boolean);
+    firstBatch.forEach((u) => preloadImage(u));
+  }, [repeatedFilters, preloadImage]);
+
+  // Prefetch neighbors when selection changes
+  useEffect(() => {
+    if (!selectedMeta || !repeatedFilters.length) return;
+    const idx = repeatedFilters.findIndex(f => f.id === selectedMeta.id);
+    const windowSize = 4;
+    for (let i = Math.max(0, idx - windowSize); i <= Math.min(repeatedFilters.length - 1, idx + windowSize); i++) {
+      preloadImage(repeatedFilters[i].image);
+    }
+  }, [selectedMeta, repeatedFilters, preloadImage]);
+
+  // Helper to load Jeeliz scripts on demand
+  const loadJeeliz = useCallback(() => {
+    if (window.JEELIZFACEFILTER && (window.JeelizResizer || window.JEELIZRESIZER || window.JEELIZRESIZER2)) {
+      return Promise.resolve();
+    }
+    const faceFilterSrc = "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/dist/jeelizFaceFilter.js";
+    const resizerSrc = "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/helpers/JeelizResizer.js";
+    const ensure = (src) => new Promise((resolve, reject) => {
+      // If already in DOM
+      if ([...document.getElementsByTagName('script')].some(s => s.src === src)) {
+        resolve();
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(s);
+    });
+    return ensure(faceFilterSrc).then(() => ensure(resizerSrc));
+  }, []);
+
+  // Init Jeeliz
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    let destroyed = false;
+
+    loadJeeliz()
+      .then(() => {
+        const JZ = window.JEELIZFACEFILTER;
+        const JR = window.JeelizResizer || window.JEELIZRESIZER || window.JEELIZRESIZER2;
+        if (!JZ || !JR) return;
+
+        JR.size_canvas({
+          canvasId: "jeeFaceFilterCanvas",
+          callback: function (isError, bestVideoSettings) {
+            if (isError) {
+              console.error("JeelizResizer error: ", isError);
+              return;
+            }
+            try { bestVideoSettings.flipX = true; } catch {}
+            JZ.init({
+              canvasId: "jeeFaceFilterCanvas",
+              NNCPath: "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/neuralNets/",
+              videoSettings: bestVideoSettings,
+              followZRot: true,
+              onWebcamGet: function () {
+                setJeelizReady(true);
+              },
+              callbackReady: function (errCode, spec) {
+                if (errCode) {
+                  console.error("Jeeliz init error:", errCode);
+                  return;
+                }
+                setJeelizReady(true);
+              },
+              callbackTrack: function (ds) {
+                // Ensure the camera video is rendered into the WebGL canvas each frame
+                try { JZ.render_video(); } catch {}
+                // Save the latest detect state for overlay/capture
+                detectStateRef.current = ds;
+                // Update overlay position if an image is selected
+                if (overlayRef.current && overlayImgRef.current && ds && ds.detected > 0.5) {
+                  const cont = overlayRef.current;
+                  try { cont.style.display = "block"; } catch {}
+                  const canvas = canvasRef.current;
+                  const width = canvas.clientWidth;
+                  const height = canvas.clientHeight;
+                  const s = Math.max(0, Math.min(1, ds.s || 0.3));
+                  const centerX = (ds.x + 1) * 0.5 * width;
+                  const centerY = (1 - (ds.y + 1) * 0.5) * height; // flip Y
+
+                  const category = overlayImgRef.current?.dataset?.category || "general";
+                  let widthRatio = 1.4;
+                  let heightRatio = 0.5;
+                  let offsetY = 0;
+                  if (category === "head") {
+                    widthRatio = 3.2;
+                    heightRatio = 2.0;
+                    offsetY = -0.7; // higher above face center
+                  } else if (category === "eyes") {
+                    widthRatio = 1.5;
+                    heightRatio = 0.5;
+                    offsetY = -0.25; // slightly higher towards eyes
+                  } else if (category === "frame" || category === "border") {
+                    // Fullscreen
+                    cont.style.position = "absolute";
+                    cont.style.left = "0px";
+                    cont.style.top = "0px";
+                    cont.style.width = `${width}px`;
+                    cont.style.height = `${height}px`;
+                    cont.style.transform = "none";
+                    return;
+                  }
+
+                  const frameW = s * width; // detection frame side
+                  const overlayW = frameW * widthRatio;
+                  const overlayH = frameW * heightRatio;
+
+                  const px = centerX;
+                  const py = centerY + offsetY * frameW;
+                  const angleRad = ds.rz || 0; // rotation around Z
+
+                  cont.style.position = "absolute";
+                  cont.style.left = `${Math.round(px - overlayW / 2)}px`;
+                  cont.style.top = `${Math.round(py - overlayH / 2)}px`;
+                  cont.style.width = `${Math.round(overlayW)}px`;
+                  cont.style.height = `${Math.round(overlayH)}px`;
+                  cont.style.transformOrigin = "center center";
+                  cont.style.transform = `rotate(${-angleRad}rad)`;
+                } else {
+                  try { if (overlayRef.current) overlayRef.current.style.display = "none"; } catch {}
+                }
+              }
+            });
+          }
+        });
+      })
+      .catch((e) => console.error("Failed to load Jeeliz scripts:", e));
+
+    return () => {
+      destroyed = true;
+      try {
+        if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) window.JEELIZFACEFILTER.destroy();
+      } catch {}
+    };
+  }, []);
+
+  const retakePhoto = useCallback(() => {
+    setShowPreview(false);
+    setCapturedImage(null);
+  }, []);
+
+  const saveImage = useCallback(() => {
+    if (!capturedImage) return;
+    const link = document.createElement("a");
+    link.href = capturedImage;
+    link.download = `photobooth-${Date.now()}.png`;
+    link.click();
+    setShowPreview(false);
+    setCapturedImage(null);
+  }, [capturedImage]);
+
+  const capturePhoto = useCallback(() => {
+    const baseCanvas = canvasRef.current; // Jeeliz canvas
+    if (!baseCanvas) return;
+
+    const width = baseCanvas.width || baseCanvas.clientWidth;
+    const height = baseCanvas.height || baseCanvas.clientHeight;
+
+    const out = document.createElement("canvas");
+    out.width = width;
+    out.height = height;
+    const ctx = out.getContext("2d");
+
+    try {
+      // Draw video (already rendered in Jeeliz canvas)
+      ctx.drawImage(baseCanvas, 0, 0, width, height);
+
+      // Draw overlay using its current DOM position and transform (more robust at snap time)
+      const img = overlayImgRef.current;
+      const container = overlayRef.current;
+      const isCorsReady = img && img.getAttribute && img.getAttribute("data-cors-ready") === "true";
+      if (img && container && isCorsReady) {
+        const contRect = container.getBoundingClientRect();
+        const camRect = document.querySelector('.camera-view')?.getBoundingClientRect();
+        if (camRect) {
+          const scaleX = width / camRect.width;
+          const scaleY = height / camRect.height;
+          const x = (contRect.left - camRect.left) * scaleX;
+          const y = (contRect.top - camRect.top) * scaleY;
+          const w = contRect.width * scaleX;
+          const h = contRect.height * scaleY;
+
+          // Parse rotation from computed style
+          const style = window.getComputedStyle(container);
+          const tf = style.transform;
+          let angle = 0;
+          if (tf && tf !== 'none') {
+            // Could be matrix() or rotate(<rad|deg>)
+            const rotateMatch = tf.match(/rotate\(([-\d\.]+)(rad|deg)\)/);
+            if (rotateMatch) {
+              angle = rotateMatch[2] === 'deg' ? (parseFloat(rotateMatch[1]) * Math.PI / 180) : parseFloat(rotateMatch[1]);
+            } else {
+              const m = tf.match(/matrix\(([^)]+)\)/);
+              if (m) {
+                const vals = m[1].split(',').map(v => parseFloat(v.trim()));
+                if (vals.length >= 4) angle = Math.atan2(vals[1], vals[0]);
+              }
+            }
+          }
+
+          ctx.save();
+          ctx.translate(x + w / 2, y + h / 2);
+          ctx.rotate(angle);
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+          ctx.restore();
+        }
+      }
+
+      const png = out.toDataURL("image/png");
+      setCapturedImage(png);
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Capture error:", error);
+      if (error.name === "SecurityError") {
+        try {
+          // Create a clean canvas and draw ONLY the Jeeliz base canvas (no overlay)
+          const baseCanvas = canvasRef.current;
+          const clean = document.createElement("canvas");
+          clean.width = width;
+          clean.height = height;
+          const cctx = clean.getContext("2d");
+          cctx.drawImage(baseCanvas, 0, 0, width, height);
+          const fallback = clean.toDataURL("image/png");
+          setCapturedImage(fallback);
+          setShowPreview(true);
+          setTimeout(() => {
+            alert(
+              "Photo captured successfully! Note: Filter overlay couldn't be included due to technical restrictions."
+            );
+          }, 50);
+        } catch (e2) {
+          console.error("Fallback capture failed:", e2);
+          alert("Unable to capture photo. Please try again.");
+        }
+      } else {
+        alert("Unable to capture photo. Please try again.");
+      }
+    }
+  }, [detectStateRef, selectedMeta]);
+
+  return (
+    <div className="photobooth-container">
+      <div className="phone-frame">
+        <div
+          className="absolute top-0 left-0 w-full z-[200]"
+          style={{
+            paddingTop: "max(env(safe-area-inset-top), 16px)",
+            paddingBottom: "12px",
+            paddingLeft: "16px",
+            paddingRight: "16px",
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <button
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40 active:bg-black/50 transition-all duration-200 cursor-pointer"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  window.location.href = "/";
+                }
+              }}
+              aria-label="Go back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <button
+              className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white text-2xl hover:bg-black/40 transition-all active:scale-90"
+              onClick={() => window.location.reload()}
+              title="Refresh"
+              aria-label="Refresh camera"
+            >
+              ↻
+            </button>
+          </div>
+        </div>
+
+        <div className="camera-view" style={{ display: showPreview ? "none" : "block" }}>
+          <canvas
+            ref={canvasRef}
+            id="jeeFaceFilterCanvas"
+            width="600"
+            height="600"
+            style={{ width: "100%", height: "100%", display: "block" }}
+          />
+
+          {/* Overlay image positioned by Jeeliz detectState */}
+          {selectedMeta && (
+            <div className="overlay-container">
+              <div ref={overlayRef} style={{ position: "absolute", zIndex: 90, display: "none" }}>
+                <img
+                  ref={overlayImgRef}
+                  src={selectedMeta.image}
+                  alt="overlay"
+                  data-category={selectedMeta?.category || "general"}
+                  loading="eager"
+                  decoding="async"
+                  fetchpriority="high"
+                  onLoad={(e) => {
+                    try {
+                      const testCanvas = document.createElement('canvas');
+                      testCanvas.width = 1;
+                      testCanvas.height = 1;
+                      const tctx = testCanvas.getContext('2d');
+                      tctx.drawImage(e.currentTarget, 0, 0, 1, 1);
+                      // Will throw if image is not CORS-enabled
+                      testCanvas.toDataURL();
+                      e.currentTarget.setAttribute("data-cors-ready", "true");
+                    } catch {
+                      e.currentTarget.setAttribute("data-cors-ready", "false");
+                    }
+                  }}
+                  onError={(e) => {
+                    // If proxy fails, try original S3 URL for display (capture will skip if not CORS-ready)
+                    const currentSrc = e.currentTarget.getAttribute('src') || '';
+                    if (selectedMeta?.originalImage && currentSrc.includes('/photobooth/filters/proxy')) {
+                      e.currentTarget.setAttribute('src', selectedMeta.originalImage);
+                      e.currentTarget.setAttribute('data-cors-ready', 'false');
+                      return;
+                    }
+                    // Give up: mark as failed
+                    e.currentTarget.setAttribute("data-cors-ready", "failed");
+                    e.currentTarget.style.display = "none";
+                  }}
+                  style={{ width: "100%", height: "100%", objectFit: selectedMeta.category === "frame" || selectedMeta.category === "border" ? "fill" : "contain" }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Loading states */}
+          {!jeelizReady && (
+            <div className="loading-overlay">
+              <div className="spinner" />
+              <div className="loading-text">Initializing camera...</div>
+            </div>
+          )}
+          {filtersLoading && jeelizReady && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-lg text-sm z-10">
+              Loading filters...
+            </div>
+          )}
+        </div>
+
+        {/* Bottom slider with capture */}
+        {!showPreview && (
+          <div className="bottom-controls">
+            <PhotoboothSlider
+              repeatedFilters={repeatedFilters}
+              selectedFilterId={selectedFilterId}
+              setSelectedFilterId={setSelectedFilterId}
+              onCapture={capturePhoto}
+              webcamReady={jeelizReady}
+            />
+          </div>
+        )}
+
+        {/* Preview Modal */}
+        {showPreview && capturedImage && (
+          <div className="absolute inset-0 bg-black z-50 flex flex-col">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
+              <h2 className="text-white text-lg font-semibold">Preview</h2>
+              <button onClick={retakePhoto} className="text-white hover:text-gray-300 transition-colors">
+                <X size={28} />
+              </button>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+              <img src={capturedImage} alt="Captured" className="max-w-full max-h-full object-contain rounded-lg" />
+            </div>
+            <div className="p-6 bg-gradient-to-t from-black/90 to-transparent">
+              <div className="flex gap-3 max-w-md mx-auto">
+                <button onClick={retakePhoto} className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-white py-4 rounded-xl hover:bg-gray-700 transition-all active:scale-95">
+                  <RotateCcw size={20} />
+                  <span className="font-medium">Retake</span>
+                </button>
+                <button onClick={saveImage} className="flex-1 flex items-center justify-center gap-2 bg-red-500 text-white py-4 rounded-xl hover:bg-red-600 transition-all active:scale-95 shadow-lg">
+                  <Download size={20} />
+                  <span className="font-medium">Save</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
