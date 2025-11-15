@@ -50,7 +50,9 @@ describe('Tour Map - Add Pin without Site Name', function () {
 
     // If we have access, try to find Tour Map elements
     const mapElements = await driver.findElements(By.css('canvas.mapboxgl-canvas, .mapbox, [class*="map"], [id*="map"]'));
-    const addPinButtons = await driver.findElements(By.css('button[title="Add Pin"], button:contains("Add"), button:contains("Pin")'));
+    const addPinButtons = await driver.findElements(
+      By.xpath("//button[@title='Add Pin' or contains(normalize-space(.), 'Add') or contains(normalize-space(.), 'Pin')]")
+    );
 
     if (mapElements.length === 0 && addPinButtons.length === 0) {
       // No map elements found - likely production routing issue
@@ -65,7 +67,9 @@ describe('Tour Map - Add Pin without Site Name', function () {
         await driver.sleep(2000);
         
         // Look for any save/submit buttons and test validation
-        const saveButtons = await driver.findElements(By.css('button:contains("Save"), button:contains("Add"), button[type="submit"]'));
+        const saveButtons = await driver.findElements(
+          By.xpath("//button[@type='submit' or contains(normalize-space(.), 'Save') or contains(normalize-space(.), 'Add')]")
+        );
         if (saveButtons.length > 0) {
           await saveButtons[0].click();
           await driver.sleep(1000);

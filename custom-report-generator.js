@@ -29,6 +29,10 @@ function getFeatureNameForSuite(title) {
         return 'Tour Map';
     }
 
+    if (t.includes('photobooth')) {
+        return 'Photobooth';
+    }
+
     return 'Other';
 }
 
