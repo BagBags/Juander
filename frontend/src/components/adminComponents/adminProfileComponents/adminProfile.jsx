@@ -9,6 +9,8 @@ import axios from "axios";
 import { useContext } from "react";
 import { UserContext } from "../../../contexts/UserContext";
 import NotificationModal from "../../shared/NotificationModal";
+import { clearAuth } from "../../../utils/authStorage";
+import { clearOfflineCache } from "../../../utils/offlineAwareApi";
 
 export default function AdminProfile() {
   const { currentAdmin, setCurrentAdmin } = useContext(UserContext);
@@ -97,9 +99,16 @@ export default function AdminProfile() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    try {
+      clearAuth();
+    } catch (e) {}
     localStorage.removeItem("admin");
-    navigate("/");
+    localStorage.removeItem("guest");
+    setCurrentAdmin(null);
+    try {
+      clearOfflineCache();
+    } catch (e) {}
+    navigate("/login", { replace: true });
   };
 
   return (

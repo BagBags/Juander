@@ -55,6 +55,20 @@ export default function AuthPersistence({ children }) {
     }
   }, []);
 
+  // Listen for cross-tab logout events
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'logout') {
+        try { clearAuth(); } catch (e) {}
+        if (location.pathname !== '/login') {
+          navigate('/login', { replace: true });
+        }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [navigate, location.pathname]);
+
   // Extend token expiry on user activity
   useEffect(() => {
     const handleUserActivity = () => {
