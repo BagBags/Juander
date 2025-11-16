@@ -27,7 +27,11 @@
   },
   "scripts": {
     "test": "mocha \"tests/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts",
-    "test:tour-map": "mocha \"tests/admin/tourmap*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts"
+    "test:tour-map": "mocha \"tests/admin/tourmap*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts",
+    "test:guest-web": "mocha \"tests/guest-web/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=guest-web-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
+    "test:guest-mobile": "mocha \"tests/guest-mobile/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=guest-mobile-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
+    "test:guest": "mocha \"tests/guest-web/**/*.test.js\" \"tests/guest-mobile/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=guest-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
+    "test:admin": "mocha \"tests/admin/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000"
   },
   "devDependencies": {
     "mocha": "^11.7.5",

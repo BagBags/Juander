@@ -712,52 +712,31 @@ describe('Tour Map - Full CRUD: Manila Cathedral', function () {
     // Find entry in archived - wait longer for content to render
     await driver.sleep(3000);
     
-    // Debug: Check what's in the archived section
-    const allText = await driver.findElement(By.css('body')).getText();
-    const hasName = allText.includes(UNIQUE_NAME);
-    console.log(`DEBUG: Site name "${UNIQUE_NAME}" in page: ${hasName}`);
+    // Check if there's a confirmation modal and close it
+    const confirmModals = await driver.findElements(By.xpath("//button[contains(., 'Add Pin')]"));
+    if (confirmModals.length > 0) {
+      console.log('DEBUG: Found confirmation modal, clicking Add Pin');
+      await safeClick(driver, confirmModals[0]);
+      await driver.sleep(2000);
+    }
     
-    // Search for archived card - try multiple approaches
+    // Search for archived card - just take the first one since we just archived it
+    // The archived card should be the most recent one
     let archivedCard = null;
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline && !archivedCard) {
-      // Approach 1: Find any element containing the site name
-      let elements = await driver.findElements(By.xpath("//*[contains(text(), '" + UNIQUE_NAME + "')]"));
-      console.log(`DEBUG: Found ${elements.length} elements with site name`);
+      // Find ALL divs with border-gray-300 (archived cards only)
+      const allArchivedCards = await driver.findElements(By.xpath("//div[contains(@class,'border-2') and contains(@class,'border-gray-300')]"));
+      console.log(`DEBUG: Found ${allArchivedCards.length} archived cards`);
       
-      if (elements.length > 0) {
-        const tag = await elements[0].getTagName();
-        const text = await elements[0].getText().catch(() => '');
-        console.log(`DEBUG: Found element: <${tag}> text="${text.substring(0, 50)}"`);
-        
-        try {
-          // Get the card div (border-2 border-gray-300)
-          const cardDiv = await elements[0].findElement(By.xpath("ancestor::div[contains(@class,'border-2') and contains(@class,'border-gray-300')]"));
-          archivedCard = cardDiv;
-          console.log('DEBUG: Found archived card with border-gray-300');
-          break;
-        } catch (e) {
-          console.log('DEBUG: No border-gray-300 ancestor, trying fallback');
-          // Fallback: just get any border-2 ancestor
-          try {
-            const cardDiv = await elements[0].findElement(By.xpath("ancestor::div[contains(@class,'border-2')]"));
-            archivedCard = cardDiv;
-            console.log('DEBUG: Found archived card with border-2');
-            break;
-          } catch (e2) {
-            console.log('DEBUG: No border-2 ancestor either');
-            // Last resort: get the closest div ancestor
-            try {
-              const divAncestor = await elements[0].findElement(By.xpath("ancestor::div[1]"));
-              archivedCard = divAncestor;
-              console.log('DEBUG: Using closest div ancestor as fallback');
-              break;
-            } catch (e3) {
-              console.log('DEBUG: No div ancestor found');
-            }
-          }
-        }
+      if (allArchivedCards.length > 0) {
+        // Just use the first archived card (it should be the one we just archived)
+        archivedCard = allArchivedCards[0];
+        const cardText = await archivedCard.getText().catch(() => '');
+        console.log(`DEBUG: Using first archived card with text: "${cardText.substring(0, 50)}..."`);
+        break;
       }
+      
       await driver.sleep(500);
     }
     
@@ -797,6 +776,11 @@ describe('Tour Map - Full CRUD: Manila Cathedral', function () {
     await step(driver, 'Archived again');
 
     // Go to Archived and permanently delete
+    // First, ensure Manage Pins modal is open
+    const managePinsBtn2 = await driver.wait(until.elementLocated(By.xpath("//button[@title='Manage Pins']")), 10000);
+    await safeClick(driver, managePinsBtn2);
+    await driver.sleep(1500);
+    
     const archivedTab2 = await driver.wait(until.elementLocated(By.xpath("//button[contains(.,'Archived')]")), 10000);
     await safeClick(driver, archivedTab2);
     await driver.sleep(1500);

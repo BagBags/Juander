@@ -1,6 +1,7 @@
 const { Builder, By, until, Key } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const { loginToProduction } = require('./production-login-helper');
+const { cleanupArchivableItems } = require('./test-cleanup-helper');
 
 const BASE_URL = (process.env.BASE_URL || 'https://d39zx5gyblzxjs.cloudfront.net').replace(/\/$/, '');
 const HEADLESS = (process.env.HEADLESS || 'false').toLowerCase() === 'true';
@@ -355,6 +356,39 @@ describe('Chatbot Management - Full CRUD: Knowledge Base Entries', function () {
     for (const entry of entries) {
       const hasAboutTag = await entry.findElements(By.xpath(".//span[contains(., 'About')]")).catch(() => []);
       // At least the filtered entry should have the tag
+    }
+  });
+
+  // Cleanup: Delete all test entries after tests complete
+  after(async () => {
+    try {
+      await step(driver, 'Cleanup: Deleting test entries');
+      
+      // Go to Active tab first
+      const activeTab = await driver.findElements(By.xpath("//button[contains(., 'Active Entries')]"));
+      if (activeTab.length > 0) {
+        await safeClick(driver, activeTab[0]);
+        await driver.sleep(1000);
+      }
+
+      // Use the cleanup helper to remove all test entries
+      const testKeywords = ['Test Entry', 'Filter Test', 'Form Clear Test', 'UPDATED'];
+      const result = await cleanupArchivableItems(driver, testKeywords, {
+        itemSelector: "//div[contains(@class,'rounded-xl') and contains(@class,'border')]",
+        archiveButtonText: 'Archive',
+        deleteButtonText: 'Delete',
+        confirmArchiveText: 'Archive Entry',
+        confirmDeleteText: 'Delete Forever',
+        archivedTabText: 'Archived',
+        sleepMs: 1000
+      });
+
+      console.log(`✓ Cleanup completed: Archived ${result.archived}, Deleted ${result.deleted}`);
+      if (result.errors.length > 0) {
+        console.log(`⚠️ Cleanup had ${result.errors.length} errors (non-critical)`);
+      }
+    } catch (err) {
+      console.log('Cleanup error (non-critical):', err.message);
     }
   });
 });

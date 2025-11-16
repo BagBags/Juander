@@ -1,6 +1,7 @@
 const SUPER_ADMIN_EMAILS = [
   "aaronbagain@gmail.com",
-  "sophiamikhaela.fabian.cics@ust.edu.ph"
+  "sophiamikhaela.fabian.cics@ust.edu.ph",
+  "juander714@gmail.com"
 ];
 
 const isSuperAdmin = (email) => {
