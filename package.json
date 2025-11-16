@@ -26,11 +26,13 @@
     "react-webcam": "^7.2.0"
   },
   "scripts": {
-    "test": "mocha \"tests/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=index,inlineAssets=true,overwrite=true"
+    "test": "mocha \"tests/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts",
+    "test:tour-map": "mocha \"tests/admin/tourmap*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts"
   },
   "devDependencies": {
     "mocha": "^11.7.5",
     "mochawesome": "^7.1.4",
+    "mochawesome-report-generator": "^7.1.4",
     "selenium-webdriver": "^4.38.0"
   }
 }

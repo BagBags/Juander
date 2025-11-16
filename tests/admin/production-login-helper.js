@@ -1,9 +1,9 @@
 const {By, until} = require('selenium-webdriver');
 
 async function loginToProduction(driver, baseUrl, adminUser, adminPass) {
-  // Navigate to the working login URL (hash-based routing)
-  console.log(`Navigating to: ${baseUrl}/#/login`);
-  await driver.get(`${baseUrl}/#/login`);
+  // Navigate to the login URL (path-based routing)
+  console.log(`Navigating to: ${baseUrl}/login`);
+  await driver.get(`${baseUrl}/login`);
   await driver.wait(async () => (await driver.executeScript('return document.readyState')) === 'complete', 20000);
   await driver.sleep(2000); // Give more time for React to load
 
@@ -12,6 +12,14 @@ async function loginToProduction(driver, baseUrl, adminUser, adminPass) {
   const bodyText = await driver.findElement(By.css('body')).getText();
   console.log(`Current URL: ${currentUrl}`);
   console.log(`Page content: ${bodyText.slice(0, 300)}`);
+  
+  // If we're already authenticated (redirected to an admin page), skip re-login
+  const looksAuthenticated = /Admin Home|Logged in as|Admin Dashboard/i.test(bodyText) ||
+                             /\/Admin(Home|ManageContent|TourMap|Photobooth)/i.test(currentUrl);
+  if (looksAuthenticated) {
+    console.log('Already authenticated; skipping login.');
+    return;
+  }
   
   if (!/login|sign in|email|password/i.test(bodyText)) {
     throw new Error(`Not on login page. URL: ${currentUrl}, Content: ${bodyText.slice(0, 200)}`);
@@ -41,49 +49,46 @@ async function loginToProduction(driver, baseUrl, adminUser, adminPass) {
   await passwordInput.sendKeys(adminPass);
   console.log('Password filled');
 
-  // Click login button - from our discovery, Button 2 was the login button
+  // Click login button robustly by visible text
   console.log('Looking for login button...');
-  
-  // Try multiple selectors based on our discovery
+
+  // Prefer an XPath that matches button by its text content
   let loginButton;
-  const buttonSelectors = [
-    'button[type="submit"]',
-    'button:contains("Login")',
-    '.w-full.bg-\\[\\#f04e37\\]',
-    'button.w-full[type="submit"]'
-  ];
-  
-  // Find all buttons and check their text
-  allButtons = await driver.findElements(By.css('button'));
-  for (let i = 0; i < allButtons.length; i++) {
-    const btn = allButtons[i];
-    const text = await btn.getText().catch(() => '');
-    const type = await btn.getAttribute('type').catch(() => '');
-    console.log(`Button ${i + 1}: type="${type}", text="${text}"`);
-    
-    if (text === 'Login' && type === 'submit') {
-      loginButton = btn;
-      console.log(`Found login button at index ${i + 1}`);
-      break;
+  try {
+    loginButton = await driver.wait(
+      until.elementLocated(By.xpath("//button[normalize-space(text())='Login']")),
+      10000
+    );
+  } catch (_) {
+    // Fallback: scan all buttons and match by text contains 'Login'
+    allButtons = await driver.findElements(By.css('button'));
+    for (let i = 0; i < allButtons.length; i++) {
+      const btn = allButtons[i];
+      const text = (await btn.getText().catch(() => '')) || '';
+      const type = await btn.getAttribute('type').catch(() => '');
+      console.log(`Button ${i + 1}: type="${type}", text="${text}"`);
+      if (/^\s*Login\s*$/i.test(text)) {
+        loginButton = btn;
+        console.log(`Found login button at index ${i + 1}`);
+        break;
+      }
     }
   }
-  
+
   if (!loginButton) {
-    // Fallback: just click the second button (index 1) which was the login button in our discovery
-    loginButton = allButtons[1];
-    console.log('Using fallback: clicking second button');
+    throw new Error('Could not find the Login button');
   }
-  
+
   await loginButton.click();
 
-  // Wait for login to complete (URL should change or login form should disappear)
+  // Wait for login to complete: token present in localStorage and navigated away from /login
   await driver.wait(async () => {
     const url = await driver.getCurrentUrl();
-    const text = await driver.findElement(By.css('body')).getText();
-    // Login successful if we're no longer on login page or login form is gone
-    return !url.includes('#/login') || !/Welcome Back.*Login to continue/i.test(text);
-  }, 15000).catch(() => {
-    throw new Error('Login did not complete within timeout');
+    const token = await driver.executeScript('return window.localStorage.getItem("token")');
+    const hasLeftLogin = !/\/login(\b|#|\?)/i.test(url);
+    return !!token && hasLeftLogin;
+  }, 20000).catch(() => {
+    throw new Error('Login did not complete within timeout (no token detected or still on /login)');
   });
 
   console.log('✅ Successfully logged into production');
