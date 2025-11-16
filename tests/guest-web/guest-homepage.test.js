@@ -49,33 +49,61 @@ describe('Guest Web - Homepage Exploration', () => {
 
     it('should display "Explore Intramuros" button', async () => {
       console.log('\nSTEP: Looking for "Explore Intramuros" button');
-      
-      // Look for explore button with various text patterns
+
+      // The button is at the bottom with a Compass icon
+      // Try multiple selectors to find it
       let exploreButton = null;
-      
+      let attempts = [];
+
+      // Attempt 1: Look for button with "bottom-16" class and contains span with text
       try {
-        exploreButton = await driver.findElement(By.xpath('//button[contains(text(), "Explore") or contains(text(), "explore")]'));
+        exploreButton = await driver.findElement(By.xpath('//button[contains(@class, "bottom-16")]//span[contains(text(), "Explore") or contains(text(), "Start")]'));
+        attempts.push('Found via bottom-16 span');
       } catch (e) {
-        console.log('Button with "Explore" text not found, checking for other patterns...');
+        attempts.push('bottom-16 span: not found');
       }
-      
+
+      // Attempt 2: Look for any button with "fixed" and "bottom" classes
       if (!exploreButton) {
         try {
-          exploreButton = await driver.findElement(By.xpath('//button[contains(text(), "Intramuros")]'));
+          exploreButton = await driver.findElement(By.xpath('//button[contains(@class, "fixed") and contains(@class, "bottom")]'));
+          attempts.push('Found via fixed bottom button');
         } catch (e) {
-          console.log('Button with "Intramuros" text not found');
+          attempts.push('fixed bottom button: not found');
         }
       }
-      
+
+      // Attempt 3: Look for button with Compass icon (lucide-react)
       if (!exploreButton) {
         try {
-          exploreButton = await driver.findElement(By.xpath('//button[contains(@class, "bottom")]'));
+          exploreButton = await driver.findElement(By.xpath('//button[.//svg and contains(@class, "bottom")]'));
+          attempts.push('Found via button with SVG at bottom');
         } catch (e) {
-          console.log('Bottom button not found');
+          attempts.push('button with SVG: not found');
         }
       }
-      
-      assert(exploreButton, 'Should find "Explore Intramuros" button');
+
+      // Attempt 4: Simple text search
+      if (!exploreButton) {
+        try {
+          const allButtons = await driver.findElements(By.xpath('//button'));
+          console.log(`Total buttons on page: ${allButtons.length}`);
+          
+          for (let btn of allButtons) {
+            const text = await btn.getText();
+            if (text.includes('Explore') || text.includes('Start Tour')) {
+              exploreButton = btn;
+              attempts.push(`Found button with text: "${text}"`);
+              break;
+            }
+          }
+        } catch (e) {
+          attempts.push('Text search: failed');
+        }
+      }
+
+      console.log('Attempts: ' + attempts.join(' | '));
+      assert(exploreButton, 'Should find Explore button (Desktop: "Explore Intramuros" or Mobile: "Start Tour")');
       console.log('✅ Explore button found');
     });
 

@@ -353,24 +353,37 @@ describe('Admin Role Management - Manage User Roles', function () {
       await searchInput.sendKeys('tourist');
       await driver.sleep(1500);
 
-      // Look for role change button - must exist for super admin
-      const changeRoleButtons = await driver.findElements(By.xpath('//button[contains(text(), "Change") or contains(text(), "Edit Role")]'));
+      // Look for role change SELECT element (not button) - it's a dropdown with options "tourist" and "admin"
+      // Based on the JSX, it's a <select> element in the Action column
+      const roleSelects = await driver.findElements(By.xpath('//select[option[contains(text(), "tourist")] and option[contains(text(), "admin")]]'));
       
-      if (changeRoleButtons.length === 0) {
-        throw new Error('Role change button not found - user may not have super admin privileges');
+      if (roleSelects.length === 0) {
+        throw new Error('Role change select dropdown not found - user may not have super admin privileges');
       }
 
-      // Click the first role change button
-      await changeRoleButtons[0].click();
-      await driver.sleep(1000);
-
-      // Verify a modal or dialog appeared for role selection
-      const roleOptions = await driver.findElements(By.xpath('//button[contains(text(), "admin")] | //option[contains(text(), "admin")]'));
-      if (roleOptions.length === 0) {
-        throw new Error('Role selection options not found after clicking change role button');
+      // Find a select that is NOT disabled (super admin can change roles)
+      let activeRoleSelect = null;
+      for (const select of roleSelects) {
+        const isDisabled = await select.getAttribute('disabled');
+        if (!isDisabled) {
+          activeRoleSelect = select;
+          break;
+        }
       }
 
-      console.log('✅ Role change functionality available - super admin privileges confirmed');
+      if (!activeRoleSelect) {
+        throw new Error('No active role change select found - user may not have super admin privileges');
+      }
+
+      // Get current value and change it
+      const currentValue = await activeRoleSelect.getAttribute('value');
+      const newValue = currentValue === 'tourist' ? 'admin' : 'tourist';
+      
+      // Change the role via select
+      await activeRoleSelect.sendKeys(newValue);
+      await driver.sleep(1500); // Wait for confirmation dialog
+
+      console.log(`✅ Role change functionality available - changed from ${currentValue} to ${newValue} - super admin privileges confirmed`);
     });
 
     it('[SUPER ADMIN ONLY] should allow changing user role from admin to tourist', async () => {
@@ -392,24 +405,36 @@ describe('Admin Role Management - Manage User Roles', function () {
       await searchInput.sendKeys('Admin');
       await driver.sleep(1500);
 
-      // Look for role change button
-      const changeRoleButtons = await driver.findElements(By.xpath('//button[contains(text(), "Change") or contains(text(), "Edit Role")]'));
+      // Look for role change SELECT element - it's a dropdown with options "tourist" and "admin"
+      const roleSelects = await driver.findElements(By.xpath('//select[option[contains(text(), "tourist")] and option[contains(text(), "admin")]]'));
       
-      if (changeRoleButtons.length === 0) {
-        throw new Error('Role change button not found - user may not have super admin privileges');
+      if (roleSelects.length === 0) {
+        throw new Error('Role change select dropdown not found - user may not have super admin privileges');
       }
 
-      // Click the first role change button
-      await changeRoleButtons[0].click();
-      await driver.sleep(1000);
-
-      // Verify a modal or dialog appeared for role selection
-      const roleOptions = await driver.findElements(By.xpath('//button[contains(text(), "tourist")] | //option[contains(text(), "tourist")]'));
-      if (roleOptions.length === 0) {
-        throw new Error('Tourist role option not found after clicking change role button');
+      // Find an active (not disabled) select
+      let activeRoleSelect = null;
+      for (const select of roleSelects) {
+        const isDisabled = await select.getAttribute('disabled');
+        if (!isDisabled) {
+          activeRoleSelect = select;
+          break;
+        }
       }
 
-      console.log('✅ Role change to tourist functionality available - super admin privileges confirmed');
+      if (!activeRoleSelect) {
+        throw new Error('No active role change select found - user may not have super admin privileges');
+      }
+
+      // Get current value and change it
+      const currentValue = await activeRoleSelect.getAttribute('value');
+      const newValue = currentValue === 'admin' ? 'tourist' : 'admin';
+      
+      // Change the role via select
+      await activeRoleSelect.sendKeys(newValue);
+      await driver.sleep(1500); // Wait for confirmation dialog
+
+      console.log(`✅ Role change to ${newValue} functionality available - super admin privileges confirmed`);
     });
 
     it('[SUPER ADMIN ONLY] should allow deleting a user', async () => {
@@ -420,8 +445,9 @@ describe('Admin Role Management - Manage User Roles', function () {
         return;
       }
 
-      // Look for delete buttons in the action column
-      const deleteButtons = await driver.findElements(By.xpath('//button[contains(text(), "Delete") or contains(text(), "Remove")]'));
+      // Look for delete buttons in the action column - they are red buttons with Trash2 icon
+      // Based on the JSX, they have class "bg-red-600" and title "Delete User"
+      const deleteButtons = await driver.findElements(By.xpath('//button[contains(@class, "bg-red") and @title="Delete User"]'));
       
       if (deleteButtons.length === 0) {
         throw new Error('Delete button not found - user may not have super admin privileges');
@@ -435,7 +461,7 @@ describe('Admin Role Management - Manage User Roles', function () {
         throw new Error('Delete button is disabled - user may not have super admin privileges');
       }
 
-      console.log('✅ User deletion functionality available - super admin privileges confirmed');
+      console.log(`✅ User deletion functionality available - found ${deleteButtons.length} delete button(s) - super admin privileges confirmed`);
     });
   });
 

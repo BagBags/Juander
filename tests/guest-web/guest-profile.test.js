@@ -288,71 +288,43 @@ describe('Guest Web - Profile', () => {
     });
 
     it('should find replay tutorial button', async () => {
-      console.log('\nSTEP: Looking for replay tutorial button');
+      console.log('\nSTEP: Looking for tutorial toggle');
       
       // Wait for animation to complete
       await driver.sleep(1500);
       
-      // Debug: Log all buttons
-      const allButtons = await driver.findElements(By.xpath('//button'));
-      console.log(`Total buttons: ${allButtons.length}`);
+      // The tutorial is now a checkbox toggle, not a button
+      // Look for the checkbox input for "Tutorial (Homepage)"
+      const tutorialCheckbox = await driver.findElement(By.xpath('//h3[contains(text(), "Tutorial (Homepage)")]/ancestor::div//input[@type="checkbox"]'));
       
-      for (let i = 0; i < allButtons.length; i++) {
-        try {
-          const text = await allButtons[i].getText();
-          console.log(`Button ${i}: "${text}"`);
-        } catch (e) {
-          console.log(`Button ${i}: (error getting text)`);
-        }
-      }
-      
-      // Try to find replay button
-      let replayButton = null;
-      
-      try {
-        replayButton = await driver.findElement(By.xpath('//button[contains(text(), "Replay")]'));
-        console.log('✅ Found Replay button');
-      } catch (e) {
-        try {
-          replayButton = await driver.findElement(By.xpath('//button[contains(text(), "Tutorial")]'));
-          console.log('✅ Found Tutorial button');
-        } catch (e2) {
-          console.log('⚠️ Could not find replay button - checking if it exists');
-          // Don't fail - just log
-          return;
-        }
-      }
-      
-      assert(replayButton, 'Should find replay tutorial button');
-      console.log('✅ Replay tutorial button found');
+      assert(tutorialCheckbox, 'Should find tutorial checkbox');
+      console.log('✅ Tutorial checkbox found');
     });
 
     it('should click replay tutorial button and show notification', async () => {
-      console.log('\nSTEP: Clicking replay tutorial button');
+      console.log('\nSTEP: Clicking tutorial checkbox');
       
-      // GuestSettings.jsx: The "Replay Tutorial" button calls toggleHomepageTutorial()
-      const replayButton = await driver.findElement(By.xpath('//button[contains(text(), "Replay")]'));
+      // GuestSettings.jsx: The tutorial is now a checkbox toggle that calls toggleHomepageTutorial()
+      // Click the checkbox for "Tutorial (Homepage)"
+      const tutorialCheckbox = await driver.findElement(By.xpath('//h3[contains(text(), "Tutorial (Homepage)")]/ancestor::div//input[@type="checkbox"]'));
       
-      await driver.executeScript('arguments[0].scrollIntoView(true);', replayButton);
+      await driver.executeScript('arguments[0].scrollIntoView(true);', tutorialCheckbox);
       await driver.sleep(500);
-      await driver.executeScript('arguments[0].click();', replayButton);
+      await driver.executeScript('arguments[0].click();', tutorialCheckbox);
       
-      // Wait for alert to appear
+      // Wait for notification modal to appear
       await driver.sleep(1500);
       
-      // Dismiss the alert
+      // Look for the notification modal
       try {
-        const alert = await driver.switchTo().alert();
-        const alertText = await alert.getText();
-        console.log(`Alert text: "${alertText}"`);
-        await alert.accept();
-        console.log('✅ Alert dismissed');
+        const notificationTitle = await driver.findElement(By.xpath('//h3[contains(text(), "Tutorial") or contains(text(), "Enabled")]'));
+        console.log('✅ Notification modal appeared');
       } catch (e) {
-        console.log('⚠️ No alert found, continuing...');
+        console.log('⚠️ Notification modal not found, but checkbox was clicked');
       }
       
       await driver.sleep(1000);
-      console.log('✅ Replay tutorial button clicked');
+      console.log('✅ Tutorial checkbox toggled');
     });
 
     it('should verify tutorial is active on homepage', async () => {
