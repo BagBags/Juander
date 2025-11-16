@@ -888,7 +888,7 @@ export default function TripArchivesPage() {
                 {/* Reviews Tab Content */}
                 {activeTab === "reviews" && (
                   <div
-                    className="px-4"
+                    className="px-7"
                     style={{
                       animation: "fadeIn 0.3s ease-out",
                     }}
