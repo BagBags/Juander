@@ -147,12 +147,12 @@ function GuestHomepageContent() {
         }}
       >
         {/* Logo Header */}
-        <div className="w-full mt-6 flex justify-center px-4">
-        <LogoHeader />
-      </div>
+        <header className="w-full mt-6 flex justify-center px-4">
+          <LogoHeader />
+        </header>
 
-      {/* Title with modern, clean styling */}
-      <div className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6">
+      {/* Main Content Area */}
+      <main className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6 flex-1 w-full">
         <h1
           className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
              font-bold tracking-tight leading-[1.1] 
@@ -167,7 +167,7 @@ function GuestHomepageContent() {
            max-w-sm mx-auto">
           Discover the historic walled city
         </p>
-      </div>
+      </main>
 
       {/* Side Buttons - Using shared component with guest filter */}
       <SideButtons userType="guest" />

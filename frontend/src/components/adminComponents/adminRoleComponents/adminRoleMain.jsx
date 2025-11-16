@@ -123,7 +123,7 @@ export default function RolesPage() {
     try {
       const token = localStorage.getItem("token");
       await axios.put(
-        `/api/admin/users/${id}/role`,
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/admin/users/${id}/role`,
         { role: newRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
