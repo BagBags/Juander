@@ -141,7 +141,7 @@ function GuestHomepageContent() {
           backgroundRepeat: "no-repeat",
           paddingTop: "env(safe-area-inset-top)",
           paddingBottom: "env(safe-area-inset-bottom)",
-          touchAction: "none",
+          touchAction: "pan-y",
           overscrollBehavior: "none",
           WebkitOverscrollBehavior: "none",
         }}
@@ -175,7 +175,7 @@ function GuestHomepageContent() {
       {/* Explore Button (Mobile Only) - Ultra Modern */}
       <button
         onClick={() => navigate("/GuestItinerary")}
-        className="absolute lg:top-[83%] lg:bottom-auto 
+        className="fixed bottom-[70px] 
         left-1/2 -translate-x-1/2
         bg-white/95 backdrop-blur-md
         text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl
@@ -191,10 +191,10 @@ function GuestHomepageContent() {
         transition-all duration-300 ease-out
         border border-white/50
         flex items-center justify-center gap-2
-        block md:hidden"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom) + 50px)",
-        }}
+        z-40
+        block md:hidden
+        touch-auto
+        cursor-pointer"
       >
         <Compass className="w-5 h-5" />
         <span>Start Tour</span>
