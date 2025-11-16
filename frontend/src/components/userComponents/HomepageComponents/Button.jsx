@@ -18,7 +18,7 @@ export default function Button({ navigate }) {
   return (
     <button
       onClick={handleClick}
-      className="fixed bottom-16 lg:fixed lg:bottom-16
+      className="homepage-start-tour-btn fixed bottom-16 lg:fixed lg:bottom-16
     left-1/2 -translate-x-1/2
     bg-white/95 backdrop-blur-md
     text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl

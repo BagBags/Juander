@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
 import axios from "axios";
-import { resetTour } from "../../../utils/tourApi";
+import { resetTour, completeTour, getTourStatus } from "../../../utils/tourApi";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -32,13 +32,16 @@ export default function Settings() {
           config
         );
         setShowFortModal(!res.data.hideFortSantiagoModal);
+        try {
+          const status = await getTourStatus();
+          setHomepageTutorialEnabled(!status.hasCompletedTour);
+        } catch {}
       } catch (err) {
         console.error("Error fetching user preference:", err);
       }
     };
     fetchUserPreference();
-    // Load switches from localStorage (manual replay flags)
-    setHomepageTutorialEnabled(localStorage.getItem("touristReplayTutorial") === "true");
+    // Map tutorial auto-start remains client-side for now
     setMapTutorialEnabled(localStorage.getItem("mapTourForceStart") === "true");
   }, []);
 
@@ -74,20 +77,20 @@ export default function Settings() {
     setTimeout(() => setSuccessMessage(""), 3000);
   };
 
-  const toggleHomepageTutorial = () => {
+  const toggleHomepageTutorial = async () => {
     const next = !homepageTutorialEnabled;
     setHomepageTutorialEnabled(next);
     try {
       if (next) {
-        localStorage.setItem("touristReplayTutorial", "true");
+        await resetTour();
         setNotification({
           isOpen: true,
           type: "info",
           title: "Homepage Tutorial Enabled",
-          message: "When you go to the Homepage, the guide will start automatically. It will turn off after you finish or skip.",
+          message: "When you visit the Homepage, the guide will auto-start.",
         });
       } else {
-        localStorage.removeItem("touristReplayTutorial");
+        await completeTour();
         setNotification({
           isOpen: true,
           type: "info",
@@ -96,7 +99,7 @@ export default function Settings() {
         });
       }
     } catch (err) {
-      console.error("Error updating homepage tutorial flag:", err);
+      console.error("Error updating homepage tutorial status:", err);
     }
   };
 

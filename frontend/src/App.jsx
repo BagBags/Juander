@@ -103,7 +103,7 @@ function AnimatedRoutes() {
           <Route
             path="/GuestItineraryMap/:itineraryId"
             element={
-              <TourProvider steps={mapTourSteps} userRole="guest">
+              <TourProvider steps={mapTourSteps} userRole="guest" scrollToFirstStep={false} disableScrolling={true} tourType="map">
                 <GuestItineraryMap />
               </TourProvider>
             }
@@ -150,7 +150,7 @@ function AnimatedRoutes() {
           <Route
             path="/TouristItineraryMap/:itineraryId"
             element={
-              <TourProvider steps={mapTourSteps} userRole="tourist">
+              <TourProvider steps={mapTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={true} tourType="map">
                 <TouristItineraryMap />
               </TourProvider>
             }

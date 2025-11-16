@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 
 export default function CustomTourTooltip({
@@ -12,9 +12,16 @@ export default function CustomTourTooltip({
   skipProps,
   isLastStep,
   size,
+  onBack,
+  onNext,
+  onClose,
+  onSkip,
+  external,
 }) {
   const containerRef = useRef(null);
   const primaryRef = useRef(null);
+  const prevPosRef = useRef(null);
+  const [slideStyle, setSlideStyle] = useState({ transform: 'translate(0,0)', transition: 'none' });
 
   // Randomize persona avatar from public/juan/Juan1-4 unless step provides one
   const personaImages = useMemo(
@@ -26,23 +33,30 @@ export default function CustomTourTooltip({
     ],
     []
   );
-  const avatarSrc = useMemo(() => {
-    if (step?.avatar) return step.avatar; // allow override per step
+  const defaultAvatar = useMemo(() => {
     const i = Math.floor(Math.random() * personaImages.length);
     return personaImages[i];
-  }, [index, step?.avatar, personaImages]);
+  }, [personaImages]);
+  const avatarSrc = step?.avatar || defaultAvatar;
 
-  // Focus management: only focus on first step to avoid flicker on move
   useEffect(() => {
     if (index === 0) {
-      const next = primaryRef.current;
-      if (next && typeof next.focus === "function") {
-        next.focus();
-      } else if (containerRef.current && typeof containerRef.current.focus === "function") {
-        containerRef.current.focus();
+      const el = primaryRef.current || containerRef.current;
+      if (el && typeof el.focus === "function") {
+        requestAnimationFrame(() => {
+          try {
+            el.focus({ preventScroll: true });
+          } catch {
+            el.focus();
+          }
+        });
       }
     }
   }, [index]);
+
+  const animateAnd = (handler) => (e) => {
+    handler?.(e);
+  };
 
   const handleKeyDown = (e) => {
     // Basic keyboard controls inside the modal tooltip
@@ -57,21 +71,54 @@ export default function CustomTourTooltip({
     }
   };
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const newRect = el.getBoundingClientRect();
+    const prev = prevPosRef.current;
+    if (prev) {
+      const dx = prev.left - newRect.left;
+      const dy = prev.top - newRect.top;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        setSlideStyle({ transform: `translate(${dx}px, ${dy}px)`, transition: 'none' });
+        requestAnimationFrame(() => {
+          setSlideStyle({ transform: 'translate(0,0)', transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' });
+        });
+      } else {
+        setSlideStyle({ transform: 'translate(0,0)', transition: 'none' });
+      }
+      prevPosRef.current = null;
+    } else {
+      setSlideStyle({ transform: 'translate(0,0)', transition: 'none' });
+    }
+  }, [index]);
+
+  const performAndSlide = (handler) => (e) => {
+    try {
+      if (containerRef.current) {
+        prevPosRef.current = containerRef.current.getBoundingClientRect();
+      }
+    } catch {}
+    handler?.(e);
+  };
+
   const titleId = `tour-title-${index}`;
   const contentId = `tour-content-${index}`;
 
   return (
     <div
-      {...tooltipProps}
-      className="relative bg-white rounded-2xl shadow-2xl w-[90vw] sm:w-[400px] md:w-[450px] max-w-[calc(100vw-32px)] border border-gray-200/60"
+      {...(external ? {} : tooltipProps)}
+      className={"relative bg-white rounded-2xl shadow-2xl border border-gray-200/60 opacity-100"}
       style={{
         padding: 0,
-        ...tooltipProps.style,
-        maxHeight: 'calc(100vh - 120px)',
+        ...(external ? {} : tooltipProps.style),
+        maxHeight: 'calc(100vh - 160px)',
+        width: 'auto',
+        maxWidth: 'min(450px, calc(100vw - 24px))',
+        boxSizing: 'border-box',
         overflow: 'visible',
         zIndex: 10020,
-        willChange: 'transform, opacity',
-        transition: 'transform 180ms ease-out',
+        willChange: 'auto',
       }}
       ref={containerRef}
       role="dialog"
@@ -82,26 +129,25 @@ export default function CustomTourTooltip({
       onKeyDown={handleKeyDown}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Floating persona avatar - half body outside modal */}
-      {avatarSrc && (
-        <div className="absolute -top-16 sm:-top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-          <img
-            src={avatarSrc}
-            alt="Tour guide"
-            aria-hidden="true"
-            className="h-20 sm:h-24 w-auto drop-shadow-2xl"
-          />
-        </div>
-      )}
+      <div style={slideStyle} className="relative">
+        {avatarSrc && (
+          <div className="absolute -top-16 sm:-top-20 left-1/2 -translate-x-1/2 z-[100000] pointer-events-none">
+            <img
+              src={avatarSrc}
+              alt=""
+              aria-hidden="true"
+              className="h-20 sm:h-24 w-auto"
+              style={{ filter: 'drop-shadow(0 8px 22px rgba(0,0,0,0.35))' }}
+            />
+          </div>
+        )}
 
-      {/* Header - Modern minimal with persona */}
       <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-center border-b border-gray-100 bg-white/95">
         <h3 id={titleId} className="text-gray-900 font-semibold text-base sm:text-lg tracking-wide truncate">
           {step.title}
         </h3>
       </div>
 
-      {/* Progress Bar */}
       <div className="h-1 bg-gray-100">
         <div 
           className="h-full bg-gradient-to-r from-[#f04e37] to-[#e03d2d] transition-all duration-300 ease-out"
@@ -109,8 +155,7 @@ export default function CustomTourTooltip({
         ></div>
       </div>
 
-      {/* Scrollable content wrapper */}
-      <div style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}>
+      <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'hidden' }}>
         {/* Content */}
         <div className="px-4 sm:px-6 py-4 sm:py-5">
         {/* Optional media support */}
@@ -128,7 +173,8 @@ export default function CustomTourTooltip({
         </p>
       </div>
 
-      {/* Footer */}
+      </div>
+
       <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white flex flex-col sm:flex-row items-center gap-3">
         {/* Top row on mobile: dot progress */}
         <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-1">
@@ -153,7 +199,7 @@ export default function CustomTourTooltip({
             <button
               {...backProps}
               type="button"
-              onClick={(e) => { if (index <= 0) return; backProps?.onClick?.(e); }}
+              onClick={(e) => { if (index <= 0) return; (external ? performAndSlide(onBack) : performAndSlide(backProps?.onClick))(e); }}
               onMouseDown={(e) => e.stopPropagation()}
               className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
               aria-label="Go to previous step"
@@ -168,7 +214,7 @@ export default function CustomTourTooltip({
             <button
               {...skipProps}
               type="button"
-              onClick={(e) => { skipProps?.onClick?.(e); }}
+              onClick={external ? performAndSlide(onSkip) : performAndSlide(skipProps?.onClick)}
               onMouseDown={(e) => e.stopPropagation()}
               className="px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
               aria-label="Skip the tour"
@@ -181,7 +227,7 @@ export default function CustomTourTooltip({
           <button
             {...(isLastStep ? closeProps : primaryProps)}
             type="button"
-            onClick={(e) => { (isLastStep ? closeProps?.onClick : primaryProps?.onClick)?.(e); }}
+            onClick={(e) => { (external ? (isLastStep ? performAndSlide(onClose) : performAndSlide(onNext)) : (isLastStep ? performAndSlide(closeProps?.onClick) : performAndSlide(primaryProps?.onClick)))?.(e); }}
             onMouseDown={(e) => e.stopPropagation()}
             className="flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ml-auto"
             aria-label={isLastStep ? "Finish tour" : "Go to next step"}

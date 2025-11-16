@@ -13,7 +13,7 @@ import { Compass, UserPlus } from "lucide-react";
 
 export default function GuestHomepage() {
   return (
-    <TourProvider steps={guestTourSteps} userRole="guest">
+    <TourProvider steps={guestTourSteps} userRole="guest" scrollToFirstStep={false} disableScrolling={true} tourType="homepage">
       <GuestHomepageContent />
     </TourProvider>
   );

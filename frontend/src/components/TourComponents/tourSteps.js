@@ -55,6 +55,14 @@ export const homepageTourSteps = [
     title: "AI Tour Guide",
     avatar: "/juan/Juan2.png",
   },
+  {
+    target: ".homepage-start-tour-btn",
+    content:
+      "Start your tour. On mobile, this opens your itineraries. On desktop, it brings you to the interactive map.",
+    placement: "auto",
+    title: "Start Tour",
+    avatar: "/juan/Juan3.png",
+  },
 ];
 
 // Guided tour for itinerary map pages (tourist and guest)
@@ -73,6 +81,14 @@ export const mapTourSteps = [
     placement: "auto",
     title: "My Location",
     avatar: "/juan/Juan3.png",
+  },
+  {
+    target: ".map-show-destination-btn",
+    content:
+      "Open the current destination card. It shows details and lets you expand to full screen.",
+    placement: "auto",
+    title: "Current Destination",
+    avatar: "/juan/Juan1.png",
   },
   {
     target: ".map-transport-button",

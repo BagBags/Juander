@@ -96,18 +96,21 @@ button[aria-label*="Close"][data-test-id] {
 
 /* Ensure custom tooltip is above everything */
 .react-joyride__tooltip > div {
-  z-index: 10010 !important;
+  z-index: 100000 !important;
+  overflow: visible !important;
 }
 
 /* Ensure floater wrapper itself sits above map layers */
 .__floater {
-  z-index: 10010 !important;
+  z-index: 100000 !important;
+  overflow: visible !important;
 }
 
 /* Explicitly set tooltip wrapper stacking to avoid being under map containers */
 .react-joyride__tooltip {
-  z-index: 10010 !important;
-  opacity: 1 !important; /* ensure visible if library sets 0 during transitions */
+  z-index: 100000 !important;
+  opacity: 1 !important;
+  overflow: visible !important;
 }
 
 /* Prevent tooltip from remaining transparent due to inline styles */
@@ -120,6 +123,7 @@ button[aria-label*="Close"][data-test-id] {
 .__floater__open {
   opacity: 1 !important;
   visibility: visible !important;
+  overflow: visible !important;
 }
 
 /* Floater positioning */
@@ -130,6 +134,7 @@ button[aria-label*="Close"][data-test-id] {
 
 .__floater__body {
   max-width: 100% !important;
+  overflow: visible !important;
 }
 
 /* Mobile optimizations */
@@ -160,4 +165,8 @@ button[aria-label*="Close"][data-test-id] {
   .__floater__open .floating-chatbot {
     animation: none;
   }
+}
+/* Prevent page scroll while tour is active */
+.tour-active {
+  overflow: hidden !important;
 }

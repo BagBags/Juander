@@ -204,7 +204,7 @@ export default function Homepage() {
 
   return (
     <Suspense fallback={<ModernLoader progress={loadingProgress} />}>
-      <TourProvider steps={homepageTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={true}>
+      <TourProvider steps={homepageTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={true} tourType="homepage">
         {/* Autostart inside Provider to satisfy hook context */}
         <HomepageTourAutostart />
       
@@ -261,15 +261,16 @@ export default function Homepage() {
 }
 
 function HomepageTourAutostart() {
-  const { startTour, isTourRunning } = useTour();
+  const { startTour, isTourRunning, hasCompletedTour } = useTour();
+  const didAutoStartRef = React.useRef(false);
   useEffect(() => {
-    const replay = localStorage.getItem("touristReplayTutorial") === "true";
-    if (replay && !isTourRunning) {
+    if (didAutoStartRef.current) return;
+    if (!hasCompletedTour && !isTourRunning) {
+      didAutoStartRef.current = true;
       setTimeout(() => {
         startTour();
-        try { localStorage.removeItem("touristReplayTutorial"); } catch {}
-      }, 800);
+      }, 600);
     }
-  }, [startTour]);
+  }, [hasCompletedTour, startTour, isTourRunning]);
   return null;
 }

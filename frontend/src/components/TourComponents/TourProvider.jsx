@@ -7,7 +7,7 @@ import { TourContext } from "./TourContext";
 
 // TourContext and useTour moved to separate module to keep provider export compatible with Fast Refresh
 
-export default function TourProvider({ children, steps = [], userRole = "tourist", scrollToFirstStep = true, disableScrolling = false }) {
+export default function TourProvider({ children, steps = [], userRole = "tourist", scrollToFirstStep = true, disableScrolling = false, tourType = "homepage" }) {
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [hasCompletedTour, setHasCompletedTour] = useState(true); // Default to true to prevent flash
@@ -15,6 +15,9 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
   const [spotlightRect, setSpotlightRect] = useState(null);
   const startLockRef = useRef(false);
   const suppressFinishRef = useRef(false);
+  const EmptyTooltip = () => null;
+  const tooltipWrapRef = useRef(null);
+  const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
 
   // Helper: find the next available step whose target exists in the DOM
   const findNextAvailableIndex = (fromIndex, direction = 1) => {
@@ -41,6 +44,18 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Prevent page scroll while tour runs
+  useEffect(() => {
+    if (run) {
+      try { document.body.classList.add('tour-active'); } catch {}
+    } else {
+      try { document.body.classList.remove('tour-active'); } catch {}
+    }
+    return () => {
+      try { document.body.classList.remove('tour-active'); } catch {}
+    };
+  }, [run]);
+
   // Update spotlight position when step changes
   useEffect(() => {
     if (!run || !steps[stepIndex]) return;
@@ -63,6 +78,24 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
     return () => clearTimeout(timer);
   }, [run, stepIndex, steps]);
 
+  // Measure tooltip size after render for accurate placement
+  useEffect(() => {
+    if (!run) return;
+    const measure = () => {
+      const el = tooltipWrapRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        setTooltipSize({ width: rect.width, height: rect.height });
+      }
+    };
+    const id = setTimeout(measure, 0);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearTimeout(id);
+      window.removeEventListener('resize', measure);
+    };
+  }, [run, stepIndex, isMobile]);
+
   // Check tour status on mount (only for tourists)
   useEffect(() => {
     console.log(" TourProvider mounted, userRole:", userRole);
@@ -73,25 +106,9 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
 
     const checkTourStatus = async () => {
       try {
-        console.log(" Fetching tour status...");
         const status = await getTourStatus();
-        console.log(" Tour status:", status);
         setHasCompletedTour(status.hasCompletedTour);
-        
-        // Auto-start tour for new users
-        if (!status.hasCompletedTour) {
-          console.log(" Starting tour in 1 second...");
-          // Small delay to ensure DOM is ready
-          setTimeout(() => {
-            console.log(" Tour starting NOW!");
-            startTour();
-          }, 1000);
-        } else {
-          console.log(" User has already completed tour");
-        }
       } catch (error) {
-        console.error(" Error checking tour status:", error);
-        // On error, don't show tour
         setHasCompletedTour(true);
       }
     };
@@ -111,9 +128,12 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
       setRun(false);
       setStepIndex(0);
       try {
-        localStorage.removeItem("guestReplayTutorial");
-        localStorage.removeItem("touristReplayTutorial");
-        localStorage.removeItem("mapTourForceStart");
+        if (tourType === "homepage") {
+          if (userRole === "guest") localStorage.removeItem("guestReplayTutorial");
+          if (userRole === "tourist") localStorage.removeItem("touristReplayTutorial");
+        } else if (tourType === "map") {
+          localStorage.removeItem("mapTourForceStart");
+        }
       } catch {}
       if (userRole === "tourist") {
         try { await apiCompleteTour(); setHasCompletedTour(true); } catch {}
@@ -128,9 +148,12 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
       setStepIndex(0);
 
       try {
-        localStorage.removeItem("guestReplayTutorial");
-        localStorage.removeItem("touristReplayTutorial");
-        localStorage.removeItem("mapTourForceStart");
+        if (tourType === "homepage") {
+          if (userRole === "guest") localStorage.removeItem("guestReplayTutorial");
+          if (userRole === "tourist") localStorage.removeItem("touristReplayTutorial");
+        } else if (tourType === "map") {
+          localStorage.removeItem("mapTourForceStart");
+        }
       } catch (e) {}
 
       if (status === STATUS.FINISHED && userRole === "tourist") {
@@ -149,9 +172,12 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
         setRun(false);
         setStepIndex(0);
         try {
-          localStorage.removeItem("guestReplayTutorial");
-          localStorage.removeItem("touristReplayTutorial");
-          localStorage.removeItem("mapTourForceStart");
+          if (tourType === "homepage") {
+            if (userRole === "guest") localStorage.removeItem("guestReplayTutorial");
+            if (userRole === "tourist") localStorage.removeItem("touristReplayTutorial");
+          } else if (tourType === "map") {
+            localStorage.removeItem("mapTourForceStart");
+          }
         } catch {}
         if (userRole === "tourist") {
           try { await apiCompleteTour(); setHasCompletedTour(true); } catch {}
@@ -197,11 +223,6 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
     if (run) return;
     if (startLockRef.current) return;
     startLockRef.current = true;
-    try {
-      localStorage.removeItem("guestReplayTutorial");
-      localStorage.removeItem("touristReplayTutorial");
-      localStorage.removeItem("mapTourForceStart");
-    } catch {}
     const firstIdx = findNextAvailableIndex(-1, 1);
     setStepIndex(typeof firstIdx === 'number' ? firstIdx : 0);
     setRun(true);
@@ -281,6 +302,103 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
             pointerEvents: 'none',
             transition: 'all 0.3s ease-in-out',
           }} />
+
+          {/* Persistent tooltip positioned near spotlight */}
+          {steps[stepIndex] && (() => {
+            const margin = isMobile ? 12 : 16;
+            const offset = isMobile ? 10 : 14;
+            const width = tooltipSize.width || Math.min(450, window.innerWidth - margin * 2);
+            const height = tooltipSize.height || 240;
+            const centerX = spotlightRect.left + spotlightRect.width / 2;
+            let left = Math.max(margin, Math.min(centerX - width / 2, window.innerWidth - margin - width));
+            let placeBelowTop = spotlightRect.top + spotlightRect.height + offset;
+            let top;
+            if (placeBelowTop + height + margin <= window.innerHeight) {
+              top = placeBelowTop;
+            } else {
+              top = Math.max(margin, spotlightRect.top - offset - height);
+            }
+            top = Math.min(top, window.innerHeight - margin - height);
+            return (
+              <div
+                ref={tooltipWrapRef}
+                style={{
+                  position: 'fixed',
+                  top,
+                  left,
+                  zIndex: 100010,
+                  maxWidth: `calc(100vw - ${margin * 2}px)`,
+                }}
+              >
+                <CustomTourTooltip
+                  continuous
+                  index={stepIndex}
+                  step={steps[stepIndex]}
+                  isLastStep={stepIndex >= steps.length - 1}
+                  size={steps.length}
+                  onBack={() => {
+                    if (stepIndex <= 0) return;
+                    const prev = stepIndex - 1;
+                    setStepIndex(prev);
+                  }}
+                  onSkip={() => {
+                    setRun(false);
+                    setStepIndex(0);
+                    try {
+                      if (tourType === "homepage") {
+                        if (userRole === "guest") localStorage.removeItem("guestReplayTutorial");
+                        if (userRole === "tourist") localStorage.removeItem("touristReplayTutorial");
+                      } else if (tourType === "map") {
+                        localStorage.removeItem("mapTourForceStart");
+                      }
+                    } catch {}
+                  }}
+                  onNext={async () => {
+                    if (stepIndex >= steps.length - 1) {
+                      setRun(false);
+                      setStepIndex(0);
+                      try {
+                        if (tourType === "homepage") {
+                          if (userRole === "guest") localStorage.removeItem("guestReplayTutorial");
+                          if (userRole === "tourist") localStorage.removeItem("touristReplayTutorial");
+                        } else if (tourType === "map") {
+                          localStorage.removeItem("mapTourForceStart");
+                        }
+                      } catch {}
+                      if (userRole === "tourist") {
+                        try { await apiCompleteTour(); setHasCompletedTour(true); } catch {}
+                      }
+                      return;
+                    }
+                    const nextIdx = findNextAvailableIndex(stepIndex, 1);
+                    if (typeof nextIdx === 'number' && nextIdx !== stepIndex) {
+                      setStepIndex(nextIdx);
+                    } else {
+                      const targetIndex = stepIndex + 1;
+                      const clamped = Math.max(0, Math.min(targetIndex, steps.length - 1));
+                      setStepIndex(clamped);
+                    }
+                  }}
+                  onClose={async () => {
+                    setRun(false);
+                    setStepIndex(0);
+                    try {
+                      if (tourType === "homepage") {
+                        if (userRole === "guest") localStorage.removeItem("guestReplayTutorial");
+                        if (userRole === "tourist") localStorage.removeItem("touristReplayTutorial");
+                      } else if (tourType === "map") {
+                        localStorage.removeItem("mapTourForceStart");
+                      }
+                    } catch {}
+                    if (userRole === "tourist") {
+                      try { await apiCompleteTour(); setHasCompletedTour(true); } catch {}
+                    }
+                  }}
+                  external
+                />
+              </div>
+            );
+          })()}
         </>
       )}
       <Joyride
@@ -298,7 +416,7 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
         spotlightClicks={false}
         disableOverlay={false}
         callback={handleJoyrideCallback}
-        tooltipComponent={CustomTourTooltip}
+        tooltipComponent={EmptyTooltip}
         styles={{
           options: {
             zIndex: 10000,
@@ -327,6 +445,7 @@ export default function TourProvider({ children, steps = [], userRole = "tourist
             },
             floater: {
               filter: 'none',
+              zIndex: 100000,
             },
           },
           options: {
