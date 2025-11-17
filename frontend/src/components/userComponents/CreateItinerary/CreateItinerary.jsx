@@ -1067,7 +1067,18 @@ function SiteCard({
         )}
       </div>
 
-      <h3 className="font-bold text-gray-800 text-base mb-1 line-clamp-2">
+      <h3 
+        className="font-bold text-gray-800 text-base mb-1"
+        style={{
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+          wordWrap: "break-word",
+          overflowWrap: "break-word",
+          lineHeight: "1.3",
+        }}
+      >
         {site.siteName}
       </h3>
       {/* Category badge: show icon and category name */}
@@ -1093,23 +1104,38 @@ function SiteCard({
       <div className="mb-3">
         <div
           ref={descriptionRef}
-          className={`text-sm text-gray-600 space-y-1 ${
-            isExpanded ? "max-h-48 overflow-y-auto pr-2" : "line-clamp-3"
+          className={`text-sm text-gray-600 ${
+            isExpanded ? "max-h-48 overflow-y-auto pr-2" : ""
           }`}
           style={{
             overflow: isExpanded ? "auto" : "hidden",
             width: "100%",
-            wordBreak: "break-word",
+            wordWrap: "break-word",
+            overflowWrap: "break-word",
+            wordBreak: "normal",
+            whiteSpace: isExpanded ? "normal" : "normal",
+            display: isExpanded ? "block" : "-webkit-box",
+            WebkitLineClamp: isExpanded ? "unset" : 3,
+            WebkitBoxOrient: "vertical",
             scrollbarWidth: "thin",
             scrollbarColor: "#f04e37 #f3f4f6",
+            lineHeight: "1.5",
           }}
         >
           {site.siteDescription ? (
-            site.siteDescription.split("\n\n").map((paragraph, idx) => (
-              <p key={idx} style={{ wordBreak: "break-word" }}>
-                {paragraph.trim()}
-              </p>
-            ))
+            isExpanded ? (
+              <div className="space-y-2">
+                {site.siteDescription.split("\n\n").map((paragraph, idx) => (
+                  <p key={idx} style={{ wordWrap: "break-word", overflowWrap: "break-word" }}>
+                    {paragraph.trim()}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <span style={{ wordWrap: "break-word", overflowWrap: "break-word" }}>
+                {site.siteDescription.replace(/\n\n/g, ' ')}
+              </span>
+            )
           ) : (
             <p className="text-gray-400 italic">No description available</p>
           )}
@@ -1277,10 +1303,31 @@ function ItineraryCard({
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-1">
+                    <h5 
+                      className="font-semibold text-gray-800 text-sm mb-1"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 1,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        wordWrap: "break-word",
+                        overflowWrap: "break-word",
+                      }}
+                    >
                       {site.siteName}
                     </h5>
-                    <p className="text-xs text-gray-500 line-clamp-2">
+                    <p 
+                      className="text-xs text-gray-500"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        wordWrap: "break-word",
+                        overflowWrap: "break-word",
+                        lineHeight: "1.4",
+                      }}
+                    >
                       {site.siteDescription || "No description available"}
                     </p>
                   </div>

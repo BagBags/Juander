@@ -114,16 +114,36 @@ export default function ProfilePage() {
 
       console.log("🔵 Upload response:", res.data);
 
-      // ✅ Append timestamp to force browser to fetch new image
-      const newProfilePic = `${res.data.profilePicture}?t=${Date.now()}`;
+      // ✅ Get the S3 URL directly from response
+      const s3Url = res.data.profilePicture;
 
       const updatedUser = {
         ...currentUser,
-        profilePicture: newProfilePic,
+        profilePicture: s3Url,
       };
 
+      // ✅ Clear preview to show the uploaded S3 image immediately
+      setPreviewImage(null);
+      setImageError(false);
+      
+      // ✅ Update state and localStorage
       setCurrentUser(updatedUser);
       localStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      // ✅ Force refresh by updating refresh key
+      setRefreshKey((prev) => prev + 1);
+
+      console.log("✅ Profile picture updated with S3 URL:", s3Url);
+
+      // ✅ Show success notification
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: t("uploadSuccess") || "Upload Successful",
+        message: "Profile picture updated successfully!",
+        autoClose: true,
+        autoCloseDuration: 2000,
+      });
     } catch (err) {
       console.error("Upload failed:", err.response?.data || err.message);
       setNotification({
@@ -171,11 +191,16 @@ export default function ProfilePage() {
               <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
               {!imageError ? (
                 <img
+                  key={currentUser?.profilePicture}
                   src={
                     previewImage
                       ? previewImage
                       : currentUser?.authProvider === "google"
-                      ? currentUser?.profilePicture
+                      ? currentUser?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          `${currentUser?.firstName || "User"} ${
+                            currentUser?.lastName || ""
+                          }`
+                        )}&background=ffffff&color=f04e37&size=200&bold=true`
                       : currentUser?.profilePicture
                       ? currentUser.profilePicture.startsWith("http")
                         ? currentUser.profilePicture
@@ -185,13 +210,11 @@ export default function ProfilePage() {
                               ""
                             ) || "http://localhost:5000"
                           }${currentUser.profilePicture}`
-                      : "https://ui-avatars.com/api/?name=" +
-                        encodeURIComponent(
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(
                           `${currentUser?.firstName || "User"} ${
                             currentUser?.lastName || ""
                           }`
-                        ) +
-                        "&background=ffffff&color=f04e37&size=200&bold=true"
+                        )}&background=ffffff&color=f04e37&size=200&bold=true`
                   }
                   alt="Profile"
                   className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
@@ -199,7 +222,7 @@ export default function ProfilePage() {
                     console.log("Image failed to load, using fallback");
                     setImageError(true);
                   }}
-                  crossOrigin="anonymous"
+                  {...(currentUser?.authProvider !== "google" && { crossOrigin: "anonymous" })}
                 />
               ) : (
                 <div className="w-full h-full rounded-full border-4 border-white bg-white flex items-center justify-center text-[#f04e37] font-bold text-3xl shadow-2xl relative">

@@ -12,7 +12,7 @@ const upload = require("../middleware/upload");
 router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
   try {
     const { itineraryId, siteId, rating, reviewText } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     if (!itineraryId || !siteId || !rating) {
       return res.status(400).json({ error: "Itinerary ID, Site ID, and rating are required" });
@@ -99,7 +99,7 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
 // @access  Private
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const reviews = await Review.find({ userId })
       .populate("itineraryId", "name")
@@ -169,7 +169,7 @@ router.get("/site/:siteId", async (req, res) => {
 // @access  Private
 router.get("/:id", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { id } = req.params;
 
     const review = await Review.findOne({ _id: id, userId })
@@ -192,7 +192,7 @@ router.get("/:id", verifyToken, async (req, res) => {
 // @access  Private
 router.put("/:id", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { id } = req.params;
     const { rating, reviewText } = req.body;
 
@@ -276,7 +276,7 @@ router.put("/:id", verifyToken, async (req, res) => {
 // @access  Private
 router.delete("/:id", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { id } = req.params;
 
     const review = await Review.findOne({ _id: id, userId })

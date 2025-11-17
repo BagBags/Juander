@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const Itinerary = require("../models/itineraryModel");
 const Log = require("../models/logModel"); // import Log model
+const VisitedSite = require("../models/visitedSiteModel");
+const Review = require("../models/reviewModel");
 const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload"); // your Multer setup
 const { deleteFromS3 } = require("../middleware/upload");
@@ -326,19 +328,51 @@ router.delete("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
+    // CASCADE DELETE: Find and delete all reviews associated with this itinerary
+    const reviews = await Review.find({ itineraryId: req.params.id });
+    
+    // Delete S3 photos from reviews
+    for (const review of reviews) {
+      if (review.photos && review.photos.length > 0) {
+        for (const photoUrl of review.photos) {
+          try {
+            await deleteFromS3(photoUrl);
+            console.log(`Deleted review photo from S3: ${photoUrl}`);
+          } catch (err) {
+            console.error(`Failed to delete review photo from S3: ${photoUrl}`, err);
+            // Continue even if S3 deletion fails
+          }
+        }
+      }
+    }
+    
+    // Delete all reviews for this itinerary
+    const deletedReviewsCount = await Review.deleteMany({ itineraryId: req.params.id });
+    console.log(`Deleted ${deletedReviewsCount.deletedCount} reviews for itinerary ${req.params.id}`);
+
+    // CASCADE DELETE: Delete all visited sites associated with this itinerary
+    const deletedVisitedSitesCount = await VisitedSite.deleteMany({ itineraryId: req.params.id });
+    console.log(`Deleted ${deletedVisitedSitesCount.deletedCount} visited sites for itinerary ${req.params.id}`);
+
+    // Delete the itinerary itself
     await itinerary.deleteOne();
 
     // Log action
     await Log.create({
       adminName: getUserName(req.user),
-      action: `Permanently deleted itinerary: "${itinerary.name}"`,
+      action: `Permanently deleted itinerary: "${itinerary.name}" (cascade deleted ${deletedVisitedSitesCount.deletedCount} visited sites and ${deletedReviewsCount.deletedCount} reviews)`,
       role: itinerary.isAdminCreated ? "admin" : "tourist",
       targetType: "itinerary",
       targetId: itinerary._id,
     });
 
-    res.json({ message: "Itinerary permanently deleted" });
+    res.json({ 
+      message: "Itinerary permanently deleted",
+      deletedVisitedSites: deletedVisitedSitesCount.deletedCount,
+      deletedReviews: deletedReviewsCount.deletedCount
+    });
   } catch (err) {
+    console.error("Error deleting itinerary:", err);
     res.status(500).json({ error: err.message });
   }
 });
