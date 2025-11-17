@@ -8,7 +8,7 @@ import React, {
 import axios from "axios";
 import { RotateCcw, Download, X } from "lucide-react";
 import PhotoboothSlider from "./photoboothSlider";
-import { baseFilters } from "./basefilter";
+// import { baseFilters } from "./basefilter"; // REMOVED - use only admin-uploaded filters
 import "../../../Photobooth.css";
 import {
   setPhotoboothRouteActive,
@@ -27,7 +27,7 @@ export default function Photobooth() {
   const [cameraKey, setCameraKey] = useState(0);
   const detectStateRef = useRef(null);
 
-  const [filters, setFilters] = useState(baseFilters);
+  const [filters, setFilters] = useState([]);
   const [filtersLoading, setFiltersLoading] = useState(true);
   const [selectedFilterId, setSelectedFilterId] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
@@ -83,11 +83,13 @@ export default function Photobooth() {
                   originalUrl = encoded;
                 }
               } catch {}
-              // If remote and not same-origin, route through our proxy for same-origin canvas drawing
+              // If remote and not same-origin, check if we need to proxy
               try {
                 const urlObj = new URL(imageUrl);
                 const isRemote = urlObj.origin !== ORIGIN;
-                if (isRemote) {
+                // Skip proxy for S3 URLs - they have public bucket policy and CORS configured
+                const isS3Url = imageUrl.includes('.s3.') || imageUrl.includes('.s3-');
+                if (isRemote && !isS3Url) {
                   const apiOrigin = new URL(API_BASE, window.location.href)
                     .origin;
                   const targetUrl = imageUrl; // absolute remote URL to fetch
@@ -120,10 +122,13 @@ export default function Photobooth() {
                 `filter-${Date.now()}-${Math.random()}`,
             };
           });
-          setFilters([...baseFilters, ...normalized]);
+          console.log("✅ Loaded filters from backend:", normalized.length);
+          console.log("📋 Filter URLs:", normalized.map(f => ({ name: f.label, url: f.image })));
+          setFilters(normalized);
         }
-      } catch {
-        // ignore, keep baseFilters
+      } catch (err) {
+        console.error("Failed to load filters:", err);
+        setFilters([]); // Empty array if fetch fails
       } finally {
         if (isMounted) setFiltersLoading(false);
       }
@@ -468,28 +473,35 @@ export default function Photobooth() {
       if (img && container && isCorsReady) {
         drawWithContainerTransform(img);
       } else if (img && container) {
-        // Try to load a CORS-safe version via backend proxy and draw it
+        // Try to load a CORS-safe version (proxy only for non-S3 URLs)
         try {
           const currentSrc = img.getAttribute("src") || "";
+          const rawUrl = selectedMeta?.originalImage || currentSrc;
+          const isS3Url = rawUrl.includes('.s3.') || rawUrl.includes('.s3-');
           const origin = window.location.origin;
+          
           let proxySrc = currentSrc;
-          if (!currentSrc.includes("/photobooth/filters/proxy")) {
-            const rawUrl = selectedMeta?.originalImage || currentSrc;
+          // Only proxy non-S3 URLs since S3 has public-read ACL and CORS configured
+          if (!currentSrc.includes("/photobooth/filters/proxy") && !isS3Url) {
             const encoded = encodeURIComponent(rawUrl);
-            proxySrc = `${origin}/photobooth/filters/proxy?url=${encoded}`;
+            proxySrc = `${origin}/api/photobooth/filters/proxy?url=${encoded}`;
+          } else if (isS3Url) {
+            // Use S3 URL directly - it has proper ACL and CORS
+            proxySrc = rawUrl;
           }
+          
           const tmpImg = new Image();
           tmpImg.crossOrigin = "anonymous";
           const loaded = await new Promise((resolve, reject) => {
             tmpImg.onload = () => resolve(true);
-            tmpImg.onerror = () => reject(new Error("Proxy overlay load failed"));
+            tmpImg.onerror = () => reject(new Error("Overlay load failed"));
             tmpImg.src = proxySrc;
           });
           if (loaded) {
             drawWithContainerTransform(tmpImg);
           }
         } catch (loadErr) {
-          console.warn("Could not load CORS-safe overlay via proxy:", loadErr);
+          console.warn("Could not load CORS-safe overlay:", loadErr);
         }
       }
 

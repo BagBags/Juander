@@ -182,11 +182,15 @@ export default function PhotoboothSlider({
                 pointerEvents: "none",
               }}
               onError={(e) => {
-                console.warn(`Failed to load filter image: ${filter.label}`);
-                // If proxy path failed and we have originalImage, try it
                 const currentSrc = e.currentTarget.getAttribute('src') || '';
+                console.warn(`❌ Failed to load filter image: ${filter.label}`);
+                console.warn(`   Tried URL: ${currentSrc}`);
+                console.warn(`   Original URL: ${filter.originalImage || 'none'}`);
+                
+                // If proxy path failed and we have originalImage, try it
                 const original = filter.originalImage;
                 if (original && currentSrc.includes('/photobooth/filters/proxy')) {
+                  console.log(`   🔄 Retrying with original URL: ${original}`);
                   e.currentTarget.setAttribute('src', original);
                   return;
                 }
