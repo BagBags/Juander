@@ -18,16 +18,7 @@ export default function ProfileLayout() {
       className="bg-white flex flex-col text-sm relative"
       style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
     >
-      {/* BackHeader pinned to the left */}
-      <div 
-        className="sticky top-0 z-20 bg-white px-4 flex items-center"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 12px)",
-          paddingBottom: "12px",
-        }}
-      >
-        <BackHeader title={getTitle()} />
-      </div>
+      <BackHeader title={getTitle()} />
 
       {/* Centered page content */}
       <div

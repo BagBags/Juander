@@ -67,21 +67,7 @@ export default function EmergencyPage() {
     >
       {/* Global TTS Button */}
 
-      {/* Sticky Back Header */}
-      <div
-        className="sticky top-0 z-20 border-b border-white/20"
-        style={{
-          background: "linear-gradient(to right, #ef4444, #f04e37)",
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px",
-        }}
-      >
-        <div className="text-white">
-          <BackHeader title="Emergency Hotlines" />
-        </div>
-      </div>
+      <BackHeader title="Emergency Hotlines" className="text-white" />
 
       <MainLayout includeSideButtons={false}>
         <PullToRefresh onRefresh={handleRefresh}>

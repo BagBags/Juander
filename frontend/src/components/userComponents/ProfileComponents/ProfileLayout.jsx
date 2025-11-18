@@ -27,18 +27,7 @@ export default function ProfileLayout() {
         overscrollBehavior: 'none'
       }}
     >
-      {/* BackHeader with safe-area support */}
-      <div 
-        className="sticky top-0 z-20 bg-white border-b border-gray-200"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px"
-        }}
-      >
-        <BackHeader title={getTitle()} />
-      </div>
+      <BackHeader title={getTitle()} />
 
       {/* Centered page content; child handles its own scroll */}
       <div

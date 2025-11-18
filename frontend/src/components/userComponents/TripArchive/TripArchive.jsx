@@ -443,18 +443,7 @@ export default function TripArchivesPage() {
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
         </div>
 
-        {/* Sticky BackHeader anchored to viewport (prevents movement between tabs) */}
-        <div
-          className="sticky top-0 z-20 bg-white border-b border-gray-200 w-full"
-          style={{
-            paddingTop: "max(env(safe-area-inset-top), 16px)",
-            paddingBottom: "8px",
-            paddingLeft: "16px",
-            paddingRight: "16px",
-          }}
-        >
-          <BackHeader title="Trip Archives" />
-        </div>
+        <BackHeader title="Trip Archives" />
 
         <MainLayout includeSideButtons={false}>
           <PullToRefresh onRefresh={handleRefresh}>

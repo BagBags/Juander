@@ -556,18 +556,7 @@ export default function CreateItineraryPage() {
 
       {/* Global TTS Button */}
 
-      {/* === STICKY BACKHEADER === */}
-      <div
-        className="sticky top-0 z-20 bg-[#f04e37] border-b border-white/20"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top), 16px)",
-          paddingBottom: "8px",
-          paddingLeft: "16px",
-          paddingRight: "16px",
-        }}
-      >
-        <BackHeader title="Itinerary Manager" className="text-white" />
-      </div>
+      <BackHeader title="Itinerary Manager" className="text-white" />
 
       {/* === TAB NAVIGATION === */}
       <div className="px-4 pt-6 pb-4">

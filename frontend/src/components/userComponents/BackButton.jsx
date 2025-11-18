@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
  * Standardized BackHeader component - matches Profile page design
  * Should be wrapped in a container with safe-area padding
  */
-export default function BackHeader({ title, className = "" }) {
+export default function BackHeader({ title, className = "", noMargin = false }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -14,7 +14,13 @@ export default function BackHeader({ title, className = "" }) {
                      (title?.props?.children || title || "Back");
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div
+      className={`flex items-center gap-2 ${className}`}
+      style={{
+        marginTop: noMargin ? 0 : 'clamp(12px, 3vh, 20px)',
+        marginLeft: noMargin ? 0 : 'clamp(10px, 4vw, 14px)'
+      }}
+    >
       <button
         className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/10"
         onClick={() => {

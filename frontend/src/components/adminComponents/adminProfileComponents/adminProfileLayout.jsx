@@ -39,9 +39,7 @@ export default function AdminProfileLayout() {
       <div className="w-full max-w-md">
         {/* Conditionally render BackHeader */}
         {showBackHeader && (
-          <div className="pt-4 z-10 bg-white sticky top-0">
-            <BackHeader title={getTitle()} />
-          </div>
+          <BackHeader title={getTitle()} />
         )}
 
         <div className="mt-4">
