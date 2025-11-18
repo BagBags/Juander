@@ -8,6 +8,7 @@ import { saveAuth, clearAuth } from "../../utils/authStorage";
 
 export default function LoginForm({ toggleForm }) {
   const navigate = useNavigate();
+  const guestButtonRef = useRef(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showForgot, setShowForgot] = useState(false);
@@ -331,8 +332,8 @@ export default function LoginForm({ toggleForm }) {
             <hr className="flex-1 border-gray-300" />
           </div>
 
-          {/* Google Login - sized responsively to match other buttons */}
-          <ResponsiveGoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError("Google login failed.")} />
+          {/* Google Login - sized responsively to match the Guest button */}
+          <ResponsiveGoogleLogin guestRef={guestButtonRef} onSuccess={handleGoogleLoginSuccess} onError={() => setError("Google login failed.")} />
 
           {/* Guest Login */}
           <button
@@ -349,6 +350,7 @@ export default function LoginForm({ toggleForm }) {
               i18n.changeLanguage("en");
               navigate("/GuestHomepage", { replace: true });
             }}
+            ref={guestButtonRef}
             className="w-full bg-gray-100 text-gray-800 px-4 py-2.5 sm:py-3 rounded-lg hover:bg-gray-200 active:scale-95 text-sm sm:text-base"
           >
             Continue as Guest
@@ -468,13 +470,15 @@ export default function LoginForm({ toggleForm }) {
   );
 }
 
-function ResponsiveGoogleLogin({ onSuccess, onError }) {
+function ResponsiveGoogleLogin({ guestRef, onSuccess, onError }) {
   const containerRef = useRef(null);
   const [width, setWidth] = useState(0);
 
   useEffect(() => {
     const measure = () => {
-      const w = containerRef.current?.offsetWidth || 360;
+      const guestW = guestRef?.current?.offsetWidth;
+      const containerW = containerRef.current?.offsetWidth;
+      const w = guestW || containerW || 360;
       setWidth(Math.floor(w));
     };
     measure();

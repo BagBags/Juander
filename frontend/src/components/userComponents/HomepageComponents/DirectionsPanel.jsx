@@ -62,17 +62,9 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
   // Helper: build turn phrase based on step
   const buildTurnPhrase = (step, prefix = "") => {
-    const modifier = step?.maneuver?.modifier || ""; // left|right|straight
     const instruction = step?.maneuver?.instruction || "";
-    // Try to extract street name from instruction
-    const intoIdx = instruction.toLowerCase().indexOf(" into ");
-    const ontoIdx = instruction.toLowerCase().indexOf(" onto ");
-    const toIdx = instruction.toLowerCase().indexOf(" to ");
-    const cutIdx = intoIdx >= 0 ? intoIdx + 6 : ontoIdx >= 0 ? ontoIdx + 6 : toIdx >= 0 ? toIdx + 4 : -1;
-    const streetName = cutIdx >= 0 ? instruction.substring(cutIdx).trim() : instruction.replace(/^(turn|continue)\s+/i, '').trim();
-    const dirWord = modifier === "left" ? "left" : modifier === "right" ? "right" : "straight";
-    const action = dirWord === "straight" ? "Continue straight" : `Turn ${dirWord}`;
-    return `${prefix}${action} into ${streetName}`.trim();
+    if (!instruction) return "";
+    return `${prefix}${instruction}`.trim();
   };
 
   // Initialize display instruction and manage lock across step changes
