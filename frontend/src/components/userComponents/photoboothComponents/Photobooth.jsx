@@ -87,7 +87,7 @@ export default function Photobooth() {
               try {
                 const urlObj = new URL(imageUrl);
                 const isRemote = urlObj.origin !== ORIGIN;
-                // Skip proxy for S3 URLs - they have public bucket policy and CORS configured
+                // Skip proxy for S3 URLs - they should have CORS configured
                 const isS3Url = imageUrl.includes('.s3.') || imageUrl.includes('.s3-');
                 if (isRemote && !isS3Url) {
                   const apiOrigin = new URL(API_BASE, window.location.href)
@@ -636,7 +636,7 @@ export default function Photobooth() {
                   data-category={selectedMeta?.category || "general"}
                   loading="eager"
                   decoding="async"
-                  fetchpriority="high"
+                  fetchPriority="high"
                   onLoad={(e) => {
                     const src = e.currentTarget.getAttribute("src") || "";
                     // Trust our backend proxy path as CORS-ready
