@@ -47,9 +47,12 @@ class TextToSpeechService {
   // Speak text with options
   speak(text, options = {}) {
     if (!this.isEnabled || !text || !this.isSupported()) return;
+    const queue = options.queue === true;
 
-    // Cancel any ongoing speech
-    this.cancel();
+    // Cancel any ongoing speech unless queuing
+    if (!queue) {
+      this.cancel();
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
     
@@ -81,7 +84,10 @@ class TextToSpeechService {
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
+      const err = event?.error;
+      if (err !== 'interrupted' && err !== 'canceled') {
+        console.error('Speech synthesis error:', event);
+      }
       this.isSpeaking = false;
     };
 

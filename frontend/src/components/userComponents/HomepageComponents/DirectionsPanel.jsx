@@ -106,7 +106,6 @@ const DirectionsPanel = memo(function DirectionsPanel({
   const displayedText = displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
   useEffect(() => {
     if (!isAllowedRoute || !ttsService.isEnabled) return;
-    if (isLockedRef.current) return; // don't speak while locked near waypoint
     if (!displayedText) return;
 
     // Check if instruction changed AND 3-second cooldown passed
@@ -116,11 +115,26 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
     if (instructionChanged && cooldownPassed) {
       console.log(`🔊 TTS: "${displayedText}" (Step ${currentStepIndex + 1}/${steps.length})`);
-      announceDirectionStep(displayedText, currentStepIndex + 1, steps.length);
+      announceDirectionStep(displayedText);
       lastSpokenInstructionRef.current = displayedText;
       lastSpokenTimeRef.current = now; // Update last spoken time
     }
   }, [displayedText, isAllowedRoute, currentStepIndex, steps.length]);
+
+  useEffect(() => {
+    const onActivated = () => {
+      setTimeout(() => {
+        const text = displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
+        if (isAllowedRoute && ttsService.isEnabled && text) {
+          ttsService.speak(text, { queue: true });
+          lastSpokenInstructionRef.current = text;
+          lastSpokenTimeRef.current = Date.now();
+        }
+      }, 2000);
+    };
+    window.addEventListener('tts-activated', onActivated);
+    return () => window.removeEventListener('tts-activated', onActivated);
+  }, [displayInstruction, currentStepIndex, steps, isAllowedRoute]);
 
   // Cancel speech when leaving itinerary pages
   useEffect(() => {

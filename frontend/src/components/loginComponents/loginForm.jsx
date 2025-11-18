@@ -331,17 +331,8 @@ export default function LoginForm({ toggleForm }) {
             <hr className="flex-1 border-gray-300" />
           </div>
 
-          {/* Google Login - sized to match other buttons */}
-          <GoogleLogin
-            onSuccess={handleGoogleLoginSuccess}
-            onError={() => setError("Google login failed.")}
-            useOneTap
-            theme="outline"
-            size="large"
-            shape="rectangular"
-            text="signin_with"
-            logo_alignment="left"
-          />
+          {/* Google Login - sized responsively to match other buttons */}
+          <ResponsiveGoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => setError("Google login failed.")} />
 
           {/* Guest Login */}
           <button
@@ -473,6 +464,40 @@ export default function LoginForm({ toggleForm }) {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function ResponsiveGoogleLogin({ onSuccess, onError }) {
+  const containerRef = useRef(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      const w = containerRef.current?.offsetWidth || 360;
+      setWidth(Math.floor(w));
+    };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  return (
+    <div className="w-full flex justify-center">
+      <div ref={containerRef} className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
+        <GoogleLogin
+          key={width || 360}
+          onSuccess={onSuccess}
+          onError={onError}
+          useOneTap
+          width={width || 360}
+          text="signin_with"
+          theme="outline"
+          size="large"
+          shape="rectangular"
+          logo_alignment="left"
+        />
+      </div>
     </div>
   );
 }

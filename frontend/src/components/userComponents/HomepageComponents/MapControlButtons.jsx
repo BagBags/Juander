@@ -28,7 +28,11 @@ export default function MapControlButtons({
     if (!isTTSSupported) return;
     const newState = ttsService.toggle();
     setIsTTSEnabled(newState);
-    // Don't announce activation
+    if (newState) {
+      const msg = t("tts_voiceEnabled") || "Voice guidance enabled";
+      ttsService.speak(msg);
+      try { window.dispatchEvent(new Event("tts-activated")); } catch {}
+    }
   };
 
   // Check if compass permission is needed (iOS 13+)
