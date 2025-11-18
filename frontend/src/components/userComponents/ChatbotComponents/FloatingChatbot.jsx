@@ -110,7 +110,7 @@ export default function FloatingChatbot() {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 pointer-events-none">
+      <div className="fixed inset-0 z-[12000] pointer-events-none">
         <Draggable
           nodeRef={nodeRef}
           bounds="parent"
@@ -187,7 +187,7 @@ export default function FloatingChatbot() {
             willChange: "transform",
             overscrollBehavior: "contain",
           }}
-          className="bg-white shadow-2xl flex flex-col z-[60]
+          className="bg-white shadow-2xl flex flex-col z-[12000]
                      w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem]
                      sm:rounded-2xl"
         >

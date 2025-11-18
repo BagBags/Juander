@@ -48,7 +48,7 @@ import Homepage from "./components/userComponents/HomepageComponents/Homepage";
 import EmergencyPage from "./components/userComponents/EmegencyComponents/EmergencyPage";
 import ProfilePage from "./components/userComponents/ProfileComponents/Profile";
 import Photobooth from "./components/userComponents/photoboothComponents/Photobooth";
-import PhotoboothJeeliz from "./components/userComponents/photoboothComponents/PhotoboothJeeliz";
+
 import Account from "./components/userComponents/ProfileComponents/Account";
 import ProfileLayout from "./components/userComponents/ProfileComponents/ProfileLayout";
 import "./App.css";
@@ -100,19 +100,24 @@ function AnimatedRoutes() {
         {/* Public Pages */}\
         <Route path="/GuestHomepage" element={<GuestHomepage />} />
         <Route path="/GuestItinerary" element={<GuestItinerary />} />
-          <Route
-            path="/GuestItineraryMap/:itineraryId"
-            element={
-              <TourProvider steps={mapTourSteps} userRole="guest" scrollToFirstStep={false} disableScrolling={true} tourType="map">
-                <GuestItineraryMap />
-              </TourProvider>
-            }
-          />
+        <Route
+          path="/GuestItineraryMap/:itineraryId"
+          element={
+            <TourProvider
+              steps={mapTourSteps}
+              userRole="guest"
+              scrollToFirstStep={false}
+              disableScrolling={true}
+              tourType="map"
+            >
+              <GuestItineraryMap />
+            </TourProvider>
+          }
+        />
         <Route path="/TourMap" element={<TourMap />} />
         <Route path="/Chatbot" element={<Chatbot />} />
         <Route path="/Emergency" element={<EmergencyPage />} />
         <Route path="/Photobooth" element={<Photobooth />} />
-        <Route path="/PhotoboothJeeliz" element={<PhotoboothJeeliz />} />
         {/* Guest Profile Section */}
         <Route path="/GuestProfile" element={<GuestProfileLayout />}>
           <Route index element={<GuestProfile />} />
@@ -150,7 +155,13 @@ function AnimatedRoutes() {
           <Route
             path="/TouristItineraryMap/:itineraryId"
             element={
-              <TourProvider steps={mapTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={true} tourType="map">
+              <TourProvider
+                steps={mapTourSteps}
+                userRole="tourist"
+                scrollToFirstStep={false}
+                disableScrolling={true}
+                tourType="map"
+              >
                 <TouristItineraryMap />
               </TourProvider>
             }

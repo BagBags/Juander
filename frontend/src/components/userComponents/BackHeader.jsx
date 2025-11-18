@@ -1,5 +1,6 @@
 // BackHeader.jsx
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 
 /**
@@ -48,56 +49,65 @@ export default function BackHeader({ title, className = "" }) {
   };
 
   return (
-    <div 
-      className={`flex items-center gap-2 w-full ${className}`}
-      style={{
-        // CRITICAL: Safe area insets for status bar clearance on ALL devices
-        paddingTop: 'max(env(safe-area-inset-top), constant(safe-area-inset-top), 20px)',
-        paddingLeft: 'max(env(safe-area-inset-left), constant(safe-area-inset-left), 16px)',
-        paddingRight: 'max(env(safe-area-inset-right), constant(safe-area-inset-right), 16px)',
-        paddingBottom: '12px',
-        
-        // Position (relative to avoid breaking other page layouts)
-        position: 'relative',
-        zIndex: 50,
-        
-        // Prevent content bleeding
-        minHeight: 'fit-content',
-        
-        // Performance optimization
-        willChange: 'transform',
-        backfaceVisibility: 'hidden',
-        WebkitBackfaceVisibility: 'hidden',
-        transform: 'translateZ(0)',
-        WebkitTransform: 'translateZ(0)',
-      }}
-    >
-      <button
-        className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
-        onClick={handleBack}
-        aria-label="Go back"
+    <>
+      {createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 'max(env(safe-area-inset-top), constant(safe-area-inset-top), 0px)',
+            backgroundColor: '#0f1115',
+            zIndex: 9998,
+            pointerEvents: 'none',
+          }}
+        />, document.body
+      )}
+      <div 
+        className={`flex items-center gap-2 w-full ${className}`}
         style={{
-          minWidth: '44px',
-          minHeight: '44px',
-          width: '44px',
-          height: '44px',
-          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-          color: 'inherit',
+          paddingTop: 'max(env(safe-area-inset-top), constant(safe-area-inset-top), 20px)',
+          paddingLeft: 'max(env(safe-area-inset-left), constant(safe-area-inset-left), 16px)',
+          paddingRight: 'max(env(safe-area-inset-right), constant(safe-area-inset-right), 16px)',
+          paddingBottom: '12px',
+          position: 'relative',
+          zIndex: 9999,
+          minHeight: 'fit-content',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
           transform: 'translateZ(0)',
           WebkitTransform: 'translateZ(0)',
         }}
       >
-        ‹
-      </button>
-      <h1 
-        className="font-bold text-xl truncate flex-1" 
-        style={{ 
-          textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-          maxWidth: 'calc(100% - 60px)',
-        }}
-      >
-        {title}
-      </h1>
-    </div>
+        <button
+          className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center rounded-lg hover:bg-black/10 dark:hover:bg-white/10"
+          onClick={handleBack}
+          aria-label="Go back"
+          style={{
+            minWidth: '44px',
+            minHeight: '44px',
+            width: '44px',
+            height: '44px',
+            textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            color: 'inherit',
+            transform: 'translateZ(0)',
+            WebkitTransform: 'translateZ(0)',
+          }}
+        >
+          ‹
+        </button>
+        <h1 
+          className="font-bold text-xl truncate flex-1" 
+          style={{ 
+            textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            maxWidth: 'calc(100% - 60px)',
+          }}
+        >
+          {title}
+        </h1>
+      </div>
+    </>
   );
 }

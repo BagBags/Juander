@@ -128,8 +128,8 @@ function CustomFeeModal({ isOpen, onClose, sites }) {
   );
 }
 
-export default function TouristItineraryMain() {
-  const [itineraries, setItineraries] = useState({ admin: [], user: [] });
+export default function TouristItineraryMain({ initialItineraries }) {
+  const [itineraries, setItineraries] = useState(initialItineraries || { admin: [], user: [] });
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [showFortModal, setShowFortModal] = useState(false);
   const [showCustomFeeModal, setShowCustomFeeModal] = useState(false);
@@ -166,6 +166,12 @@ export default function TouristItineraryMain() {
   };
 
   useEffect(() => {
+    // If preloaded itineraries were provided, use them and skip fetching
+    if (initialItineraries && (initialItineraries.admin?.length || initialItineraries.user?.length)) {
+      setItineraries(initialItineraries);
+      return;
+    }
+
     const fetchItineraries = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -183,7 +189,6 @@ export default function TouristItineraryMain() {
         const adminItineraries = res.data.filter((i) => i.isAdminCreated);
         const userItineraries = res.data.filter((i) => !i.isAdminCreated);
 
-        // Fetch completion status for each itinerary based on itinerary progress
         const computeStatuses = async (list) => {
           const token = localStorage.getItem("token");
           const headers = { Authorization: `Bearer ${token}` };
@@ -215,7 +220,7 @@ export default function TouristItineraryMain() {
     };
 
     fetchItineraries();
-  }, []);
+  }, [initialItineraries]);
 
   // Admin carousel navigation
   const goToAdminNext = () => {

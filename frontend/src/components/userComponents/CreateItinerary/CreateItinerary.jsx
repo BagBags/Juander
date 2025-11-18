@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import MainLayout from "../MainLayout";
+import PullToRefresh from "../../shared/PullToRefresh";
 import BackHeader from "../BackButton";
 import { useTranslation } from "react-i18next";
 import OnlineRequiredModal from "../../shared/OnlineRequiredModal";
@@ -612,7 +613,8 @@ export default function CreateItineraryPage() {
 
       {/* === MAIN CONTENT === */}
       <MainLayout includeSideButtons={false}>
-        <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <PullToRefresh onRefresh={async () => { await fetchSites(); await fetchItineraries(); }} activationAreaPx={96}>
+          <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* CREATE ITINERARY TAB */}
           {activeTab === "create" && (
             <div className="space-y-6 animate-fadeIn">
@@ -872,7 +874,8 @@ export default function CreateItineraryPage() {
             © {new Date().getFullYear()} {t("intramurosAdmin")}.
             Developed by UST College of Information and Computing Sciences.
           </p>
-        </div>
+          </div>
+        </PullToRefresh>
       </MainLayout>
 
       {/* Offline Modal */}

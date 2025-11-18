@@ -5,7 +5,7 @@ import { RefreshCw } from 'lucide-react';
  * Modern Pull-to-Refresh Component
  * Displays a smooth refresh animation when user pulls down
  */
-export default function PullToRefresh({ onRefresh, children }) {
+export default function PullToRefresh({ onRefresh, children, activationAreaPx = 80 }) {
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
@@ -17,9 +17,15 @@ export default function PullToRefresh({ onRefresh, children }) {
     if (!container) return;
 
     const handleTouchStart = (e) => {
-      // Only trigger if scrolled to top
-      if (container.scrollTop === 0) {
-        setTouchStart(e.touches[0].clientY);
+      // Only trigger if scrolled to top AND touch originates within top activation area
+      if (container.scrollTop !== 0) return;
+      const rect = container.getBoundingClientRect();
+      const touchY = e.touches[0].clientY;
+      const relativeStartY = touchY - rect.top;
+      if (relativeStartY <= activationAreaPx) {
+        setTouchStart(touchY);
+      } else {
+        setTouchStart(0);
       }
     };
 
@@ -76,7 +82,7 @@ export default function PullToRefresh({ onRefresh, children }) {
   const scale = Math.min(pullDistance / threshold, 1);
 
   return (
-    <div ref={containerRef} className="relative flex-1 overflow-y-auto">
+    <div ref={containerRef} className="relative flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
       {/* Pull-to-refresh indicator */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-center transition-all duration-200"

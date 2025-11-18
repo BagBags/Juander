@@ -40,6 +40,14 @@ function GuestHomepageContent() {
     
     const loadResources = async () => {
       try {
+        const alreadyLoaded = localStorage.getItem('guest_homepage_preloaded') === 'true';
+        if (alreadyLoaded) {
+          setBgLoaded(true);
+          setComponentsLoaded(true);
+          setLoadingProgress(100);
+          progressLocked = true;
+          return;
+        }
         // Step 1: Initial load (20%)
         updateProgress(20);
         
@@ -84,6 +92,7 @@ function GuestHomepageContent() {
         await new Promise(resolve => setTimeout(resolve, 200));
         if (!mounted) return;
         setComponentsLoaded(true);
+        localStorage.setItem('guest_homepage_preloaded', 'true');
       } catch (error) {
         console.error('Error loading resources:', error);
         if (mounted) {
@@ -91,6 +100,7 @@ function GuestHomepageContent() {
           updateProgress(100);
           progressLocked = true;
           setComponentsLoaded(true);
+          localStorage.setItem('guest_homepage_preloaded', 'true');
         }
       }
     };

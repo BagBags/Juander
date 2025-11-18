@@ -503,9 +503,8 @@ export default function SignupForm({ toggleForm }) {
         <hr className="flex-1 border-gray-300" />
       </div>
 
-      {/* Google Login - stabilized container to prevent shrink on load */}
       <div className="w-full flex justify-center">
-        <div className="w-full sm:w-[360px] min-w-[280px] flex-shrink-0">
+        <div className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
           <GoogleLogin
             onSuccess={handleGoogleSignup}
             onError={() => setErrors({ general: "Google sign-up error" })}

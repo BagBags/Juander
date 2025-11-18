@@ -181,7 +181,7 @@ export default function TourMap() {
           });
         }}
         mapStyle="mapbox://styles/mapbox/streets-v11"
-        className="w-full h-full"
+        className="w-full h-full translate-y-10 sm:translate-y-12 md:translate-y-14"
         maxZoom={20}
         minZoom={15.5}
         minPitch={0}

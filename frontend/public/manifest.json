@@ -1,0 +1,17 @@
+{
+  "name": "Juander - Intramuros Tour Guide",
+  "short_name": "Juander",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#f04e37",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/juan/JuanderPWAIcon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}

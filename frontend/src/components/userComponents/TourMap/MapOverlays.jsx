@@ -81,6 +81,20 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
 
   return (
     <>
+      {createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 'max(env(safe-area-inset-top), 0px)',
+            backgroundColor: '#0f1115',
+            zIndex: 9998,
+            pointerEvents: 'none',
+          }}
+        />, document.body
+      )}
       {/* Back Header - Rendered via Portal */}
       {createPortal(backHeader, document.body)}
 
@@ -146,10 +160,7 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
         </div>
       )}
 
-      {/* Footer */}
-      <div className="absolute bottom-0 w-full bg-orange-600 text-white text-center py-2 font-bold z-30 pointer-events-auto" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}>
-        Tour Map
-      </div>
+      
     </>
   );
 };
