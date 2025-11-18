@@ -188,7 +188,9 @@ export const touristApi = {
       throw new Error('Creating itineraries requires an internet connection');
     }
     const api = createOfflineAwareApi();
-    return api.post('/api/itineraries', data);
+    const res = await api.post('/api/itineraries', data);
+    localStorage.removeItem('user_itineraries');
+    return res;
   },
 
   updateItinerary: async (id, data) => {
@@ -196,7 +198,9 @@ export const touristApi = {
       throw new Error('Updating itineraries requires an internet connection');
     }
     const api = createOfflineAwareApi();
-    return api.put(`/api/itineraries/${id}`, data);
+    const res = await api.put(`/api/itineraries/${id}`, data);
+    localStorage.removeItem('user_itineraries');
+    return res;
   },
 
   deleteItinerary: async (id) => {
@@ -204,7 +208,9 @@ export const touristApi = {
       throw new Error('Deleting itineraries requires an internet connection');
     }
     const api = createOfflineAwareApi();
-    return api.delete(`/api/itineraries/${id}`);
+    const res = await api.delete(`/api/itineraries/${id}`);
+    localStorage.removeItem('user_itineraries');
+    return res;
   },
 
   getUserItineraries: async () => {

@@ -393,6 +393,7 @@ export default function CreateItineraryPage() {
           payload,
           config
         );
+        localStorage.removeItem('user_itineraries');
         setNotification({
           isOpen: true,
           type: "success",
@@ -400,13 +401,15 @@ export default function CreateItineraryPage() {
           message: "Your itinerary was updated successfully.",
         });
       } else {
-        await axios.post(
+        const res = await axios.post(
           `${
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
           }/itineraries`,
           payload,
           config
         );
+        localStorage.removeItem('user_itineraries');
+        setUserItineraries((prev) => [res.data, ...prev]);
         setNotification({
           isOpen: true,
           type: "success",
@@ -455,7 +458,8 @@ export default function CreateItineraryPage() {
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/${itineraryToDelete}`,
         config
-      );
+        );
+      localStorage.removeItem('user_itineraries');
       setUserItineraries(userItineraries.filter((i) => i._id !== itineraryToDelete));
       setShowDeleteItineraryModal(false);
       setItineraryToDelete(null);
