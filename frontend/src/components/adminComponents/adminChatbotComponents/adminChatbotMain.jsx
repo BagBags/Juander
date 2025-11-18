@@ -23,6 +23,9 @@ export default function AdminChatbot() {
   // Validation errors
   const [errors, setErrors] = useState({
     info_en: "",
+    info_fil: "",
+    keywords: "",
+    tags: "",
     tagName: "",
   });
   
@@ -115,6 +118,15 @@ export default function AdminChatbot() {
     if (!payload.info_en) {
       newErrors.info_en = "English information is required";
     }
+    if (!payload.info_fil) {
+      newErrors.info_fil = "Filipino information is required";
+    }
+    if (payload.keywords.length === 0) {
+      newErrors.keywords = "At least one keyword is required";
+    }
+    if (payload.tags.length === 0) {
+      newErrors.tags = "At least one tag must be selected";
+    }
     
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
@@ -140,7 +152,7 @@ export default function AdminChatbot() {
           }
           setForm({ info_en: "", info_fil: "", keywords: "", tags: [] });
           fetchEntries();
-          setErrors({ info_en: "", tagName: "" }); // Clear errors
+          setErrors({ info_en: "", info_fil: "", keywords: "", tags: "", tagName: "" }); // Clear errors
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error("Error saving entry:", err);
@@ -560,40 +572,60 @@ export default function AdminChatbot() {
               {/* Filipino Information */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Information (Filipino)
+                  Information (Filipino) <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   name="info_fil"
                   value={form.info_fil}
-                  onChange={handleChange}
-                  placeholder="Information (Filipino)"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.info_fil && e.target.value.trim()) {
+                      setErrors({...errors, info_fil: ""});
+                    }
+                  }}
+                  placeholder="Information (Filipino)*"
                   rows={4}
-                  className="w-full border-2 border-gray-300 rounded-lg 
-                 focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-                 outline-none transition text-gray-700 bg-white p-2 text-sm"
+                  className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                    errors.info_fil ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+                  }`}
                 />
+                {errors.info_fil && (
+                  <p className="text-red-500 text-xs mt-1">{errors.info_fil}</p>
+                )}
               </div>
               
               {/* Keywords */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Keywords
+                  Keywords <span className="text-red-500">*</span>
                 </label>
                 <input
                   name="keywords"
                   value={form.keywords}
-                  onChange={handleChange}
-                  placeholder="Keywords (comma separated)"
-                  className="w-full border-2 border-gray-300 rounded-lg 
-                 focus:border-gray-400 focus:ring-2 focus:ring-gray-200 
-                 outline-none transition text-gray-700 bg-white p-2 text-sm"
+                  onChange={(e) => {
+                    handleChange(e);
+                    if (errors.keywords && e.target.value.trim()) {
+                      setErrors({...errors, keywords: ""});
+                    }
+                  }}
+                  placeholder="Keywords (comma separated)*"
+                  className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                    errors.keywords ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+                  }`}
                 />
+                {errors.keywords && (
+                  <p className="text-red-500 text-xs mt-1">{errors.keywords}</p>
+                )}
               </div>
 
               {/* Tags selection */}
               <div>
-                <p className="font-medium text-gray-700 text-sm mb-2">Tags</p>
-                <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
+                <p className="font-medium text-gray-700 text-sm mb-2">
+                  Tags <span className="text-red-500">*</span>
+                </p>
+                <div className={`grid grid-cols-1 gap-2 max-h-48 overflow-y-auto p-2 border-2 rounded-lg ${
+                  errors.tags ? "border-red-500" : "border-gray-200"
+                }`}>
                   {tags.map((tag) => (
                     <label
                       key={tag._id}
@@ -602,12 +634,20 @@ export default function AdminChatbot() {
                       <input
                         type="checkbox"
                         checked={form.tags.includes(tag._id)}
-                        onChange={() => handleTagCheckbox(tag._id)}
+                        onChange={() => {
+                          handleTagCheckbox(tag._id);
+                          if (errors.tags) {
+                            setErrors({...errors, tags: ""});
+                          }
+                        }}
                       />
                       {tag.name}
                     </label>
                   ))}
                 </div>
+                {errors.tags && (
+                  <p className="text-red-500 text-xs mt-1">{errors.tags}</p>
+                )}
               </div>
 
               {/* Buttons */}

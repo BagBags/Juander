@@ -181,6 +181,8 @@ export default function CreateItineraryPage() {
   const [offlineMessage, setOfflineMessage] = useState("");
   const [hideFortModalPreference, setHideFortModalPreference] = useState(false);
   const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
+  const [showDeleteItineraryModal, setShowDeleteItineraryModal] = useState(false);
+  const [itineraryToDelete, setItineraryToDelete] = useState(null);
   // Search and filter state for Available Sites
   const [siteSearchQuery, setSiteSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
@@ -432,7 +434,7 @@ export default function CreateItineraryPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     // Check if offline
     if (!navigator.onLine) {
       setOfflineMessage("Deleting itineraries requires an internet connection");
@@ -440,15 +442,30 @@ export default function CreateItineraryPage() {
       return;
     }
 
-    if (!confirm("Delete this itinerary?")) return;
+    // Show confirmation modal
+    setItineraryToDelete(id);
+    setShowDeleteItineraryModal(true);
+  };
+
+  const confirmDelete = async () => {
     try {
       await axios.delete(
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-        }/itineraries/${id}`,
+        }/itineraries/${itineraryToDelete}`,
         config
       );
-      setUserItineraries(userItineraries.filter((i) => i._id !== id));
+      setUserItineraries(userItineraries.filter((i) => i._id !== itineraryToDelete));
+      setShowDeleteItineraryModal(false);
+      setItineraryToDelete(null);
+      
+      // Show success notification
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Itinerary Deleted",
+        message: "Your itinerary has been successfully deleted.",
+      });
     } catch (err) {
       if (!navigator.onLine || err.message === "Network Error") {
         setOfflineMessage(
@@ -463,6 +480,8 @@ export default function CreateItineraryPage() {
           message: "Please try again.",
         });
       }
+      setShowDeleteItineraryModal(false);
+      setItineraryToDelete(null);
     }
   };
 
@@ -508,6 +527,20 @@ export default function CreateItineraryPage() {
         title="Delete Image?"
         message="Are you sure you want to remove this image? This action cannot be undone."
         confirmText="Delete Image"
+        type="danger"
+      />
+
+      {/* Delete Itinerary Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteItineraryModal}
+        onClose={() => {
+          setShowDeleteItineraryModal(false);
+          setItineraryToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Itinerary?"
+        message="Are you sure you want to delete this itinerary? This action cannot be undone."
+        confirmText="Delete Itinerary"
         type="danger"
       />
 

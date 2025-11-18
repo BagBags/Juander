@@ -3,6 +3,7 @@ import axios from "axios";
 import { Search, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 import ConfirmModal from "../../shared/ConfirmModal";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function RolesPage() {
   const [users, setUsers] = useState([]);
@@ -21,6 +22,14 @@ export default function RolesPage() {
     message: "",
     onConfirm: null,
     loading: false,
+  });
+
+  // Notification modal state
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
   });
 
   useEffect(() => {
@@ -134,10 +143,20 @@ export default function RolesPage() {
         )
       );
 
-      Swal.fire("Updated!", "User role has been changed.", "success");
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "Role Updated",
+        message: `User role has been successfully changed to ${newRole}.`,
+      });
     } catch (err) {
       console.error("Error updating role:", err);
-      Swal.fire("Error!", "There was a problem updating the role.", "error");
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Update Failed",
+        message: "There was a problem updating the role. Please try again.",
+      });
     }
   };
 
@@ -168,11 +187,22 @@ export default function RolesPage() {
           }
 
           setConfirmModal({ isOpen: false, type: "danger", title: "", message: "", onConfirm: null, loading: false });
-          Swal.fire("Deleted!", "User has been permanently deleted.", "success");
+          
+          setNotification({
+            isOpen: true,
+            type: "success",
+            title: "User Deleted",
+            message: "User has been permanently deleted from the system.",
+          });
         } catch (err) {
           console.error("Error deleting user:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
-          Swal.fire("Error!", err.response?.data?.message || "There was a problem deleting the user.", "error");
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Delete Failed",
+            message: err.response?.data?.message || "There was a problem deleting the user. Please try again.",
+          });
         }
       },
     });
@@ -347,10 +377,10 @@ export default function RolesPage() {
                   <td className="px-6 py-3 text-gray-600 min-w-[200px]">{user.email}</td>
                   <td className="px-6 py-3 min-w-[100px]">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold mr-2 ${
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-md ${
                         user.role === "admin"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-blue-100 text-blue-800"
+                          ? "bg-gradient-to-r from-green-500 to-green-600 text-white"
+                          : "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
                       }`}
                     >
                       {user.role}
@@ -359,7 +389,7 @@ export default function RolesPage() {
                   <td className="px-6 py-3 min-w-[200px]">
                     <div className="flex items-center gap-2">
                       {SUPER_ADMIN_EMAILS.includes(user.email) ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                        <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md">
                           Super
                         </span>
                       ) : isSuperAdmin ? (
@@ -369,14 +399,14 @@ export default function RolesPage() {
                             onChange={(e) =>
                               confirmRoleChange(user._id, e.target.value)
                             }
-                            className="min-w-[100px] border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium bg-white hover:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37] focus:border-[#f04e37] focus:outline-none transition-colors cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23666%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
+                            className="min-w-[100px] border-2 border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white hover:border-[#f04e37] hover:shadow-md focus:ring-2 focus:ring-[#f04e37]/30 focus:border-[#f04e37] focus:outline-none transition-all duration-200 cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23f04e37%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:14px] bg-[right_8px_center] bg-no-repeat pr-8 text-gray-700"
                           >
                             <option value="tourist">tourist</option>
                             <option value="admin">admin</option>
                           </select>
                           <button
                             onClick={() => handleDeleteUser(user)}
-                            className="px-2 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-1"
+                            className="p-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 hover:shadow-lg transition-all duration-200 flex items-center gap-1 shadow-md hover:scale-105 active:scale-95"
                             title="Delete User"
                           >
                             <Trash2 size={14} />
@@ -386,7 +416,7 @@ export default function RolesPage() {
                         <select
                           value={user.role}
                           disabled
-                          className="min-w-[120px] border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium bg-gray-50 text-gray-500 cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23ccc%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-10"
+                          className="min-w-[100px] border-2 border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold bg-gray-50 text-gray-400 cursor-not-allowed appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23ccc%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3e%3cpolyline points=%276 9 12 15 18 9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:14px] bg-[right_8px_center] bg-no-repeat pr-8"
                         >
                           <option>{user.role}</option>
                         </select>
@@ -450,6 +480,15 @@ export default function RolesPage() {
         type={confirmModal.type}
         confirmText={confirmModal.confirmText}
         loading={confirmModal.loading}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ isOpen: false, type: "info", title: "", message: "" })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
       />
     </div>
   );

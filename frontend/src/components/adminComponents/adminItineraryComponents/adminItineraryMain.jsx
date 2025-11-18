@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import ConfirmModal from "../../shared/ConfirmModal";
+import NotificationModal from "../../shared/NotificationModal";
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
@@ -43,6 +44,14 @@ export default function AdminItineraryMain() {
     message: "",
     onConfirm: null,
     loading: false,
+  });
+
+  // Notification modal state
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
   });
 
   const ICON_SIZE = 20;
@@ -190,8 +199,15 @@ export default function AdminItineraryMain() {
           // Check if token exists
           const token = localStorage.getItem("token");
           if (!token) {
-            alert("Session expired. Please login again.");
-            window.location.href = "/admin/login";
+            setNotification({
+              isOpen: true,
+              type: "error",
+              title: "Session Expired",
+              message: "Please login again.",
+            });
+            setTimeout(() => {
+              window.location.href = "/admin/login";
+            }, 2000);
             return;
           }
 
@@ -260,16 +276,38 @@ export default function AdminItineraryMain() {
           fetchItineraries();
           setErrors({ name: "", description: "", duration: "", image: "", sites: "" }); // Clear errors
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          
+          // Show success notification
+          setNotification({
+            isOpen: true,
+            type: "success",
+            title: editingId ? "Itinerary Updated" : "Itinerary Added",
+            message: editingId 
+              ? "The itinerary has been updated successfully."
+              : "New itinerary has been added successfully.",
+          });
         } catch (err) {
           console.error("Failed to save itinerary:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
           
           // Handle 401 Unauthorized
           if (err.response?.status === 401) {
-            alert("Session expired. Please login again.");
-            window.location.href = "/admin/login";
+            setNotification({
+              isOpen: true,
+              type: "error",
+              title: "Session Expired",
+              message: "Please login again.",
+            });
+            setTimeout(() => {
+              window.location.href = "/admin/login";
+            }, 2000);
           } else {
-            alert(err.response?.data?.error || "Failed to save itinerary. Please try again.");
+            setNotification({
+              isOpen: true,
+              type: "error",
+              title: "Error",
+              message: err.response?.data?.error || "Failed to save itinerary. Please try again.",
+            });
           }
         }
       },
@@ -295,9 +333,23 @@ export default function AdminItineraryMain() {
           fetchItineraries();
           fetchArchivedItineraries();
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          
+          // Show success notification
+          setNotification({
+            isOpen: true,
+            type: "success",
+            title: "Itinerary Archived",
+            message: "The itinerary has been archived successfully.",
+          });
         } catch (err) {
           console.error("Failed to archive itinerary:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Error",
+            message: "Failed to archive itinerary. Please try again.",
+          });
         }
       },
     });
@@ -323,9 +375,23 @@ export default function AdminItineraryMain() {
           fetchItineraries();
           fetchArchivedItineraries();
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          
+          // Show success notification
+          setNotification({
+            isOpen: true,
+            type: "success",
+            title: "Itinerary Restored",
+            message: "The itinerary has been restored successfully.",
+          });
         } catch (err) {
           console.error("Failed to restore itinerary:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Error",
+            message: "Failed to restore itinerary. Please try again.",
+          });
         }
       },
     });
@@ -349,9 +415,23 @@ export default function AdminItineraryMain() {
           );
           fetchArchivedItineraries();
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          
+          // Show success notification
+          setNotification({
+            isOpen: true,
+            type: "success",
+            title: "Itinerary Deleted",
+            message: "The itinerary has been permanently deleted.",
+          });
         } catch (err) {
           console.error("Failed to delete itinerary:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Error",
+            message: "Failed to delete itinerary. Please try again.",
+          });
         }
       },
     });
@@ -419,9 +499,23 @@ export default function AdminItineraryMain() {
           setImageUrl("");
           setErrors({ ...errors, image: "" });
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          
+          // Show success notification
+          setNotification({
+            isOpen: true,
+            type: "success",
+            title: "Image Deleted",
+            message: "The image has been deleted successfully.",
+          });
         } catch (err) {
           console.error("Failed to delete image:", err);
           setConfirmModal(prev => ({ ...prev, loading: false }));
+          setNotification({
+            isOpen: true,
+            type: "error",
+            title: "Error",
+            message: "Failed to delete image. Please try again.",
+          });
         }
       },
     });
@@ -439,6 +533,15 @@ export default function AdminItineraryMain() {
         type={confirmModal.type}
         confirmText={confirmModal.confirmText}
         loading={confirmModal.loading}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ isOpen: false, type: "info", title: "", message: "" })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
       />
       
       <div className="flex gap-6 p-6">

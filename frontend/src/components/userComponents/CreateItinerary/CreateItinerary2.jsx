@@ -27,6 +27,8 @@ export default function CreateItineraryPage() {
   const [descriptionToggles, setDescriptionToggles] = useState({});
   const [showMyItineraries, setShowMyItineraries] = useState(false);
   const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
+  const [showDeleteItineraryModal, setShowDeleteItineraryModal] = useState(false);
+  const [itineraryToDelete, setItineraryToDelete] = useState(null);
   const [notification, setNotification] = useState({
     isOpen: false,
     type: "info",
@@ -185,19 +187,31 @@ export default function CreateItineraryPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this itinerary?")) return;
+  const handleDelete = (id) => {
+    // Show confirmation modal
+    setItineraryToDelete(id);
+    setShowDeleteItineraryModal(true);
+  };
+
+  const confirmDelete = async () => {
     try {
       await axios.delete(
         `${
           import.meta.env.VITE_API_BASE_URL ||
           `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`
-        }/itineraries/${id}`,
+        }/itineraries/${itineraryToDelete}`,
         config
       );
-      setUserItineraries(userItineraries.filter((i) => i._id !== id));
+      setUserItineraries(userItineraries.filter((i) => i._id !== itineraryToDelete));
+      setShowDeleteItineraryModal(false);
+      setItineraryToDelete(null);
+      
+      // Show success notification
+      showNotification("success", "Itinerary Deleted", "Your itinerary has been successfully deleted.");
     } catch {
       showNotification("error", "Error", "Failed to delete itinerary");
+      setShowDeleteItineraryModal(false);
+      setItineraryToDelete(null);
     }
   };
 
@@ -233,6 +247,20 @@ export default function CreateItineraryPage() {
         title="Delete Image?"
         message="Are you sure you want to remove this image? This action cannot be undone."
         confirmText="Delete Image"
+        type="danger"
+      />
+
+      {/* Delete Itinerary Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteItineraryModal}
+        onClose={() => {
+          setShowDeleteItineraryModal(false);
+          setItineraryToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Itinerary?"
+        message="Are you sure you want to delete this itinerary? This action cannot be undone."
+        confirmText="Delete Itinerary"
         type="danger"
       />
 

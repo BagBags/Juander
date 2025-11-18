@@ -145,6 +145,14 @@ export default function AdminReviewsMain() {
           
           setReviews((prev) => prev.filter((r) => r._id !== review._id));
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          
+          // Show success notification
+          setNotification({
+            isOpen: true,
+            title: "Review Deleted",
+            message: "The review has been successfully deleted.",
+            type: "success",
+          });
         } catch (err) {
           console.error("Error deleting review:", err);
           setNotification({ isOpen: true, title: "Error", message: "Failed to delete review", type: "error" });
@@ -454,7 +462,7 @@ export default function AdminReviewsMain() {
         title={confirmModal.title}
         message={confirmModal.message}
         onConfirm={confirmModal.onConfirm}
-        onCancel={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
+        onClose={() => setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false })}
         loading={confirmModal.loading}
       />
 
