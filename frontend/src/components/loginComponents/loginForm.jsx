@@ -329,19 +329,17 @@ export default function LoginForm({ toggleForm }) {
             <hr className="flex-1 border-gray-300" />
           </div>
 
-          <div className="w-full flex justify-center">
-            <div className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
-              <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={() => setError("Google login failed.")}
-                useOneTap
-                theme="outline"
-                size="large"
-                shape="rectangular"
-                width="100%"
-                logo_alignment="left"
-              />
-            </div>
+          <div className="w-full">
+            <GoogleLogin
+              onSuccess={handleGoogleLoginSuccess}
+              onError={() => setError("Google login failed.")}
+              useOneTap
+              theme="outline"
+              size="large"
+              shape="rectangular"
+              width="100%"
+              logo_alignment="left"
+            />
           </div>
 
           {/* Guest Login */}
