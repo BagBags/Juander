@@ -28,7 +28,7 @@ import NotificationModal from "../../shared/NotificationModal";
 import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
 import ConfirmModal from "../../shared/ConfirmModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
-import ttsService, { announceDirectionStep } from "../../../utils/textToSpeech";
+import ttsService from "../../../utils/textToSpeech";
 import { useTour } from "../../TourComponents/TourContext";
 
 export default function GuestItineraryMap() {
@@ -959,12 +959,7 @@ export default function GuestItineraryMap() {
         setCurrentStepIndex(closestIdx);
         stepSwitchCandidateRef.current = { index: null, startedAt: 0, count: 0 };
         
-        // Announce new step instruction for accessibility
-        if (ttsService.isEnabled && steps[closestIdx]) {
-          const newInstruction = steps[closestIdx]?.maneuver?.instruction || "Continue on route";
-          console.log(`🔊 TTS: Auto-announcing step change - "${newInstruction}"`);
-          announceDirectionStep(newInstruction, closestIdx + 1, steps.length);
-        }
+        
       }
     } else {
       // Reset candidate when staying at same step

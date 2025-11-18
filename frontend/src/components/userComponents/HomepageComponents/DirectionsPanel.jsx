@@ -36,6 +36,15 @@ const DirectionsPanel = memo(function DirectionsPanel({
   // Per-step one-time prompt flags
   const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spokenFinal: false, arrivalSpoken: false });
 
+  const speakWithCooldown = (text) => {
+    if (!text || !ttsService.isEnabled || !isAllowedRoute) return;
+    const now = Date.now();
+    const cooldownPassed = now - lastSpokenTimeRef.current >= 3000;
+    if (!cooldownPassed) return;
+    ttsService.speak(text);
+    lastSpokenTimeRef.current = Date.now();
+  };
+
   // Helper: distance in meters between user and target [lng, lat]
   const distanceToTarget = (userLoc, waypoint) => {
     if (!userLoc || !waypoint || waypoint.length < 2) return Infinity;
@@ -110,19 +119,6 @@ const DirectionsPanel = memo(function DirectionsPanel({
       announceDirectionStep(displayedText, currentStepIndex + 1, steps.length);
       lastSpokenInstructionRef.current = displayedText;
       lastSpokenTimeRef.current = now; // Update last spoken time
-    } else if (instructionChanged && !cooldownPassed) {
-      // Instruction changed but cooldown hasn't passed - schedule it
-      const remaining = 3000 - (now - lastSpokenTimeRef.current);
-      console.log(`⏳ TTS cooldown: waiting ${Math.ceil(remaining/1000)}s before speaking next step`);
-      const timer = setTimeout(() => {
-        if (ttsService.isEnabled && isAllowedRoute) {
-          console.log(`🔊 TTS (delayed): "${displayedText}" (Step ${currentStepIndex + 1}/${steps.length})`);
-          announceDirectionStep(displayedText, currentStepIndex + 1, steps.length);
-          lastSpokenInstructionRef.current = displayedText;
-          lastSpokenTimeRef.current = Date.now();
-        }
-      }, remaining);
-      return () => clearTimeout(timer);
     }
   }, [displayedText, isAllowedRoute, currentStepIndex, steps.length]);
 
@@ -161,7 +157,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
       // Arrival announcement (only on arrival step) or destination proximity
       if (!flags.arrivalSpoken && isArriveStep) {
         const name = activePin?.siteName || "your destination";
-        ttsService.speak(`You have arrived at ${name}.`);
+        speakWithCooldown(`You have arrived at ${name}.`);
         flags.arrivalSpoken = true;
       }
       // Do not speak other prompts while locked
@@ -171,18 +167,18 @@ const DirectionsPanel = memo(function DirectionsPanel({
     // If outside lock radius, normal behavior resumes; emit distance prompts once per step
     if (dist <= 100 && !flags.spoken100 && !isArriveStep) {
       const phrase = buildTurnPhrase(step, "In 100 meters, ");
-      ttsService.speak(phrase);
+      speakWithCooldown(phrase);
       flags.spoken100 = true;
     }
     if (dist <= 50 && !flags.spoken50 && !isArriveStep) {
       const phrase = buildTurnPhrase(step, "In 50 meters, ");
-      ttsService.speak(phrase);
+      speakWithCooldown(phrase);
       flags.spoken50 = true;
     }
     // Final turn instruction very near the waypoint (but outside the lock threshold)
     if (dist <= 12 && !flags.spokenFinal && !isArriveStep) {
       const finalPhrase = buildTurnPhrase(step);
-      ttsService.speak(finalPhrase);
+      speakWithCooldown(finalPhrase);
       flags.spokenFinal = true;
     }
   }, [userLocation, steps, currentStepIndex, isAllowedRoute, activePin]);
@@ -225,6 +221,8 @@ const DirectionsPanel = memo(function DirectionsPanel({
         )}
       </div>
 
+
+{/*Step by step instructions*/}
       <div className="text-center px-3" aria-live="polite">
         <p className="text-sm sm:text-base md:text-lg font-medium text-[#f04e37] truncate">
           {displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
