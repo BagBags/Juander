@@ -3,6 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { FaMars, FaVenus, FaGenderless } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function Gender() {
   const { t } = useTranslation();
@@ -81,6 +82,7 @@ export default function Gender() {
       transition={{ duration: 0.35 }}
       className="flex flex-col min-h-full bg-white overflow-hidden"
     >
+      <PullToRefresh onRefresh={async () => { await new Promise((r) => setTimeout(r, 800)); }}>
       <div className="w-full max-w-md mt-6 flex flex-col gap-6">
         <div className="text-center">
           <h2 className="text-lg font-semibold">{t("genderQuestion")}</h2>
@@ -117,6 +119,7 @@ export default function Gender() {
           <p className="text-center text-sm text-gray-600 mt-2">{message}</p>
         )}
       </div>
+      </PullToRefresh>
     </motion.div>
   );
 }

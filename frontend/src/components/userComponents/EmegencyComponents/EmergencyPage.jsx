@@ -5,48 +5,54 @@ import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import { useTranslation } from "react-i18next";
 import { Phone, AlertCircle } from "lucide-react";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function EmergencyPage() {
   const { t } = useTranslation();
   const [hotlines, setHotlines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // No TTS here; voice guidance is exclusive to itinerary maps
 
+  const fetchHotlines = async () => {
+    try {
+      const res = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`
+      );
+      const transformed = res.data.map((agency) => ({
+        title: agency.name,
+        icon: agency.icon
+          ? agency.icon.startsWith("http")
+            ? agency.icon
+            : `${
+                import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+                "http://localhost:5000"
+              }${agency.icon}`
+          : null,
+        contacts: agency.contactChannels.map((channel) => ({
+          label: channel.label,
+          value: channel.number,
+        })),
+      }));
+      setHotlines(transformed);
+    } catch (error) {
+      console.error("Failed to fetch emergency contacts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchHotlines = async () => {
-      try {
-        const res = await axios.get(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/emergency`
-        );
-        const transformed = res.data.map((agency) => ({
-          title: agency.name,
-          icon: agency.icon
-            ? agency.icon.startsWith("http")
-              ? agency.icon
-              : `${
-                  import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
-                  "http://localhost:5000"
-                }${agency.icon}`
-            : null,
-          contacts: agency.contactChannels.map((channel) => ({
-            label: channel.label,
-            value: channel.number,
-          })),
-        }));
-
-        setHotlines(transformed);
-      } catch (error) {
-        console.error("Failed to fetch emergency contacts:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchHotlines();
   }, []);
+
+  const handleRefresh = async () => {
+    setRefreshKey((prev) => prev + 1);
+    setLoading(true);
+    await fetchHotlines();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  };
 
   return (
     <div
@@ -54,6 +60,9 @@ export default function EmergencyPage() {
       style={{
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        height: "100dvh",
+        overflow: "hidden",
+        overscrollBehavior: "none",
       }}
     >
       {/* Global TTS Button */}
@@ -75,7 +84,8 @@ export default function EmergencyPage() {
       </div>
 
       <MainLayout includeSideButtons={false}>
-        <div className="w-full max-w-4xl mx-auto px-4 pt-6 pb-8">
+        <PullToRefresh onRefresh={handleRefresh}>
+        <div className="w-full max-w-4xl mx-auto px-4 pt-6 pb-8" key={refreshKey}>
           {/* Hero Section */}
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-2xl mb-4 animate-pulse">
@@ -126,16 +136,16 @@ export default function EmergencyPage() {
               </p>
             </div>
           )}
+          {/* Footer (non-sticky, below content) */}
+          <div className="text-center px-6 pt-4 pb-8 max-w-4xl mx-auto">
+            <p className="text-xs text-center text-white">
+              © {new Date().getFullYear()} {t("intramurosAdmin")}.
+              Developed by UST College of Information and Computing Sciences.
+            </p>
+          </div>
         </div>
+        </PullToRefresh>
       </MainLayout>
-
-      {/* Footer */}
-      <div className="mt-auto text-center px-6 pt-4 pb-8 max-w-4xl mx-auto">
-        <p className="text-xs text-center text-white">
-          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
-          College of Information and Computing Sciences.
-        </p>
-      </div>
     </div>
   );
 }

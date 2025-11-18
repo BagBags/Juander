@@ -3,9 +3,11 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function Language() {
   const { t, i18n } = useTranslation();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const languages = [
     { label: "English", code: "gb", lng: "en" },
@@ -76,8 +78,9 @@ export default function Language() {
       transition={{ duration: 0.4 }}
       className="flex flex-col min-h-full bg-white overflow-hidden"
     >
+      <PullToRefresh onRefresh={async () => { setRefreshKey((prev) => prev + 1); await new Promise((r) => setTimeout(r, 1000)); }}>
       {/* Main content */}
-      <div className="flex-1 px-6 py-8 overflow-y-auto">
+      <div className="flex-1 px-6 py-8" key={refreshKey}>
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-6">{t("chooseLanguage")}</h2>
 
@@ -116,6 +119,7 @@ export default function Language() {
           {t("continue")}
         </button>
       </div>
+      </PullToRefresh>
 
       {/* Notification Modal */}
       <NotificationModal

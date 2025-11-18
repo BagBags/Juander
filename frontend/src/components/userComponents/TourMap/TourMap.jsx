@@ -140,7 +140,7 @@ export default function TourMap() {
   };
 
   return (
-    <div className="relative w-full h-screen" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div className="relative w-full" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none', paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* Offline Map Warning */}
       {!isOnline && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">

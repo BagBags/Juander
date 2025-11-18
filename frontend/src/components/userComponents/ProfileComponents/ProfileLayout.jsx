@@ -40,12 +40,12 @@ export default function ProfileLayout() {
         <BackHeader title={getTitle()} />
       </div>
 
-      {/* Centered page content, scroll only if needed */}
+      {/* Centered page content; child handles its own scroll */}
       <div
-        className="flex-1 flex justify-center px-4 md:px-0 overflow-y-auto"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)", WebkitOverflowScrolling: 'touch' }}
+        className="flex-1 flex justify-center px-4 md:px-0 overflow-hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="w-full max-w-md mt-4">
+        <div className="w-full max-w-md mt-4 flex flex-col h-full">
           <Outlet />
         </div>
       </div>

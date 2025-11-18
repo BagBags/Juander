@@ -76,7 +76,7 @@ export default function PullToRefresh({ onRefresh, children }) {
   const scale = Math.min(pullDistance / threshold, 1);
 
   return (
-    <div ref={containerRef} className="relative h-full overflow-y-auto">
+    <div ref={containerRef} className="relative flex-1 overflow-y-auto">
       {/* Pull-to-refresh indicator */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-center transition-all duration-200"

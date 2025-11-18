@@ -341,6 +341,7 @@ export default function SiteModalFullScreen({
   return (
     <div 
       className="fixed inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
+      style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
     >
       {/* Modern Header with Close Button */}
       <div 

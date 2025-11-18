@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function GuestLanguage() {
   const { t, i18n } = useTranslation();
@@ -13,6 +14,7 @@ export default function GuestLanguage() {
   ];
 
   const [selected, setSelected] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [notification, setNotification] = useState({
     isOpen: false,
     type: "info",
@@ -46,6 +48,16 @@ export default function GuestLanguage() {
     });
   };
 
+  const handleRefresh = async () => {
+    const savedLang = localStorage.getItem("guestLanguage");
+    if (savedLang) {
+      setSelected(savedLang);
+      i18n.changeLanguage(savedLang);
+    }
+    setRefreshKey((prev) => prev + 1);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  };
+
   return (
     <motion.div
       initial={{ x: "100%", opacity: 0 }}
@@ -54,8 +66,8 @@ export default function GuestLanguage() {
       transition={{ duration: 0.4 }}
       className="flex flex-col h-[calc(100dvh-4rem)] bg-white"
     >
-      {/* Main content */}
-      <div className="flex-1 px-6 py-8 overflow-y-auto">
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="flex-1 px-6 py-8 overflow-y-auto" key={refreshKey}>
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-6">{t("chooseLanguage")}</h2>
 
@@ -81,6 +93,7 @@ export default function GuestLanguage() {
           </div>
         </div>
       </div>
+      </PullToRefresh>
 
       {/* Bottom fixed button */}
       <div className="p-6 border-t bg-white">
@@ -94,7 +107,6 @@ export default function GuestLanguage() {
           {t("continue")}
         </button>
       </div>
-      {/* Notification Modal */}
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}

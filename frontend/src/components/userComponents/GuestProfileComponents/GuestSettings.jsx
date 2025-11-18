@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, Play } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function GuestSettings() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function GuestSettings() {
   const [homepageTutorialEnabled, setHomepageTutorialEnabled] = useState(false);
   const [mapTutorialEnabled, setMapTutorialEnabled] = useState(false);
   const [notification, setNotification] = useState({ isOpen: false, type: "info", title: "", message: "" });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Load guest preference from localStorage
   useEffect(() => {
@@ -105,6 +107,14 @@ export default function GuestSettings() {
     }
   };
 
+  const handleRefresh = async () => {
+    setShowFortModal(!(localStorage.getItem("guestHideFortSantiagoModal") === "true"));
+    setHomepageTutorialEnabled(localStorage.getItem("guestReplayTutorial") === "true");
+    setMapTutorialEnabled(localStorage.getItem("mapTourForceStart") === "true");
+    setRefreshKey((prev) => prev + 1);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  };
+
   return (
     <motion.div
       initial={{ x: "100%", opacity: 0 }}
@@ -113,7 +123,8 @@ export default function GuestSettings() {
       transition={{ duration: 0.4 }}
       className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
-      <div className="w-full max-w-md flex flex-col flex-1">
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="w-full max-w-md flex flex-col flex-1" key={refreshKey}>
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <h2 className="text-xl font-bold text-gray-800 mb-6">
             Notification Settings
@@ -258,6 +269,7 @@ export default function GuestSettings() {
           College of Information and Computing Sciences.
         </p>
       </div>
+      </PullToRefresh>
     </motion.div>
   );
 }

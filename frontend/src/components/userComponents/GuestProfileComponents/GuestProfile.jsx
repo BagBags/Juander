@@ -1,5 +1,5 @@
 // GuestProfilePage.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaUser,
   FaBirthdayCake,
@@ -15,10 +15,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { FaXTwitter } from "react-icons/fa6";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function GuestProfilePage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Load guest language preference on mount
   useEffect(() => {
@@ -27,6 +29,15 @@ export default function GuestProfilePage() {
       i18n.changeLanguage(savedLang);
     }
   }, [i18n]);
+
+  const handleRefresh = async () => {
+    setRefreshKey((prev) => prev + 1);
+    const savedLang = localStorage.getItem("guestLanguage");
+    if (savedLang) {
+      i18n.changeLanguage(savedLang);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  };
 
   const options = [
     {
@@ -104,7 +115,8 @@ export default function GuestProfilePage() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10">
+      <PullToRefresh onRefresh={handleRefresh}>
+      <div className="w-full max-w-md relative z-10" key={refreshKey}>
         {/* Profile Card */}
         <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
           {/* Decorative circles */}
@@ -246,6 +258,7 @@ export default function GuestProfilePage() {
           College of Information and Computing Sciences.
         </p>
       </div>
+      </PullToRefresh>
     </motion.div>
   );
 }

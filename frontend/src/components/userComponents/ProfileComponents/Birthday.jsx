@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function Birthday() {
   const { t } = useTranslation();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
@@ -133,7 +135,8 @@ export default function Birthday() {
       transition={{ duration: 0.4 }}
       className="flex flex-col min-h-full bg-white overflow-hidden"
     >
-      <div className="w-full max-w-md mt-6 flex flex-col gap-6">
+      <PullToRefresh onRefresh={async () => { setRefreshKey((prev) => prev + 1); await new Promise((r) => setTimeout(r, 1000)); }}>
+      <div className="w-full max-w-md mt-6 flex flex-col gap-6 min-h-full" key={refreshKey}>
         <h2 className="text-lg font-semibold text-center">
           {t("dobQuestion")}
         </h2>
@@ -179,12 +182,12 @@ export default function Birthday() {
         >
           {t("save")}
         </button>
-      </div>
-
-      <p className="mb-8 text-xs text-center text-gray-400">
+      <p className="mt-auto mb-8 text-xs text-center text-gray-400">
         © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
         College of Information and Computing Sciences.
       </p>
+      </div>
+      </PullToRefresh>
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}

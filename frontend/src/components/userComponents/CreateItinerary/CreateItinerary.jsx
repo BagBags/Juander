@@ -490,7 +490,7 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative">
+    <div className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}>
       {/* Fort Santiago Modal */}
       {showFortModal && (
         <FortSantiagoModal
@@ -579,7 +579,7 @@ export default function CreateItineraryPage() {
 
       {/* === MAIN CONTENT === */}
       <MainLayout includeSideButtons={false}>
-        <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8">
+        <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* CREATE ITINERARY TAB */}
           {activeTab === "create" && (
             <div className="space-y-6 animate-fadeIn">
@@ -835,13 +835,12 @@ export default function CreateItineraryPage() {
               </div>
             </div>
           )}
+          <p className="mt-8 mb-8 text-xs text-center text-white">
+            © {new Date().getFullYear()} {t("intramurosAdmin")}.
+            Developed by UST College of Information and Computing Sciences.
+          </p>
         </div>
       </MainLayout>
-
-      <p className="mb-8 text-xs text-center text-gray-400">
-        © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
-        College of Information and Computing Sciences.
-      </p>
 
       {/* Offline Modal */}
       <OnlineRequiredModal

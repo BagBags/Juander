@@ -436,7 +436,7 @@ export default function TripArchivesPage() {
           }
         }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col items-center text-sm relative">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col text-sm relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}>
         {/* Decorative Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
@@ -457,7 +457,8 @@ export default function TripArchivesPage() {
         </div>
 
         <MainLayout includeSideButtons={false}>
-          <div className="w-full relative z-10">
+          <PullToRefresh onRefresh={handleRefresh}>
+          <div className="w-full relative z-10" key={refreshKey} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
             {/* Page content */}
             <div className="px-4 pt-6">
               {/* Icon Tab Navigation */}
@@ -1259,7 +1260,8 @@ export default function TripArchivesPage() {
             © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
             College of Information and Computing Sciences.
           </p>
-        </div>
+          </div>
+          </PullToRefresh>
         </MainLayout>
 
         {/* Review Modal */}

@@ -14,7 +14,10 @@ export default function ProfileLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col text-sm relative">
+    <div
+      className="bg-white flex flex-col text-sm relative"
+      style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
+    >
       {/* BackHeader pinned to the left */}
       <div 
         className="sticky top-0 z-20 bg-white px-4 flex items-center"
@@ -27,7 +30,10 @@ export default function ProfileLayout() {
       </div>
 
       {/* Centered page content */}
-      <div className="flex-1 flex justify-center px-4 md:px-0">
+      <div
+        className="flex-1 flex justify-center px-4 md:px-0 overflow-y-auto"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)', WebkitOverflowScrolling: 'touch' }}
+      >
         <div className="w-full max-w-md mt-4">
           <Outlet />
         </div>

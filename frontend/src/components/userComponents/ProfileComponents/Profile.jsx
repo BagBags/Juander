@@ -166,7 +166,7 @@ export default function ProfilePage() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="min-h-screen bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
+      className="flex-1 min-h-0 bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
       style={{
         paddingTop: "max(env(safe-area-inset-top), 16px)",
         paddingBottom: "env(safe-area-inset-bottom)",
@@ -181,7 +181,7 @@ export default function ProfilePage() {
       {/* Global TTS Button */}
 
       <PullToRefresh onRefresh={handleRefresh}>
-        <div className="w-full max-w-md relative z-10" key={refreshKey}>
+        <div className="w-full max-w-md relative z-10 flex flex-col min-h-0" key={refreshKey}>
           {/* Profile Card */}
           <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
             {/* Decorative circles */}
@@ -357,7 +357,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Footer */}
-          <p className="mb-8 text-xs text-center text-gray-400">
+          <p className="mt-8 mb-8 text-xs text-center text-gray-400">
             © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by
             UST College of Information and Computing Sciences.
           </p>

@@ -5,10 +5,12 @@ import { Eye, EyeOff, AlertTriangle, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function Account() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [user, setUser] = useState({
     firstName: "",
@@ -377,7 +379,8 @@ export default function Account() {
       transition={{ duration: 0.4 }}
       className="flex flex-col min-h-full bg-white overflow-hidden"
     >
-      <div className="w-full max-w-md">
+      <PullToRefresh onRefresh={async () => { setRefreshKey((prev) => prev + 1); await new Promise((r) => setTimeout(r, 1000)); }}>
+      <div className="w-full max-w-md flex flex-col min-h-full" key={refreshKey}>
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <form className="space-y-4" onSubmit={handleSubmit}>
             {successMessage && (
@@ -754,11 +757,12 @@ export default function Account() {
           </div>
         )}
 
-        <p className="mb-8 text-xs text-center text-gray-400">
+        <p className="mt-auto mb-8 text-xs text-center text-gray-400">
           © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
           College of Information and Computing Sciences.
         </p>
       </div>
+      </PullToRefresh>
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}

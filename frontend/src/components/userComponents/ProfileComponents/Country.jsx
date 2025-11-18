@@ -4,9 +4,11 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import NotificationModal from "../../shared/NotificationModal";
+import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function CountrySelector() {
   const { t } = useTranslation();
+  const [refreshKey, setRefreshKey] = useState(0);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(""); // store country code
   const [loading, setLoading] = useState(false);
@@ -21,8 +23,6 @@ export default function CountrySelector() {
 
   // Fetch current user's country on mount
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-
     const fetchUserCountry = async () => {
       const token =
         sessionStorage.getItem("token") || localStorage.getItem("token");
@@ -45,10 +45,6 @@ export default function CountrySelector() {
     };
 
     fetchUserCountry();
-
-    return () => {
-      document.body.style.overflow = "";
-    };
   }, []);
 
   // Filtered country list
@@ -121,8 +117,9 @@ export default function CountrySelector() {
       transition={{ duration: 0.4 }}
       className="flex flex-col min-h-full bg-white"
     >
+      <PullToRefresh onRefresh={async () => { setRefreshKey((prev) => prev + 1); await new Promise((r) => setTimeout(r, 1000)); }}>
       {/* Header and Search */}
-      <div className="p-4 shrink-0">
+      <div className="p-4 shrink-0" key={refreshKey}>
         <h2 className="text-center text-lg font-semibold mb-4">
           {t("changeCountry") || "Change Country"}
         </h2>
@@ -136,7 +133,7 @@ export default function CountrySelector() {
       </div>
 
       {/* Scrollable List */}
-      <div className="flex-1 overflow-y-auto px-4">
+      <div className="flex-1 px-4">
         {countryArray.map((c) => (
           <button
             key={c.code}
@@ -189,6 +186,7 @@ export default function CountrySelector() {
           {loading ? t("saving") || "Saving..." : t("save") || "Save"}
         </button>
       </div>
+      </PullToRefresh>
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}
