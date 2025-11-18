@@ -7,13 +7,15 @@ import fs from "fs";
 import path from "path";
 
 export default defineConfig({
-  base: '', // Empty string for relative paths
+  base: "", // Empty string for relative paths
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ['**/*.{png,jpg,jpeg,svg,gif,ico,webp,woff,woff2,ttf,eot}'],
+      includeAssets: [
+        "**/*.{png,jpg,jpeg,svg,gif,ico,webp,woff,woff2,ttf,eot}",
+      ],
       manifest: {
         name: "Juander - Intramuros Tour Guide",
         short_name: "Juander",
@@ -26,25 +28,25 @@ export default defineConfig({
         theme_color: "#f04e37",
         icons: [
           {
-            src: "/icons/logo.png",
+            src: "/juan/JuanderPWAIcon.svg",
             sizes: "192x192",
             type: "image/png",
-            purpose: "any maskable"
+            purpose: "any maskable",
           },
           {
-            src: "/icons/logo.png",
+            src: "/juan/JuanderPWAIcon.svg",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable"
+            purpose: "any maskable",
           },
         ],
       },
-      manifestFilename: 'manifest.json',
+      manifestFilename: "manifest.json",
       workbox: {
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB for videos/3D models
-        globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}'],
+        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff,woff2}"],
         // Ensure all JS chunks are cached (including lazy-loaded ones)
-        globDirectory: 'dist',
+        globDirectory: "dist",
         cleanupOutdatedCaches: true,
         // Skip waiting to activate new service worker immediately
         skipWaiting: true,
@@ -53,9 +55,9 @@ export default defineConfig({
           // Photobooth filter images proxied through our backend
           {
             urlPattern: /\/api\/photobooth\/filters\/proxy\?.*/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'photobooth-filter-images',
+              cacheName: "photobooth-filter-images",
               expiration: {
                 maxEntries: 300,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -67,10 +69,11 @@ export default defineConfig({
           },
           // Chatbot API calls - Bot entries and OpenAI
           {
-            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai).*/i,
-            handler: 'NetworkFirst',
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai).*/i,
+            handler: "NetworkFirst",
             options: {
-              cacheName: 'chatbot-api-cache',
+              cacheName: "chatbot-api-cache",
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24, // 1 day for chatbot responses
@@ -83,10 +86,11 @@ export default defineConfig({
           },
           // Guest API calls - Public endpoints only (pins, reviews)
           {
-            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
-            handler: 'NetworkFirst',
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
+            handler: "NetworkFirst",
             options: {
-              cacheName: 'guest-api-cache',
+              cacheName: "guest-api-cache",
               expiration: {
                 maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days for guest content
@@ -99,15 +103,16 @@ export default defineConfig({
           },
           // Exclude authenticated endpoints from caching
           {
-            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i,
-            handler: 'NetworkOnly',
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i,
+            handler: "NetworkOnly",
           },
           // Images - Cache First (with stale-while-revalidate)
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'image-cache',
+              cacheName: "image-cache",
               expiration: {
                 maxEntries: 200,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -117,9 +122,9 @@ export default defineConfig({
           // Videos - Cache First
           {
             urlPattern: /\.(?:mp4|webm|ogg|mov)$/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'video-cache',
+              cacheName: "video-cache",
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -130,9 +135,9 @@ export default defineConfig({
           // 3D Models - Cache First
           {
             urlPattern: /\.(?:glb|gltf)$/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: '3d-model-cache',
+              cacheName: "3d-model-cache",
               expiration: {
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -142,9 +147,9 @@ export default defineConfig({
           // Fonts - Cache First
           {
             urlPattern: /\.(?:woff|woff2|ttf|eot)$/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'font-cache',
+              cacheName: "font-cache",
               expiration: {
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
@@ -154,9 +159,9 @@ export default defineConfig({
           // Mapbox tiles - Cache First (better for offline)
           {
             urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'mapbox-cache',
+              cacheName: "mapbox-cache",
               expiration: {
                 maxEntries: 1000,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -170,11 +175,13 @@ export default defineConfig({
                   handlerDidError: async () => {
                     // Return a fallback response when map tiles fail
                     return new Response(
-                      JSON.stringify({ error: 'Offline - Map tiles unavailable' }),
+                      JSON.stringify({
+                        error: "Offline - Map tiles unavailable",
+                      }),
                       {
                         status: 503,
-                        statusText: 'Service Unavailable',
-                        headers: { 'Content-Type': 'application/json' }
+                        statusText: "Service Unavailable",
+                        headers: { "Content-Type": "application/json" },
                       }
                     );
                   },
@@ -184,10 +191,11 @@ export default defineConfig({
           },
           // External CDN resources
           {
-            urlPattern: /^https:\/\/(cdn|unpkg|fonts\.googleapis|fonts\.gstatic)\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
+            urlPattern:
+              /^https:\/\/(cdn|unpkg|fonts\.googleapis|fonts\.gstatic)\.com\/.*/i,
+            handler: "StaleWhileRevalidate",
             options: {
-              cacheName: 'cdn-cache',
+              cacheName: "cdn-cache",
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
@@ -195,14 +203,14 @@ export default defineConfig({
             },
           },
         ],
-        navigateFallback: '/index.html',
+        navigateFallback: "/index.html",
         navigateFallbackDenylist: [
-          /^\/api/,  // Only block API calls
+          /^\/api/, // Only block API calls
         ],
       },
       devOptions: {
         enabled: false, // Disable in development to avoid offline cache issues
-        type: 'module',
+        type: "module",
       },
     }),
     visualizer({
@@ -233,7 +241,7 @@ export default defineConfig({
     },
   },
   server: {
-    host: 'localhost',
+    host: "localhost",
     port: 5173,
     cors: true,
     proxy: {
