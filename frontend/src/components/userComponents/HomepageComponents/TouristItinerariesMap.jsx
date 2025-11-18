@@ -56,6 +56,9 @@ export default function TouristItineraryMap() {
   const [savedProgress, setSavedProgress] = useState(null);
   const [itineraryName, setItineraryName] = useState("");
   const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+  const smoothedLocRef = useRef(null);
+  const lastRawLocRef = useRef(null);
+  const stepSwitchCandidateRef = useRef({ index: null, startedAt: 0, count: 0 });
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
 
@@ -408,10 +411,35 @@ export default function TouristItineraryMap() {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           };
-          
-          console.log('📍 Location updated:', newLocation);
-          setUserLocation(newLocation);
-          
+          const prevRaw = lastRawLocRef.current;
+          const toRad = (v) => (v * Math.PI) / 180;
+          const haversineMeters = (lat1, lng1, lat2, lng2) => {
+            const R = 6371000;
+            const dLat = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+          };
+          if (prevRaw) {
+            const jitter = haversineMeters(prevRaw.latitude, prevRaw.longitude, newLocation.latitude, newLocation.longitude);
+            if (jitter < 3) {
+              lastRawLocRef.current = newLocation;
+              return;
+            }
+          }
+          const prevSmooth = smoothedLocRef.current;
+          const alpha = 0.35;
+          const smoothLocation = prevSmooth
+            ? {
+                latitude: prevSmooth.latitude + alpha * (newLocation.latitude - prevSmooth.latitude),
+                longitude: prevSmooth.longitude + alpha * (newLocation.longitude - prevSmooth.longitude),
+              }
+            : newLocation;
+          smoothedLocRef.current = smoothLocation;
+          lastRawLocRef.current = newLocation;
+          setUserLocation(smoothLocation);
+
           // Update heading if available from GPS
           if (position.coords.heading !== null && position.coords.heading !== undefined) {
             const smoothHeading = normalizeHeading(position.coords.heading);
@@ -992,7 +1020,7 @@ export default function TouristItineraryMap() {
       position: absolute;
       width: 100%;
       height: 100%;
-      transform: rotate(${userHeading}deg) translateZ(0);
+      transform: rotate(${(userHeading - (viewState?.bearing || 0) + 360) % 360}deg) translateZ(0);
       transform-origin: center center;
       transition: transform 0.15s ease-out;
       will-change: transform;
@@ -1084,16 +1112,17 @@ export default function TouristItineraryMap() {
     };
   }, [userLocation]);
 
-  /** Update heading beam rotation (Google Maps style) */
+  /** Update heading beam rotation accounting for map bearing */
   useEffect(() => {
     if (userMarkerRef.current) {
       const el = userMarkerRef.current.getElement();
       const beamContainer = el.querySelector('.heading-beam-container');
       if (beamContainer) {
-        beamContainer.style.transform = `rotate(${userHeading}deg) translateZ(0)`;
+        const adjusted = (userHeading - (viewState?.bearing || 0) + 360) % 360;
+        beamContainer.style.transform = `rotate(${adjusted}deg) translateZ(0)`;
       }
     }
-  }, [userHeading]);
+  }, [userHeading, viewState?.bearing]);
 
   /** Trigger geolocate control on mount and enable watch mode */
   useEffect(() => {
@@ -1276,10 +1305,8 @@ export default function TouristItineraryMap() {
     }
   }, [userLocation, currentPinIndex, optimizedPins, manuallyDismissed, visitedSites, skippedSites]);
 
-  /** Update step index as user moves (meters via haversine for reliability) */
   useEffect(() => {
     if (!userLocation || steps.length === 0) return;
-
     const toRad = (v) => (v * Math.PI) / 180;
     const haversineMeters = (lat1, lng1, lat2, lng2) => {
       const R = 6371000;
@@ -1289,10 +1316,8 @@ export default function TouristItineraryMap() {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
-
     let closestIdx = 0;
     let minMeters = Infinity;
-
     for (let idx = 0; idx < steps.length; idx++) {
       const loc = steps[idx]?.maneuver?.location;
       if (!loc || loc.length < 2) continue;
@@ -1303,9 +1328,29 @@ export default function TouristItineraryMap() {
         closestIdx = idx;
       }
     }
-
-    setCurrentStepIndex((prevIdx) => (prevIdx === closestIdx ? prevIdx : closestIdx));
-  }, [userLocation, steps]);
+    const currentLoc = steps[currentStepIndex]?.maneuver?.location;
+    const currentDist = currentLoc && currentLoc.length >= 2
+      ? haversineMeters(userLocation.latitude, userLocation.longitude, currentLoc[1], currentLoc[0])
+      : Infinity;
+    if (closestIdx !== currentStepIndex) {
+      const now = Date.now();
+      const forward = closestIdx > currentStepIndex;
+      const strongForward = forward && currentDist - minMeters > 6;
+      const strongBackward = !forward && currentDist - minMeters > 20;
+      const strongChange = strongForward || strongBackward;
+      const candidate = stepSwitchCandidateRef.current;
+      if (candidate.index !== closestIdx) {
+        stepSwitchCandidateRef.current = { index: closestIdx, startedAt: now, count: 1 };
+      } else {
+        candidate.count += 1;
+      }
+      const ready = strongChange && (now - stepSwitchCandidateRef.current.startedAt > 1200 || stepSwitchCandidateRef.current.count >= 3);
+      if (ready) {
+        setCurrentStepIndex(closestIdx);
+        stepSwitchCandidateRef.current = { index: null, startedAt: 0, count: 0 };
+      }
+    }
+  }, [userLocation, steps, currentStepIndex]);
 
   /** Mark site as visited */
   const markSiteAsVisited = async (pin) => {
