@@ -217,9 +217,9 @@ function CameraLifecycleOnRouteLeave() {
     // Update active route flag
     setPhotoboothRouteActive(isPhotobooth);
 
-    // If we just left Photobooth, schedule camera stop after 10s
+    // If we just left Photobooth, stop camera immediately
     if (!isPhotobooth) {
-      scheduleCameraStop(10000);
+      scheduleCameraStop(0);
     } else {
       // If we're on Photobooth, ensure any pending stop is canceled
       cancelCameraStop();
@@ -229,20 +229,20 @@ function CameraLifecycleOnRouteLeave() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) {
-        // App/tab hidden: if Photobooth is active, schedule stop
-        scheduleCameraStop(10000);
+        // App/tab hidden: stop camera immediately
+        scheduleCameraStop(0);
       } else {
         // Returned: cancel any pending stop; Photobooth re-init handles itself
         cancelCameraStop();
       }
     };
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", () => scheduleCameraStop(10000));
-    window.addEventListener("beforeunload", () => scheduleCameraStop(10000));
+    window.addEventListener("pagehide", () => scheduleCameraStop(0));
+    window.addEventListener("beforeunload", () => scheduleCameraStop(0));
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pagehide", () => scheduleCameraStop(10000));
-      window.removeEventListener("beforeunload", () => scheduleCameraStop(10000));
+      window.removeEventListener("pagehide", () => scheduleCameraStop(0));
+      window.removeEventListener("beforeunload", () => scheduleCameraStop(0));
     };
   }, []);
 

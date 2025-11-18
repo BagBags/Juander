@@ -315,3 +315,15 @@ body.photobooth-active {
   .preview-actions { padding: 16px; }
   .btn { height: 46px; }
 }
+
+/* PWA standalone: maximize preview area */
+@media (display-mode: standalone) {
+  .preview-header { padding: 10px; }
+  .preview-image-wrapper { padding: 8px; }
+  .preview-actions {
+    padding: 12px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+  .btn { height: 44px; }
+  .preview-image { border-radius: 12px; }
+}

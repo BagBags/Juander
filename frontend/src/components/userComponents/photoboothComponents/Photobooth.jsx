@@ -355,16 +355,11 @@ export default function Photobooth() {
     return () => {
       destroyed = true;
       try {
-        // If we're still on Photobooth (effect re-run), destroy immediately.
-        // If leaving the route (unmount), schedule stop after 10 seconds.
         if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
-          if (isPhotoboothRouteActive()) {
-            window.JEELIZFACEFILTER.destroy();
-          } else {
-            scheduleCameraStop(10000);
-          }
+          window.JEELIZFACEFILTER.destroy();
         }
       } catch {}
+      scheduleCameraStop(0);
     };
   }, [cameraKey]);
 

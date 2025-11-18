@@ -16,6 +16,7 @@ import { loadFaceModel } from "./model";
 import { setupFaceDetection } from "./facedetect";
 import Overlays from "./overlay";
 import "../../../Photobooth.css";
+import { scheduleCameraStop } from "../../../utils/cameraLifecycle";
 
 export default function PhotoboothJeeliz() {
   const webcamRef = useRef(null);
@@ -652,3 +653,8 @@ export default function PhotoboothJeeliz() {
     </div>
   );
 }
+  useEffect(() => {
+    return () => {
+      scheduleCameraStop(0);
+    };
+  }, []);

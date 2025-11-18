@@ -12,6 +12,8 @@ export default function PhotoboothSlider({
 }) {
   const carouselRef = useRef(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const isSnappingRef = useRef(false);
+  const settleTimerRef = useRef(null);
   
   // Responsive sizing
   useEffect(() => {
@@ -47,42 +49,50 @@ export default function PhotoboothSlider({
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
-    let timeoutId;
-    const handleScroll = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const scrollLeft = carousel.scrollLeft;
-        const centerX = scrollLeft + carousel.offsetWidth / 2;
-        let closestId = null;
-        let minDist = Infinity;
-        Array.from(carousel.children).forEach((btn, i) => {
-          const btnCenter = btn.offsetLeft + btn.offsetWidth / 2;
-          const dist = Math.abs(centerX - btnCenter);
-          if (dist < minDist) {
-            minDist = dist;
-            closestId = repeatedFilters[i].id;
-          }
-        });
-        if (closestId && closestId !== selectedFilterId) {
-          setSelectedFilterId(closestId);
+    const centerNearest = () => {
+      if (isSnappingRef.current) return;
+      const rect = carousel.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      let closestIdx = 0;
+      let minDist = Infinity;
+      const children = Array.from(carousel.children);
+      for (let i = 0; i < children.length; i++) {
+        const r = children[i].getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const d = Math.abs(centerX - cx);
+        if (d < minDist) {
+          minDist = d;
+          closestIdx = i;
         }
-        const closestButton =
-          carousel.children[
-            repeatedFilters.findIndex((f) => f.id === closestId)
-          ];
-        if (closestButton) {
-          const scrollLeft =
-            closestButton.offsetLeft -
-            (carousel.offsetWidth - closestButton.offsetWidth) / 2;
-          carousel.scrollTo({ left: scrollLeft, behavior: "smooth" });
-        }
-      }, 150);
+      }
+      const id = repeatedFilters[closestIdx]?.id;
+      if (!id) return;
+      const target = children[closestIdx];
+      const left = target.offsetLeft - (carousel.offsetWidth - target.offsetWidth) / 2;
+      isSnappingRef.current = true;
+      setSelectedFilterId(id);
+      carousel.scrollTo({ left, behavior: "smooth" });
+      setTimeout(() => { isSnappingRef.current = false; }, 200);
     };
 
-    carousel.addEventListener("scroll", handleScroll);
+    const onScroll = () => {
+      if (isSnappingRef.current) return;
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = setTimeout(centerNearest, 120);
+    };
+    const onRelease = () => {
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = setTimeout(centerNearest, 60);
+    };
+
+    carousel.addEventListener("scroll", onScroll, { passive: true });
+    carousel.addEventListener("touchend", onRelease, { passive: true });
+    carousel.addEventListener("pointerup", onRelease, { passive: true });
     return () => {
-      clearTimeout(timeoutId);
-      carousel.removeEventListener("scroll", handleScroll);
+      if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+      carousel.removeEventListener("scroll", onScroll);
+      carousel.removeEventListener("touchend", onRelease);
+      carousel.removeEventListener("pointerup", onRelease);
     };
   }, [repeatedFilters, selectedFilterId]);
 
@@ -138,6 +148,7 @@ export default function PhotoboothSlider({
                   ? "4px solid #fff" // bold white ring for active, Snapchat style
                   : "2px solid #ccc",
               scrollSnapAlign: "center",
+              scrollSnapStop: "always",
               position: "relative",
               cursor: "pointer",
               overflow: "hidden",
