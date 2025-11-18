@@ -56,11 +56,15 @@ export default function GuestItineraryMap() {
   const userMarkerRef = useRef(null); // Custom user marker with heading
   const beamRotationRef = useRef(0); // Continuous rotation to avoid wrap-around spins
   const isMapRotatingRef = useRef(false);
+  const lastCameraUpdateRef = useRef(0);
+  const followEnabledRef = useRef(true);
+  const lastUserInteractRef = useRef(0);
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const smoothedLocRef = useRef(null);
   const lastRawLocRef = useRef(null);
   const stepSwitchCandidateRef = useRef({ index: null, startedAt: 0, count: 0 });
+  const lastUpdateTimeRef = useRef(0);
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
 
@@ -216,9 +220,13 @@ export default function GuestItineraryMap() {
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
           };
+          const acc = position.coords.accuracy || 10;
+          const dynamicThreshold = Math.min(5, Math.max(0.5, acc * 0.05));
+          const now = Date.now();
           if (prevRaw) {
             const jitter = haversineMeters(prevRaw.latitude, prevRaw.longitude, newLocation.latitude, newLocation.longitude);
-            if (jitter < 3) {
+            const recentlyUpdated = now - (lastUpdateTimeRef.current || 0) < 1500;
+            if (jitter < dynamicThreshold && recentlyUpdated) {
               lastRawLocRef.current = newLocation;
               return;
             }
@@ -234,6 +242,8 @@ export default function GuestItineraryMap() {
           smoothedLocRef.current = smoothLocation;
           lastRawLocRef.current = newLocation;
           
+          const now2 = Date.now();
+          lastUpdateTimeRef.current = now2;
           console.log('📍 Location updated:', smoothLocation);
           setUserLocation(smoothLocation);
           
@@ -256,8 +266,8 @@ export default function GuestItineraryMap() {
         },
         {
           enableHighAccuracy: true,
-          maximumAge: 10000, // Accept cached position up to 10 seconds old
-          timeout: 15000, // Wait up to 15 seconds for position
+          maximumAge: 5000,
+          timeout: 15000,
         }
       );
     };
@@ -579,131 +589,38 @@ export default function GuestItineraryMap() {
     };
   }, []);
 
-  /** Create custom user marker with heading cone using Mapbox GL JS */
   useEffect(() => {
     if (!mapRef.current || !userLocation) return;
-
     const map = mapRef.current.getMap();
     if (!map) return;
-
-    // Initialize continuous rotation angle based on current heading and bearing
-    const initialDesired = (userHeading - (viewState?.bearing || 0));
-    beamRotationRef.current = initialDesired;
-
-    // Remove existing marker if any
-    if (userMarkerRef.current) {
-      userMarkerRef.current.remove();
+    if (!userMarkerRef.current) {
+      const el = document.createElement('div');
+      el.className = 'custom-user-marker';
+      el.style.cssText = `position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;`;
+      const beamContainer = document.createElement('div');
+      beamContainer.className = 'heading-beam-container';
+      beamContainer.style.cssText = `position: absolute; width: 100%; height: 100%; transform: rotate(${beamRotationRef.current}deg) translateZ(0); transform-origin: center center; transition: transform 0.15s ease-out; will-change: transform; backface-visibility: hidden; -webkit-backface-visibility: hidden; perspective: 1000px; -webkit-perspective: 1000px; pointer-events: none;`;
+      const beam = document.createElement('div');
+      beam.className = 'heading-cone';
+      beam.style.cssText = `position: absolute; width: 70px; height: 90px; background: linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0)); top: -50px; left: 50%; transform: translateX(-50%) translateZ(0); -webkit-transform: translateX(-50%) translateZ(0); clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%); -webkit-clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%); filter: blur(1px); -webkit-filter: blur(1px); backface-visibility: hidden; -webkit-backface-visibility: hidden; pointer-events: none;`;
+      beamContainer.appendChild(beam);
+      el.appendChild(beamContainer);
+      const pulse = document.createElement('div');
+      pulse.style.cssText = `position: absolute; width: 48px; height: 48px; background-color: rgba(59, 130, 246, 0.2); border-radius: 50%; animation: pulse 2s infinite; pointer-events: none;`;
+      el.appendChild(pulse);
+      const accuracyRing = document.createElement('div');
+      accuracyRing.style.cssText = `position: absolute; width: 40px; height: 40px; background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 50%; pointer-events: none;`;
+      el.appendChild(accuracyRing);
+      const dot = document.createElement('div');
+      dot.style.cssText = `position: relative; width: 20px; height: 20px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); z-index: 10; pointer-events: none;`;
+      el.appendChild(dot);
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([userLocation.longitude, userLocation.latitude])
+        .addTo(map);
+      userMarkerRef.current = marker;
+    } else {
+      userMarkerRef.current.setLngLat([userLocation.longitude, userLocation.latitude]);
     }
-
-    // Create marker element (Google Maps style)
-    const el = document.createElement('div');
-    el.className = 'custom-user-marker';
-    el.style.cssText = `
-      position: relative;
-      width: 64px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
-    
-    // Create beam container (rotates)
-    const beamContainer = document.createElement('div');
-    beamContainer.className = 'heading-beam-container';
-    beamContainer.style.cssText = `
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      transform: rotate(${beamRotationRef.current}deg) translateZ(0);
-      transform-origin: center center;
-      transition: transform 0.15s ease-out;
-      will-change: transform;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      perspective: 1000px;
-      -webkit-perspective: 1000px;
-      pointer-events: none;
-    `;
-    
-    // Create direction beam (Google Maps style - wider trapezoid)
-    const beam = document.createElement('div');
-    beam.className = 'heading-cone';
-    beam.style.cssText = `
-      position: absolute;
-      width: 70px;
-      height: 90px;
-      background: linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0));
-      top: -50px;
-      left: 50%;
-      transform: translateX(-50%) translateZ(0);
-      -webkit-transform: translateX(-50%) translateZ(0);
-      clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%);
-      -webkit-clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%);
-      filter: blur(1px);
-      -webkit-filter: blur(1px);
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      pointer-events: none;
-    `;
-    beamContainer.appendChild(beam);
-    el.appendChild(beamContainer);
-    
-    // Create pulse animation
-    const pulse = document.createElement('div');
-    pulse.style.cssText = `
-      position: absolute;
-      width: 48px;
-      height: 48px;
-      background-color: rgba(59, 130, 246, 0.2);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-      pointer-events: none;
-    `;
-    el.appendChild(pulse);
-    
-    // Create accuracy ring
-    const accuracyRing = document.createElement('div');
-    accuracyRing.style.cssText = `
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      background-color: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      border-radius: 50%;
-      pointer-events: none;
-    `;
-    el.appendChild(accuracyRing);
-    
-    // Create user dot (Google Maps style)
-    const dot = document.createElement('div');
-    dot.style.cssText = `
-      position: relative;
-      width: 20px;
-      height: 20px;
-      background-color: #3b82f6;
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      z-index: 10;
-      pointer-events: none;
-    `;
-    el.appendChild(dot);
-
-    // Create and add marker to map
-    const marker = new mapboxgl.Marker({
-      element: el,
-      anchor: 'center'
-    })
-      .setLngLat([userLocation.longitude, userLocation.latitude])
-      .addTo(map);
-
-    userMarkerRef.current = marker;
-
-    return () => {
-      if (userMarkerRef.current) {
-        userMarkerRef.current.remove();
-      }
-    };
   }, [userLocation]);
 
   /** Update heading beam rotation accounting for map bearing with continuous angle */
@@ -729,15 +646,51 @@ export default function GuestItineraryMap() {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     if (!map) return;
-    const onStart = () => { isMapRotatingRef.current = true; };
-    const onEnd = () => { isMapRotatingRef.current = false; };
-    map.on('rotatestart', onStart);
-    map.on('rotateend', onEnd);
+    const onRotateStart = () => { isMapRotatingRef.current = true; followEnabledRef.current = false; lastUserInteractRef.current = Date.now(); };
+    const onRotateEnd = () => { isMapRotatingRef.current = false; lastUserInteractRef.current = Date.now(); };
+    const onDragStart = () => { followEnabledRef.current = false; lastUserInteractRef.current = Date.now(); };
+    const onDragEnd = () => { lastUserInteractRef.current = Date.now(); };
+    const onPitchStart = () => { followEnabledRef.current = false; lastUserInteractRef.current = Date.now(); };
+    const onPitchEnd = () => { lastUserInteractRef.current = Date.now(); };
+    map.on('rotatestart', onRotateStart);
+    map.on('rotateend', onRotateEnd);
+    map.on('dragstart', onDragStart);
+    map.on('dragend', onDragEnd);
+    map.on('pitchstart', onPitchStart);
+    map.on('pitchend', onPitchEnd);
     return () => {
-      map.off('rotatestart', onStart);
-      map.off('rotateend', onEnd);
+      map.off('rotatestart', onRotateStart);
+      map.off('rotateend', onRotateEnd);
+      map.off('dragstart', onDragStart);
+      map.off('dragend', onDragEnd);
+      map.off('pitchstart', onPitchStart);
+      map.off('pitchend', onPitchEnd);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || !userLocation) return;
+    const map = mapRef.current.getMap();
+    if (!map) return;
+    const now = Date.now();
+    if (!followEnabledRef.current) {
+      if (now - (lastUserInteractRef.current || 0) > 5000) {
+        followEnabledRef.current = true;
+      } else {
+        return;
+      }
+    }
+    if (now - (lastCameraUpdateRef.current || 0) < 400) return;
+    lastCameraUpdateRef.current = now;
+    const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : (viewState?.zoom || 16);
+    map.easeTo({
+      center: [userLocation.longitude, userLocation.latitude],
+      bearing: typeof userHeading === 'number' ? userHeading : (typeof map.getBearing === 'function' ? map.getBearing() : 0),
+      zoom: currentZoom,
+      duration: 300,
+      essential: true
+    });
+  }, [userLocation, userHeading]);
 
   /** Trigger geolocate control on mount and enable watch mode */
   useEffect(() => {
