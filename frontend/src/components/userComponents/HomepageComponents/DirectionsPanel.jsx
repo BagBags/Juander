@@ -190,7 +190,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
       style={{
         bottom: 'max(8px, env(safe-area-inset-bottom, 8px))',
         maxWidth: 'min(720px, 96vw)',
-        maxHeight: 'clamp(220px, 44svh, 360px)',
+        maxHeight: 'clamp(220px, 40svh, 340px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         WebkitOverflowScrolling: 'touch'
       }}

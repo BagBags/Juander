@@ -49,6 +49,8 @@ export default function TouristItineraryMap() {
   const geolocateControlRef = useRef(null); // Ref for Mapbox GeolocateControl
   const mapRef = useRef(null);
   const userMarkerRef = useRef(null); // Custom user marker with heading
+  const beamRotationRef = useRef(0); // Continuous rotation to avoid wrap-around spins
+  const isMapRotatingRef = useRef(false);
   const [showGpsModal, setShowGpsModal] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
@@ -1016,11 +1018,13 @@ export default function TouristItineraryMap() {
     // Create beam container (rotates)
     const beamContainer = document.createElement('div');
     beamContainer.className = 'heading-beam-container';
+    const initialDesired = (userHeading - (viewState?.bearing || 0));
+    beamRotationRef.current = initialDesired;
     beamContainer.style.cssText = `
       position: absolute;
       width: 100%;
       height: 100%;
-      transform: rotate(${(userHeading - (viewState?.bearing || 0) + 360) % 360}deg) translateZ(0);
+      transform: rotate(${beamRotationRef.current}deg) translateZ(0);
       transform-origin: center center;
       transition: transform 0.15s ease-out;
       will-change: transform;
@@ -1112,17 +1116,37 @@ export default function TouristItineraryMap() {
     };
   }, [userLocation]);
 
-  /** Update heading beam rotation accounting for map bearing */
+  /** Update heading beam rotation accounting for map bearing with continuous angle */
   useEffect(() => {
     if (userMarkerRef.current) {
       const el = userMarkerRef.current.getElement();
       const beamContainer = el.querySelector('.heading-beam-container');
       if (beamContainer) {
-        const adjusted = (userHeading - (viewState?.bearing || 0) + 360) % 360;
-        beamContainer.style.transform = `rotate(${adjusted}deg) translateZ(0)`;
+        const desired = (userHeading - (viewState?.bearing || 0));
+        const current = beamRotationRef.current;
+        const diff = ((desired - current + 540) % 360) - 180; // shortest angular delta
+        const next = current + diff;
+        beamRotationRef.current = next;
+        beamContainer.style.transition = isMapRotatingRef.current ? 'none' : 'transform 0.15s ease-out';
+        beamContainer.style.transform = `rotate(${next}deg) translateZ(0)`;
       }
     }
   }, [userHeading, viewState?.bearing]);
+
+  /** Detect map rotation gestures to temporarily disable beam transition */
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current.getMap();
+    if (!map) return;
+    const onStart = () => { isMapRotatingRef.current = true; };
+    const onEnd = () => { isMapRotatingRef.current = false; };
+    map.on('rotatestart', onStart);
+    map.on('rotateend', onEnd);
+    return () => {
+      map.off('rotatestart', onStart);
+      map.off('rotateend', onEnd);
+    };
+  }, []);
 
   /** Trigger geolocate control on mount and enable watch mode */
   useEffect(() => {
