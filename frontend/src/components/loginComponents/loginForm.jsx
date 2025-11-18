@@ -330,16 +330,17 @@ export default function LoginForm({ toggleForm }) {
           </div>
 
           <div className="w-full flex justify-center">
-            <div className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
+            <div ref={googleLoginContainerRef} className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
               <GoogleLogin
+                key={googleBtnWidth || 360}
                 onSuccess={handleGoogleLoginSuccess}
                 onError={() => setError("Google login failed.")}
                 useOneTap
                 theme="outline"
                 size="large"
                 shape="rectangular"
-                text="signin_with"
-                width="100%"
+                text="sign_in_with"
+                width={googleBtnWidth || 360}
                 logo_alignment="left"
               />
             </div>
@@ -478,3 +479,14 @@ export default function LoginForm({ toggleForm }) {
     </div>
   );
 }
+  const googleLoginContainerRef = useRef(null);
+  const [googleBtnWidth, setGoogleBtnWidth] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const w = googleLoginContainerRef.current?.offsetWidth || 360;
+      setGoogleBtnWidth(Math.floor(w));
+    };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
+    return () => window.removeEventListener("resize", measure);
+  }, []);

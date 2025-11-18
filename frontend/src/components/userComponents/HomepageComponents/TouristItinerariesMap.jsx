@@ -28,6 +28,7 @@ import NotificationModal from "../../shared/NotificationModal";
 import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
 import ConfirmModal from "../../shared/ConfirmModal";
 import { useTour } from "../../TourComponents/TourContext";
+import ttsService from "../../../utils/textToSpeech";
 
 export default function TouristItineraryMap() {
   const { startTour, isTourRunning } = useTour?.() || { startTour: () => {}, isTourRunning: false };
@@ -1031,7 +1032,11 @@ export default function TouristItineraryMap() {
         .addTo(map);
       userMarkerRef.current = marker;
     } else {
-      userMarkerRef.current.setLngLat([userLocation.longitude, userLocation.latitude]);
+      const snap = nearestPointOnRoute(userLocation.longitude, userLocation.latitude);
+      const useSnap = snap && snap.meters <= 15; // snap within 15m to route centerline
+      const lng = useSnap ? snap.lng : userLocation.longitude;
+      const lat = useSnap ? snap.lat : userLocation.latitude;
+      userMarkerRef.current.setLngLat([lng, lat]);
     }
   }, [userLocation]);
 
@@ -1094,9 +1099,42 @@ export default function TouristItineraryMap() {
     if (now - (lastCameraUpdateRef.current || 0) < 400) return;
     lastCameraUpdateRef.current = now;
     const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : (viewState?.zoom || 16);
+    const toRad = (v) => (v * Math.PI) / 180;
+    const haversineMeters = (lat1, lng1, lat2, lng2) => {
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+    const calcBearing = (lat1, lng1, lat2, lng2) => {
+      const dLng = toRad(lng2 - lng1);
+      const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+      const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+      let brng = Math.atan2(y, x) * 180 / Math.PI;
+      if (brng < 0) brng += 360;
+      return brng;
+    };
+    let targetBearing = typeof map.getBearing === 'function' ? map.getBearing() : 0;
+    if (steps && steps.length > 0) {
+      const step = steps[currentStepIndex];
+      const loc = step?.maneuver?.location;
+      if (loc && loc.length >= 2) {
+        const [lng, lat] = loc;
+        const dist = haversineMeters(userLocation.latitude, userLocation.longitude, lat, lng);
+        if (dist <= 60) {
+          targetBearing = calcBearing(userLocation.latitude, userLocation.longitude, lat, lng);
+        }
+      }
+    }
+    const snap = nearestPointOnRoute(userLocation.longitude, userLocation.latitude);
+    const useSnap = snap && snap.meters <= 15;
+    const centerLng = useSnap ? snap.lng : userLocation.longitude;
+    const centerLat = useSnap ? snap.lat : userLocation.latitude;
     map.easeTo({
-      center: [userLocation.longitude, userLocation.latitude],
-      bearing: typeof userHeading === 'number' ? userHeading : (typeof map.getBearing === 'function' ? map.getBearing() : 0),
+      center: [centerLng, centerLat],
+      bearing: targetBearing,
       zoom: currentZoom,
       duration: 300,
       essential: true
@@ -1780,3 +1818,55 @@ export default function TouristItineraryMap() {
     </div>
   );
 }
+  const nearestPointOnRoute = useCallback((lng, lat) => {
+    try {
+      const coords = route?.geometry?.coordinates;
+      if (!coords || coords.length < 2) return null;
+      const R = 6371000;
+      const toRad = (v) => (v * Math.PI) / 180;
+      const lat0 = lat;
+      const toXY = (lngX, latY) => ({
+        x: R * toRad(lngX) * Math.cos(toRad(lat0)),
+        y: R * toRad(latY),
+      });
+      const p = toXY(lng, lat);
+      let best = { dist2: Infinity, lng: null, lat: null };
+      for (let i = 0; i < coords.length - 1; i++) {
+        const [lng1, lat1] = coords[i];
+        const [lng2, lat2] = coords[i + 1];
+        const a = toXY(lng1, lat1);
+        const b = toXY(lng2, lat2);
+        const abx = b.x - a.x;
+        const aby = b.y - a.y;
+        const apx = p.x - a.x;
+        const apy = p.y - a.y;
+        const ab2 = abx * abx + aby * aby || 1;
+        let t = (apx * abx + apy * aby) / ab2;
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        const projx = a.x + t * abx;
+        const projy = a.y + t * aby;
+        const dx = p.x - projx;
+        const dy = p.y - projy;
+        const dist2 = dx * dx + dy * dy;
+        if (dist2 < best.dist2) {
+          // Convert back to lat/lng
+          const projLat = (projy / R) * (180 / Math.PI);
+          const projLng = ((projx / (R * Math.cos(toRad(lat0)))) * (180 / Math.PI));
+          best = { dist2, lng: projLng, lat: projLat };
+        }
+      }
+      return best.dist2 !== Infinity ? { lng: best.lng, lat: best.lat, meters: Math.sqrt(best.dist2) } : null;
+    } catch {
+      return null;
+    }
+  }, [route]);
+  useEffect(() => {
+    try {
+      if (ttsService.isSupported()) {
+        ttsService.enable();
+      }
+    } catch {}
+    return () => {
+      try { ttsService.cancel(); } catch {}
+    };
+  }, []);

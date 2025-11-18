@@ -186,11 +186,11 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
   return (
     <div 
-      className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl text-sm flex flex-col z-40 border border-gray-200 rounded-2xl overflow-y-auto"
+      className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl text-sm flex flex-col z-40 border border-gray-200 rounded-2xl overflow-hidden"
       style={{
         bottom: 'max(8px, env(safe-area-inset-bottom, 8px))',
         maxWidth: 'min(720px, 96vw)',
-        maxHeight: 'clamp(220px, 40svh, 340px)',
+        maxHeight: 'clamp(220px, 38svh, 330px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         WebkitOverflowScrolling: 'touch'
       }}
@@ -205,7 +205,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
       </div>
 
       <div className="text-center px-3" aria-live="polite">
-        <p className="text-base md:text-lg font-medium text-[#f04e37]">
+        <p className="text-sm sm:text-base md:text-lg font-medium text-[#f04e37] truncate">
           {displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
         </p>
       </div>
@@ -235,7 +235,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <button
           onClick={onPrevSite}
           disabled={!hasPrevSite}
-          className={`direction-prev-btn flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+          className={`direction-prev-btn flex-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
             hasPrevSite
               ? "bg-gray-200 text-gray-700 hover:bg-gray-300 active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -249,7 +249,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <button
           onClick={onSkipSite}
           disabled={!hasNextSite}
-          className={`direction-skip-btn flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+          className={`direction-skip-btn flex-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
             hasNextSite
               ? "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -263,7 +263,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <button
           onClick={onNextSite}
           disabled={!hasNextSite}
-          className={`direction-next-btn flex-1 px-3 py-2 rounded-lg text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all ${
+          className={`direction-next-btn flex-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
             hasNextSite
               ? "bg-[#f04e37] text-white hover:bg-[#d9442f] active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"

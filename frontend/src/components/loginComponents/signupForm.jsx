@@ -165,6 +165,18 @@ export default function SignupForm({ toggleForm }) {
     }
   };
 
+  const googleSignupContainerRef = useRef(null);
+  const [googleSignupWidth, setGoogleSignupWidth] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      const w = googleSignupContainerRef.current?.offsetWidth || 360;
+      setGoogleSignupWidth(Math.floor(w));
+    };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   // 🔹 OTP input handlers
   const handleOtpChange = (value, index) => {
     if (/^\d$/.test(value)) {
@@ -504,11 +516,12 @@ export default function SignupForm({ toggleForm }) {
       </div>
 
       <div className="w-full flex justify-center">
-        <div className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
+        <div ref={googleSignupContainerRef} className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
           <GoogleLogin
+            key={googleSignupWidth || 360}
             onSuccess={handleGoogleSignup}
             onError={() => setErrors({ general: "Google sign-up error" })}
-            width="100%"
+            width={googleSignupWidth || 360}
             text="signup_with"
             theme="outline"
             size="large"

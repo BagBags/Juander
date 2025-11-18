@@ -62,8 +62,7 @@ export default function SitePreviewCard({
 
         <div
           onClick={onExpand}
-          className="p-3 cursor-pointer hover:bg-gray-50/50 transition-colors active:bg-gray-100/50 flex-1 overflow-y-auto"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="p-3 cursor-pointer hover:bg-gray-50/50 transition-colors active:bg-gray-100/50 flex-1 overflow-hidden"
         >
           <div className="flex gap-3 items-start">
             {thumbnailUrl && (
@@ -87,20 +86,20 @@ export default function SitePreviewCard({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-bold text-gray-900 truncate">
+                <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">
                   {selectedPin.title || selectedPin.siteName}
                 </h3>
                 {isVisited && (
-                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-semibold shrink-0">
+                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-md text-[10px] font-semibold shrink-0 whitespace-nowrap">
                     <CheckCircle className="w-3 h-3" /> Done
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-gray-600 line-clamp-2 mt-1">
+              <p className="text-[10px] sm:text-[11px] text-gray-600 line-clamp-2 mt-1">
                 {selectedPin.description || selectedPin.siteDescription}
               </p>
               {distance !== null && (
-                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-700">
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-700 whitespace-nowrap">
                   <Navigation className="w-3.5 h-3.5 text-blue-600" />
                   <span className="font-medium">{(distance / 1000).toFixed(2)} km away</span>
                 </div>
