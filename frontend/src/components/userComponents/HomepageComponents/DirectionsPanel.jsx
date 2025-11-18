@@ -34,7 +34,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
   const lockedStepIndexRef = useRef(null);
 
   // Per-step one-time prompt flags
-  const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spokenFinal: false, arrivalSpoken: false });
+  const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spoken20: false, spoken10: false, spokenFinal: false, arrivalSpoken: false });
 
   const speakWithCooldown = (text) => {
     if (!text || !ttsService.isEnabled || !isAllowedRoute) return;
@@ -61,10 +61,15 @@ const DirectionsPanel = memo(function DirectionsPanel({
   };
 
   // Helper: build turn phrase based on step
-  const buildTurnPhrase = (step, prefix = "") => {
-    const instruction = step?.maneuver?.instruction || "";
-    if (!instruction) return "";
-    return `${prefix}${instruction}`.trim();
+  const buildDistancePrompt = (step, prefix = "") => {
+    const type = (step?.maneuver?.type || "").toLowerCase();
+    const mod = (step?.maneuver?.modifier || "").toLowerCase();
+    const dir = mod === "left" ? "left" : mod === "right" ? "right" : "straight";
+    const action = dir === "straight" ? "Continue straight" : `Turn ${dir}`;
+    if (type === "depart" || type === "head") {
+      return `${prefix}Continue straight`.trim();
+    }
+    return `${prefix}${action}`.trim();
   };
 
   // Initialize display instruction and manage lock across step changes
@@ -75,7 +80,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
     // Reset prompt flags for new step
     if (promptFlagsRef.current.stepIndex !== currentStepIndex) {
-      promptFlagsRef.current = { stepIndex: currentStepIndex, spoken100: false, spoken50: false, spokenFinal: false, arrivalSpoken: false };
+      promptFlagsRef.current = { stepIndex: currentStepIndex, spoken100: false, spoken50: false, spoken20: false, spoken10: false, spokenFinal: false, arrivalSpoken: false };
     }
 
     // Unlock when moving to a new step
@@ -155,6 +160,11 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
     // 10-meter lock: prevent rapid-fire when very close to waypoint
     if (dist <= 10) {
+      if (!flags.spoken10 && !isArriveStep) {
+        const phrase = buildDistancePrompt(step, "In 10 meters, ");
+        speakWithCooldown(phrase);
+        flags.spoken10 = true;
+      }
       if (!isLockedRef.current) {
         isLockedRef.current = true;
         lockedStepIndexRef.current = currentStepIndex;
@@ -170,20 +180,30 @@ const DirectionsPanel = memo(function DirectionsPanel({
       return;
     }
 
+    if (isLockedRef.current && lockedStepIndexRef.current === currentStepIndex && dist > 10) {
+      isLockedRef.current = false;
+      lockedStepIndexRef.current = null;
+    }
+
     // If outside lock radius, normal behavior resumes; emit distance prompts once per step
     if (dist <= 100 && !flags.spoken100 && !isArriveStep) {
-      const phrase = buildTurnPhrase(step, "In 100 meters, ");
+      const phrase = buildDistancePrompt(step, "In 100 meters, ");
       speakWithCooldown(phrase);
       flags.spoken100 = true;
     }
     if (dist <= 50 && !flags.spoken50 && !isArriveStep) {
-      const phrase = buildTurnPhrase(step, "In 50 meters, ");
+      const phrase = buildDistancePrompt(step, "In 50 meters, ");
       speakWithCooldown(phrase);
       flags.spoken50 = true;
     }
+    if (dist <= 20 && !flags.spoken20 && !isArriveStep) {
+      const phrase = buildDistancePrompt(step, "In 20 meters, ");
+      speakWithCooldown(phrase);
+      flags.spoken20 = true;
+    }
     // Final turn instruction very near the waypoint (but outside the lock threshold)
     if (dist <= 12 && !flags.spokenFinal && !isArriveStep) {
-      const finalPhrase = buildTurnPhrase(step);
+      const finalPhrase = step?.maneuver?.instruction || "";
       speakWithCooldown(finalPhrase);
       flags.spokenFinal = true;
     }

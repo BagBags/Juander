@@ -169,8 +169,9 @@ export default function SignupForm({ toggleForm }) {
   const [googleSignupWidth, setGoogleSignupWidth] = useState(0);
   useEffect(() => {
     const measure = () => {
-      const w = googleSignupContainerRef.current?.offsetWidth || 360;
-      setGoogleSignupWidth(Math.floor(w));
+      const candidate = googleSignupContainerRef.current?.offsetWidth || 360;
+      const clamped = Math.max(280, Math.min(360, candidate));
+      setGoogleSignupWidth(Math.floor(clamped));
     };
     measure();
     window.addEventListener("resize", measure, { passive: true });
@@ -515,8 +516,8 @@ export default function SignupForm({ toggleForm }) {
         <hr className="flex-1 border-gray-300" />
       </div>
 
-      <div className="w-full flex justify-center">
-        <div ref={googleSignupContainerRef} className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
+      <div className="w-full">
+        <div ref={googleSignupContainerRef} className="w-full h-[44px] min-h-[44px] grid place-items-center">
           <GoogleLogin
             key={googleSignupWidth || 360}
             onSuccess={handleGoogleSignup}

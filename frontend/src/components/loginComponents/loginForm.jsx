@@ -478,8 +478,9 @@ function ResponsiveGoogleLogin({ guestRef, onSuccess, onError }) {
     const measure = () => {
       const guestW = guestRef?.current?.offsetWidth;
       const containerW = containerRef.current?.offsetWidth;
-      const w = guestW || containerW || 360;
-      setWidth(Math.floor(w));
+      const candidate = guestW || containerW || 360;
+      const clamped = Math.max(280, Math.min(360, candidate));
+      setWidth(Math.floor(clamped));
     };
     measure();
     window.addEventListener("resize", measure, { passive: true });
@@ -487,8 +488,8 @@ function ResponsiveGoogleLogin({ guestRef, onSuccess, onError }) {
   }, []);
 
   return (
-    <div className="w-full flex justify-center">
-      <div ref={containerRef} className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
+    <div className="w-full">
+      <div ref={containerRef} className="w-full h-[44px] min-h-[44px] grid place-items-center">
         <GoogleLogin
           key={width || 360}
           onSuccess={onSuccess}
