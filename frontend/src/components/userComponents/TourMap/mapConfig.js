@@ -1,4 +1,5 @@
 import mbxDirections from "@mapbox/mapbox-sdk/services/directions";
+import mbxGeocoding from "@mapbox/mapbox-sdk/services/geocoding";
 import { polygon } from "@turf/helpers";
 import mapboxgl from "mapbox-gl";
 
@@ -12,6 +13,7 @@ export const MAPBOX_TOKEN =
   "pk.eyJ1IjoiY2hhcmxlczI5ZyIsImEiOiJjbWNrYWVzYmUwYzY4MmpweGcwZDN0c25iIn0.JJ7mcLEqZchHFAV5XY776A";
 
 export const directionsClient = mbxDirections({ accessToken: MAPBOX_TOKEN });
+export const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_TOKEN });
 
 export const INTRAMUROS_BOUNDS = [
   [120.969, 14.5833],

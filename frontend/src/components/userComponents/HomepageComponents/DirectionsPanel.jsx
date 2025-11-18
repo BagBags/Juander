@@ -27,14 +27,89 @@ const DirectionsPanel = memo(function DirectionsPanel({
   const lastSpokenTimeRef = useRef(0); // Track last TTS time for 3-second cooldown
   const location = useLocation();
   const isAllowedRoute = location.pathname.startsWith("/TouristItineraryMap/") || location.pathname.startsWith("/GuestItineraryMap/");
+  const strictMatchTTS = true;
+  const isGenericText = (txt) => /\b(walkway|footpath|foot\b|path|trail|unnamed)\b/i.test(String(txt || ""));
+  const includesName = (txt, rn) => rn && String(txt || "").toLowerCase().includes(String(rn).toLowerCase());
+  const hasVerb = (txt) => /\b(turn|continue|walk|head|merge|exit|arrive|proceed|keep|take|enter)\b/i.test(String(txt || ""));
+  const computeInstructionForStep = (step) => {
+    const type = String(step?.maneuver?.type || "").toLowerCase();
+    const mod = String(step?.maneuver?.modifier || "").toLowerCase();
+    const rnRaw = (step?.roadName || step?.name || "").trim();
+    const rnCandidate = rnRaw.split(/[;|,\\/]+/)[0]?.trim() || "";
+    const rn = rnCandidate && !isGenericText(rnCandidate) ? rnCandidate : "";
+    const banner = String(step?.bannerInstructions?.[0]?.primary?.text || "").trim();
+
+    const dir = mod === "left" ? "left"
+      : mod === "right" ? "right"
+      : /slight\s*left/.test(mod) ? "slight left"
+      : /slight\s*right/.test(mod) ? "slight right"
+      : /sharp\s*left/.test(mod) ? "sharp left"
+      : /sharp\s*right/.test(mod) ? "sharp right"
+      : /uturn/.test(mod) ? "u-turn"
+      : "straight";
+
+    if (banner && hasVerb(banner) && !isGenericText(banner)) {
+      return banner;
+    }
+
+    if (type === "turn" || type === "merge" || type === "exit" || type === "roundabout") {
+      if (dir === "straight") {
+        const base = "Continue straight";
+        return rn && !includesName(base, rn) ? `${base} to ${rn}` : base;
+      }
+      const base = `Turn ${dir}`;
+      return rn && !includesName(base, rn) ? `${base} onto ${rn}` : base;
+    }
+
+    if (type === "depart" || type === "head") {
+      if (currentStepIndex === 0) {
+        const base = dir === "straight" ? "Head straight" : `Head ${dir}`;
+        return rn && !includesName(base, rn) ? `${base} to ${rn}` : base;
+      }
+      const base = rn ? `Continue along ${rn}` : "Continue straight";
+      return base;
+    }
+
+    if (type === "arrive") {
+      return "Arrive at destination";
+    }
+
+    const base = rn ? `Continue along ${rn}` : (dir === "straight" ? "Continue straight" : `Continue ${dir}`);
+    return base;
+  };
+
+  const isActionableTurn = (step) => {
+    const t = String(step?.maneuver?.type || "").toLowerCase();
+    const m = String(step?.maneuver?.modifier || "").toLowerCase();
+    if (t === "turn" || t === "merge" || t === "exit" || t === "roundabout") return true;
+    if (t === "arrive") return true;
+    if (t === "continue" && m && m !== "straight") return true;
+    return false;
+  };
+
+  const getNextActionStepIndex = (fromIdx) => {
+    for (let i = fromIdx; i < steps.length; i++) {
+      if (isActionableTurn(steps[i])) return i;
+    }
+    return null;
+  };
+
+  const getCurrentActionStepIndex = (idx) => {
+    const s = steps[idx];
+    const t = String(s?.maneuver?.type || "").toLowerCase();
+    if (t === "depart" || t === "head" || t === "continue") {
+      const nextIdx = getNextActionStepIndex(idx + 1);
+      return nextIdx !== null ? nextIdx : idx;
+    }
+    return idx;
+  };
 
   // Displayed instruction is locked near waypoints to avoid flicker
   const [displayInstruction, setDisplayInstruction] = useState("");
   const isLockedRef = useRef(false);
   const lockedStepIndexRef = useRef(null);
 
-  // Per-step one-time prompt flags
-  const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spoken20: false, spoken10: false, spokenFinal: false, arrivalSpoken: false });
+  const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spoken40: false, spoken30: false, spoken20: false, spoken10: false, spokenNear: false, spokenFinal: false, arrivalSpoken: false });
 
   const speakWithCooldown = (text) => {
     if (!text || !ttsService.isEnabled || !isAllowedRoute) return;
@@ -60,23 +135,31 @@ const DirectionsPanel = memo(function DirectionsPanel({
     return R * c;
   };
 
-  // Helper: build turn phrase based on step
+  // Helper: build Waze/Google-like distance prompt (only actionable turns)
   const buildDistancePrompt = (step, prefix = "") => {
     const type = (step?.maneuver?.type || "").toLowerCase();
     const mod = (step?.maneuver?.modifier || "").toLowerCase();
-    const dir = mod === "left" ? "left" : mod === "right" ? "right" : "straight";
-    const action = dir === "straight" ? "Continue straight" : `Turn ${dir}`;
-    if (type === "depart" || type === "head") {
-      return `${prefix}Continue straight`.trim();
-    }
-    return `${prefix}${action}`.trim();
+    const isTurnType = type === "turn" || type === "merge" || type === "exit" || type === "roundabout";
+    if (!isTurnType) return null; // Don't announce straight/continue/depart
+
+    let dir = "straight";
+    if (/^left$/i.test(mod)) dir = "left";
+    else if (/^right$/i.test(mod)) dir = "right";
+    else if (/u[-\s]?turn/i.test(mod)) dir = "u-turn";
+    else if (/slight\s*left/i.test(mod)) dir = "slight left";
+    else if (/slight\s*right/i.test(mod)) dir = "slight right";
+    else if (/sharp\s*left/i.test(mod)) dir = "sharp left";
+    else if (/sharp\s*right/i.test(mod)) dir = "sharp right";
+
+    if (dir === "straight") return null; // No prompt for straight
+    return `${prefix}Turn ${dir}`.trim();
   };
 
   // Initialize display instruction and manage lock across step changes
   useEffect(() => {
     if (!steps || steps.length === 0) return;
-    const currentStep = steps[currentStepIndex];
-    const instruction = currentStep?.maneuver?.instruction || "Follow route";
+    const idx = getCurrentActionStepIndex(currentStepIndex);
+    const instruction = computeInstructionForStep(steps[idx]);
 
     // Reset prompt flags for new step
     if (promptFlagsRef.current.stepIndex !== currentStepIndex) {
@@ -89,10 +172,8 @@ const DirectionsPanel = memo(function DirectionsPanel({
       lockedStepIndexRef.current = null;
     }
 
-    // Only update displayed instruction if not locked
-    if (!isLockedRef.current) {
-      setDisplayInstruction(instruction);
-    }
+    // Always reflect the current step in the displayed instruction
+    setDisplayInstruction(instruction);
 
     return () => {
       // No-op: unmount cancellation handled in dedicated effects below
@@ -100,7 +181,10 @@ const DirectionsPanel = memo(function DirectionsPanel({
   }, [currentStepIndex, steps, isAllowedRoute]);
 
   // Speak only when the displayed instruction changes (Waze-style behavior) with 3-second cooldown
-  const displayedText = displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
+  const displayedText = displayInstruction || (() => {
+    const idx = getCurrentActionStepIndex(currentStepIndex);
+    return computeInstructionForStep(steps[idx]);
+  })();
   useEffect(() => {
     if (!isAllowedRoute || !ttsService.isEnabled) return;
     if (!displayedText) return;
@@ -121,9 +205,9 @@ const DirectionsPanel = memo(function DirectionsPanel({
   useEffect(() => {
     const onActivated = () => {
       setTimeout(() => {
-        const text = displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
+        const text = displayedText || computeInstructionForStep(steps[currentStepIndex]);
         if (isAllowedRoute && ttsService.isEnabled && text) {
-          ttsService.speak(text, { queue: true });
+          ttsService.speak(text);
           lastSpokenInstructionRef.current = text;
           lastSpokenTimeRef.current = Date.now();
         }
@@ -161,8 +245,23 @@ const DirectionsPanel = memo(function DirectionsPanel({
     // 10-meter lock: prevent rapid-fire when very close to waypoint
     if (dist <= 10) {
       if (!flags.spoken10 && !isArriveStep) {
-        const phrase = buildDistancePrompt(step, "In 10 meters, ");
-        speakWithCooldown(phrase);
+        const type = (step?.maneuver?.type || "").toLowerCase();
+        const mod = (step?.maneuver?.modifier || "").toLowerCase();
+        const isTurnType = type === "turn" || type === "merge" || type === "exit" || type === "roundabout";
+        if (isTurnType) {
+          let dir = "straight";
+          if (/^left$/i.test(mod)) dir = "left";
+          else if (/^right$/i.test(mod)) dir = "right";
+          else if (/u[-\s]?turn/i.test(mod)) dir = "u-turn";
+          else if (/slight\s*left/i.test(mod)) dir = "slight left";
+          else if (/slight\s*right/i.test(mod)) dir = "slight right";
+          else if (/sharp\s*left/i.test(mod)) dir = "sharp left";
+          else if (/sharp\s*right/i.test(mod)) dir = "sharp right";
+          if (dir !== "straight") {
+            const d = Math.max(3, Math.round(dist));
+            speakWithCooldown(`In ${d} meters, Turn ${dir}`);
+          }
+        }
         flags.spoken10 = true;
       }
       if (!isLockedRef.current) {
@@ -188,23 +287,48 @@ const DirectionsPanel = memo(function DirectionsPanel({
     // If outside lock radius, normal behavior resumes; emit distance prompts once per step
     if (dist <= 100 && !flags.spoken100 && !isArriveStep) {
       const phrase = buildDistancePrompt(step, "In 100 meters, ");
-      speakWithCooldown(phrase);
+      if (phrase) speakWithCooldown(phrase);
       flags.spoken100 = true;
     }
     if (dist <= 50 && !flags.spoken50 && !isArriveStep) {
       const phrase = buildDistancePrompt(step, "In 50 meters, ");
-      speakWithCooldown(phrase);
+      if (phrase) speakWithCooldown(phrase);
       flags.spoken50 = true;
+    }
+    if (dist <= 40 && !flags.spoken40 && !isArriveStep) {
+      const phrase = buildDistancePrompt(step, "In 40 meters, ");
+      if (phrase) speakWithCooldown(phrase);
+      flags.spoken40 = true;
+    }
+    if (dist <= 30 && !flags.spoken30 && !isArriveStep) {
+      const phrase = buildDistancePrompt(step, "In 30 meters, ");
+      if (phrase) speakWithCooldown(phrase);
+      flags.spoken30 = true;
     }
     if (dist <= 20 && !flags.spoken20 && !isArriveStep) {
       const phrase = buildDistancePrompt(step, "In 20 meters, ");
-      speakWithCooldown(phrase);
+      if (phrase) speakWithCooldown(phrase);
       flags.spoken20 = true;
     }
     // Final turn instruction very near the waypoint (but outside the lock threshold)
     if (dist <= 12 && !flags.spokenFinal && !isArriveStep) {
-      const finalPhrase = step?.maneuver?.instruction || "";
-      speakWithCooldown(finalPhrase);
+      const type = (step?.maneuver?.type || "").toLowerCase();
+      const mod = (step?.maneuver?.modifier || "").toLowerCase();
+      const isTurnType = type === "turn" || type === "merge" || type === "exit" || type === "roundabout";
+      if (isTurnType) {
+        let dir = "straight";
+        if (/^left$/i.test(mod)) dir = "left";
+        else if (/^right$/i.test(mod)) dir = "right";
+        else if (/u[-\s]?turn/i.test(mod)) dir = "u-turn";
+        else if (/slight\s*left/i.test(mod)) dir = "slight left";
+        else if (/slight\s*right/i.test(mod)) dir = "slight right";
+        else if (/sharp\s*left/i.test(mod)) dir = "sharp left";
+        else if (/sharp\s*right/i.test(mod)) dir = "sharp right";
+        if (dir !== "straight") {
+          const d = Math.max(3, Math.round(dist));
+          speakWithCooldown(`In ${d} meters, Turn ${dir}`);
+        }
+      }
       flags.spokenFinal = true;
     }
   }, [userLocation, steps, currentStepIndex, isAllowedRoute, activePin]);
@@ -226,6 +350,10 @@ const DirectionsPanel = memo(function DirectionsPanel({
     : transportMode === 'walking'
     ? 'Foot'
     : undefined;
+
+  const currentActionIndex = getCurrentActionStepIndex(currentStepIndex);
+  const nextActionIndex = getNextActionStepIndex(currentActionIndex + 1);
+  const nextHintText = nextActionIndex !== null ? computeInstructionForStep(steps[nextActionIndex]) : null;
 
   return (
     <div 
@@ -253,6 +381,11 @@ const DirectionsPanel = memo(function DirectionsPanel({
         <p className="text-sm sm:text-base md:text-lg font-medium text-[#f04e37] truncate">
           {displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
         </p>
+        {nextHintText && (
+          <p className="mt-0.5 text-[11px] sm:text-xs text-gray-600 truncate">
+            Next: {nextHintText}
+          </p>
+        )}
       </div>
 
       {/* ETA + Distance + Arrival */}

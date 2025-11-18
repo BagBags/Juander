@@ -14,6 +14,7 @@ import {
   MAPBOX_TOKEN,
   INTRAMUROS_BOUNDS,
   directionsClient,
+  geocodingClient,
   createInverseMask,
 } from "../TourMap/mapConfig";
 
@@ -773,20 +774,14 @@ export default function GuestItineraryMap() {
     try {
       const reqId = ++routingReqId.current;
       setIsRouting(true);
-      const resp = await directionsClient
-        .getDirections({
-          profile: transportMode,
-          geometries: "geojson",
-          overview: "full",
-          steps: true,
-          waypoints: [
-            { coordinates: [start.longitude, start.latitude] },
-            { coordinates: [pin.longitude, pin.latitude] },
-          ],
-        })
-        .send();
-
-      const routeData = resp.body.routes[0];
+      const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('i18nextLng')) || 'en';
+      const url = `https://api.mapbox.com/directions/v5/mapbox/${transportMode}/${start.longitude},${start.latitude};${pin.longitude},${pin.latitude}`
+        + `?steps=true&geometries=geojson&overview=full&voice_instructions=true&banner_instructions=true`
+        + `&alternatives=false&annotations=distance,duration&language=${encodeURIComponent(lang)}&voice_units=metric&continue_straight=true`
+        + `&access_token=${encodeURIComponent(MAPBOX_TOKEN)}`;
+      const resp = await fetch(url);
+      const json = await resp.json();
+      const routeData = json.routes?.[0];
       
       // Check if route stays within Intramuros bounds
       if (!isRouteWithinBounds(routeData.geometry)) {
@@ -838,7 +833,41 @@ export default function GuestItineraryMap() {
         geometry: routeData.geometry,
         properties: {},
       });
-      setSteps(routeData.legs.flatMap((leg) => leg.steps));
+      const rawSteps = routeData.legs.flatMap((leg) => leg.steps);
+      const map = mapRef.current?.getMap?.();
+      const stepsWithNames = await Promise.all(
+        rawSteps.map(async (s) => {
+          let roadName = (s.name || "").trim();
+          const generic = !roadName || /^(unnamed|walkway|foot|path|trail)$/i.test(roadName);
+          if (generic) {
+            try {
+              if (map && typeof map.project === "function") {
+                const [lng, lat] = s?.maneuver?.location || [];
+                const pt = map.project({ lng, lat });
+                const bbox = [
+                  { x: pt.x - 24, y: pt.y - 24 },
+                  { x: pt.x + 24, y: pt.y + 24 },
+                ];
+                const feats = map.queryRenderedFeatures([
+                  [bbox[0].x, bbox[0].y],
+                  [bbox[1].x, bbox[1].y],
+                ]);
+                const named = feats.find((f) => {
+                  const n = (f?.properties?.name || "").trim();
+                  return n && !/^(unnamed|walkway|foot|path|trail)$/i.test(n);
+                });
+                if (named) roadName = named.properties.name;
+              }
+              if (!roadName) {
+                const r = await geocodingClient.reverseGeocode({ query: s?.maneuver?.location, limit: 1 }).send();
+                roadName = r?.body?.features?.[0]?.text || roadName;
+              }
+            } catch {}
+          }
+          return { ...s, roadName };
+        })
+      );
+      setSteps(stepsWithNames);
       setCurrentStepIndex(0);
       setIsRouting(false);
     } catch (err) {
