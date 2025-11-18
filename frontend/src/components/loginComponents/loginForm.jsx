@@ -30,9 +30,6 @@ export default function LoginForm({ toggleForm }) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
 
-  // Google Login button width management
-  const googleLoginContainerRef = useRef(null);
-  const [googleBtnWidth, setGoogleBtnWidth] = useState(0);
 
   // 👇 Load saved language on component mount
   useEffect(() => {
@@ -40,16 +37,6 @@ export default function LoginForm({ toggleForm }) {
     i18n.changeLanguage(savedLang);
   }, []);
 
-  // Measure Google button container width
-  useEffect(() => {
-    const measure = () => {
-      const w = googleLoginContainerRef.current?.offsetWidth || 360;
-      setGoogleBtnWidth(Math.floor(w));
-    };
-    measure();
-    window.addEventListener("resize", measure, { passive: true });
-    return () => window.removeEventListener("resize", measure);
-  }, []);
 
   useEffect(() => {
     if (step === 2 && timeLeft > 0) {
@@ -344,22 +331,17 @@ export default function LoginForm({ toggleForm }) {
             <hr className="flex-1 border-gray-300" />
           </div>
 
-          <div className="w-full flex justify-center">
-            <div ref={googleLoginContainerRef} className="w-full sm:w-[360px] min-w-[280px] h-[44px] min-h-[44px] flex-shrink-0 overflow-hidden">
-              <GoogleLogin
-                key={googleBtnWidth || 360}
-                onSuccess={handleGoogleLoginSuccess}
-                onError={() => setError("Google login failed.")}
-                useOneTap
-                theme="outline"
-                size="large"
-                shape="rectangular"
-                text="sign_in_with"
-                width={googleBtnWidth || 360}
-                logo_alignment="left"
-              />
-            </div>
-          </div>
+          {/* Google Login - sized to match other buttons */}
+          <GoogleLogin
+            onSuccess={handleGoogleLoginSuccess}
+            onError={() => setError("Google login failed.")}
+            useOneTap
+            theme="outline"
+            size="large"
+            shape="rectangular"
+            text="signin_with"
+            logo_alignment="left"
+          />
 
           {/* Guest Login */}
           <button

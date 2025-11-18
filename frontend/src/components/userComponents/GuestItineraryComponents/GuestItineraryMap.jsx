@@ -28,7 +28,7 @@ import NotificationModal from "../../shared/NotificationModal";
 import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
 import ConfirmModal from "../../shared/ConfirmModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
-import ttsService from "../../../utils/textToSpeech";
+import ttsService, { announceDirectionStep } from "../../../utils/textToSpeech";
 import { useTour } from "../../TourComponents/TourContext";
 
 export default function GuestItineraryMap() {
@@ -674,62 +674,65 @@ export default function GuestItineraryMap() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!mapRef.current || !userLocation) return;
-    const map = mapRef.current.getMap();
-    if (!map) return;
-    const now = Date.now();
-    if (!followEnabledRef.current) {
-      if (now - (lastUserInteractRef.current || 0) > 5000) {
-        followEnabledRef.current = true;
-      } else {
-        return;
-      }
-    }
-    if (now - (lastCameraUpdateRef.current || 0) < 400) return;
-    lastCameraUpdateRef.current = now;
-    const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : (viewState?.zoom || 16);
-    const toRad = (v) => (v * Math.PI) / 180;
-    const haversineMeters = (lat1, lng1, lat2, lng2) => {
-      const R = 6371000;
-      const dLat = toRad(lat2 - lat1);
-      const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    };
-    const calcBearing = (lat1, lng1, lat2, lng2) => {
-      const dLng = toRad(lng2 - lng1);
-      const y = Math.sin(dLng) * Math.cos(toRad(lat2));
-      const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
-      let brng = Math.atan2(y, x) * 180 / Math.PI;
-      if (brng < 0) brng += 360;
-      return brng;
-    };
-    let targetBearing = typeof map.getBearing === 'function' ? map.getBearing() : 0;
-    if (steps && steps.length > 0) {
-      const step = steps[currentStepIndex];
-      const loc = step?.maneuver?.location;
-      if (loc && loc.length >= 2) {
-        const [lng, lat] = loc;
-        const dist = haversineMeters(userLocation.latitude, userLocation.longitude, lat, lng);
-        if (dist <= 60) {
-          targetBearing = calcBearing(userLocation.latitude, userLocation.longitude, lat, lng);
-        }
-      }
-    }
-    const snap = nearestPointOnRoute.current?.(userLocation.longitude, userLocation.latitude);
-    const useSnap = snap && snap.meters <= 15;
-    const centerLng = useSnap ? snap.lng : userLocation.longitude;
-    const centerLat = useSnap ? snap.lat : userLocation.latitude;
-    map.easeTo({
-      center: [centerLng, centerLat],
-      bearing: targetBearing,
-      zoom: currentZoom,
-      duration: 300,
-      essential: true
-    });
-  }, [userLocation, userHeading]);
+  /** DISABLED: Automatic map centering and rotating
+   * Users can now freely pan and rotate the map without it auto-centering on their location
+   */
+  // useEffect(() => {
+  //   if (!mapRef.current || !userLocation) return;
+  //   const map = mapRef.current.getMap();
+  //   if (!map) return;
+  //   const now = Date.now();
+  //   if (!followEnabledRef.current) {
+  //     if (now - (lastUserInteractRef.current || 0) > 5000) {
+  //       followEnabledRef.current = true;
+  //     } else {
+  //       return;
+  //     }
+  //   }
+  //   if (now - (lastCameraUpdateRef.current || 0) < 400) return;
+  //   lastCameraUpdateRef.current = now;
+  //   const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : (viewState?.zoom || 16);
+  //   const toRad = (v) => (v * Math.PI) / 180;
+  //   const haversineMeters = (lat1, lng1, lat2, lng2) => {
+  //     const R = 6371000;
+  //     const dLat = toRad(lat2 - lat1);
+  //     const dLng = toRad(lng2 - lng1);
+  //     const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  //     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  //     return R * c;
+  //   };
+  //   const calcBearing = (lat1, lng1, lat2, lng2) => {
+  //     const dLng = toRad(lng2 - lng1);
+  //     const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+  //     const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+  //     let brng = Math.atan2(y, x) * 180 / Math.PI;
+  //     if (brng < 0) brng += 360;
+  //     return brng;
+  //   };
+  //   let targetBearing = typeof map.getBearing === 'function' ? map.getBearing() : 0;
+  //   if (steps && steps.length > 0) {
+  //     const step = steps[currentStepIndex];
+  //     const loc = step?.maneuver?.location;
+  //     if (loc && loc.length >= 2) {
+  //       const [lng, lat] = loc;
+  //       const dist = haversineMeters(userLocation.latitude, userLocation.longitude, lat, lng);
+  //       if (dist <= 60) {
+  //         targetBearing = calcBearing(userLocation.latitude, userLocation.longitude, lat, lng);
+  //       }
+  //     }
+  //   }
+  //   const snap = nearestPointOnRoute.current?.(userLocation.longitude, userLocation.latitude);
+  //   const useSnap = snap && snap.meters <= 15;
+  //   const centerLng = useSnap ? snap.lng : userLocation.longitude;
+  //   const centerLat = useSnap ? snap.lat : userLocation.latitude;
+  //   map.easeTo({
+  //     center: [centerLng, centerLat],
+  //     bearing: targetBearing,
+  //     zoom: currentZoom,
+  //     duration: 300,
+  //     essential: true
+  //   });
+  // }, [userLocation, userHeading]);
 
   /** Trigger geolocate control on mount and enable watch mode */
   useEffect(() => {
@@ -892,6 +895,7 @@ export default function GuestItineraryMap() {
     }
   }, [userLocation, currentPinIndex, optimizedPins, manuallyDismissed]);
 
+  // Step advancement logic - SENSITIVE: auto-advance immediately when user turns to another street
   useEffect(() => {
     if (!userLocation || steps.length === 0) return;
     const toRad = (v) => (v * Math.PI) / 180;
@@ -903,6 +907,8 @@ export default function GuestItineraryMap() {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
+    
+    // Find closest step to user's current position
     let closestIdx = 0;
     let minMeters = Infinity;
     for (let idx = 0; idx < steps.length; idx++) {
@@ -915,27 +921,54 @@ export default function GuestItineraryMap() {
         closestIdx = idx;
       }
     }
+    
+    // Calculate distance to current step
     const currentLoc = steps[currentStepIndex]?.maneuver?.location;
     const currentDist = currentLoc && currentLoc.length >= 2
       ? haversineMeters(userLocation.latitude, userLocation.longitude, currentLoc[1], currentLoc[0])
       : Infinity;
+    
     if (closestIdx !== currentStepIndex) {
       const now = Date.now();
       const forward = closestIdx > currentStepIndex;
-      const strongForward = forward && currentDist - minMeters > 6;
-      const strongBackward = !forward && currentDist - minMeters > 20;
-      const strongChange = strongForward || strongBackward;
+      
+      // SENSITIVE thresholds for immediate turn detection:
+      // Forward: advance if user is 10m+ away from current step (reduced from 15m)
+      // OR if closer to next step and moved 12m+ from current (for tight turns)
+      const isForwardReady = forward && (
+        currentDist > 10 || // Passed maneuver point by 10m
+        (minMeters < currentDist && currentDist > 12) // Closer to next and moved away from current
+      );
+      const isBackwardReady = !forward && currentDist - minMeters > 30; // Only go back if much closer
+      const shouldAdvance = isForwardReady || isBackwardReady;
+      
       const candidate = stepSwitchCandidateRef.current;
       if (candidate.index !== closestIdx) {
         stepSwitchCandidateRef.current = { index: closestIdx, startedAt: now, count: 1 };
       } else {
         candidate.count += 1;
       }
-      const ready = strongChange && (now - stepSwitchCandidateRef.current.startedAt > 1200 || stepSwitchCandidateRef.current.count >= 3);
+      
+      // Fast response: advance after 500ms OR 2 confirmations (reduced from 800ms/3 times)
+      const timePassed = now - stepSwitchCandidateRef.current.startedAt > 500;
+      const countMet = stepSwitchCandidateRef.current.count >= 2;
+      const ready = shouldAdvance && (timePassed || countMet);
+      
       if (ready) {
+        console.log(`📍 Step advancement: ${currentStepIndex} → ${closestIdx} (distance from current: ${currentDist.toFixed(1)}m, distance to new: ${minMeters.toFixed(1)}m)`);
         setCurrentStepIndex(closestIdx);
         stepSwitchCandidateRef.current = { index: null, startedAt: 0, count: 0 };
+        
+        // Announce new step instruction for accessibility
+        if (ttsService.isEnabled && steps[closestIdx]) {
+          const newInstruction = steps[closestIdx]?.maneuver?.instruction || "Continue on route";
+          console.log(`🔊 TTS: Auto-announcing step change - "${newInstruction}"`);
+          announceDirectionStep(newInstruction, closestIdx + 1, steps.length);
+        }
       }
+    } else {
+      // Reset candidate when staying at same step
+      stepSwitchCandidateRef.current = { index: null, startedAt: 0, count: 0 };
     }
   }, [userLocation, steps, currentStepIndex]);
 
@@ -1282,13 +1315,10 @@ export default function GuestItineraryMap() {
     };
   }, [route]);
 
-  // Initialize TTS service
+  // Initialize TTS service - OFF by default, user controls via toggle button
   useEffect(() => {
-    try {
-      if (ttsService.isSupported()) {
-        ttsService.enable();
-      }
-    } catch {}
+    // Don't auto-enable - let user control via toggle button
+    // TTS service is OFF by default (isEnabled = false)
     return () => {
       try { ttsService.cancel(); } catch {}
     };

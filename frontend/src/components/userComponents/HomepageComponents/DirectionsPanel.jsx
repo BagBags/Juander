@@ -24,6 +24,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
 }) {
   // Track the last spoken displayed instruction to avoid repeats
   const lastSpokenInstructionRef = useRef("");
+  const lastSpokenTimeRef = useRef(0); // Track last TTS time for 3-second cooldown
   const location = useLocation();
   const isAllowedRoute = location.pathname.startsWith("/TouristItineraryMap/") || location.pathname.startsWith("/GuestItineraryMap/");
 
@@ -92,16 +93,36 @@ const DirectionsPanel = memo(function DirectionsPanel({
     };
   }, [currentStepIndex, steps, isAllowedRoute]);
 
-  // Speak only when the displayed instruction changes (Waze-style behavior)
+  // Speak only when the displayed instruction changes (Waze-style behavior) with 3-second cooldown
   const displayedText = displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route";
   useEffect(() => {
     if (!isAllowedRoute || !ttsService.isEnabled) return;
     if (isLockedRef.current) return; // don't speak while locked near waypoint
     if (!displayedText) return;
 
-    if (displayedText !== lastSpokenInstructionRef.current) {
+    // Check if instruction changed AND 3-second cooldown passed
+    const now = Date.now();
+    const cooldownPassed = now - lastSpokenTimeRef.current >= 3000; // 3-second cooldown
+    const instructionChanged = displayedText !== lastSpokenInstructionRef.current;
+
+    if (instructionChanged && cooldownPassed) {
+      console.log(`🔊 TTS: "${displayedText}" (Step ${currentStepIndex + 1}/${steps.length})`);
       announceDirectionStep(displayedText, currentStepIndex + 1, steps.length);
       lastSpokenInstructionRef.current = displayedText;
+      lastSpokenTimeRef.current = now; // Update last spoken time
+    } else if (instructionChanged && !cooldownPassed) {
+      // Instruction changed but cooldown hasn't passed - schedule it
+      const remaining = 3000 - (now - lastSpokenTimeRef.current);
+      console.log(`⏳ TTS cooldown: waiting ${Math.ceil(remaining/1000)}s before speaking next step`);
+      const timer = setTimeout(() => {
+        if (ttsService.isEnabled && isAllowedRoute) {
+          console.log(`🔊 TTS (delayed): "${displayedText}" (Step ${currentStepIndex + 1}/${steps.length})`);
+          announceDirectionStep(displayedText, currentStepIndex + 1, steps.length);
+          lastSpokenInstructionRef.current = displayedText;
+          lastSpokenTimeRef.current = Date.now();
+        }
+      }, remaining);
+      return () => clearTimeout(timer);
     }
   }, [displayedText, isAllowedRoute, currentStepIndex, steps.length]);
 
