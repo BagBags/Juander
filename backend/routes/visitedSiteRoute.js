@@ -12,7 +12,7 @@ router.use(verifyToken);
 router.post("/", async (req, res) => {
   try {
     const { itineraryId, siteId } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     if (!itineraryId || !siteId) {
       return res.status(400).json({ error: "Itinerary ID and Site ID are required" });
@@ -58,7 +58,7 @@ router.post("/", async (req, res) => {
 // @access  Private
 router.get("/", async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const visitedSites = await VisitedSite.find({ userId })
       .populate("itineraryId", "name")
@@ -77,7 +77,7 @@ router.get("/", async (req, res) => {
 // @access  Private
 router.get("/:itineraryId", async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { itineraryId } = req.params;
 
     const visitedSites = await VisitedSite.find({ userId, itineraryId })
@@ -96,7 +96,7 @@ router.get("/:itineraryId", async (req, res) => {
 // @access  Private
 router.delete("/:id", async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
     const { id } = req.params;
 
     const visitedSite = await VisitedSite.findOne({ _id: id, userId });
