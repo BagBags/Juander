@@ -13,28 +13,33 @@ export function setPhotoboothRouteActive(active) {
 export function scheduleCameraStop(delayMs = 10000) {
   try {
     if (stopTimerId) clearTimeout(stopTimerId);
-  } catch {}
+  } catch (e) { void e; }
   stopTimerId = setTimeout(() => {
     stopTimerId = null;
     try {
-      // Stop Jeeliz camera if present
       if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
         window.JEELIZFACEFILTER.destroy();
       }
-    } catch {}
+    } catch (e) { void e; }
 
-    // Best-effort: stop any media streams attached to <video> elements
+    // Best-effort: stop and fully release any media streams attached to <video> elements
     try {
       const videos = document.querySelectorAll('video');
       videos.forEach((v) => {
         const stream = v.srcObject;
         if (stream && typeof stream.getTracks === 'function') {
           stream.getTracks().forEach((t) => {
-            try { t.stop(); } catch {}
+            try { t.stop(); } catch (e) { void e; }
           });
+          try {
+            v.pause();
+            v.srcObject = null;
+            v.removeAttribute('src');
+            v.load();
+          } catch (e) { void e; }
         }
       });
-    } catch {}
+    } catch (e) { void e; }
   }, Math.max(0, Number(delayMs) || 0));
 }
 
@@ -44,7 +49,7 @@ export function cancelCameraStop() {
       clearTimeout(stopTimerId);
       stopTimerId = null;
     }
-  } catch {}
+  } catch (e) { void e; }
 }
 
 export function isPhotoboothRouteActive() {

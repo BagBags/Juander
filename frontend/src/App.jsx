@@ -222,8 +222,8 @@ function CameraLifecycleOnRouteLeave() {
   const location = useLocation();
   useEffect(() => {
     const isPhotobooth =
-      location.pathname === "/Photobooth" ||
-      location.pathname === "/PhotoboothJeeliz";
+      location.pathname.startsWith("/Photobooth") ||
+      location.pathname.startsWith("/PhotoboothJeeliz");
     // Update active route flag
     setPhotoboothRouteActive(isPhotobooth);
 
@@ -249,10 +249,12 @@ function CameraLifecycleOnRouteLeave() {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", () => scheduleCameraStop(0));
     window.addEventListener("beforeunload", () => scheduleCameraStop(0));
+    document.addEventListener("freeze", () => scheduleCameraStop(0));
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", () => scheduleCameraStop(0));
       window.removeEventListener("beforeunload", () => scheduleCameraStop(0));
+      document.removeEventListener("freeze", () => scheduleCameraStop(0));
     };
   }, []);
 

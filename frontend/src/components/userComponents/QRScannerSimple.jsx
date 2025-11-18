@@ -12,9 +12,21 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   const scanIntervalRef = useRef(null);
 
   useEffect(() => {
-    // Cleanup: stop scanning when component unmounts
     return () => {
       stopScanning();
+      try {
+        const v = webcamRef.current?.video;
+        const s = webcamRef.current?.stream || v?.srcObject;
+        if (s && typeof s.getTracks === 'function') {
+          s.getTracks().forEach((t) => { try { t.stop(); } catch (e) { void e; } });
+        }
+        if (v) {
+          try { v.pause(); } catch (e) { void e; }
+          try { v.srcObject = null; } catch (e) { void e; }
+          try { v.removeAttribute('src'); } catch (e) { void e; }
+          try { v.load(); } catch (e) { void e; }
+        }
+      } catch (e) { void e; }
     };
   }, []);
 
@@ -96,7 +108,23 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
           <h2 className="text-lg font-bold text-white">Scan QR Code for AR</h2>
         </div>
         <button
-          onClick={onClose}
+          onClick={() => {
+            try {
+              stopScanning();
+              const v = webcamRef.current?.video;
+              const s = webcamRef.current?.stream || v?.srcObject;
+              if (s && typeof s.getTracks === 'function') {
+                s.getTracks().forEach((t) => { try { t.stop(); } catch (e) { void e; } });
+              }
+              if (v) {
+                try { v.pause(); } catch (e) { void e; }
+                try { v.srcObject = null; } catch (e) { void e; }
+                try { v.removeAttribute('src'); } catch (e) { void e; }
+                try { v.load(); } catch (e) { void e; }
+              }
+            } catch (e) { void e; }
+            if (onClose) onClose();
+          }}
           className="p-2 hover:bg-white/20 rounded-lg transition-colors"
           aria-label="Close scanner"
         >
