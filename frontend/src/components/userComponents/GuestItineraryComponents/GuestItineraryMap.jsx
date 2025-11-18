@@ -842,27 +842,35 @@ export default function GuestItineraryMap() {
     }
   }, [userLocation, currentPinIndex, optimizedPins, manuallyDismissed]);
 
-  /** Update step index as user moves */
+  /** Update step index as user moves (meters via haversine) */
   useEffect(() => {
     if (!userLocation || steps.length === 0) return;
 
-    let closestIdx = 0;
-    let minDist = Infinity;
+    const toRad = (v) => (v * Math.PI) / 180;
+    const haversineMeters = (lat1, lng1, lat2, lng2) => {
+      const R = 6371000;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
 
-    steps.forEach((step, idx) => {
-      if (!step.maneuver?.location) return;
-      const [lng, lat] = step.maneuver.location;
-      const dx = lat - userLocation.latitude;
-      const dy = lng - userLocation.longitude;
-      const dist = dx * dx + dy * dy;
-      if (dist < minDist) {
-        minDist = dist;
+    let closestIdx = 0;
+    let minMeters = Infinity;
+
+    for (let idx = 0; idx < steps.length; idx++) {
+      const loc = steps[idx]?.maneuver?.location;
+      if (!loc || loc.length < 2) continue;
+      const [lng, lat] = loc;
+      const meters = haversineMeters(userLocation.latitude, userLocation.longitude, lat, lng);
+      if (meters < minMeters) {
+        minMeters = meters;
         closestIdx = idx;
       }
-    });
+    }
 
-    // Only update if step actually changed to prevent unnecessary rerenders and TTS rapid-fire
-    setCurrentStepIndex((prevIdx) => prevIdx === closestIdx ? prevIdx : closestIdx);
+    setCurrentStepIndex((prevIdx) => (prevIdx === closestIdx ? prevIdx : closestIdx));
   }, [userLocation, steps]);
 
   /** Mark site as visited - Guest users store in localStorage */

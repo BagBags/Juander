@@ -186,12 +186,15 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
   return (
     <div 
-      className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl p-4 text-sm flex flex-col items-center z-40 border border-gray-200 rounded-2xl"
+      className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto bg-white/90 backdrop-blur-lg shadow-2xl text-sm flex flex-col z-40 border border-gray-200 rounded-2xl overflow-y-auto"
       style={{
-        bottom: 'max(12px, env(safe-area-inset-bottom, 12px))'
+        bottom: 'max(8px, env(safe-area-inset-bottom, 8px))',
+        maxWidth: 'min(720px, 96vw)',
+        maxHeight: '50svh',
+        WebkitOverflowScrolling: 'touch'
       }}
     >
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 px-3 pt-3">
         <h4 className="font-semibold text-gray-800">Directions</h4>
         {modeLabel && (
           <span className="px-2 py-0.5 text-xs rounded-full border border-gray-300 text-gray-600 bg-white/80">
@@ -200,15 +203,15 @@ const DirectionsPanel = memo(function DirectionsPanel({
         )}
       </div>
 
-      <div className="text-center mb-3" aria-live="polite">
-        <p className="text-base font-medium text-[#f04e37]">
+      <div className="text-center px-3" aria-live="polite">
+        <p className="text-base md:text-lg font-medium text-[#f04e37]">
           {displayInstruction || steps[currentStepIndex]?.maneuver?.instruction || "Follow route"}
         </p>
       </div>
 
       {/* ETA + Distance + Arrival */}
       {eta && distance && (
-        <div className="flex flex-col items-center text-sm text-gray-700 mb-3">
+        <div className="flex flex-col items-center text-xs md:text-sm text-gray-700 px-3">
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />
             {formatEta(eta)} • {(distance / 1000).toFixed(2)} km
@@ -226,7 +229,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
       )}
 
       {/* Site Navigation Controls */}
-      <div className="flex gap-2 w-full">
+      <div className="flex gap-2 w-full px-3 pb-3 pt-2 mt-1">
         {/* Previous Site Button */}
         <button
           onClick={onPrevSite}
