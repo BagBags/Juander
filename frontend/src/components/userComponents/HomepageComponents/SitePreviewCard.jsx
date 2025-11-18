@@ -36,7 +36,7 @@ export default function SitePreviewCard({
       className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto z-40 animate-slide-down"
       style={{ top: "calc(max(env(safe-area-inset-top), 16px) + 64px)", maxWidth: "min(720px, 96vw)" }}
     >
-      <div className="bg-white/90 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: "40svh" }}>
+      <div className="bg-white/90 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: "clamp(200px, 34svh, 320px)" }}>
         <div className="px-3 py-2 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2">
             {isNearby ? (
