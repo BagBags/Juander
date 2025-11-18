@@ -914,6 +914,45 @@ export default function TouristItineraryMap() {
     return accumulatedRotationRef.current;
   }, []);
 
+  /** Calculate nearest point on route for GPS snapping */
+  const nearestPointOnRoute = useCallback((lng, lat) => {
+    try {
+      const coords = route?.geometry?.coordinates;
+      if (!coords || coords.length < 2) return null;
+      const R = 6371000;
+      const toRad = (v) => (v * Math.PI) / 180;
+      const lat0 = lat;
+      const toXY = (lngX, latY) => ({
+        x: R * toRad(lngX) * Math.cos(toRad(lat0)),
+        y: R * toRad(latY),
+      });
+      const p = toXY(lng, lat);
+      let best = { dist2: Infinity, lng: null, lat: null };
+      for (let i = 0; i < coords.length - 1; i++) {
+        const [lng1, lat1] = coords[i];
+        const [lng2, lat2] = coords[i + 1];
+        const a = toXY(lng1, lat1);
+        const b = toXY(lng2, lat2);
+        const abx = b.x - a.x;
+        const aby = b.y - a.y;
+        const dot = abx * abx + aby * aby;
+        if (dot === 0) continue;
+        const t = Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.y - a.y) * aby) / dot));
+        const projX = a.x + t * abx;
+        const projY = a.y + t * aby;
+        const dist2 = (p.x - projX) * (p.x - projX) + (p.y - projY) * (p.y - projY);
+        if (dist2 < best.dist2) {
+          const projLng = lng1 + (lng2 - lng1) * t;
+          const projLat = lat1 + (lat2 - lat1) * t;
+          best = { dist2, lng: projLng, lat: projLat };
+        }
+      }
+      return best.dist2 !== Infinity ? { lng: best.lng, lat: best.lat, meters: Math.sqrt(best.dist2) } : null;
+    } catch {
+      return null;
+    }
+  }, [route]);
+
   /** Track device orientation for heading */
   useEffect(() => {
     const handleOrientation = (event) => {
@@ -1500,6 +1539,18 @@ export default function TouristItineraryMap() {
     setViewState(evt.viewState);
   }, []);
 
+  // Initialize TTS service
+  useEffect(() => {
+    try {
+      if (ttsService.isSupported()) {
+        ttsService.enable();
+      }
+    } catch {}
+    return () => {
+      try { ttsService.cancel(); } catch {}
+    };
+  }, []);
+
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Resume/Restart Modal */}
@@ -1818,55 +1869,3 @@ export default function TouristItineraryMap() {
     </div>
   );
 }
-  const nearestPointOnRoute = useCallback((lng, lat) => {
-    try {
-      const coords = route?.geometry?.coordinates;
-      if (!coords || coords.length < 2) return null;
-      const R = 6371000;
-      const toRad = (v) => (v * Math.PI) / 180;
-      const lat0 = lat;
-      const toXY = (lngX, latY) => ({
-        x: R * toRad(lngX) * Math.cos(toRad(lat0)),
-        y: R * toRad(latY),
-      });
-      const p = toXY(lng, lat);
-      let best = { dist2: Infinity, lng: null, lat: null };
-      for (let i = 0; i < coords.length - 1; i++) {
-        const [lng1, lat1] = coords[i];
-        const [lng2, lat2] = coords[i + 1];
-        const a = toXY(lng1, lat1);
-        const b = toXY(lng2, lat2);
-        const abx = b.x - a.x;
-        const aby = b.y - a.y;
-        const apx = p.x - a.x;
-        const apy = p.y - a.y;
-        const ab2 = abx * abx + aby * aby || 1;
-        let t = (apx * abx + apy * aby) / ab2;
-        if (t < 0) t = 0; else if (t > 1) t = 1;
-        const projx = a.x + t * abx;
-        const projy = a.y + t * aby;
-        const dx = p.x - projx;
-        const dy = p.y - projy;
-        const dist2 = dx * dx + dy * dy;
-        if (dist2 < best.dist2) {
-          // Convert back to lat/lng
-          const projLat = (projy / R) * (180 / Math.PI);
-          const projLng = ((projx / (R * Math.cos(toRad(lat0)))) * (180 / Math.PI));
-          best = { dist2, lng: projLng, lat: projLat };
-        }
-      }
-      return best.dist2 !== Infinity ? { lng: best.lng, lat: best.lat, meters: Math.sqrt(best.dist2) } : null;
-    } catch {
-      return null;
-    }
-  }, [route]);
-  useEffect(() => {
-    try {
-      if (ttsService.isSupported()) {
-        ttsService.enable();
-      }
-    } catch {}
-    return () => {
-      try { ttsService.cancel(); } catch {}
-    };
-  }, []);

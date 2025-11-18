@@ -30,10 +30,25 @@ export default function LoginForm({ toggleForm }) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
 
+  // Google Login button width management
+  const googleLoginContainerRef = useRef(null);
+  const [googleBtnWidth, setGoogleBtnWidth] = useState(0);
+
   // 👇 Load saved language on component mount
   useEffect(() => {
     const savedLang = localStorage.getItem("lang") || "en";
     i18n.changeLanguage(savedLang);
+  }, []);
+
+  // Measure Google button container width
+  useEffect(() => {
+    const measure = () => {
+      const w = googleLoginContainerRef.current?.offsetWidth || 360;
+      setGoogleBtnWidth(Math.floor(w));
+    };
+    measure();
+    window.addEventListener("resize", measure, { passive: true });
+    return () => window.removeEventListener("resize", measure);
   }, []);
 
   useEffect(() => {
@@ -479,14 +494,3 @@ export default function LoginForm({ toggleForm }) {
     </div>
   );
 }
-  const googleLoginContainerRef = useRef(null);
-  const [googleBtnWidth, setGoogleBtnWidth] = useState(0);
-  useEffect(() => {
-    const measure = () => {
-      const w = googleLoginContainerRef.current?.offsetWidth || 360;
-      setGoogleBtnWidth(Math.floor(w));
-    };
-    measure();
-    window.addEventListener("resize", measure, { passive: true });
-    return () => window.removeEventListener("resize", measure);
-  }, []);

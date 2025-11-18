@@ -93,7 +93,6 @@ export default function BackHeader({ title, className = "", noMargin = false }) 
           zIndex: 9999,
           marginTop: noMargin ? 0 : 'clamp(12px, 3vh, 20px)',
           marginLeft: noMargin ? 0 : 'clamp(10px, 4vw, 14px)',
-          minHeight: 'fit-content',
           willChange: 'transform',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
