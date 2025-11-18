@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Building2 } from "lucide-react";
 
 export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formErrors = {}, setFormErrors }) {
   const [name, setName] = useState("");
@@ -68,19 +69,25 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formEr
 
       {/* Image Upload */}
       <div className="flex flex-col items-center space-y-3">
-        <img
-          src={
-            preview // newly uploaded file preview
-              ? preview
-              : typeof icon === "string" // existing image URL
-              ? icon.startsWith("http") // if full URL
-                ? icon
-                : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${icon}` // prepend backend URL if needed
-              : "/placeholder.png"
-          }
-          alt="Agency Icon"
-          className="w-54 h-54 object-cover rounded-full shadow-md border border-gray-200"
-        />
+        {preview || (typeof icon === "string" && icon) ? (
+          <img
+            src={
+              preview // newly uploaded file preview
+                ? preview
+                : typeof icon === "string" // existing image URL
+                ? icon.startsWith("http") // if full URL
+                  ? icon
+                  : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${icon}` // prepend backend URL if needed
+                : "/placeholder.png"
+            }
+            alt="Agency Icon"
+            className="w-54 h-54 object-cover rounded-full shadow-md border border-gray-200"
+          />
+        ) : (
+          <div className="w-54 h-54 rounded-full shadow-md border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+            <Building2 className="w-20 h-20 text-gray-400" />
+          </div>
+        )}
 
         <label className={`cursor-pointer px-4 py-2 rounded-lg border bg-white text-sm font-medium hover:bg-gray-50 hover:shadow transition-all ${
           formErrors.icon ? "border-red-500 text-red-600" : "border-gray-200 text-gray-700"

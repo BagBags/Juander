@@ -309,11 +309,11 @@ export default function Account() {
       setShowPassword(false);
       setShowConfirm(false);
       setErrors({});
-      setSuccessMessage(t("profileUpdated"));
+      setSuccessMessage(t("Profile Updated"));
       setOtpMessage("");
     } catch (err) {
       console.error("Update error:", err);
-      setOtpMessage(err.response?.data?.message || t("profileUpdateFailed"));
+      setOtpMessage(err.response?.data?.message || t("Profile Update Failed"));
     } finally {
       setLoading(false);
     }

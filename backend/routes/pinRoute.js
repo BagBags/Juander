@@ -11,6 +11,7 @@ const {
 } = require("../controllers/pinController.js");
 const Pin = require("../models/pinModel");
 const upload = require("../middleware/upload");
+const { deleteFromS3 } = require("../middleware/upload");
 const { verifyAdmin } = require("../middleware/authMiddleware");
 const path = require("path");
 const fs = require("fs");

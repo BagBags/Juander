@@ -13,6 +13,7 @@ import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point } from "@turf/helpers";
 import { CheckCircle2, XCircle, MapPin, Archive, RotateCcw, Trash2, Edit, MapPinned, Image, Sparkles, Camera, Layers, X, Plus, Check, Info, Crop, Save, Search, Filter } from "lucide-react";
 import ConfirmModal from "../../shared/ConfirmModal";
+import NotificationModal from "../../shared/NotificationModal";
 import {
   faCropSimple,
   faPlus,
@@ -106,7 +107,14 @@ export default function AdminTourMapMain() {
   const [draggablePinIndex, setDraggablePinIndex] = useState(null);
 
   const [loading, setLoading] = useState(false);
-  const [notif, setNotif] = useState(null);
+  
+  // Notification modal state
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
 
   const [showGlbPreview, setShowGlbPreview] = useState(false);
   const [currentGlbUrl, setCurrentGlbUrl] = useState("");
@@ -138,9 +146,13 @@ export default function AdminTourMapMain() {
   const [editCategoryId, setEditCategoryId] = useState(null);
 
   // ---------- Helpers ----------
-  const notify = (type, message) => {
-    setNotif({ type, message });
-    setTimeout(() => setNotif(null), 2500);
+  const notify = (type, title, message) => {
+    setNotification({
+      isOpen: true,
+      type: type,
+      title: title,
+      message: message,
+    });
   };
 
   // Create inverse mask geometry for visual overlay
@@ -231,10 +243,10 @@ export default function AdminTourMapMain() {
         fetchArchivedPins();
         fetchCategories();
 
-        notify("success", "Map data loaded");
+        notify("success", "Success", "Map data loaded successfully.");
       } catch (err) {
         console.error(err);
-        notify("error", "Failed to load pins/mask");
+        notify("error", "Error", "Failed to load pins and mask data.");
       } finally {
         setLoading(false);
       }
@@ -309,17 +321,17 @@ export default function AdminTourMapMain() {
           featureToSave = data.features[0];
           setMaskGeoJson(featureToSave);
         } else {
-          notify("error", "No mask found to save");
+          notify("error", "No Mask", "No mask found to save. Please draw a mask first.");
           setIsMaskingMode(false);
           return;
         }
       }
 
       await api.post("/mask", { geometry: featureToSave.geometry });
-      notify("success", "Mask saved");
+      notify("success", "Mask Saved", "The boundary mask has been saved successfully.");
     } catch (err) {
       console.error(err);
-      notify("error", "Failed to save mask");
+      notify("error", "Save Failed", "Failed to save the boundary mask. Please try again.");
     } finally {
       exitMaskEditing();
     }
@@ -343,7 +355,7 @@ export default function AdminTourMapMain() {
     
     // Validate if pin is inside Intramuros mask
     if (!isInsideMask(lng, lat)) {
-      notify("error", "Pin location is outside Intramuros bounds. Please place pins within the highlighted area.");
+      notify("error", "Invalid Location", "Pin location is outside Intramuros bounds. Please place pins within the highlighted area.");
       return;
     }
     
@@ -366,11 +378,11 @@ export default function AdminTourMapMain() {
     const lat = parseFloat(manualCoords.lat);
     const lng = parseFloat(manualCoords.lng);
     if (isNaN(lat) || isNaN(lng))
-      return notify("error", "Invalid latitude or longitude");
+      return notify("error", "Invalid Coordinates", "Please enter valid latitude and longitude values.");
     
     // Validate if pin is inside Intramuros mask
     if (!isInsideMask(lng, lat)) {
-      notify("error", "Coordinates are outside Intramuros bounds. Please enter valid coordinates within the highlighted area.");
+      notify("error", "Invalid Location", "Coordinates are outside Intramuros bounds. Please enter valid coordinates within the highlighted area.");
       return;
     }
     
@@ -469,7 +481,7 @@ export default function AdminTourMapMain() {
     
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      notify("error", "Please fill in all required fields");
+      notify("error", "Validation Error", "Please fill in all required fields before saving.");
       return;
     }
     
@@ -503,7 +515,7 @@ export default function AdminTourMapMain() {
             saved = res.data;
           }
           setPins((prev) => prev.map((p, i) => (i === index ? saved : p)));
-          notify("success", `Pin #${index + 1} saved`);
+          notify("success", "Pin Saved", `Pin #${index + 1} has been saved successfully.`);
           setSelectedPin(null);
           setOriginalPinData(null);
           setIsAddingPin(false);
@@ -511,7 +523,7 @@ export default function AdminTourMapMain() {
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
-          notify("error", "Failed to save pin");
+          notify("error", "Save Failed", "Failed to save the pin. Please try again.");
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -534,11 +546,11 @@ export default function AdminTourMapMain() {
           setPins(Array.isArray(pinsRes.data) ? pinsRes.data : []);
           fetchArchivedPins();
           setSelectedPin(null);
-          notify("success", "Pin archived successfully");
+          notify("success", "Pin Archived", "The pin has been archived successfully.");
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
-          notify("error", "Failed to archive pin");
+          notify("error", "Archive Failed", "Failed to archive the pin. Please try again.");
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -560,11 +572,11 @@ export default function AdminTourMapMain() {
           const pinsRes = await api.get("/pins");
           setPins(Array.isArray(pinsRes.data) ? pinsRes.data : []);
           fetchArchivedPins();
-          notify("success", "Pin restored successfully");
+          notify("success", "Pin Restored", "The pin has been restored successfully.");
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
-          notify("error", "Failed to restore pin");
+          notify("error", "Restore Failed", "Failed to restore the pin. Please try again.");
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -584,11 +596,11 @@ export default function AdminTourMapMain() {
         try {
           await api.delete(`/pins/${id}`);
           fetchArchivedPins();
-          notify("success", "Pin permanently deleted");
+          notify("success", "Pin Deleted", "The pin has been permanently deleted.");
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
-          notify("error", "Failed to delete pin");
+          notify("error", "Delete Failed", "Failed to delete the pin. Please try again.");
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -599,7 +611,7 @@ export default function AdminTourMapMain() {
   const handleCategorySubmit = async (e) => {
     e.preventDefault();
     if (!categoryForm.name.trim()) {
-      notify("error", "Category name is required");
+      notify("error", "Validation Error", "Category name is required.");
       return;
     }
 
@@ -619,10 +631,10 @@ export default function AdminTourMapMain() {
         try {
           if (isEditing) {
             await api.put(`/admin/categories/${editCategoryId}`, { name: categoryName });
-            notify("success", "Category updated");
+            notify("success", "Category Updated", "The category has been updated successfully.");
           } else {
             await api.post("/admin/categories", { name: categoryName });
-            notify("success", "Category created");
+            notify("success", "Category Created", "The new category has been created successfully.");
           }
           setCategoryForm({ name: "" });
           setEditCategoryId(null);
@@ -630,7 +642,7 @@ export default function AdminTourMapMain() {
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
-          notify("error", err.response?.data?.message || "Failed to save category");
+          notify("error", "Save Failed", err.response?.data?.message || "Failed to save the category. Please try again.");
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -654,11 +666,11 @@ export default function AdminTourMapMain() {
         try {
           await api.delete(`/admin/categories/${id}`);
           fetchCategories();
-          notify("success", "Category deleted");
+          notify("success", "Category Deleted", "The category has been deleted successfully.");
           setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
         } catch (err) {
           console.error(err);
-          notify("error", "Failed to delete category");
+          notify("error", "Delete Failed", "Failed to delete the category. Please try again.");
           setConfirmModal(prev => ({ ...prev, loading: false }));
         }
       },
@@ -681,10 +693,10 @@ export default function AdminTourMapMain() {
       setPins((prev) =>
         prev.map((p, i) => (i === index ? { ...p, glbUrl: uploadedUrl } : p))
       );
-      notify("success", "3D model uploaded (click Save Changes to apply)");
+      notify("success", "Model Uploaded", "3D model uploaded successfully. Click Save Changes to apply.");
     } catch (err) {
       console.error(err);
-      notify("error", err.response?.data?.message || "Upload failed");
+      notify("error", "Upload Failed", err.response?.data?.message || "Failed to upload the 3D model. Please try again.");
     }
   };
 
@@ -709,73 +721,77 @@ export default function AdminTourMapMain() {
       setPins((prev) =>
         prev.map((p, i) => (i === pinIndex ? { ...p, facadeUrl: uploadedUrl } : p))
       );
-      notify("success", "Facade image uploaded (click Save Changes to apply)");
+      notify("success", "Facade Uploaded", "Facade image uploaded successfully. Click Save Changes to apply.");
     } catch (err) {
       console.error(err);
-      notify("error", "Facade upload failed");
+      notify("error", "Upload Failed", "Failed to upload the facade image. Please try again.");
     }
   };
 
-  const handleRemoveFacade = async (index) => {
+  const handleRemoveFacade = (index) => {
     const pin = pins[index];
     
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the facade image for "${pin.siteName}"?\n\n` +
-      `This will permanently delete the file from the server and cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-
-    try {
-      notify("info", "Deleting facade image...");
-      
-      // Call backend to delete the file and update database
-      await api.delete(`/pins/${pin._id}/remove-facade`);
-      
-      // Update local state
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], facadeUrl: "" };
-        return updated;
-      });
-      
-      notify("success", "Facade image deleted successfully");
-    } catch (error) {
-      console.error("Error removing facade:", error);
-      notify("error", "Failed to delete facade image. Please try again.");
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete Facade Image?",
+      message: `Are you sure you want to delete the facade image for "${pin.siteName}"? This will permanently delete the file from the server and cannot be undone.`,
+      confirmText: "Delete Facade",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          // Call backend to delete the file and update database
+          await api.delete(`/pins/${pin._id}/remove-facade`);
+          
+          // Update local state
+          setPins((prev) => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], facadeUrl: "" };
+            return updated;
+          });
+          
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          notify("success", "Facade Deleted", "The facade image has been deleted successfully.");
+        } catch (error) {
+          console.error("Error removing facade:", error);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+          notify("error", "Delete Failed", "Failed to delete the facade image. Please try again.");
+        }
+      },
+    });
   };
 
-  const handleRemoveGlb = async (index) => {
+  const handleRemoveGlb = (index) => {
     const pin = pins[index];
     
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to delete the 3D model for "${pin.siteName}"?\n\n` +
-      `This will permanently delete the file from the server and cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-
-    try {
-      notify("info", "Deleting 3D model...");
-      
-      // Call backend to delete the file and update database
-      await api.delete(`/pins/${pin._id}/remove-glb`);
-      
-      // Update local state
-      setPins((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], glbUrl: "" };
-        return updated;
-      });
-      
-      notify("success", "3D model deleted successfully");
-    } catch (error) {
-      console.error("Error removing 3D model:", error);
-      notify("error", "Failed to delete 3D model. Please try again.");
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete 3D Model?",
+      message: `Are you sure you want to delete the 3D model for "${pin.siteName}"? This will permanently delete the file from the server and cannot be undone.`,
+      confirmText: "Delete Model",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
+        try {
+          // Call backend to delete the file and update database
+          await api.delete(`/pins/${pin._id}/remove-glb`);
+          
+          // Update local state
+          setPins((prev) => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], glbUrl: "" };
+            return updated;
+          });
+          
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          notify("success", "Model Deleted", "The 3D model has been deleted successfully.");
+        } catch (error) {
+          console.error("Error removing 3D model:", error);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+          notify("error", "Delete Failed", "Failed to delete the 3D model. Please try again.");
+        }
+      },
+    });
   };
 
   const handleMediaUpload = async (e, index) => {
@@ -788,7 +804,7 @@ export default function AdminTourMapMain() {
     
     if (oversizedFiles.length > 0) {
       const fileNames = oversizedFiles.map(f => f.name).join(", ");
-      notify("error", `File(s) too large: ${fileNames}. Maximum size is 50MB per file.`);
+      notify("error", "File Too Large", `File(s) too large: ${fileNames}. Maximum size is 50MB per file.`);
       return;
     }
     
@@ -798,7 +814,7 @@ export default function AdminTourMapMain() {
     });
 
     try {
-      notify("info", "Uploading files...");
+      notify("info", "Uploading", "Uploading files...");
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins/upload-media`,
         formData,
@@ -819,56 +835,60 @@ export default function AdminTourMapMain() {
           return p;
         })
       );
-      notify("success", `${uploadedFiles.length} file(s) uploaded (click Save Changes to apply)`);
+      notify("success", "Files Uploaded", `${uploadedFiles.length} file(s) uploaded successfully. Click Save Changes to apply.`);
     } catch (err) {
       console.error(err);
-      notify("error", err.response?.data?.message || "Media upload failed");
+      notify("error", "Upload Failed", err.response?.data?.message || "Failed to upload media files. Please try again.");
     }
   };
 
-  const handleRemoveMedia = async (pinIndex, mediaIndex) => {
+  const handleRemoveMedia = (pinIndex, mediaIndex) => {
     const pin = pins[pinIndex];
     const mediaFile = pin.mediaFiles[mediaIndex];
     
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to delete this media file?\n\n` +
-      `This will permanently delete the file from the server and cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-
-    try {
-      notify("info", "Deleting media file...");
-      
-      // Only call backend if the pin has been saved (has _id)
-      // For newly uploaded files that haven't been saved, just remove from local state
-      if (pin._id) {
+    setConfirmModal({
+      isOpen: true,
+      type: "danger",
+      title: "Delete Media File?",
+      message: "This will permanently delete the file from the server and cannot be undone.",
+      confirmText: "Delete File",
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, loading: true }));
         try {
-          await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
-        } catch (error) {
-          // If backend returns 400 (invalid index), it means the file wasn't saved yet
-          // Just remove from local state
-          if (error.response?.status !== 400) {
-            throw error; // Re-throw if it's a different error
+          // Only call backend if the pin has been saved (has _id)
+          // For newly uploaded files that haven't been saved, just remove from local state
+          if (pin._id) {
+            try {
+              await api.delete(`/pins/${pin._id}/remove-media/${mediaIndex}`);
+            } catch (error) {
+              // If backend returns 400 (invalid index), it means the file wasn't saved yet
+              // Just remove from local state
+              if (error.response?.status !== 400) {
+                throw error; // Re-throw if it's a different error
+              }
+            }
           }
+          
+          // Update local state
+          setPins((prev) => {
+            const updated = [...prev];
+            const mediaFiles = [...(updated[pinIndex].mediaFiles || [])];
+            mediaFiles.splice(mediaIndex, 1);
+            updated[pinIndex] = { ...updated[pinIndex], mediaFiles };
+            return updated;
+          });
+          
+          setConfirmModal({ isOpen: false, type: "warning", title: "", message: "", onConfirm: null, loading: false });
+          notify("success", "Media Deleted", "The media file has been removed successfully.");
+        } catch (error) {
+          console.error("Error removing media file:", error);
+          setConfirmModal(prev => ({ ...prev, loading: false }));
+          
+          const errorMessage = error.response?.data?.message || error.message || "Failed to delete the media file. Please try again.";
+          notify("error", "Delete Failed", errorMessage);
         }
-      }
-      
-      // Update local state
-      setPins((prev) => {
-        const updated = [...prev];
-        const mediaFiles = [...(updated[pinIndex].mediaFiles || [])];
-        mediaFiles.splice(mediaIndex, 1);
-        updated[pinIndex] = { ...updated[pinIndex], mediaFiles };
-        return updated;
-      });
-      
-      notify("success", "Media file removed");
-    } catch (error) {
-      console.error("Error removing media file:", error);
-      notify("error", "Failed to delete media file. Please try again.");
-    }
+      },
+    });
   };
 
   return (
@@ -884,35 +904,21 @@ export default function AdminTourMapMain() {
         confirmText={confirmModal.confirmText}
         loading={confirmModal.loading}
       />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ isOpen: false, type: "info", title: "", message: "" })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
       
       <div className="flex justify-center items-center p-6 bg-gray-100 min-h-screen">
       <div className="relative w-full h-[90vh] bg-white rounded-2xl shadow-lg overflow-hidden">
         {loading && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[10000] bg-white/90 border border-gray-200 px-3 py-1 rounded shadow">
             Loading…
-          </div>
-        )}
-        {notif && (
-          <div
-            className={`absolute top-3 left-1/2 z-[10000] w-auto min-w-[300px] max-w-md px-4 py-3 rounded-xl shadow-lg border animate-slideDown ${
-              notif.type === "success"
-                ? "bg-green-50 border-green-300 text-green-800"
-                : notif.type === "error"
-                ? "bg-red-50 border-red-300 text-red-800"
-                : "bg-blue-50 border-blue-300 text-blue-800"
-            }`}
-            style={{ transform: 'translateX(-50%)' }}
-          >
-            <div className="flex items-center gap-3">
-              {notif.type === "success" ? (
-                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-              ) : notif.type === "error" ? (
-                <XCircle className="w-5 h-5 flex-shrink-0" />
-              ) : (
-                <MapPin className="w-5 h-5 flex-shrink-0" />
-              )}
-              <p className="text-sm font-medium leading-relaxed">{notif.message}</p>
-            </div>
           </div>
         )}
         
@@ -1662,3 +1668,4 @@ export default function AdminTourMapMain() {
     </>
   );
 }
+

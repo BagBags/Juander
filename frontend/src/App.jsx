@@ -48,7 +48,6 @@ import Homepage from "./components/userComponents/HomepageComponents/Homepage";
 import EmergencyPage from "./components/userComponents/EmegencyComponents/EmergencyPage";
 import ProfilePage from "./components/userComponents/ProfileComponents/Profile";
 import Photobooth from "./components/userComponents/photoboothComponents/Photobooth";
-
 import Account from "./components/userComponents/ProfileComponents/Account";
 import ProfileLayout from "./components/userComponents/ProfileComponents/ProfileLayout";
 import "./App.css";
