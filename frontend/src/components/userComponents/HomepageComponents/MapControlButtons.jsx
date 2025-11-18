@@ -20,10 +20,12 @@ export default function MapControlButtons({
 }) {
   const { t } = useTranslation();
   const [isTTSEnabled, setIsTTSEnabled] = useState(ttsService.isEnabled);
+  const isTTSSupported = ttsService.isSupported();
   const [needsCompassPermission, setNeedsCompassPermission] = useState(false);
   const [compassPermissionGranted, setCompassPermissionGranted] = useState(false);
 
   const handleTTSToggle = () => {
+    if (!isTTSSupported) return;
     const newState = ttsService.toggle();
     setIsTTSEnabled(newState);
     // Don't announce activation
@@ -82,12 +84,27 @@ export default function MapControlButtons({
       <button
         onClick={handleTTSToggle}
         className={`map-tts-toggle p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
-          isTTSEnabled
+          !isTTSSupported
+            ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
+            : isTTSEnabled
             ? "bg-green-500 hover:bg-green-600 text-white border-green-600 animate-pulse"
             : "bg-white hover:bg-gray-50 text-gray-700 border-gray-300"
         }`}
-        title={isTTSEnabled ? "Disable voice guidance" : "Enable voice guidance"}
-        aria-label={isTTSEnabled ? "Disable voice guidance" : "Enable voice guidance"}
+        disabled={!isTTSSupported}
+        title={
+          !isTTSSupported
+            ? "Voice guidance not supported on this device"
+            : isTTSEnabled
+            ? "Disable voice guidance"
+            : "Enable voice guidance"
+        }
+        aria-label={
+          !isTTSSupported
+            ? "Voice guidance not supported"
+            : isTTSEnabled
+            ? "Disable voice guidance"
+            : "Enable voice guidance"
+        }
       >
         {isTTSEnabled ? (
           <Volume2 className="w-5 h-5" />

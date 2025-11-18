@@ -2,9 +2,18 @@
 class TextToSpeechService {
   constructor() {
     this.synth = window.speechSynthesis;
+    this.voices = [];
     this.isSpeaking = false;
     this.isEnabled = false; // Default to OFF
     this.currentLanguage = 'en-US'; // Default language
+    const loadVoices = () => {
+      const v = this.synth?.getVoices?.() || [];
+      if (v && v.length) this.voices = v;
+    };
+    loadVoices();
+    if (this.synth && typeof this.synth.addEventListener === 'function') {
+      this.synth.addEventListener('voiceschanged', loadVoices);
+    }
   }
 
   // Set language for TTS
@@ -37,7 +46,7 @@ class TextToSpeechService {
 
   // Speak text with options
   speak(text, options = {}) {
-    if (!this.isEnabled || !text) return;
+    if (!this.isEnabled || !text || !this.isSupported()) return;
 
     // Cancel any ongoing speech
     this.cancel();
@@ -50,7 +59,17 @@ class TextToSpeechService {
     utterance.volume = options.volume || 1.0; // Volume (0 to 1)
     
     // Use provided language or detect current language
-    utterance.lang = options.lang || this.getCurrentLanguage();
+    const lang = options.lang || this.getCurrentLanguage();
+    utterance.lang = lang;
+    const voices = this.voices?.length ? this.voices : (this.synth?.getVoices?.() || []);
+    const matchLang = (vLang) => {
+      if (!vLang || !lang) return false;
+      const a = String(vLang).toLowerCase();
+      const b = String(lang).toLowerCase();
+      return a === b || a.startsWith(b.split('-')[0]);
+    };
+    const voice = voices.find(v => matchLang(v.lang)) || voices.find(v => /en[-_]?us/i.test(v.lang)) || voices[0];
+    if (voice) utterance.voice = voice;
 
     // Event handlers
     utterance.onstart = () => {
@@ -66,12 +85,12 @@ class TextToSpeechService {
       this.isSpeaking = false;
     };
 
-    this.synth.speak(utterance);
+    this.synth?.speak(utterance);
   }
 
   // Cancel current speech
   cancel() {
-    if (this.synth.speaking) {
+    if (this.synth && this.synth.speaking) {
       this.synth.cancel();
       this.isSpeaking = false;
     }
@@ -174,7 +193,6 @@ export const announceArrival = (siteName) => {
   ttsService.speak(text, { rate: 0.9 });
 };
 
-export const announceDirectionStep = (instruction, stepNumber, totalSteps) => {
-  // Only read the instruction, not the step number
+export const announceDirectionStep = (instruction) => {
   ttsService.speak(instruction);
 };
