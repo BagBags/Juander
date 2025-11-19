@@ -133,7 +133,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
       </div>
 
       {/* Scanner Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
+      <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-4 overflow-y-auto">
         {error ? (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 max-w-md">
             <div className="flex items-start gap-3">
@@ -171,16 +171,16 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
             {/* Loading indicator */}
             {!cameraReady && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-50 rounded-xl">
-                <div className="text-center p-8">
-                  <div className="w-16 h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p className="text-white text-lg font-bold mb-2">Starting Camera</p>
-                  <p className="text-white/80 text-sm">Please allow camera access...</p>
+                <div className="text-center p-4 md:p-8">
+                  <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin mx-auto mb-3 md:mb-4"></div>
+                  <p className="text-white text-base md:text-lg font-bold mb-1 md:mb-2">Starting Camera</p>
+                  <p className="text-white/80 text-xs md:text-sm">Please allow camera access...</p>
                 </div>
               </div>
             )}
             
             {/* Camera View */}
-            <div className="relative rounded-xl overflow-hidden border-4 border-white shadow-2xl">
+            <div className="relative rounded-lg md:rounded-xl overflow-hidden border-2 md:border-4 border-white shadow-2xl">
               <Webcam
                 ref={webcamRef}
                 audio={false}
@@ -192,33 +192,33 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
                 }}
                 onUserMedia={handleCameraReady}
                 onUserMediaError={handleWebcamError}
-                className="w-full h-auto"
-                style={{ width: '100%', height: 'auto' }}
+                className="w-full h-auto max-h-[50vh] object-cover"
+                style={{ width: '100%' }}
               />
               
               {/* Scanning Overlay */}
               {scanning && (
                 <div className="absolute inset-0 pointer-events-none">
                   {/* Corner decorations */}
-                  <div className="absolute top-4 left-4 w-12 h-12 border-t-4 border-l-4 border-[#f04e37]"></div>
-                  <div className="absolute top-4 right-4 w-12 h-12 border-t-4 border-r-4 border-[#f04e37]"></div>
-                  <div className="absolute bottom-4 left-4 w-12 h-12 border-b-4 border-l-4 border-[#f04e37]"></div>
-                  <div className="absolute bottom-4 right-4 w-12 h-12 border-b-4 border-r-4 border-[#f04e37]"></div>
+                  <div className="absolute top-2 left-2 md:top-4 md:left-4 w-8 h-8 md:w-12 md:h-12 border-t-2 border-l-2 md:border-t-4 md:border-l-4 border-[#f04e37]"></div>
+                  <div className="absolute top-2 right-2 md:top-4 md:right-4 w-8 h-8 md:w-12 md:h-12 border-t-2 border-r-2 md:border-t-4 md:border-r-4 border-[#f04e37]"></div>
+                  <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 w-8 h-8 md:w-12 md:h-12 border-b-2 border-l-2 md:border-b-4 md:border-l-4 border-[#f04e37]"></div>
+                  <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 w-8 h-8 md:w-12 md:h-12 border-b-2 border-r-2 md:border-b-4 md:border-r-4 border-[#f04e37]"></div>
                   
                   {/* Center scanning box */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-64 h-64 border-2 border-white/50 rounded-lg"></div>
+                    <div className="w-48 h-48 md:w-64 md:h-64 border-2 border-white/50 rounded-lg"></div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Instructions */}
-            <div className="mt-6 text-center">
-              <p className="text-white text-sm mb-2 font-medium">
+            <div className="mt-3 md:mt-6 text-center px-2">
+              <p className="text-white text-xs md:text-sm mb-1 md:mb-2 font-medium">
                 Position the QR code within the frame
               </p>
-              <p className="text-white/70 text-xs">
+              <p className="text-white/70 text-[10px] md:text-xs">
                 The scanner will automatically detect and process the code
               </p>
             </div>

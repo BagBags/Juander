@@ -415,8 +415,11 @@ export default function GuestItineraryMap() {
               optimizedOrder,
             });
 
-            // Show Resume/Restart modal
-            setTimeout(() => setShowResumeModal(true), 100);
+            // Only show Resume/Restart modal if there's actual progress
+            const hasProgress = currentIndex > 0 || visitedSet.size > 0;
+            if (hasProgress) {
+              setTimeout(() => setShowResumeModal(true), 100);
+            }
             
             setHasLoadedProgress(true);
             return;
@@ -1021,8 +1024,20 @@ export default function GuestItineraryMap() {
   const handleRestartItinerary = () => {
     if (!userLocation || pins.length === 0) return;
     
-    // Re-run optimization from current location, preserving visited sites (consistent with tourist)
-    const optimized = optimizeRoute(userLocation, pins, visitedSites);
+    // Clear visited and skipped sites for fresh restart
+    const freshVisited = new Set();
+    const freshSkipped = new Set();
+    setVisitedSites(freshVisited);
+    setSkippedSites(freshSkipped);
+    
+    // Clear from localStorage
+    const visitedKey = `guest_visited_${itineraryId}`;
+    const skippedKey = `guest_skipped_${itineraryId}`;
+    localStorage.removeItem(visitedKey);
+    localStorage.removeItem(skippedKey);
+    
+    // Re-run optimization from current location with fresh state
+    const optimized = optimizeRoute(userLocation, pins, freshVisited);
     setOptimizedPins(optimized);
     
     // Save new optimized order
@@ -1030,7 +1045,7 @@ export default function GuestItineraryMap() {
     const optimizedOrder = optimized.map(pin => pin._id);
     localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
     
-    // Go to first site in NEW optimized order (keep visited flags)
+    // Go to first site in NEW optimized order
     setCurrentPinIndex(0);
     if (optimized.length > 0) {
       const firstPin = optimized[0];
@@ -1047,8 +1062,9 @@ export default function GuestItineraryMap() {
 
     // Note: Guest mode persists to localStorage only; server persistence is for Tourist flows
     
-    console.log('✅ Restart: Re-optimized from current location, going to pin #1, kept visited flags (Guest)');
+    console.log('✅ Restart: Re-optimized from current location, going to pin #1, cleared visited/skipped (Guest)');
     setShowResumeModal(false);
+    setShowCompletionModal(false);
   };
 
   // Handle resume - state already restored, just close modal and rebuild route
@@ -1201,6 +1217,11 @@ export default function GuestItineraryMap() {
     const nextPin = nextIndex < optimizedPins.length ? optimizedPins[nextIndex] : null;
 
     if (nextPin && nextPin.feeType === "fort_santiago" && transportMode === "driving") {
+      setFortModalConfirm(() => () => {
+        setTransportMode('walking');
+        setShowFortDrivingModal(false);
+        // Modal closed - user can now click Next again with walking mode
+      });
       setShowFortDrivingModal(true);
       return;
     }
@@ -1682,7 +1703,6 @@ export default function GuestItineraryMap() {
         />)}
 
       {/* Fort Santiago Driving Restriction Modal */}
-      {!isTourRunning && (
       <ConfirmModal
         isOpen={showFortDrivingModal}
         onClose={() => setShowFortDrivingModal(false)}
@@ -1692,7 +1712,7 @@ export default function GuestItineraryMap() {
         confirmText="Walk Mode"
         cancelText="Cancel"
         type="warning"
-      />)}
+      />
 
       {/* Completion Modal */}
       {!isTourRunning && (

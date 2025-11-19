@@ -14,7 +14,6 @@ export default function AdminProfileLayout() {
     if (location.pathname.endsWith("/Birthday")) return "Birthday";
     if (location.pathname.endsWith("/Gender")) return "Gender";
     if (location.pathname.endsWith("/Country")) return "Country";
-    if (location.pathname.endsWith("/Language")) return "Language";
     return "Admin Profile";
   };
 
@@ -24,7 +23,6 @@ export default function AdminProfileLayout() {
     "/Birthday",
     "/Gender",
     "/Country",
-    "/Language",
   ];
 
   const showBackHeader = routesWithBackHeader.some((path) =>
@@ -32,18 +30,21 @@ export default function AdminProfileLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center text-sm relative px-4 md:px-0">
+    <div className="min-h-screen bg-white flex text-sm relative">
       {/* Sidebar */}
       <AdminSidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
 
-      <div className="w-full max-w-md">
-        {/* Conditionally render BackHeader */}
-        {showBackHeader && (
-          <BackHeader title={getTitle()} />
-        )}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center px-4 md:px-0 overflow-auto">
+        <div className="w-full max-w-md">
+          {/* Conditionally render BackHeader */}
+          {showBackHeader && (
+            <BackHeader title={getTitle()} />
+          )}
 
-        <div className="mt-4">
-          <Outlet />
+          <div>
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

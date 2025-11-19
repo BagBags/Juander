@@ -27,6 +27,7 @@ export default function Account() {
   const [otpTimeLeft, setOtpTimeLeft] = useState(0);
   const [otpMessage, setOtpMessage] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
+  const [sendingOtp, setSendingOtp] = useState(false); // Loading state for OTP send
   const otpRefs = useRef([]);
   const otpLength = 6;
 
@@ -152,6 +153,10 @@ export default function Account() {
       setOtpMessage(t("enterNewEmailFirst"));
       return;
     }
+    
+    setSendingOtp(true);
+    setOtpMessage(""); // Clear previous messages
+    
     try {
       await axios.post(
         `${
@@ -166,8 +171,20 @@ export default function Account() {
       setOtpMessage(t("otpSentToNewEmail"));
       setResendCooldown(60); // 60 second cooldown for resend
     } catch (err) {
-      console.error(err);
-      setOtpMessage(err.response?.data?.message || t("otpSendFailed"));
+      console.error("OTP send error:", err);
+      console.error("Error details:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      
+      const errorMsg = err.response?.data?.message || 
+                       err.message || 
+                       t("otpSendFailed") || 
+                       "Failed to send OTP. Please check your email and try again.";
+      setOtpMessage(errorMsg);
+    } finally {
+      setSendingOtp(false);
     }
   };
 
@@ -447,7 +464,7 @@ export default function Account() {
                     ? "border-red-400 focus:ring-red-500"
                     : "focus:ring-2 focus:ring-[#cf3325]"
                 }`}
-                disabled={loading || user.authProvider === "google"}
+                disabled={loading || user.authProvider === "google" || otpStep}
               />
               {errors.email && (
                 <p className="text-xs text-red-600 mt-1">{errors.email}</p>
@@ -463,17 +480,30 @@ export default function Account() {
                   ) : (
                     <button
                       type="button"
-                      className="text-sm text-[#cf3325] hover:underline mt-2"
+                      className="mt-2 mx-auto block px-4 py-2 bg-[#cf3325] hover:bg-[#b42c21] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={sendEmailOtp}
+                      disabled={sendingOtp}
                     >
-                      {t("verifyNewEmail")}
+                      {sendingOtp ? "Sending..." : t("Verify New Email")}
                     </button>
+                  )}
+                  {otpMessage && !otpStep && (
+                    <p className={`text-sm mt-2 ${
+                      otpMessage.includes("successfully") || otpMessage.includes("sent")
+                        ? "text-green-600"
+                        : "text-red-600"
+                    }`}>
+                      {otpMessage}
+                    </p>
                   )}
                 </>
               )}
 
               {otpStep && (
                 <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-3">
+                    {t("enterOtpSentTo") || "Enter the OTP sent to"}: <span className="font-semibold">{user.email}</span>
+                  </p>
                   <div
                     className="flex justify-center gap-3 flex-wrap"
                     onPaste={handlePaste}
@@ -499,11 +529,11 @@ export default function Account() {
                     className="w-full bg-[#cf3325] text-white py-2 rounded mt-3 hover:bg-[#b42c21] transition"
                     onClick={verifyEmailOtp}
                   >
-                    {t("verifyOtp")}
+                    {t("Verify OTP")}
                   </button>
 
-                  {/* Resend OTP Button */}
-                  <div className="text-center mt-3">
+                  {/* Resend OTP and Cancel Buttons */}
+                  <div className="flex justify-center gap-4 mt-3">
                     <button
                       type="button"
                       onClick={handleResendEmailOtp}
@@ -517,6 +547,20 @@ export default function Account() {
                       {resendCooldown > 0
                         ? `Resend OTP in ${resendCooldown}s`
                         : "Resend OTP"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpStep(false);
+                        setOtpSent(false);
+                        setOtp("");
+                        setOtpTimeLeft(0);
+                        setOtpMessage("");
+                        setResendCooldown(0);
+                      }}
+                      className="text-sm font-medium text-gray-600 hover:underline"
+                    >
+                      Cancel
                     </button>
                   </div>
                   {otpMessage && (

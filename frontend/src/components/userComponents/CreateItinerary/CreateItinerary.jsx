@@ -393,7 +393,10 @@ export default function CreateItineraryPage() {
           payload,
           config
         );
+        // Clear all itinerary cache to force refresh in Start Tour
         localStorage.removeItem('user_itineraries');
+        localStorage.removeItem('tourist_itineraries_cache');
+        localStorage.removeItem('tourist_itinerary_preloaded_v2');
         setNotification({
           isOpen: true,
           type: "success",
@@ -408,7 +411,10 @@ export default function CreateItineraryPage() {
           payload,
           config
         );
+        // Clear all itinerary cache to force refresh in Start Tour
         localStorage.removeItem('user_itineraries');
+        localStorage.removeItem('tourist_itineraries_cache');
+        localStorage.removeItem('tourist_itinerary_preloaded_v2');
         setUserItineraries((prev) => [res.data, ...prev]);
         setNotification({
           isOpen: true,
@@ -459,7 +465,10 @@ export default function CreateItineraryPage() {
         }/itineraries/${itineraryToDelete}`,
         config
         );
+      // Clear all itinerary cache to force refresh in Start Tour
       localStorage.removeItem('user_itineraries');
+      localStorage.removeItem('tourist_itineraries_cache');
+      localStorage.removeItem('tourist_itinerary_preloaded_v2');
       setUserItineraries(userItineraries.filter((i) => i._id !== itineraryToDelete));
       setShowDeleteItineraryModal(false);
       setItineraryToDelete(null);

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { FaUser, FaBirthdayCake, FaVenusMars, FaCamera } from "react-icons/fa";
-import { MdLanguage } from "react-icons/md";
 import { GiEarthAsiaOceania } from "react-icons/gi";
 import { IoChevronForwardSharp, IoSettingsSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
@@ -49,7 +48,6 @@ export default function AdminProfile() {
       label: "Country",
       to: "/AdminProfile/Country",
     },
-    { icon: <MdLanguage />, label: "Language", to: "/AdminProfile/Language" },
   ];
 
   const handleFileChange = async (e) => {
@@ -257,7 +255,7 @@ export default function AdminProfile() {
           Log out
         </button>
         {/* Footer */}
-        image.png
+      
       </div>
 
       <NotificationModal

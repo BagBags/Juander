@@ -58,8 +58,8 @@ export default function ConfirmModal({
   const Icon = currentConfig.icon;
 
   return (
-    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl animate-fadeIn">
+    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn" style={{ pointerEvents: 'auto' }}>
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl animate-fadeIn" style={{ pointerEvents: 'auto' }}>
         {/* Icon Circle */}
         <div className="flex justify-center pt-8 pb-4">
           <div
@@ -81,6 +81,7 @@ export default function ConfirmModal({
             onClick={onClose}
             disabled={loading}
             className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ touchAction: 'manipulation', pointerEvents: 'auto' }}
           >
             {cancelText}
           </button>
@@ -88,6 +89,7 @@ export default function ConfirmModal({
             onClick={onConfirm}
             disabled={loading}
             className={`flex-1 px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+            style={{ touchAction: 'manipulation', pointerEvents: 'auto' }}
           >
             {loading ? (
               <>

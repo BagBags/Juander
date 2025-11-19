@@ -1337,8 +1337,9 @@ export default function AdminTourMapMain() {
                         (filterStatus === "active" && (!pin.status || pin.status === "active")) ||
                         (filterStatus === "inactive" && pin.status === "inactive");
                       
-                      // Category filter
-                      const matchesCategory = filterCategory === "all" || pin.category === filterCategory;
+                      // Category filter - handle both populated category object and category ID
+                      const pinCategoryId = typeof pin.category === 'object' ? pin.category?._id : pin.category;
+                      const matchesCategory = filterCategory === "all" || pinCategoryId === filterCategory;
                       
                       return matchesSearch && matchesStatus && matchesCategory;
                     });

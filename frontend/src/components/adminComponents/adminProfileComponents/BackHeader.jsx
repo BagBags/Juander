@@ -29,20 +29,19 @@ export default function BackHeader({ title, fallback = "/AdminProfile", classNam
     <>
       <div
         ref={headerRef}
-        className={`flex items-center gap-2 ${className}`}
+        className={`flex items-center gap-2 bg-white ${className}`}
         style={{
-          position: 'fixed',
+          position: 'sticky',
           top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 9999,
-          paddingTop: 'max(env(safe-area-inset-top), 24px)',
+          zIndex: 40,
+          paddingTop: '24px',
           paddingBottom: '16px',
-          minHeight: 'calc(max(env(safe-area-inset-top), 0px) + 64px)',
-          paddingLeft: '16px',
-          paddingRight: '16px',
-          marginTop: noMargin ? 0 : 'clamp(12px, 3vh, 20px)',
-          marginLeft: noMargin ? 0 : 'clamp(10px, 4vw, 14px)'
+          minHeight: '64px',
+          paddingLeft: '0',
+          paddingRight: '0',
+          marginTop: 0,
+          marginLeft: 0,
+          marginBottom: '16px'
         }}
       >
         <button
@@ -60,7 +59,6 @@ export default function BackHeader({ title, fallback = "/AdminProfile", classNam
           {title}
         </h1>
       </div>
-      <div style={{ height: headerHeight || 88 }} />
     </>
   );
 }

@@ -666,9 +666,7 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
             strokeWidth={1.5}
           />
         </div>
-        <p className="text-[#f04e37]/60 text-sm font-medium mt-3">
-          Itinerary Image
-        </p>
+       
       </div>
       </div>
 
@@ -713,7 +711,7 @@ function ItineraryCard({ itinerary, onCardClick, getFullImageUrl }) {
           </div>
         )}
         
-        {itinerary.duration && (
+        {itinerary.duration > 0 && (
           <div className="flex-shrink-0 mb-3">
             <div className="flex items-center gap-1.5 mb-1">
               <Clock className="w-3.5 h-3.5 text-gray-500" />

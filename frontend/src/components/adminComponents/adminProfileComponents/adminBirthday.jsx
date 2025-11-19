@@ -6,6 +6,7 @@ export default function Birthday() {
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [year, setYear] = useState("");
+  const [message, setMessage] = useState("");
 
   const months = [
     "Jan",
@@ -60,12 +61,12 @@ export default function Birthday() {
         sessionStorage.getItem("token") || localStorage.getItem("token");
 
       if (!token) {
-        alert("Not logged in!");
+        setMessage("You are not logged in. Please login first.");
         return;
       }
 
       if (!month || !date || !year) {
-        alert("Please complete all fields.");
+        setMessage("Please complete all fields.");
         return;
       }
 
@@ -78,13 +79,13 @@ export default function Birthday() {
       );
 
       console.log("Birthday saved:", data);
-      alert("Birthday saved successfully!");
+      setMessage("Birthday saved successfully!");
     } catch (err) {
       console.error(
         "Error saving birthday:",
         err.response?.data || err.message
       );
-      alert(err.response?.data?.message || "Failed to save birthday.");
+      setMessage(err.response?.data?.message || "Failed to save birthday.");
     }
   };
 
@@ -142,8 +143,12 @@ export default function Birthday() {
         >
           Save
         </button>
+
+        {message && (
+          <p className="text-center text-sm text-gray-600 mt-2">{message}</p>
+        )}
       </div>
-      image.png
+      
     </motion.div>
   );
 }

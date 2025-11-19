@@ -257,7 +257,7 @@ function ItineraryCard({ itinerary, navigate }) {
             <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
             <MapPin className="w-20 h-20 text-[#f04e37] relative" strokeWidth={1.5} />
           </div>
-          <p className="text-[#f04e37]/60 text-sm font-medium mt-3">Itinerary Image</p>
+          
         </div>
       </div>
 

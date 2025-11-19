@@ -89,7 +89,7 @@ exports.sendEmailVerificationOtp = async (req, res) => {
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
     });

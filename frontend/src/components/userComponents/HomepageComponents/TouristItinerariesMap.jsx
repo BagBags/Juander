@@ -313,6 +313,11 @@ export default function TouristItineraryMap() {
     const nextPin = nextIndex < optimizedPins.length ? optimizedPins[nextIndex] : null;
 
     if (nextPin && nextPin.feeType === "fort_santiago" && transportMode === "driving") {
+      setFortModalConfirm(() => () => {
+        setTransportMode('walking');
+        setShowFortDrivingModal(false);
+        // Modal closed - user can now click Next again with walking mode
+      });
       setShowFortDrivingModal(true);
       return;
     }
@@ -837,11 +842,17 @@ export default function TouristItineraryMap() {
     console.log('✅ Resume confirmed - state already restored');
   };
 
-  // Handle restart - re-optimize from current location, go to pin 1, keep visited/skipped
+  // Handle restart - re-optimize from current location, go to pin 1, clear visited/skipped
   const handleRestartProgress = async () => {
     if (userLocation && pins.length > 0) {
+      // Clear visited and skipped sites for fresh restart
+      const freshVisited = new Set();
+      const freshSkipped = new Set();
+      setVisitedSites(freshVisited);
+      setSkippedSites(freshSkipped);
+      
       // Re-run optimization from user's CURRENT location (not original)
-      const optimized = optimizeRoute(userLocation, pins, visitedSites);
+      const optimized = optimizeRoute(userLocation, pins, freshVisited);
       setOptimizedPins(optimized);
 
       // Go to first site in NEW optimized order
@@ -853,13 +864,14 @@ export default function TouristItineraryMap() {
         if (userLocation) {
           buildRoute(userLocation, firstPin);
         }
-        // Save NEW optimized order while keeping existing visited/skipped for persistence
-        await saveProgress(0, visitedSites, skippedSites, userLocation, optimized);
-        console.log('✅ Restart: Re-optimized from current location, kept visited/skipped, set to pin #1');
+        // Save NEW optimized order with fresh (empty) visited/skipped
+        await saveProgress(0, freshVisited, freshSkipped, userLocation, optimized);
+        console.log('✅ Restart: Re-optimized from current location, cleared visited/skipped, set to pin #1');
       }
     }
     
     setShowResumeModal(false);
+    setShowCompletionModal(false);
   };
 
   // Check if all sites are visited (completion) - removed modal display
@@ -1908,7 +1920,6 @@ export default function TouristItineraryMap() {
         />)}
 
         {/* Fort Santiago Driving Restriction Modal */}
-        {!isTourRunning && (
         <ConfirmModal
           isOpen={showFortDrivingModal}
           onClose={() => setShowFortDrivingModal(false)}
@@ -1918,7 +1929,7 @@ export default function TouristItineraryMap() {
           confirmText="Walk Mode"
           cancelText="Cancel"
           type="warning"
-        />)}
+        />
       </div>
     </div>
   );
