@@ -63,6 +63,7 @@ app.use(
       "http://juander-frontend.s3-website-ap-southeast-2.amazonaws.com", // Production S3
       "https://d39zx5gyblzxjs.cloudfront.net", // Production Frontend CloudFront
       "https://d3des4qdhz53rp.cloudfront.net", // Production Backend CloudFront
+      "https://juanderintra.com",
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
