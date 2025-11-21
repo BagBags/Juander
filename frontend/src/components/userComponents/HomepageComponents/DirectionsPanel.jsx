@@ -21,6 +21,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
   hasPrevSite,
   hasNextSite,
   isLastSite = false,
+  onArriveAtDestination,
 }) {
   // Track the last spoken displayed instruction to avoid repeats
   const lastSpokenInstructionRef = useRef("");
@@ -71,7 +72,8 @@ const DirectionsPanel = memo(function DirectionsPanel({
     }
 
     if (type === "arrive") {
-      return "Arrive at destination";
+      const name = activePin?.siteName || activePin?.title;
+      return name ? `You have arrived at ${name}.` : "Arrive at destination";
     }
 
     const base = rn ? `Continue along ${rn}` : (dir === "straight" ? "Continue straight" : `Continue ${dir}`);
@@ -110,9 +112,19 @@ const DirectionsPanel = memo(function DirectionsPanel({
   const lockedStepIndexRef = useRef(null);
 
   const promptFlagsRef = useRef({ stepIndex: -1, spoken100: false, spoken50: false, spoken40: false, spoken30: false, spoken20: false, spoken10: false, spokenNear: false, spokenFinal: false, arrivalSpoken: false });
+  const arrivalTriggeredRef = useRef(false);
 
   const speakWithCooldown = (text) => {
     if (!text || !ttsService.isEnabled || !isAllowedRoute) return;
+    const lockActive = typeof window !== 'undefined' && window.__ttsArrivalLockUntil && Date.now() < window.__ttsArrivalLockUntil;
+    const isArrival = /^you have arrived/i.test(String(text));
+    if (lockActive && !isArrival) return;
+    if (isArrival) {
+      try { window.__ttsArrivalLockUntil = Date.now() + 5000; } catch {}
+      ttsService.speak(text);
+      lastSpokenTimeRef.current = Date.now();
+      return;
+    }
     const now = Date.now();
     const cooldownPassed = now - lastSpokenTimeRef.current >= 3000;
     if (!cooldownPassed) return;
@@ -188,6 +200,9 @@ const DirectionsPanel = memo(function DirectionsPanel({
   useEffect(() => {
     if (!isAllowedRoute || !ttsService.isEnabled) return;
     if (!displayedText) return;
+    const lockActive = typeof window !== 'undefined' && window.__ttsArrivalLockUntil && Date.now() < window.__ttsArrivalLockUntil;
+    const isArrivalText = /^you have arrived/i.test(String(displayedText));
+    if (lockActive && !isArrivalText) return;
 
     // Check if instruction changed AND 3-second cooldown passed
     const now = Date.now();
@@ -196,7 +211,11 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
     if (instructionChanged && cooldownPassed) {
       console.log(`🔊 TTS: "${displayedText}" (Step ${currentStepIndex + 1}/${steps.length})`);
-      announceDirectionStep(displayedText);
+      if (isArrivalText) {
+        speakWithCooldown(displayedText);
+      } else {
+        announceDirectionStep(displayedText);
+      }
       lastSpokenInstructionRef.current = displayedText;
       lastSpokenTimeRef.current = now; // Update last spoken time
     }
@@ -206,8 +225,14 @@ const DirectionsPanel = memo(function DirectionsPanel({
     const onActivated = () => {
       setTimeout(() => {
         const text = displayedText || computeInstructionForStep(steps[currentStepIndex]);
-        if (isAllowedRoute && ttsService.isEnabled && text) {
-          ttsService.speak(text);
+        const lockActive = typeof window !== 'undefined' && window.__ttsArrivalLockUntil && Date.now() < window.__ttsArrivalLockUntil;
+        const isArrivalText = /^you have arrived/i.test(String(text));
+        if (isAllowedRoute && ttsService.isEnabled && text && (!lockActive || isArrivalText)) {
+          if (isArrivalText) {
+            speakWithCooldown(text);
+          } else {
+            ttsService.speak(text);
+          }
           lastSpokenInstructionRef.current = text;
           lastSpokenTimeRef.current = Date.now();
         }
@@ -238,8 +263,10 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
     const step = steps[currentStepIndex];
     const wp = step?.maneuver?.location;
-    const dist = distanceToTarget(userLocation, wp);
+    const wpDist = distanceToTarget(userLocation, wp);
     const isArriveStep = (step?.maneuver?.type || "").toLowerCase() === "arrive";
+    const pinDist = activePin ? distanceToTarget(userLocation, [activePin.longitude, activePin.latitude]) : Infinity;
+    const dist = isArriveStep ? pinDist : wpDist;
     const flags = promptFlagsRef.current;
 
     // 10-meter lock: prevent rapid-fire when very close to waypoint
@@ -271,8 +298,14 @@ const DirectionsPanel = memo(function DirectionsPanel({
 
       // Arrival announcement (only on arrival step) or destination proximity
       if (!flags.arrivalSpoken && isArriveStep) {
-        const name = activePin?.siteName || "your destination";
+        const name = activePin?.siteName || activePin?.title || "your destination";
+        setDisplayInstruction(`You have arrived at ${name}.`);
+        try { window.__ttsArrivalLockUntil = Date.now() + 5000; } catch {}
         speakWithCooldown(`You have arrived at ${name}.`);
+        if (!arrivalTriggeredRef.current && typeof onArriveAtDestination === "function") {
+          try { onArriveAtDestination(activePin); } catch {}
+          arrivalTriggeredRef.current = true;
+        }
         flags.arrivalSpoken = true;
       }
       // Do not speak other prompts while locked
@@ -332,6 +365,25 @@ const DirectionsPanel = memo(function DirectionsPanel({
       flags.spokenFinal = true;
     }
   }, [userLocation, steps, currentStepIndex, isAllowedRoute, activePin]);
+
+  useEffect(() => {
+    if (!userLocation || !activePin) return;
+    const d = distanceToTarget(userLocation, [activePin.longitude, activePin.latitude]);
+    if (d <= 10) {
+      if (!arrivalTriggeredRef.current) {
+        const name = activePin?.siteName || activePin?.title || "your destination";
+        setDisplayInstruction(`You have arrived at ${name}.`);
+        try { window.__ttsArrivalLockUntil = Date.now() + 5000; } catch {}
+        speakWithCooldown(`You have arrived at ${name}.`);
+        if (typeof onArriveAtDestination === "function") {
+          try { onArriveAtDestination(activePin); } catch {}
+        }
+        arrivalTriggeredRef.current = true;
+      }
+    } else if (d > 12) {
+      arrivalTriggeredRef.current = false;
+    }
+  }, [userLocation, activePin]);
 
   if (steps.length === 0) return null;
 

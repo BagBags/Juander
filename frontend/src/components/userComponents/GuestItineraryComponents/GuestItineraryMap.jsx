@@ -1342,6 +1342,33 @@ export default function GuestItineraryMap() {
     };
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      try {
+        if (
+          !isTourRunning &&
+          !notification.isOpen &&
+          !showFullModal &&
+          !showGpsModal &&
+          !showResumeModal &&
+          !showCompletionModal &&
+          !showFortDrivingModal
+        ) {
+          setNotification({
+            isOpen: true,
+            type: "warning",
+            title: "Stay Alert",
+            message: "For your safety, please stay aware of your surroundings and watch the streets while navigating."
+          });
+          setTimeout(() => {
+            setNotification((n) => (n.title === "Stay Alert" ? { ...n, isOpen: false } : n));
+          }, 7000);
+        }
+      } catch {}
+    }, 120000);
+    return () => clearInterval(interval);
+  }, [isTourRunning, notification.isOpen, showFullModal, showGpsModal, showResumeModal, showCompletionModal, showFortDrivingModal]);
+
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Resume/Restart Modal */}
@@ -1608,6 +1635,12 @@ export default function GuestItineraryMap() {
         hasPrevSite={currentPinIndex > 0}
         hasNextSite={true}
         isLastSite={currentPinIndex >= optimizedPins.length - 1}
+        onArriveAtDestination={() => {
+          if (!isTourRunning && !showGpsModal && activePin) {
+            setSelectedPin(activePin);
+            setShowFullModal(true);
+          }
+        }}
           />
         )}
 

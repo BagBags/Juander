@@ -47,8 +47,10 @@ export default function SiteModalFullScreen({
   // Cancel any ongoing TTS when modal opens
   useEffect(() => {
     if (selectedPin) {
-      // Cancel any ongoing TTS (like directions) when modal opens
-      ttsService.cancel();
+      const allow = typeof window !== 'undefined' && window.__ttsArrivalLockUntil && Date.now() < window.__ttsArrivalLockUntil;
+      if (!allow) {
+        ttsService.cancel();
+      }
     }
     
     // Fetch user language preference
