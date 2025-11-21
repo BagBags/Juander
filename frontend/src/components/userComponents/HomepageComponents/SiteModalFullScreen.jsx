@@ -1,5 +1,5 @@
 import React, { useState, Suspense, lazy, useEffect } from "react";
-import { X, Volume2, Star, Info, Tag, Glasses, Send, Edit2, Trash2 } from "lucide-react";
+import { X, Volume2, Star, Info, Tag, Glasses, Send, Edit2, Trash2, Play, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
@@ -41,6 +41,8 @@ export default function SiteModalFullScreen({
   const [editingReviewId, setEditingReviewId] = useState(null);
   const [reviewImages, setReviewImages] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const speechCheckIntervalRef = React.useRef(null);
 
   // Cancel any ongoing TTS when modal opens
   useEffect(() => {
@@ -85,30 +87,63 @@ export default function SiteModalFullScreen({
   // Cleanup: stop TTS when component unmounts (modal closes)
   useEffect(() => {
     return () => {
+      if (speechCheckIntervalRef.current) {
+        clearInterval(speechCheckIntervalRef.current);
+        speechCheckIntervalRef.current = null;
+      }
       ttsService.cancel();
+      setIsPlaying(false);
     };
   }, []);
 
-  // Handler to manually play description (triggered by "Listen to Description" button)
-  const handlePlayDescription = () => {
-    if (selectedPin) {
-      const description = selectedPin.description || selectedPin.siteDescription || "";
-      if (description) {
-        // Temporarily enable TTS if it's disabled, then speak
-        const wasEnabled = ttsService.isEnabled;
-        if (!wasEnabled) {
-          ttsService.enable();
+  // Handler to manually play/stop description
+  const handleToggleDescription = () => {
+    if (isPlaying) {
+      // Stop the speech
+      if (speechCheckIntervalRef.current) {
+        clearInterval(speechCheckIntervalRef.current);
+        speechCheckIntervalRef.current = null;
+      }
+      ttsService.cancel();
+      setIsPlaying(false);
+    } else {
+      // Start playing
+      if (selectedPin) {
+        let description = '';
+        if (userLanguage === 'tagalog' && selectedPin.siteDescriptionTagalog) {
+          description = selectedPin.siteDescriptionTagalog;
+        } else if (userLanguage === 'english' && selectedPin.siteDescription) {
+          description = selectedPin.siteDescription;
+        } else {
+          description = selectedPin.description || selectedPin.siteDescription || selectedPin.siteDescriptionTagalog || "";
         }
         
-        // Get only the first paragraph for TTS
-        const firstParagraph = description.split("\n\n")[0].trim();
-        ttsService.speak(firstParagraph);
-        
-        // Restore previous TTS state after speaking
-        if (!wasEnabled) {
+        if (description) {
+          // Temporarily enable TTS if it's disabled
+          const wasEnabled = ttsService.isEnabled;
+          if (!wasEnabled) {
+            ttsService.enable();
+          }
+          
+          setIsPlaying(true);
+          ttsService.speak(description);
+          
+          // Wait 500ms before starting to monitor speech end (to allow speech to actually start)
           setTimeout(() => {
-            ttsService.disable();
-          }, firstParagraph.length * 50); // Estimate time based on text length
+            speechCheckIntervalRef.current = setInterval(() => {
+              if (!ttsService.isSpeaking) {
+                setIsPlaying(false);
+                if (speechCheckIntervalRef.current) {
+                  clearInterval(speechCheckIntervalRef.current);
+                  speechCheckIntervalRef.current = null;
+                }
+                // Restore previous TTS state
+                if (!wasEnabled) {
+                  ttsService.disable();
+                }
+              }
+            }, 100);
+          }, 500);
         }
       }
     }
@@ -357,7 +392,12 @@ export default function SiteModalFullScreen({
         </div>
         <button
           onClick={() => {
+            if (speechCheckIntervalRef.current) {
+              clearInterval(speechCheckIntervalRef.current);
+              speechCheckIntervalRef.current = null;
+            }
             ttsService.cancel(); // Stop any ongoing speech
+            setIsPlaying(false);
             onClose();
           }}
           className="p-2.5 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
@@ -383,7 +423,7 @@ export default function SiteModalFullScreen({
                   src={scannedArUrl}
                   title="AR Experience"
                   className="flex-1 w-full"
-                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; autoplay *; fullscreen *"
+                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; device-orientation *; geolocation *; web-share *; clipboard-write *; autoplay *; fullscreen *"
                   allowFullScreen
                 />
                 <button
@@ -413,11 +453,26 @@ export default function SiteModalFullScreen({
           <>
             {/* 3D Model Preview */}
             {selectedPin.glbUrl && selectedPin.glbUrl.endsWith(".glb") && (
-              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                 <Suspense
                   fallback={
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-gray-500">Loading 3D model...</p>
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      {/* Animated 3D Cube Loader */}
+                      <div className="relative w-16 h-16">
+                        <div className="absolute inset-0 border-4 border-[#f04e37] border-t-transparent rounded-lg animate-spin"></div>
+                        <div className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+                      </div>
+                      {/* Loading Text */}
+                      <div className="text-center">
+                        <p className="text-base font-semibold text-gray-700 mb-1">Loading 3D Model</p>
+                        <p className="text-sm text-gray-500">Please wait...</p>
+                      </div>
+                      {/* Progress Dots */}
+                      <div className="flex gap-2">
+                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
                     </div>
                   }
                 >
@@ -615,14 +670,28 @@ export default function SiteModalFullScreen({
               </div>
             )}
 
-            {/* Read Description Button - Modern Design */}
+            {/* Play/Stop Description Button - Modern Design */}
             <button
-              onClick={handlePlayDescription}
-              className="mb-6 w-full text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98 bg-gradient-to-r from-[#f04e37] to-[#ff6b54]"
-              aria-label="Read site description aloud"
+              onClick={handleToggleDescription}
+              className="mb-6 w-full text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98"
+              style={{
+                background: isPlaying 
+                  ? 'linear-gradient(to right, #dc2626, #ef4444)' 
+                  : 'linear-gradient(to right, #f04e37, #ff6b54)'
+              }}
+              aria-label={isPlaying ? "Stop reading description" : "Listen to description"}
             >
-              <Volume2 className="w-5 h-5" />
-              <span>Listen to Description</span>
+              {isPlaying ? (
+                <>
+                  <Square className="w-5 h-5" />
+                  <span>Stop Reading</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5" />
+                  <span>Listen to Description</span>
+                </>
+              )}
             </button>
 
             {/* Description - Enhanced Typography with Language Support */}

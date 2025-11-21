@@ -76,38 +76,55 @@ export default function SiteCardModelPreview({ url }) {
 
   return (
     <ErrorBoundary>
-      <Canvas
-        onCreated={({ gl }) => {
-          gl.setClearColor('#f9fafb', 1);
-        }}
-        onError={(error) => {
-          console.error('Canvas error:', error);
-          setLoadError(true);
-        }}
-      >
+      <div className="relative w-full h-full">
+        {/* Loading overlay - shows while model loads inside Canvas */}
         <Suspense 
           fallback={
-            <mesh>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshStandardMaterial color="#e5e7eb" opacity={0.5} transparent />
-            </mesh>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 z-10">
+              {/* Animated 3D Cube Loader */}
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-4 border-[#f04e37] border-t-transparent rounded-lg animate-spin"></div>
+                <div className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+              </div>
+              {/* Loading Text */}
+              <div className="text-center mt-4">
+                <p className="text-base font-semibold text-gray-700 mb-1">Loading 3D Model</p>
+                <p className="text-sm text-gray-500">Please wait...</p>
+              </div>
+              {/* Progress Dots */}
+              <div className="flex gap-2 mt-3">
+                <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
           }
         >
-          <ambientLight intensity={1.2} />
-          <directionalLight position={[10, 10, 10]} intensity={1.5} />
-          <directionalLight position={[-5, 5, -5]} intensity={0.5} />
-          <Bounds fit clip observe margin={0.8}>
-            <Center>
-              <Model url={url} />
-            </Center>
-          </Bounds>
-          <OrbitControls
-            enableZoom={true}
-            minPolarAngle={Math.PI / 3}
-            maxPolarAngle={Math.PI / 2}
-          />
+          <Canvas
+            onCreated={({ gl }) => {
+              gl.setClearColor('#f9fafb', 1);
+            }}
+            onError={(error) => {
+              console.error('Canvas error:', error);
+              setLoadError(true);
+            }}
+          >
+            <ambientLight intensity={1.2} />
+            <directionalLight position={[10, 10, 10]} intensity={1.5} />
+            <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+            <Bounds fit clip observe margin={0.8}>
+              <Center>
+                <Model url={url} />
+              </Center>
+            </Bounds>
+            <OrbitControls
+              enableZoom={true}
+              minPolarAngle={Math.PI / 3}
+              maxPolarAngle={Math.PI / 2}
+            />
+          </Canvas>
         </Suspense>
-      </Canvas>
+      </div>
     </ErrorBoundary>
   );
 }

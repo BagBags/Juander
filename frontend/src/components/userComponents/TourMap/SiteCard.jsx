@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useEffect, lazy } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
-import { X, MapPin, Clock, DollarSign, Glasses, ChevronDown, ChevronUp, Tag, Info, Volume2, Star } from "lucide-react";
+import { X, MapPin, Clock, DollarSign, Glasses, ChevronDown, ChevronUp, Tag, Info, Volume2, Star, Play, Square } from "lucide-react";
 import ttsService from "../../../utils/textToSpeech";
 import { useTranslation } from "react-i18next";
 import { FaStar } from "react-icons/fa";
@@ -20,6 +20,8 @@ const SiteCard = ({ pin, onClose, distance }) => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [userLanguage, setUserLanguage] = useState('english');
   const [showFeeModal, setShowFeeModal] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const speechCheckIntervalRef = React.useRef(null);
 
   // Fetch user language preference
   useEffect(() => {
@@ -60,7 +62,12 @@ const SiteCard = ({ pin, onClose, distance }) => {
   // Remove non-itinerary TTS announcements; keep cleanup only
   useEffect(() => {
     return () => {
+      if (speechCheckIntervalRef.current) {
+        clearInterval(speechCheckIntervalRef.current);
+        speechCheckIntervalRef.current = null;
+      }
       ttsService.cancel();
+      setIsPlaying(false);
     };
   }, [pin?._id]);
 
@@ -108,7 +115,12 @@ const SiteCard = ({ pin, onClose, distance }) => {
         </div>
         <button
           onClick={() => {
+            if (speechCheckIntervalRef.current) {
+              clearInterval(speechCheckIntervalRef.current);
+              speechCheckIntervalRef.current = null;
+            }
             ttsService.cancel(); // Stop any ongoing speech
+            setIsPlaying(false);
             onClose();
           }}
           className="p-2.5 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 active:scale-95"
@@ -130,7 +142,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
                   src={scannedArUrl}
                   title="AR Experience"
                   className="flex-1 w-full"
-                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; autoplay *; fullscreen *"
+                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; device-orientation *; geolocation *; web-share *; clipboard-write *; autoplay *; fullscreen *"
                   allowFullScreen
                 />
                 <button
@@ -160,11 +172,26 @@ const SiteCard = ({ pin, onClose, distance }) => {
           <>
             {/* 3D Model Preview */}
             {pin.glbUrl && pin.glbUrl.endsWith(".glb") && (
-              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                 <Suspense
                   fallback={
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-gray-500">Loading 3D model...</p>
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      {/* Animated 3D Cube Loader */}
+                      <div className="relative w-16 h-16">
+                        <div className="absolute inset-0 border-4 border-[#f04e37] border-t-transparent rounded-lg animate-spin"></div>
+                        <div className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+                      </div>
+                      {/* Loading Text */}
+                      <div className="text-center">
+                        <p className="text-base font-semibold text-gray-700 mb-1">Loading 3D Model</p>
+                        <p className="text-sm text-gray-500">Please wait...</p>
+                      </div>
+                      {/* Progress Dots */}
+                      <div className="flex gap-2">
+                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
                     </div>
                   }
                 >
@@ -362,28 +389,74 @@ const SiteCard = ({ pin, onClose, distance }) => {
               </div>
             )}
 
-            {/* Read Description Button - Modern Design */}
+            {/* Play/Stop Description Button - Modern Design */}
             <button
               onClick={() => {
-                let description = '';
-                if (userLanguage === 'tagalog' && pin.siteDescriptionTagalog) {
-                  description = pin.siteDescriptionTagalog;
-                } else if (userLanguage === 'english' && pin.siteDescription) {
-                  description = pin.siteDescription;
+                if (isPlaying) {
+                  // Stop the speech
+                  if (speechCheckIntervalRef.current) {
+                    clearInterval(speechCheckIntervalRef.current);
+                    speechCheckIntervalRef.current = null;
+                  }
+                  ttsService.cancel();
+                  setIsPlaying(false);
                 } else {
-                  description = pin.description || pin.siteDescription || pin.siteDescriptionTagalog || "No description available";
+                  // Start playing
+                  let description = '';
+                  if (userLanguage === 'tagalog' && pin.siteDescriptionTagalog) {
+                    description = pin.siteDescriptionTagalog;
+                  } else if (userLanguage === 'english' && pin.siteDescription) {
+                    description = pin.siteDescription;
+                  } else {
+                    description = pin.description || pin.siteDescription || pin.siteDescriptionTagalog || "No description available";
+                  }
+                  
+                  // Temporarily enable TTS if it's disabled
+                  const wasEnabled = ttsService.isEnabled;
+                  if (!wasEnabled) {
+                    ttsService.enable();
+                  }
+                  
+                  setIsPlaying(true);
+                  ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
+                  
+                  // Wait 500ms before starting to monitor speech end (to allow speech to actually start)
+                  setTimeout(() => {
+                    speechCheckIntervalRef.current = setInterval(() => {
+                      if (!ttsService.isSpeaking) {
+                        setIsPlaying(false);
+                        if (speechCheckIntervalRef.current) {
+                          clearInterval(speechCheckIntervalRef.current);
+                          speechCheckIntervalRef.current = null;
+                        }
+                        // Restore previous TTS state
+                        if (!wasEnabled) {
+                          ttsService.disable();
+                        }
+                      }
+                    }, 100);
+                  }, 500);
                 }
-                ttsService.enable(); // Enable TTS
-                ttsService.speak(`${pin.title}. ${description}`, { rate: 0.9 });
               }}
               className="mb-6 w-full text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98"
-              style={{ backgroundColor: '#f04e37' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d9442f'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f04e37'}
-              aria-label="Read site description aloud"
+              style={{
+                background: isPlaying 
+                  ? 'linear-gradient(to right, #dc2626, #ef4444)' 
+                  : 'linear-gradient(to right, #f04e37, #ff6b54)'
+              }}
+              aria-label={isPlaying ? "Stop reading description" : "Listen to description"}
             >
-              <Volume2 className="w-5 h-5" />
-              <span>Listen to Description</span>
+              {isPlaying ? (
+                <>
+                  <Square className="w-5 h-5" />
+                  <span>Stop Reading</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5" />
+                  <span>Listen to Description</span>
+                </>
+              )}
             </button>
 
             {/* Description - Enhanced Typography with Language Support */}
