@@ -842,34 +842,19 @@ export default function TouristItineraryMap() {
     console.log('✅ Resume confirmed - state already restored');
   };
 
-  // Handle restart - re-optimize from current location, go to pin 1, clear visited/skipped
   const handleRestartProgress = async () => {
     if (userLocation && pins.length > 0) {
-      // Clear visited and skipped sites for fresh restart
-      const freshVisited = new Set();
-      const freshSkipped = new Set();
-      setVisitedSites(freshVisited);
-      setSkippedSites(freshSkipped);
-      
-      // Re-run optimization from user's CURRENT location (not original)
-      const optimized = optimizeRoute(userLocation, pins, freshVisited);
+      const optimized = optimizeRoute(userLocation, pins, visitedSites);
       setOptimizedPins(optimized);
-
-      // Go to first site in NEW optimized order
       setCurrentPinIndex(0);
       if (optimized.length > 0) {
         const firstPin = optimized[0];
         setSelectedPin(firstPin);
         setActivePin(firstPin);
-        if (userLocation) {
-          buildRoute(userLocation, firstPin);
-        }
-        // Save NEW optimized order with fresh (empty) visited/skipped
-        await saveProgress(0, freshVisited, freshSkipped, userLocation, optimized);
-        console.log('✅ Restart: Re-optimized from current location, cleared visited/skipped, set to pin #1');
+        buildRoute(userLocation, firstPin);
+        await saveProgress(0, visitedSites, skippedSites, userLocation, optimized);
       }
     }
-    
     setShowResumeModal(false);
     setShowCompletionModal(false);
   };

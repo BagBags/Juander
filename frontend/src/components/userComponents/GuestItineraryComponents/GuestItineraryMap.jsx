@@ -1020,49 +1020,22 @@ export default function GuestItineraryMap() {
     }
   };
 
-  /** Clear saved progress and restart - Guest mode */
   const handleRestartItinerary = () => {
     if (!userLocation || pins.length === 0) return;
-    
-    // Clear visited and skipped sites for fresh restart
-    const freshVisited = new Set();
-    const freshSkipped = new Set();
-    setVisitedSites(freshVisited);
-    setSkippedSites(freshSkipped);
-    
-    // Clear from localStorage
-    const visitedKey = `guest_visited_${itineraryId}`;
-    const skippedKey = `guest_skipped_${itineraryId}`;
-    localStorage.removeItem(visitedKey);
-    localStorage.removeItem(skippedKey);
-    
-    // Re-run optimization from current location with fresh state
-    const optimized = optimizeRoute(userLocation, pins, freshVisited);
+    const optimized = optimizeRoute(userLocation, pins, visitedSites);
     setOptimizedPins(optimized);
-    
-    // Save new optimized order
     const orderKey = `guest_optimized_order_${itineraryId}`;
     const optimizedOrder = optimized.map(pin => pin._id);
     localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
-    
-    // Go to first site in NEW optimized order
     setCurrentPinIndex(0);
     if (optimized.length > 0) {
       const firstPin = optimized[0];
       setSelectedPin(firstPin);
       setActivePin(firstPin);
-      if (userLocation) {
-        buildRoute(userLocation, firstPin);
-      }
+      buildRoute(userLocation, firstPin);
     }
-    
-    // Reset current index to 0
     const indexKey = `guest_current_index_${itineraryId}`;
     localStorage.setItem(indexKey, '0');
-
-    // Note: Guest mode persists to localStorage only; server persistence is for Tourist flows
-    
-    console.log('✅ Restart: Re-optimized from current location, going to pin #1, cleared visited/skipped (Guest)');
     setShowResumeModal(false);
     setShowCompletionModal(false);
   };
