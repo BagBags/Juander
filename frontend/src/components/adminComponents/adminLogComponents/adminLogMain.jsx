@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Search, Eye, X, Printer } from "lucide-react";
+import { Search, Eye, X, Download, FileSpreadsheet } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function AdminLogMain() {
   const [logs, setLogs] = useState([]);
@@ -12,34 +14,6 @@ export default function AdminLogMain() {
   const [selectedLog, setSelectedLog] = useState(null);
   const logsPerPage = 10;
 
-  // Add print-specific styles
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @media print {
-        @page {
-          size: A4;
-          margin: 1cm;
-        }
-        body {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        table {
-          page-break-inside: auto;
-        }
-        tr {
-          page-break-inside: avoid;
-          page-break-after: auto;
-        }
-        thead {
-          display: table-header-group;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
 
   useEffect(() => {
     fetchLogs();
@@ -61,8 +35,114 @@ export default function AdminLogMain() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadCSV = () => {
+    // Prepare CSV content
+    const headers = ['ID', 'Type', 'User/Admin', 'Role', 'Action', 'Timestamp'];
+    const csvRows = [];
+    
+    // Add header row
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    filteredLogs.forEach((log, idx) => {
+      const row = [
+        `#${sortOrder === 'latest' ? filteredLogs.length - idx : idx + 1}`,
+        log.targetType,
+        `"${log.adminName}"`, // Wrap in quotes to handle commas
+        log.role === 'admin' ? 'Admin' : 'User',
+        `"${log.action}"`,
+        `"${formatDateTime(log.createdAt)}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+    
+    // Create blob and download
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `activity-logs-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(18);
+      doc.setFont(undefined, 'bold');
+      doc.text('Intramuros Administration', 105, 15, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setTextColor(240, 78, 55);
+      doc.text('Activity Logs Report', 105, 23, { align: 'center' });
+      
+      // Add summary info
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+      const summaryY = 32;
+      doc.text(`Total Logs: ${filteredLogs.length}`, 14, summaryY);
+      doc.text(`Filter Type: ${filterType}`, 70, summaryY);
+      doc.text(`Sort Order: ${sortOrder === 'latest' ? 'Latest First' : 'Oldest First'}`, 120, summaryY);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, summaryY + 6);
+      
+      // Prepare table data
+      const tableData = filteredLogs.map((log, idx) => [
+        `#${sortOrder === 'latest' ? filteredLogs.length - idx : idx + 1}`,
+        log.targetType,
+        `${log.adminName}\n(${log.role === 'admin' ? 'Admin' : 'User'})`,
+        log.action,
+        formatDateTime(log.createdAt)
+      ]);
+      
+      // Add table using autoTable
+      autoTable(doc, {
+        startY: summaryY + 12,
+        head: [['ID', 'Type', 'User/Admin', 'Action', 'Timestamp']],
+        body: tableData,
+        theme: 'grid',
+        styles: { 
+          fontSize: 8,
+          cellPadding: 2,
+          overflow: 'linebreak'
+        },
+        headStyles: { 
+          fillColor: [240, 78, 55],
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          0: { cellWidth: 15 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 45 },
+          3: { cellWidth: 40 },
+          4: { cellWidth: 40 }
+        },
+        didDrawPage: (data) => {
+          // Footer
+          const pageCount = doc.internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(128);
+          doc.text(
+            `© ${new Date().getFullYear()} Intramuros Administration - Page ${data.pageNumber} of ${pageCount}`,
+            105,
+            doc.internal.pageSize.height - 10,
+            { align: 'center' }
+          );
+        }
+      });
+      
+      // Save the PDF
+      doc.save(`activity-logs-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('Failed to generate PDF. Please try refreshing the page.');
+    }
   };
 
   const formatDateTime = (dateString) => {
@@ -125,14 +205,7 @@ export default function AdminLogMain() {
   const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-6 print:shadow-none print:rounded-none">
-      {/* Print-only Title Header */}
-      <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-300">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Intramuros Administration</h1>
-          <h2 className="text-xl font-semibold text-[#f04e37]">Activity Logs Report</h2>
-        </div>
-      </div>
+    <div className="bg-white rounded-2xl shadow-md p-6">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4 print:hidden">
@@ -143,36 +216,14 @@ export default function AdminLogMain() {
           </p>
         </div>
         <button
-          onClick={handlePrint}
+          onClick={handleDownloadPDF}
           className="px-4 py-2 bg-[#f04e37] text-white rounded-lg hover:bg-[#e03d2d] transition-colors font-medium flex items-center gap-2"
         >
-          <Printer className="w-4 h-4" />
-          Print Logs
+          <Download className="w-4 h-4" />
+          Download PDF
         </button>
       </div>
 
-      {/* Print-only Summary Stats */}
-      <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-300">
-        <h3 className="text-lg font-bold text-gray-900 mb-3">Log Summary</h3>
-        <div className="grid grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-gray-600 font-medium">Total Logs:</p>
-            <p className="text-xl font-bold text-gray-900">{filteredLogs.length}</p>
-          </div>
-          <div>
-            <p className="text-gray-600 font-medium">Filter Type:</p>
-            <p className="text-xl font-bold text-gray-900 capitalize">{filterType}</p>
-          </div>
-          <div>
-            <p className="text-gray-600 font-medium">Sort Order:</p>
-            <p className="text-xl font-bold text-gray-900">{sortOrder === "latest" ? "Latest First" : "Oldest First"}</p>
-          </div>
-          <div>
-            <p className="text-gray-600 font-medium">Generated:</p>
-            <p className="text-sm font-bold text-gray-900">{new Date().toLocaleDateString()}</p>
-          </div>
-        </div>
-      </div>
 
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 print:hidden">
@@ -224,23 +275,21 @@ export default function AdminLogMain() {
         <p className="text-gray-500 italic">No logs found.</p>
       ) : (
         <>
-          <div className="overflow-auto max-h-[60vh] print:max-h-none rounded-xl border border-gray-200 print:border-gray-300">
+          <div className="overflow-auto max-h-[60vh] rounded-xl border border-gray-200">
             <table className="min-w-full text-sm text-left">
-              <thead className="bg-gray-100 text-gray-700 print:bg-gray-200">
+              <thead className="bg-gray-100 text-gray-700">
                 <tr>
-                  <th className="px-6 py-3 print:px-3 print:py-2">ID</th>
-                  <th className="px-6 py-3 print:px-3 print:py-2">Type</th>
-                  <th className="px-6 py-3 print:px-3 print:py-2">User/Admin</th>
-                  <th className="px-6 py-3 print:px-3 print:py-2">Action</th>
-                  <th className="px-6 py-3 print:px-3 print:py-2">Summary</th>
-                  <th className="px-6 py-3 print:px-3 print:py-2">Timestamp</th>
-                  <th className="px-6 py-3 print:hidden">Actions</th>
+                  <th className="px-6 py-3">ID</th>
+                  <th className="px-6 py-3">Type</th>
+                  <th className="px-6 py-3">User/Admin</th>
+                  <th className="px-6 py-3">Action</th>
+                  <th className="px-6 py-3">Timestamp</th>
+                  <th className="px-6 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {/* Screen view - paginated logs */}
                 {currentLogs.map((log, idx) => (
-                  <tr key={`screen-${log._id}`} className="bg-white hover:bg-gray-50 print:hidden">
+                  <tr key={log._id} className="bg-white hover:bg-gray-50">
                     <td className="px-6 py-3">
                       #{sortOrder === "latest" 
                         ? filteredLogs.length - (indexOfFirstLog + idx)
@@ -260,18 +309,6 @@ export default function AdminLogMain() {
                     <td className={`px-6 py-3 ${getActionColor(log.action)}`}>
                       {log.action}
                     </td>
-                    <td className="px-6 py-3 text-gray-600 max-w-xs truncate">
-                      {log.details?.siteName && (
-                        <div className="text-xs">
-                          <span className="font-medium">Site:</span> {log.details.siteName}
-                        </div>
-                      )}
-                      {log.details?.rating && (
-                        <div className="text-xs">
-                          <span className="font-medium">Rating:</span> {log.details.rating}⭐
-                        </div>
-                      )}
-                    </td>
                     <td className="px-6 py-3 text-gray-500">
                       {formatDateTime(log.createdAt)}
                     </td>
@@ -286,57 +323,12 @@ export default function AdminLogMain() {
                     </td>
                   </tr>
                 ))}
-                
-                {/* Print view - all filtered logs */}
-                {filteredLogs.map((log, idx) => (
-                  <tr key={`print-${log._id}`} className="hidden print:table-row border-b border-gray-200">
-                    <td className="px-3 py-2 text-xs">
-                      #{sortOrder === "latest" 
-                        ? filteredLogs.length - idx
-                        : idx + 1}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTargetTypeBadge(log.targetType)}`}>
-                        {log.targetType}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-xs font-medium text-gray-800">
-                      {log.adminName}
-                      <div className="text-xs text-gray-500">
-                        ({log.role === "admin" ? "Admin" : "User"})
-                      </div>
-                    </td>
-                    <td className={`px-3 py-2 text-xs ${getActionColor(log.action)}`}>
-                      {log.action}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-gray-600">
-                      {log.details?.siteName && (
-                        <div className="text-xs">
-                          <span className="font-medium">Site:</span> {log.details.siteName}
-                        </div>
-                      )}
-                      {log.details?.itineraryName && (
-                        <div className="text-xs">
-                          <span className="font-medium">Itinerary:</span> {log.details.itineraryName}
-                        </div>
-                      )}
-                      {log.details?.rating && (
-                        <div className="text-xs">
-                          <span className="font-medium">Rating:</span> {log.details.rating}⭐
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-gray-500">
-                      {formatDateTime(log.createdAt)}
-                    </td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </div>
 
           {/* Pagination Controls */}
-          <div className="flex justify-between items-center mt-4 print:hidden">
+          <div className="flex justify-between items-center mt-4">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
@@ -358,16 +350,10 @@ export default function AdminLogMain() {
         </>
       )}
 
-      {/* Print Footer */}
-      <div className="hidden print:block text-center text-gray-500 text-sm mt-12 pt-6 border-t-2 border-gray-400">
-        <p className="font-semibold">© {new Date().getFullYear()} Intramuros Administration</p>
-        <p className="text-xs mt-2">This report is confidential and intended for administrative use only.</p>
-        <p className="text-xs mt-1">Generated on {new Date().toLocaleString()}</p>
-      </div>
 
       {/* Detail Modal */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
               <h3 className="text-xl font-bold">Log Details</h3>

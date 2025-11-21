@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { Printer } from "lucide-react";
+import { Download } from "lucide-react";
 import { Bar, Line, Pie } from "react-chartjs-2";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -32,6 +34,13 @@ export default function AdminReportsMain() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("charts"); // "charts" or "tables"
+  
+  // Refs for chart canvases
+  const countryChartRef = useRef(null);
+  const genderChartRef = useRef(null);
+  const languageChartRef = useRef(null);
+  const ratingChartRef = useRef(null);
+  const sitesChartRef = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -60,8 +69,198 @@ export default function AdminReportsMain() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    try {
+      const doc = new jsPDF();
+      let yPosition = 15;
+
+      // Title
+      doc.setFontSize(18);
+      doc.setFont(undefined, 'bold');
+      doc.text('Intramuros Administration', 105, yPosition, { align: 'center' });
+      yPosition += 8;
+      doc.setFontSize(14);
+      doc.setTextColor(240, 78, 55);
+      doc.text('Analytics & Reports', 105, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      // Summary Stats
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Users: ${users.length}`, 14, yPosition);
+      doc.text(`Administrators: ${users.filter(u => u.role === "admin" || u.email === "aaronbagain@gmail.com").length}`, 70, yPosition);
+      yPosition += 6;
+      doc.text(`Total Reviews: ${reviews.length}`, 14, yPosition);
+      doc.text(`Average Rating: ${avgRating}`, 70, yPosition);
+      yPosition += 6;
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, yPosition);
+      yPosition += 10;
+
+      if (viewMode === "charts") {
+        // Get chart images
+        const charts = [
+          { ref: countryChartRef, title: 'Users by Country', height: 80 },
+          { ref: genderChartRef, title: 'Users by Gender', height: 60 },
+          { ref: languageChartRef, title: 'Users by Language', height: 60 },
+          { ref: ratingChartRef, title: 'Reviews by Rating', height: 60 },
+          { ref: sitesChartRef, title: 'Top 10 Most Reviewed Sites', height: 60 }
+        ];
+
+        for (const chart of charts) {
+          if (chart.ref.current) {
+            const canvas = chart.ref.current.canvas;
+            if (canvas) {
+              // Check if we need a new page
+              if (yPosition + chart.height > 270) {
+                doc.addPage();
+                yPosition = 20;
+              }
+
+              // Add chart title
+              doc.setFontSize(12);
+              doc.setFont(undefined, 'bold');
+              doc.text(chart.title, 14, yPosition);
+              yPosition += 6;
+
+              // Add chart image
+              const imgData = canvas.toDataURL('image/png');
+              const imgWidth = 180;
+              const imgHeight = chart.height;
+              doc.addImage(imgData, 'PNG', 14, yPosition, imgWidth, imgHeight);
+              yPosition += imgHeight + 10;
+            }
+          }
+        }
+      } else {
+        // Table view - add tables using autoTable
+        
+        // Users by Country
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Country', 'Count', 'Percentage']],
+          body: Object.entries(countryCount)
+            .sort((a, b) => b[1] - a[1])
+            .map(([country, count]) => [
+              country,
+              count,
+              `${((count / users.length) * 100).toFixed(1)}%`
+            ]),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 78, 55] },
+          margin: { top: 10 }
+        });
+        yPosition = doc.lastAutoTable.finalY + 10;
+
+        // Users by Gender
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Gender', 'Count', 'Percentage']],
+          body: Object.entries(genderCount)
+            .sort((a, b) => b[1] - a[1])
+            .map(([gender, count]) => [
+              gender,
+              count,
+              `${((count / users.length) * 100).toFixed(1)}%`
+            ]),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 78, 55] },
+          margin: { top: 10 }
+        });
+        yPosition = doc.lastAutoTable.finalY + 10;
+
+        // Users by Language
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Language', 'Count', 'Percentage']],
+          body: Object.entries(languageCount)
+            .sort((a, b) => b[1] - a[1])
+            .map(([language, count]) => [
+              language,
+              count,
+              `${((count / users.length) * 100).toFixed(1)}%`
+            ]),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 78, 55] },
+          margin: { top: 10 }
+        });
+        yPosition = doc.lastAutoTable.finalY + 10;
+
+        // Reviews by Rating
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Rating', 'Count', 'Percentage']],
+          body: [5, 4, 3, 2, 1].map((rating) => {
+            const count = ratingCount[rating] || 0;
+            return [
+              `${rating} Star${rating !== 1 ? 's' : ''}`,
+              count,
+              reviews.length > 0 ? `${((count / reviews.length) * 100).toFixed(1)}%` : '0%'
+            ];
+          }),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 78, 55] },
+          margin: { top: 10 }
+        });
+        yPosition = doc.lastAutoTable.finalY + 10;
+
+        // Top 10 Most Reviewed Sites
+        if (yPosition > 200) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        const topSites = Object.entries(reviewsBySite)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+        
+        autoTable(doc, {
+          startY: yPosition,
+          head: [['Rank', 'Site Name', 'Reviews', 'Avg Rating']],
+          body: topSites.map(([siteName, count], index) => {
+            const siteReviews = reviews.filter(r => r.siteId?.siteName === siteName);
+            const siteAvgRating = siteReviews.length > 0
+              ? (siteReviews.reduce((sum, r) => sum + r.rating, 0) / siteReviews.length).toFixed(1)
+              : "N/A";
+            return [index + 1, siteName, count, siteAvgRating];
+          }),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 78, 55] },
+          margin: { top: 10 }
+        });
+      }
+
+      // Add footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128);
+        doc.text(
+          `© ${new Date().getFullYear()} Intramuros Administration - Page ${i} of ${pageCount}`,
+          105,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        );
+      }
+
+      // Save PDF
+      doc.save(`analytics-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   // Calculate statistics
@@ -125,11 +324,11 @@ export default function AdminReportsMain() {
               {viewMode === "charts" ? "View Tables" : "View Charts"}
             </button>
             <button
-              onClick={handlePrint}
+              onClick={handleDownloadPDF}
               className="px-4 py-2 bg-[#f04e37] text-white rounded-lg hover:bg-[#e03d2d] transition-colors font-medium flex items-center gap-2"
             >
-              <Printer className="w-4 h-4" />
-              Print Report
+              <Download className="w-4 h-4" />
+              Download PDF
             </button>
           </div>
         </div>
@@ -164,7 +363,8 @@ export default function AdminReportsMain() {
           <div className="bg-white rounded-xl shadow-md p-6" style={{ height: Object.keys(countryCount).length > 10 ? '600px' : '400px' }}>
             <h3 className="text-xl font-bold text-gray-900 mb-4">Users by Country</h3>
             <div className="h-[calc(100%-3rem)]">
-              <Bar 
+              <Bar
+                ref={countryChartRef}
                 data={{
                   labels: Object.keys(countryCount).sort((a, b) => countryCount[b] - countryCount[a]),
                   datasets: [{
@@ -205,7 +405,8 @@ export default function AdminReportsMain() {
           <div className="bg-white rounded-xl shadow-md p-6 h-[400px]">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Users by Gender</h3>
             <div className="h-[calc(100%-3rem)]">
-              <Pie 
+              <Pie
+                ref={genderChartRef}
                 data={{
                   labels: Object.keys(genderCount),
                   datasets: [{
@@ -228,7 +429,8 @@ export default function AdminReportsMain() {
           <div className="bg-white rounded-xl shadow-md p-6 h-[400px]">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Users by Language</h3>
             <div className="h-[calc(100%-3rem)]">
-              <Pie 
+              <Pie
+                ref={languageChartRef} 
                 data={{
                   labels: Object.keys(languageCount),
                   datasets: [{
@@ -251,7 +453,8 @@ export default function AdminReportsMain() {
           <div className="bg-white rounded-xl shadow-md p-6 h-[400px]">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Reviews by Rating</h3>
             <div className="h-[calc(100%-3rem)]">
-              <Bar 
+              <Bar
+                ref={ratingChartRef} 
                 data={{
                   labels: ["1 Star", "2 Stars", "3 Stars", "4 Stars", "5 Stars"],
                   datasets: [{
@@ -287,7 +490,8 @@ export default function AdminReportsMain() {
           <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-2 h-[400px]">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Top 10 Most Reviewed Sites</h3>
             <div className="h-[calc(100%-3rem)]">
-              <Bar 
+              <Bar
+                ref={sitesChartRef} 
                 data={{
                   labels: Object.entries(reviewsBySite)
                     .sort((a, b) => b[1] - a[1])
@@ -503,12 +707,6 @@ export default function AdminReportsMain() {
       </div>
       )}
 
-      {/* Print Footer */}
-      <div className="hidden print:block text-center text-gray-500 text-sm mt-12 pt-6 border-t-2 border-gray-400">
-        <p className="font-semibold">© 2025 Intramuros Administration</p>
-        <p className="text-xs mt-2">This report is confidential and intended for administrative use only.</p>
-        <p className="text-xs mt-1">Generated on {new Date().toLocaleString()}</p>
-      </div>
     </div>
   );
 }
