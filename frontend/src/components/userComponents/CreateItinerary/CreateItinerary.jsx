@@ -16,6 +16,10 @@ import {
   FaEdit,
 } from "react-icons/fa";
 import { Info, X, Filter as FilterIcon } from "lucide-react";
+import TourProvider from "../../TourComponents/TourProvider";
+import { useTour } from "../../TourComponents/TourContext";
+import { createItineraryTourSteps } from "../../TourComponents/tourSteps";
+import { getCreateItineraryTourStatus } from "../../../utils/tourApi";
 
 function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -203,6 +207,29 @@ export default function CreateItineraryPage() {
     fetchItineraries();
     fetchUserPreference();
   }, [t]);
+
+  // Respond to tutorial events
+  useEffect(() => {
+    const openMyItineraries = () => {
+      setActiveTab("myItineraries");
+    };
+    const expandFirstItinerary = () => {
+      try {
+        setExpandedIndex(0);
+      } catch {}
+    };
+    const returnToCreateItinerary = () => {
+      setActiveTab("create");
+    };
+    window.addEventListener("tour:openMyItineraries", openMyItineraries);
+    window.addEventListener("tour:expandFirstItinerary", expandFirstItinerary);
+    window.addEventListener("tour:returnToCreateItinerary", returnToCreateItinerary);
+    return () => {
+      window.removeEventListener("tour:openMyItineraries", openMyItineraries);
+      window.removeEventListener("tour:expandFirstItinerary", expandFirstItinerary);
+      window.removeEventListener("tour:returnToCreateItinerary", returnToCreateItinerary);
+    };
+  }, []);
 
   const fetchUserPreference = async () => {
     try {
@@ -523,6 +550,8 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
+    <TourProvider steps={createItineraryTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={false} tourType="createItinerary">
+    <CreateItineraryTourAutostart />
     <div className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}>
       {/* Fort Santiago Modal */}
       {showFortModal && (
@@ -590,7 +619,7 @@ export default function CreateItineraryPage() {
             <div className="relative grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => setActiveTab("create")}
-                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 ${
+                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 itinerary-tab-create-btn ${
                   activeTab === "create"
                     ? "text-[#f04e37]"
                     : "text-white hover:text-white/80"
@@ -600,7 +629,7 @@ export default function CreateItineraryPage() {
               </button>
               <button
                 onClick={() => setActiveTab("myItineraries")}
-                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 ${
+                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 my-itineraries-tab-btn ${
                   activeTab === "myItineraries"
                     ? "text-[#f04e37]"
                     : "text-white hover:text-white/80"
@@ -616,12 +645,12 @@ export default function CreateItineraryPage() {
       {/* === MAIN CONTENT === */}
       <MainLayout includeSideButtons={false}>
         <PullToRefresh onRefresh={async () => { await fetchSites(); await fetchItineraries(); }} activationAreaPx={96}>
-          <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto tour-page-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* CREATE ITINERARY TAB */}
           {activeTab === "create" && (
             <div className="space-y-6 animate-fadeIn">
               {/* Form Section */}
-              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20 available-sites-section">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                   <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
                   {editingItineraryId
@@ -707,7 +736,7 @@ export default function CreateItineraryPage() {
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={handleSave}
-                      className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
+                      className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 create-itinerary-save-btn"
                     >
                       {editingItineraryId
                         ? "Update Itinerary"
@@ -753,7 +782,7 @@ export default function CreateItineraryPage() {
                         value={siteSearchQuery}
                         onChange={(e) => setSiteSearchQuery(e.target.value)}
                         placeholder="Search by name or description"
-                        className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                        className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none create-itinerary-search"
                       />
                     </div>
                   </div>
@@ -888,6 +917,7 @@ export default function CreateItineraryPage() {
         showLoginOption={false}
       />
     </div>
+    </TourProvider>
   );
 }
 
@@ -1195,7 +1225,7 @@ function SiteCard({
 
       <button
         onClick={() => toggleSelection(site._id)}
-        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all duration-200 ${
+        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all duration-200 create-itinerary-add-btn ${
           isSelected
             ? "bg-green-500 text-white hover:bg-green-600"
             : "bg-gradient-to-r from-[#f04e37] to-orange-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95"
@@ -1276,14 +1306,14 @@ function ItineraryCard({
             <div className="flex gap-2">
               <button
                 onClick={() => handleEdit(itinerary)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all my-itinerary-edit-btn"
               >
                 <FaEdit className="text-sm" />
                 <span>Edit</span>
               </button>
               <button
                 onClick={() => handleDelete(itinerary._id)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all my-itinerary-delete-btn"
               >
                 <FaTrash className="text-sm" />
                 <span>Delete</span>
@@ -1291,7 +1321,7 @@ function ItineraryCard({
             </div>
             <button
               onClick={toggleExpand}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all my-itinerary-view-sites-btn"
             >
               {expanded ? (
                 <>
@@ -1301,7 +1331,7 @@ function ItineraryCard({
               ) : (
                 <>
                   <FaChevronDown className="text-sm" />
-                  <span>View Sites ({itinerary.sites?.length || 0})</span>
+                  <span>View/Hide Sites</span>
                 </>
               )}
             </button>
@@ -1376,4 +1406,32 @@ function ItineraryCard({
       )}
     </div>
   );
+}
+
+function CreateItineraryTourAutostart() {
+  const { startTour, isTourRunning } = useTour();
+  const didStartRef = useRef(false);
+  useEffect(() => {
+    if (didStartRef.current) return;
+    (async () => {
+      try {
+        const status = await getCreateItineraryTourStatus();
+        const shouldStart = !status.hasCompletedCreateItineraryTour;
+        if (shouldStart && !isTourRunning) {
+          didStartRef.current = true;
+          setTimeout(() => {
+            startTour();
+          }, 600);
+        }
+      } catch (err) {
+        try {
+          if (!isTourRunning) {
+            didStartRef.current = true;
+            setTimeout(() => { startTour(); }, 600);
+          }
+        } catch {}
+      }
+    })();
+  }, [startTour, isTourRunning]);
+  return null;
 }

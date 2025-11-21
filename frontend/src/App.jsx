@@ -79,7 +79,7 @@ import GuestLanguage from "./components/userComponents/GuestProfileComponents/Gu
 import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
 import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
 import TourProvider from "./components/TourComponents/TourProvider";
-import { mapTourSteps } from "./components/TourComponents/tourSteps";
+import { mapTourSteps, emergencyTourSteps, profileTourSteps, guestProfileTourSteps, tourMapSteps, photoboothTourSteps, tripArchiveTourSteps } from "./components/TourComponents/tourSteps";
 import GuestSettings from "./components/userComponents/GuestProfileComponents/GuestSettings";
 import NotFound from "./components/NotFound";
 import CompleteProfile from "./components/userComponents/CompleteProfile";
@@ -113,13 +113,65 @@ function AnimatedRoutes() {
             </TourProvider>
           }
         />
-        <Route path="/TourMap" element={<TourMap />} />
+        <Route
+          path="/TourMap"
+          element={
+            <TourProvider
+              steps={tourMapSteps}
+              userRole="tourist"
+              scrollToFirstStep={true}
+              disableScrolling={true}
+              tourType="tourMap"
+            >
+              <TourMap />
+            </TourProvider>
+          }
+        />
         <Route path="/Chatbot" element={<Chatbot />} />
-        <Route path="/Emergency" element={<EmergencyPage />} />
-        <Route path="/Photobooth" element={<Photobooth />} />
+        <Route
+          path="/Emergency"
+          element={
+            <TourProvider
+              steps={emergencyTourSteps}
+              userRole="tourist"
+              scrollToFirstStep={true}
+              disableScrolling={true}
+              tourType="emergency"
+            >
+              <EmergencyPage />
+            </TourProvider>
+          }
+        />
+        <Route
+          path="/Photobooth"
+          element={
+            <TourProvider
+              steps={photoboothTourSteps}
+              userRole="tourist"
+              scrollToFirstStep={true}
+              disableScrolling={true}
+              tourType="photobooth"
+            >
+              <Photobooth />
+            </TourProvider>
+          }
+        />
         {/* Guest Profile Section */}
         <Route path="/GuestProfile" element={<GuestProfileLayout />}>
-          <Route index element={<GuestProfile />} />
+          <Route
+            index
+            element={
+              <TourProvider
+                steps={guestProfileTourSteps}
+                userRole="guest"
+                scrollToFirstStep={true}
+                disableScrolling={true}
+                tourType="guestProfile"
+              >
+                <GuestProfile />
+              </TourProvider>
+            }
+          />
           <Route path="GuestLanguage" element={<GuestLanguage />} />
           <Route path="GuestSettings" element={<GuestSettings />} />
         </Route>
@@ -148,7 +200,20 @@ function AnimatedRoutes() {
         <Route element={<TouristProtectedRoute />}>
           {/* Tourist */}
           <Route path="/Homepage" element={<Homepage />} />{" "}
-          <Route path="/TripArchive" element={<TripArchives />} />
+          <Route
+            path="/TripArchive"
+            element={
+              <TourProvider
+                steps={tripArchiveTourSteps}
+                userRole="tourist"
+                scrollToFirstStep={true}
+                disableScrolling={true}
+                tourType="tripArchive"
+              >
+                <TripArchives />
+              </TourProvider>
+            }
+          />
           <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
           <Route path="/TouristItinerary" element={<TouristItinerary />} />
           <Route
@@ -167,7 +232,20 @@ function AnimatedRoutes() {
           />
           {/* Profile Section with Persistent Header */}
           <Route path="/Profile" element={<ProfileLayout />}>
-            <Route index element={<ProfilePage />} />
+            <Route
+              index
+              element={
+                <TourProvider
+                  steps={profileTourSteps}
+                  userRole="tourist"
+                  scrollToFirstStep={true}
+                  disableScrolling={true}
+                  tourType="profile"
+                >
+                  <ProfilePage />
+                </TourProvider>
+              }
+            />
             <Route path="Account" element={<Account />} />
             <Route path="Birthday" element={<Birthday />} />
             <Route path="Gender" element={<Gender />} />

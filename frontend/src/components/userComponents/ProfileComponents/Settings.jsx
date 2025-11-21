@@ -6,7 +6,7 @@ import { Bell, BellOff, Play } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
 import PullToRefresh from "../../shared/PullToRefresh";
 import axios from "axios";
-import { resetTour, completeTour, getTourStatus } from "../../../utils/tourApi";
+import { resetTour, completeTour, getTourStatus, getCreateItineraryTourStatus, resetCreateItineraryTour, completeCreateItineraryTour, getEmergencyTourStatus, resetEmergencyTour, completeEmergencyTour, getProfileTourStatus, resetProfileTour, completeProfileTour, getTourMapTourStatus, resetTourMapTour, completeTourMapTour, getPhotoboothTourStatus, resetPhotoboothTour, completePhotoboothTour, getTripArchiveTourStatus, resetTripArchiveTour, completeTripArchiveTour } from "../../../utils/tourApi";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -17,7 +17,14 @@ export default function Settings() {
   const [tourLoading, setTourLoading] = useState(false);
   const [homepageTutorialEnabled, setHomepageTutorialEnabled] = useState(false);
   const [mapTutorialEnabled, setMapTutorialEnabled] = useState(false);
+  const [createItineraryTutorialEnabled, setCreateItineraryTutorialEnabled] = useState(true);
   const [notification, setNotification] = useState({ isOpen: false, type: "info", title: "", message: "" });
+  const [emergencyTutorialEnabled, setEmergencyTutorialEnabled] = useState(true);
+  const [profileTutorialEnabled, setProfileTutorialEnabled] = useState(true);
+  const [tourMapTutorialEnabled, setTourMapTutorialEnabled] = useState(true);
+  const [photoboothTutorialEnabled, setPhotoboothTutorialEnabled] = useState(true);
+  const [tripArchiveTutorialEnabled, setTripArchiveTutorialEnabled] = useState(true);
+  const [allTutorialsEnabled, setAllTutorialsEnabled] = useState(true);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -44,7 +51,147 @@ export default function Settings() {
     fetchUserPreference();
     // Map tutorial auto-start remains client-side for now
     setMapTutorialEnabled(localStorage.getItem("mapTourForceStart") === "true");
+    const initCreateItineraryStatus = async () => {
+      try {
+        const ciStatus = await getCreateItineraryTourStatus();
+        setCreateItineraryTutorialEnabled(!ciStatus.hasCompletedCreateItineraryTour);
+      } catch {
+        setCreateItineraryTutorialEnabled(true);
+      }
+    };
+    initCreateItineraryStatus();
+    const initEmergencyStatus = async () => {
+      try {
+        const eStatus = await getEmergencyTourStatus();
+        setEmergencyTutorialEnabled(!eStatus.hasCompletedEmergencyTour);
+      } catch {
+        setEmergencyTutorialEnabled(true);
+      }
+    };
+    initEmergencyStatus();
+    const initProfileStatus = async () => {
+      try {
+        const pStatus = await getProfileTourStatus();
+        setProfileTutorialEnabled(!pStatus.hasCompletedProfileTour);
+      } catch {
+        setProfileTutorialEnabled(true);
+      }
+    };
+    initProfileStatus();
+    const initTourMapStatus = async () => {
+      try {
+        const mStatus = await getTourMapTourStatus();
+        setTourMapTutorialEnabled(!mStatus.hasCompletedTourMapTour);
+      } catch {
+        setTourMapTutorialEnabled(true);
+      }
+    };
+    initTourMapStatus();
+    const initPhotoboothStatus = async () => {
+      try {
+        const pStatus = await getPhotoboothTourStatus();
+        setPhotoboothTutorialEnabled(!pStatus.hasCompletedPhotoboothTour);
+      } catch {
+        setPhotoboothTutorialEnabled(true);
+      }
+    };
+    initPhotoboothStatus();
+    const initTripArchiveStatus = async () => {
+      try {
+        const taStatus = await getTripArchiveTourStatus();
+        setTripArchiveTutorialEnabled(!taStatus.hasCompletedTripArchiveTour);
+      } catch {
+        setTripArchiveTutorialEnabled(true);
+      }
+    };
+    initTripArchiveStatus();
+    const computeAll = async () => {
+      try {
+        const statuses = await Promise.all([
+          getTourStatus(),
+          getCreateItineraryTourStatus(),
+          getEmergencyTourStatus(),
+          getProfileTourStatus(),
+          getTourMapTourStatus(),
+          getPhotoboothTourStatus(),
+          getTripArchiveTourStatus(),
+        ]);
+        const allCompleted = statuses.every((s) => {
+          return (
+            s.hasCompletedTour ||
+            s.hasCompletedCreateItineraryTour ||
+            s.hasCompletedEmergencyTour ||
+            s.hasCompletedProfileTour ||
+            s.hasCompletedTourMapTour ||
+            s.hasCompletedPhotoboothTour ||
+            s.hasCompletedTripArchiveTour
+          );
+        });
+        setAllTutorialsEnabled(!allCompleted);
+      } catch {
+        setAllTutorialsEnabled(true);
+      }
+    };
+    computeAll();
   }, []);
+
+  const toggleAllTutorials = async () => {
+    const next = !allTutorialsEnabled;
+    setAllTutorialsEnabled(next);
+    try {
+      if (next) {
+        await Promise.all([
+          resetTour(),
+          resetCreateItineraryTour(),
+          resetEmergencyTour(),
+          resetProfileTour(),
+          resetTourMapTour(),
+          resetPhotoboothTour(),
+          resetTripArchiveTour(),
+        ]);
+        setHomepageTutorialEnabled(true);
+        setMapTutorialEnabled(true);
+        setCreateItineraryTutorialEnabled(true);
+        setEmergencyTutorialEnabled(true);
+        setProfileTutorialEnabled(true);
+        setTourMapTutorialEnabled(true);
+        setPhotoboothTutorialEnabled(true);
+        setTripArchiveTutorialEnabled(true);
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "All Tutorials Enabled",
+          message: "All guides across the app will auto-start when relevant.",
+        });
+      } else {
+        await Promise.all([
+          completeTour(),
+          completeCreateItineraryTour(),
+          completeEmergencyTour(),
+          completeProfileTour(),
+          completeTourMapTour(),
+          completePhotoboothTour(),
+          completeTripArchiveTour(),
+        ]);
+        setHomepageTutorialEnabled(false);
+        setMapTutorialEnabled(false);
+        setCreateItineraryTutorialEnabled(false);
+        setEmergencyTutorialEnabled(false);
+        setProfileTutorialEnabled(false);
+        setTourMapTutorialEnabled(false);
+        setPhotoboothTutorialEnabled(false);
+        setTripArchiveTutorialEnabled(false);
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "All Tutorials Disabled",
+          message: "No guides will auto-start anywhere in the app.",
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling all tutorials:", err);
+    }
+  };
 
   const handleToggleFortModal = async () => {
     const newValue = !showFortModal;
@@ -130,6 +277,163 @@ export default function Settings() {
     }
   };
 
+  const toggleCreateItineraryTutorial = async () => {
+    const next = !createItineraryTutorialEnabled;
+    setCreateItineraryTutorialEnabled(next);
+    try {
+      if (next) {
+        await resetCreateItineraryTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Create Itinerary Tutorial Enabled",
+          message: "When you visit Create Itinerary, the guide will auto-start.",
+        });
+      } else {
+        await completeCreateItineraryTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Create Itinerary Tutorial Disabled",
+          message: "The guide will not auto-start on Create Itinerary.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating create itinerary tutorial status:", err);
+    }
+  };
+
+  const toggleEmergencyTutorial = async () => {
+    const next = !emergencyTutorialEnabled;
+    setEmergencyTutorialEnabled(next);
+    try {
+      if (next) {
+        await resetEmergencyTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Emergency Tutorial Enabled",
+          message: "When you visit Emergency, the guide will auto-start.",
+        });
+      } else {
+        await completeEmergencyTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Emergency Tutorial Disabled",
+          message: "The guide will not auto-start on Emergency.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating emergency tutorial status:", err);
+    }
+  };
+
+  const toggleProfileTutorial = async () => {
+    const next = !profileTutorialEnabled;
+    setProfileTutorialEnabled(next);
+    try {
+      if (next) {
+        await resetProfileTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Profile Tutorial Enabled",
+          message: "The guide will auto-start on Profile.",
+        });
+      } else {
+        await completeProfileTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Profile Tutorial Disabled",
+          message: "The guide will not auto-start on Profile.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating profile tutorial status:", err);
+    }
+  };
+
+  const toggleTourMapTutorial = async () => {
+    const next = !tourMapTutorialEnabled;
+    setTourMapTutorialEnabled(next);
+    try {
+      if (next) {
+        await resetTourMapTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Tutorial (Tour Map) Enabled",
+          message: "The guide will auto-start on Tour Map.",
+        });
+      } else {
+        await completeTourMapTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Tutorial (Tour Map) Disabled",
+          message: "The guide will not auto-start on Tour Map.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating Tour Map tutorial status:", err);
+    }
+  };
+
+  const togglePhotoboothTutorial = async () => {
+    const next = !photoboothTutorialEnabled;
+    setPhotoboothTutorialEnabled(next);
+    try {
+      if (next) {
+        await resetPhotoboothTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Tutorial (Photobooth) Enabled",
+          message: "The guide will auto-start on Photobooth.",
+        });
+      } else {
+        await completePhotoboothTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Tutorial (Photobooth) Disabled",
+          message: "The guide will not auto-start on Photobooth.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating Photobooth tutorial status:", err);
+    }
+  };
+
+  const toggleTripArchiveTutorial = async () => {
+    const next = !tripArchiveTutorialEnabled;
+    setTripArchiveTutorialEnabled(next);
+    try {
+      if (next) {
+        await resetTripArchiveTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Tutorial (Trip Archive) Enabled",
+          message: "The guide will auto-start on Trip Archive.",
+        });
+      } else {
+        await completeTripArchiveTour();
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Tutorial (Trip Archive) Disabled",
+          message: "The guide will not auto-start on Trip Archive.",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating Trip Archive tutorial status:", err);
+    }
+  };
+
+
   return (
     <motion.div
       initial={{ x: "100%", opacity: 0 }}
@@ -205,7 +509,8 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Tutorial (Homepage) Switch */}
+
+          {/* Main Tutorial Toggle */}
           <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 mt-1">
@@ -213,58 +518,26 @@ export default function Settings() {
               </div>
 
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Homepage)</h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide when you visit the Homepage.</p>
+                <h3 className="font-semibold text-gray-800 mb-2">Animated Guides</h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Control all tutorials across the app with a single switch.</p>
 
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative">
                     <input
                       type="checkbox"
-                      checked={homepageTutorialEnabled}
-                      onChange={toggleHomepageTutorial}
+                      checked={allTutorialsEnabled}
+                      onChange={toggleAllTutorials}
                       className="sr-only peer"
                     />
                     <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{homepageTutorialEnabled ? "Enabled" : "Disabled"}</span>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{allTutorialsEnabled ? "Enabled" : "Disabled"}</span>
                 </label>
               </div>
             </div>
           </div>
 
-          {/* Tutorial (Start Tour) Switch for Map */}
-          <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 mt-1">
-                <Play className="w-6 h-6 text-[#f04e37]" />
-              </div>
-
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Start Tour)</h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide on the Itinerary Map when you go there.</p>
-
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={mapTutorialEnabled}
-                      onChange={toggleMapTutorial}
-                      className="sr-only peer"
-                    />
-                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{mapTutorialEnabled ? "Enabled" : "Disabled"}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Removed global note; now shown under the Fort Santiago card */}
-        </div>
-
-        {/* Notification Modal */}
         <NotificationModal
           isOpen={notification.isOpen}
           onClose={() => setNotification({ ...notification, isOpen: false })}
@@ -279,7 +552,10 @@ export default function Settings() {
           © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
           College of Information and Computing Sciences.
         </p>
+
+        </div>
       </div>
+      
       </PullToRefresh>
     </motion.div>
   );

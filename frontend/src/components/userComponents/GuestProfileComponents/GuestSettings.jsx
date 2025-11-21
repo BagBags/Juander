@@ -15,6 +15,7 @@ export default function GuestSettings() {
   const [tourLoading, setTourLoading] = useState(false);
   const [homepageTutorialEnabled, setHomepageTutorialEnabled] = useState(false);
   const [mapTutorialEnabled, setMapTutorialEnabled] = useState(false);
+  const [allTutorialsEnabled, setAllTutorialsEnabled] = useState(true);
   const [notification, setNotification] = useState({ isOpen: false, type: "info", title: "", message: "" });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -24,8 +25,11 @@ export default function GuestSettings() {
     // stored === "true" means hide; we invert for showFortModal
     setShowFortModal(!(stored === "true"));
     // Load tutorial switches from localStorage
-    setHomepageTutorialEnabled(localStorage.getItem("guestReplayTutorial") === "true");
-    setMapTutorialEnabled(localStorage.getItem("mapTourForceStart") === "true");
+    const homepage = localStorage.getItem("guestReplayTutorial") === "true";
+    const map = localStorage.getItem("mapTourForceStart") === "true";
+    setHomepageTutorialEnabled(homepage);
+    setMapTutorialEnabled(map);
+    setAllTutorialsEnabled(homepage || map);
   }, []);
 
   const handleToggleFortModal = () => {
@@ -104,6 +108,46 @@ export default function GuestSettings() {
       }
     } catch (err) {
       console.error("Error updating map tutorial flag:", err);
+    }
+  };
+
+  const toggleAllTutorials = () => {
+    const next = !allTutorialsEnabled;
+    setAllTutorialsEnabled(next);
+    try {
+      if (next) {
+        localStorage.setItem("guestReplayTutorial", "true");
+        localStorage.setItem("mapTourForceStart", "true");
+        localStorage.setItem("guestProfileTourForceStart", "true");
+        localStorage.setItem("guestPhotoboothTourForceStart", "true");
+        localStorage.setItem("guestEmergencyTourForceStart", "true");
+        localStorage.removeItem("guestTutorialsDisabled");
+        setHomepageTutorialEnabled(true);
+        setMapTutorialEnabled(true);
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Animated Guides Enabled",
+          message: "All available guest tutorials will auto-start.",
+        });
+      } else {
+        localStorage.removeItem("guestReplayTutorial");
+        localStorage.removeItem("mapTourForceStart");
+        localStorage.removeItem("guestProfileTourForceStart");
+        localStorage.removeItem("guestPhotoboothTourForceStart");
+        localStorage.removeItem("guestEmergencyTourForceStart");
+        localStorage.setItem("guestTutorialsDisabled", "true");
+        setHomepageTutorialEnabled(false);
+        setMapTutorialEnabled(false);
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Animated Guides Disabled",
+          message: "No guest tutorials will auto-start.",
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling all guest tutorials:", err);
     }
   };
 
@@ -187,7 +231,7 @@ export default function GuestSettings() {
             </div>
           </div>
 
-          {/* Tutorial (Homepage) Switch */}
+          {/* Main Tutorial Toggle (Guest) */}
           <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0 mt-1">
@@ -195,49 +239,21 @@ export default function GuestSettings() {
               </div>
 
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Homepage)</h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide when you visit the Guest Homepage.</p>
+                <h3 className="font-semibold text-gray-800 mb-2">Animated Guides</h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Control all available guest tutorials with a single switch.</p>
 
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className="relative">
                     <input
                       type="checkbox"
-                      checked={homepageTutorialEnabled}
-                      onChange={toggleHomepageTutorial}
+                      checked={allTutorialsEnabled}
+                      onChange={toggleAllTutorials}
                       className="sr-only peer"
                     />
                     <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{homepageTutorialEnabled ? "Enabled" : "Disabled"}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Tutorial (Start Tour) Switch for Map */}
-          <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 mt-1">
-                <Play className="w-6 h-6 text-[#f04e37]" />
-              </div>
-
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">Tutorial (Start Tour)</h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Enable auto-start of the guide on the Itinerary Map when you go there.</p>
-
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={mapTutorialEnabled}
-                      onChange={toggleMapTutorial}
-                      className="sr-only peer"
-                    />
-                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{mapTutorialEnabled ? "Enabled" : "Disabled"}</span>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{allTutorialsEnabled ? "Enabled" : "Disabled"}</span>
                 </label>
               </div>
             </div>

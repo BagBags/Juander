@@ -13,7 +13,7 @@ export const UserLocationMarker = ({ userLocation }) => (
 export const PinMarkers = ({ pins, selectedPin, onPinClick }) => {
   if (!pins) return null;
 
-  return pins.map((pin) => {
+  return pins.map((pin, idx) => {
     const isSelected = selectedPin?._id === pin._id;
 
     return (
@@ -24,7 +24,7 @@ export const PinMarkers = ({ pins, selectedPin, onPinClick }) => {
         anchor="bottom"
       >
         <div
-          className="relative flex items-center justify-center cursor-pointer"
+          className={`relative flex items-center justify-center cursor-pointer ${idx === 0 ? 'map-first-pin' : ''}`}
           onClick={() => onPinClick(pin)}
         >
           {/* Facade image */}

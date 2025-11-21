@@ -17,6 +17,7 @@ import {
   isPhotoboothRouteActive,
 } from "../../../utils/cameraLifecycle";
 import NotificationModal from "../../shared/NotificationModal";
+import { useTour } from "../../TourComponents/TourContext";
 
 export default function Photobooth() {
   const canvasRef = useRef(null);
@@ -560,6 +561,7 @@ export default function Photobooth() {
 
   return (
     <div className="photobooth-container">
+      <PhotoboothTourAutostart ready={jeelizReady} />
       <div className="phone-frame">
         <div
           className="absolute top-0 left-0 w-full z-[200]"
@@ -753,4 +755,19 @@ export default function Photobooth() {
       />
     </div>
   );
+}
+
+function PhotoboothTourAutostart({ ready }) {
+  const { startTour, isTourRunning, hasCompletedTour } = useTour();
+  const didAutoStartRef = React.useRef(false);
+  useEffect(() => {
+    if (didAutoStartRef.current) return;
+    if (!hasCompletedTour && ready && !isTourRunning) {
+      didAutoStartRef.current = true;
+      setTimeout(() => {
+        startTour();
+      }, 600);
+    }
+  }, [hasCompletedTour, ready, isTourRunning, startTour]);
+  return null;
 }

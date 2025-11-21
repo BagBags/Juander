@@ -17,12 +17,13 @@ import {
 } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
 import PullToRefresh from "../../shared/PullToRefresh";
+import { useTour } from "../../TourComponents/TourContext";
 
 // Reusable Site Card Component
-const SiteCard = ({ site, resolveUrl, children }) => {
+const SiteCard = ({ site, resolveUrl, children, className = "" }) => {
   return (
     <div
-      className="bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full"
+      className={`bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full ${className}`}
       style={{ minWidth: 0, maxWidth: "100%", touchAction: "pan-y pinch-zoom" }}
     >
       <div className="relative h-48 overflow-hidden">
@@ -93,6 +94,7 @@ export default function TripArchivesPage() {
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
   const { t } = useTranslation();
+  const { startTour, isTourRunning, hasCompletedTour } = useTour();
 
   const handleRefresh = async () => {
     setRefreshKey((prev) => prev + 1);
@@ -100,6 +102,41 @@ export default function TripArchivesPage() {
     await fetchVisitedSites();
     await fetchReviews();
   };
+
+  useEffect(() => {
+    const openReviewsTab = () => setActiveTab("reviews");
+    const openPlacesTab = () => setActiveTab("places");
+    const openWriteReview = () => {
+      const filtered = visitedSites
+        .filter(
+          (s) =>
+            selectedReviewItineraryFilter === "all" ||
+            s.itineraryId?._id === selectedReviewItineraryFilter
+        );
+      const site = filtered[0] || visitedSites[0];
+      if (site) handleOpenReviewModal(site);
+    };
+    const closeReviewModal = () => {
+      setShowReviewModal(false);
+      setSelectedSite(null);
+    };
+    const openReviewModalAgain = () => {
+      const site = selectedSite || visitedSites[0];
+      if (site) handleOpenReviewModal(site);
+    };
+    window.addEventListener("tour:tripArchiveOpenReviewsTab", openReviewsTab);
+    window.addEventListener("tour:tripArchiveOpenPlacesTab", openPlacesTab);
+    window.addEventListener("tour:tripArchiveOpenWriteReview", openWriteReview);
+    window.addEventListener("tour:tripArchiveCloseReviewModal", closeReviewModal);
+    window.addEventListener("tour:tripArchiveOpenReviewModalAgain", openReviewModalAgain);
+    return () => {
+      window.removeEventListener("tour:tripArchiveOpenReviewsTab", openReviewsTab);
+      window.removeEventListener("tour:tripArchiveOpenPlacesTab", openPlacesTab);
+      window.removeEventListener("tour:tripArchiveOpenWriteReview", openWriteReview);
+      window.removeEventListener("tour:tripArchiveCloseReviewModal", closeReviewModal);
+      window.removeEventListener("tour:tripArchiveOpenReviewModalAgain", openReviewModalAgain);
+    };
+  }, [visitedSites, selectedReviewItineraryFilter, selectedSite]);
 
   const BACKEND_URL =
     import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
@@ -437,6 +474,7 @@ export default function TripArchivesPage() {
         }
       `}</style>
       <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col text-sm relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}>
+        <TripArchiveTourAutostart running={isTourRunning} completed={hasCompletedTour} onStart={startTour} />
         {/* Decorative Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
@@ -455,7 +493,7 @@ export default function TripArchivesPage() {
                 {/* Places Tab */}
                 <button
                   onClick={() => setActiveTab("places")}
-                  className="group relative transition-all duration-300"
+                  className="group relative transition-all duration-300 trip-tab-places-btn"
                 >
                   <div
                     className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
@@ -485,7 +523,7 @@ export default function TripArchivesPage() {
                 {/* Reviews Tab */}
                 <button
                   onClick={() => setActiveTab("reviews")}
-                  className="group relative transition-all duration-300"
+                  className="group relative transition-all duration-300 trip-tab-reviews-btn"
                 >
                   <div
                     className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
@@ -574,7 +612,7 @@ export default function TripArchivesPage() {
                     </div>
 
                     <div
-                      className="grid grid-cols-1 gap-6 w-full"
+                      className="grid grid-cols-1 gap-6 w-full trip-places-list"
                       style={{ touchAction: "pan-y pinch-zoom" }}
                     >
                       {(() => {
@@ -605,9 +643,25 @@ export default function TripArchivesPage() {
                         const list = showAllArchives
                           ? filtered
                           : filtered.slice(0, 4);
+                        if (!list.length) {
+                          // Placeholder card shown during tour when no data
+                          return [
+                            {
+                              _id: "placeholder",
+                              siteId: {
+                                siteName: "No visited places yet",
+                                mediaUrl: "",
+                                siteDescription:
+                                  "When you visit sites, they appear here.",
+                              },
+                              itineraryId: { name: "Your itinerary" },
+                            },
+                          ];
+                        }
                         return list;
                       })().map((site, index) => (
                         <SiteCard
+                          className={index === 0 ? "trip-place-card" : ""}
                           key={
                             site?._id ||
                             `${site.siteId?._id || "site"}-${index}`
@@ -1113,7 +1167,7 @@ export default function TripArchivesPage() {
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => handleOpenReviewModal(site)}
-                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-edit-review-btn"
                                   >
                                     Edit Review
                                   </button>
@@ -1121,19 +1175,37 @@ export default function TripArchivesPage() {
                                     onClick={() =>
                                       handleDeleteReview(existingReview._id)
                                     }
-                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-delete-review-btn"
                                   >
                                     Delete Review
                                   </button>
                                 </div>
                               </>
                             ) : (
-                              <button
-                                onClick={() => handleOpenReviewModal(site)}
-                                className="w-full bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
-                              >
-                                Write Review
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleOpenReviewModal(site)}
+                                  className="w-full bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-write-review-btn"
+                                >
+                                  Write Review
+                                </button>
+                                <div className="mt-3 flex gap-2" aria-hidden>
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-500 text-xs font-semibold rounded-xl shadow-sm cursor-default trip-edit-review-btn"
+                                  >
+                                    Edit Review
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-500 text-xs font-semibold rounded-xl shadow-sm cursor-default trip-delete-review-btn"
+                                  >
+                                    Delete Review
+                                  </button>
+                                </div>
+                              </>
                             )}
                           </SiteCard>
                         );
@@ -1255,7 +1327,7 @@ export default function TripArchivesPage() {
 
         {/* Review Modal */}
         {showReviewModal && selectedSite && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4 trip-review-modal">
             <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-200">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-200">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-orange-600 rounded-full flex items-center justify-center">
@@ -1377,6 +1449,20 @@ export default function TripArchivesPage() {
       </div>
     </>
   );
+}
+
+function TripArchiveTourAutostart({ running, completed, onStart }) {
+  const didStartRef = React.useRef(false);
+  useEffect(() => {
+    if (didStartRef.current) return;
+    if (!completed && !running) {
+      didStartRef.current = true;
+      setTimeout(() => {
+        onStart?.();
+      }, 600);
+    }
+  }, [completed, running, onStart]);
+  return null;
 }
 // Accessible, icon-only dropdown for filtering by itinerary
 function ItineraryFilterButton({ value, onChange, options }) {

@@ -1,6 +1,6 @@
 import { Phone } from "lucide-react";
 
-export default function Card({ title, contacts, icon }) {
+export default function Card({ title, contacts, icon, highlightFirstContact = false }) {
   return (
     <div
       className="bg-white/95 backdrop-blur-md rounded-3xl p-6 w-full
@@ -48,10 +48,10 @@ export default function Card({ title, contacts, icon }) {
           <a
             key={index}
             href={`tel:${contact.value}`}
-            className="flex items-center gap-3 px-4 py-3.5 rounded-xl 
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-xl 
                        bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-medium 
                        shadow-md hover:shadow-xl hover:scale-105 active:scale-95
-                       transition-all duration-200 group/button"
+                       transition-all duration-200 group/button ${highlightFirstContact && index === 0 ? 'emergency-first-contact' : ''}`}
           >
             <div className="w-10 h-10 flex items-center justify-center bg-white/20 rounded-full group-hover/button:bg-white/30 transition-colors">
               <Phone className="w-5 h-5" strokeWidth={2.5} />

@@ -106,6 +106,7 @@ export default function PhotoboothSlider({
         alignItems: "center",
         ...style,
       }}
+      className="photobooth-slider"
     >
       <div
         ref={carouselRef}
@@ -237,7 +238,7 @@ export default function PhotoboothSlider({
       <button
         onClick={onCapture}
         disabled={!webcamReady}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group photobooth-capture-btn"
         style={{
           pointerEvents: "auto",
           background: "transparent",

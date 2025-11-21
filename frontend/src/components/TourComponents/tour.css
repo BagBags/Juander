@@ -84,6 +84,7 @@ button[aria-label*="Close"][data-test-id] {
 /* Spotlight with rounded corners */
 .react-joyride__spotlight {
   border-radius: 20px !important;
+  transition: box-shadow 220ms ease-out, transform 220ms ease-out !important;
 }
 
 /* Hide default Joyride tooltip wrapper */
@@ -104,6 +105,7 @@ button[aria-label*="Close"][data-test-id] {
 .__floater {
   z-index: 100000 !important;
   overflow: visible !important;
+  transition: opacity 200ms ease-out, transform 200ms ease-out !important;
 }
 
 /* Explicitly set tooltip wrapper stacking to avoid being under map containers */

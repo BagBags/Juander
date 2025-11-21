@@ -13,6 +13,7 @@ import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import TourMapSearchModal from "./TourMapSearchModal";
 import TourMapControlButtons from "./TourMapControlButtons";
 import "../../../App.css";
+import { useTour } from "../../TourComponents/TourContext";
 
 // ✅ Axios instance with auth token
 const api = axios.create({
@@ -141,6 +142,7 @@ export default function TourMap() {
 
   return (
     <div className="relative w-full" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none', paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <TourMapTourAutostart />
       {/* Offline Map Warning */}
       {!isOnline && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
@@ -234,4 +236,19 @@ export default function TourMap() {
       <FloatingChatbot />
     </div>
   );
+}
+
+function TourMapTourAutostart() {
+  const { startTour, isTourRunning, hasCompletedTour } = useTour();
+  const didAutoStartRef = React.useRef(false);
+  useEffect(() => {
+    if (didAutoStartRef.current) return;
+    if (!hasCompletedTour && !isTourRunning) {
+      didAutoStartRef.current = true;
+      setTimeout(() => {
+        startTour();
+      }, 600);
+    }
+  }, [hasCompletedTour, startTour, isTourRunning]);
+  return null;
 }

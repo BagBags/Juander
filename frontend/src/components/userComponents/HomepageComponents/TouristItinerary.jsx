@@ -4,6 +4,7 @@ import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import PullToRefresh from "../../shared/PullToRefresh";
 import axios from "axios";
+import CustomTourTooltip from "../../TourComponents/CustomTourTooltip";
 import ModernLoader from "../../shared/ModernLoader";
 
 export default function TouristItinerary() {
@@ -195,11 +196,38 @@ export default function TouristItinerary() {
         <PullToRefresh onRefresh={handleRefresh}>
           <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
             <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
+              <InstructionModal />
               <TouristItineraryMain key={refreshKey} initialItineraries={prefetchedItineraries} />
             </div>
           </div>
         </PullToRefresh>
       </MainLayout>
+    </div>
+  );
+}
+
+function InstructionModal() {
+  const [show, setShow] = useState(true);
+  if (!show) return null;
+  const step = {
+    title: "Choose Itinerary",
+    content: "Choose from Suggested itineraries or your customized itineraries to begin.",
+    avatar: "/juan/Juan1.png",
+  };
+  return (
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/70" onClick={() => setShow(false)} />
+      <div style={{ zIndex: 100010 }}>
+        <CustomTourTooltip
+          continuous={false}
+          index={0}
+          size={1}
+          step={step}
+          isLastStep={true}
+          external
+          onClose={() => setShow(false)}
+        />
+      </div>
     </div>
   );
 }

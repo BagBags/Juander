@@ -16,6 +16,8 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { FaXTwitter } from "react-icons/fa6";
 import PullToRefresh from "../../shared/PullToRefresh";
+import { useTour } from "../../TourComponents/TourContext";
+import { getGuestProfileTourStatus } from "../../../utils/tourApi";
 
 export default function GuestProfilePage() {
   const navigate = useNavigate();
@@ -116,6 +118,7 @@ export default function GuestProfilePage() {
       </div>
 
       <PullToRefresh onRefresh={handleRefresh}>
+      <GuestProfileTourAutostart />
       <div className="w-full max-w-md relative z-10" key={refreshKey}>
         {/* Profile Card */}
         <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
@@ -166,7 +169,10 @@ export default function GuestProfilePage() {
               <Link
                 key={index}
                 to={opt.to}
-                className="flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 group border border-gray-100"
+                className={`flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 group border border-gray-100 ${
+                  opt.to.endsWith('/GuestLanguage') ? 'guest-option-language' :
+                  opt.to.endsWith('/GuestSettings') ? 'guest-option-settings' : ''
+                }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
@@ -189,7 +195,7 @@ export default function GuestProfilePage() {
             sessionStorage.clear();
             navigate("/");
           }}
-          className="mt-8 w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
+          className="mt-8 w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 guest-create-account-btn"
         >
           {t("createAccount")}
         </button>
@@ -261,4 +267,18 @@ export default function GuestProfilePage() {
       </PullToRefresh>
     </motion.div>
   );
+}
+
+function GuestProfileTourAutostart() {
+  const { startTour, isTourRunning } = useTour();
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (started) return;
+    const flag = localStorage.getItem("guestProfileTourForceStart") === "true";
+    if (flag && !isTourRunning) {
+      setStarted(true);
+      setTimeout(() => { startTour(); }, 500);
+    }
+  }, [startTour, isTourRunning, started]);
+  return null;
 }

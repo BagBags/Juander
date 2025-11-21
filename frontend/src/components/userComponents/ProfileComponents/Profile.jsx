@@ -12,6 +12,8 @@ import { FaXTwitter } from "react-icons/fa6";
 import axios from "axios";
 import { clearAuth } from "../../../utils/authStorage";
 import PullToRefresh from "../../shared/PullToRefresh";
+import { useTour } from "../../TourComponents/TourContext";
+import { getProfileTourStatus } from "../../../utils/tourApi";
 import NotificationModal from "../../shared/NotificationModal";
 
 export default function ProfilePage() {
@@ -181,6 +183,7 @@ export default function ProfilePage() {
       {/* Global TTS Button */}
 
       <PullToRefresh onRefresh={handleRefresh}>
+        <ProfileTourAutostart />
         <div className="w-full max-w-md relative z-10 flex flex-col min-h-0" key={refreshKey}>
           {/* Profile Card */}
           <div className="mt-4 w-full bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-3xl p-8 flex items-center text-white gap-6 shadow-2xl relative overflow-hidden">
@@ -275,7 +278,14 @@ export default function ProfilePage() {
               <Link
                 key={index}
                 to={opt.to}
-                className="flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 group border border-gray-100"
+                className={`flex items-center justify-between px-5 py-4 bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 group border border-gray-100 ${
+                  opt.to.endsWith('/Account') ? 'profile-option-account' :
+                  opt.to.endsWith('/Birthday') ? 'profile-option-birthday' :
+                  opt.to.endsWith('/Gender') ? 'profile-option-gender' :
+                  opt.to.endsWith('/Country') ? 'profile-option-country' :
+                  opt.to.endsWith('/Language') ? 'profile-option-language' :
+                  opt.to.endsWith('/Settings') ? 'profile-option-settings' : ''
+                }`}
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-gradient-to-br from-[#f04e37] to-[#d9442f] rounded-xl flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform">
@@ -293,7 +303,7 @@ export default function ProfilePage() {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="mt-8 w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200"
+            className="mt-8 w-full bg-gradient-to-r from-red-600 to-red-700 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 profile-logout-btn"
           >
             {t("logout")}
           </button>
@@ -374,4 +384,25 @@ export default function ProfilePage() {
       />
     </motion.div>
   );
+}
+
+function ProfileTourAutostart() {
+  const { startTour, isTourRunning } = useTour();
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (started) return;
+    (async () => {
+      try {
+        const status = await getProfileTourStatus();
+        const shouldStart = !status.hasCompletedProfileTour;
+        if (shouldStart && !isTourRunning) {
+          setStarted(true);
+          setTimeout(() => { startTour(); }, 500);
+        }
+      } catch {
+        // if status fails, do not start automatically
+      }
+    })();
+  }, [startTour, isTourRunning, started]);
+  return null;
 }

@@ -122,13 +122,13 @@ function GuestHomepageContent() {
 
   // No TTS here; voice guidance is exclusive to itinerary maps
 
-  // Auto-start guest tutorial when flagged from GuestSettings
+  // Auto-start guest tutorial only when explicitly enabled via settings
   useEffect(() => {
+    const disabled = localStorage.getItem("guestTutorialsDisabled") === "true";
     const replay = localStorage.getItem("guestReplayTutorial") === "true";
-    if (replay) {
+    if (!disabled && replay) {
       setTimeout(() => {
         startTour();
-        // Do not clear here; flag will be cleared on finish/skip
       }, 800);
     }
   }, [startTour]);

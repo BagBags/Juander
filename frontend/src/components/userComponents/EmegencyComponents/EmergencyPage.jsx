@@ -6,6 +6,8 @@ import BackHeader from "../BackButton";
 import { useTranslation } from "react-i18next";
 import { Phone, AlertCircle } from "lucide-react";
 import PullToRefresh from "../../shared/PullToRefresh";
+import { useTour } from "../../TourComponents/TourContext";
+import { getEmergencyTourStatus } from "../../../utils/tourApi";
 
 export default function EmergencyPage() {
   const { t } = useTranslation();
@@ -70,6 +72,7 @@ export default function EmergencyPage() {
       <BackHeader title="Emergency Hotlines" className="text-white" />
 
       <MainLayout includeSideButtons={false}>
+        <EmergencyTourAutostart />
         <PullToRefresh onRefresh={handleRefresh}>
         <div className="w-full max-w-4xl mx-auto px-4 pt-6 pb-8" key={refreshKey}>
           {/* Hero Section */}
@@ -112,6 +115,7 @@ export default function EmergencyPage() {
                   title={item.title}
                   contacts={item.contacts}
                   icon={item.icon}
+                  highlightFirstContact={index === 0}
                 />
               ))}
             </div>
@@ -134,4 +138,17 @@ export default function EmergencyPage() {
       </MainLayout>
     </div>
   );
+}
+
+function EmergencyTourAutostart() {
+  const { startTour, isTourRunning, hasCompletedTour } = useTour();
+  const [started, setStarted] = useState(false);
+  useEffect(() => {
+    if (started) return;
+    if (!hasCompletedTour && !isTourRunning) {
+      setStarted(true);
+      setTimeout(() => { startTour(); }, 500);
+    }
+  }, [startTour, isTourRunning, hasCompletedTour, started]);
+  return null;
 }

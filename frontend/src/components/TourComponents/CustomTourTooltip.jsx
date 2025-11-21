@@ -176,24 +176,25 @@ export default function CustomTourTooltip({
       </div>
 
       <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white flex flex-col sm:flex-row items-center gap-3">
-        {/* Top row on mobile: dot progress */}
-        <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-1">
-          {Array.from({ length: size }).map((_, i) => (
-            <span
-              key={i}
-              className={`inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-colors duration-200 ${
-                i === index
-                  ? 'bg-[#f04e37]'
-                  : i < index
-                    ? 'bg-[#f04e37]/40'
-                    : 'bg-gray-300'
-              }`}
-            />
-          ))}
-        </div>
+        {(!isLastStep) && (
+          <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-1">
+            {Array.from({ length: size }).map((_, i) => (
+              <span
+                key={i}
+                className={`inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-colors duration-200 ${
+                  i === index
+                    ? 'bg-[#f04e37]'
+                    : i < index
+                      ? 'bg-[#f04e37]/40'
+                      : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Bottom row on mobile: buttons */}
-        <div className="flex items-center justify-between w-full sm:w-auto gap-2 order-2 sm:order-2 sm:ml-auto">
+        <div className={`flex items-center ${index > 0 || !isLastStep ? 'justify-between sm:ml-auto' : 'justify-center'} w-full sm:w-auto gap-2 order-2 sm:order-2`}>
           {/* Back button */}
           {index > 0 && (
             <button
@@ -229,7 +230,7 @@ export default function CustomTourTooltip({
             type="button"
             onClick={(e) => { (external ? (isLastStep ? performAndSlide(onClose) : performAndSlide(onNext)) : (isLastStep ? performAndSlide(closeProps?.onClick) : performAndSlide(primaryProps?.onClick)))?.(e); }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ml-auto"
+            className={`flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ${index > 0 || !isLastStep ? 'ml-auto' : ''}`}
             aria-label={isLastStep ? "Finish tour" : "Go to next step"}
             ref={primaryRef}
           >
