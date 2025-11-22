@@ -2,8 +2,11 @@ import React from "react";
 import { CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react";
 
 /**
- * Modern Notification Modal - Replaces alert()
+ * Modern Notification Modal - Replaces alert() and confirm()
  * Types: success, error, warning, info
+ * 
+ * For alerts: Just provide isOpen, onClose, title, message, type
+ * For confirmations: Also provide onConfirm callback to show Cancel/Confirm buttons
  */
 export default function NotificationModal({
   isOpen,
@@ -12,6 +15,8 @@ export default function NotificationModal({
   message,
   type = "info", // "success", "error", "warning", "info"
   confirmText = "OK",
+  cancelText = "Cancel",
+  onConfirm, // If provided, shows confirmation dialog with two buttons
   autoClose = false,
   autoCloseDuration = 3000,
 }) {
@@ -79,14 +84,36 @@ export default function NotificationModal({
           <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
         </div>
 
-        {/* Action Button */}
+        {/* Action Buttons */}
         <div className="px-8 pb-8">
-          <button
-            onClick={onClose}
-            className={`w-full px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
-          >
-            {confirmText}
-          </button>
+          {onConfirm ? (
+            // Confirmation mode: Show Cancel + Confirm buttons
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-xl transition-colors"
+              >
+                {cancelText}
+              </button>
+              <button
+                onClick={() => {
+                  onConfirm();
+                  onClose();
+                }}
+                className={`flex-1 px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
+              >
+                {confirmText}
+              </button>
+            </div>
+          ) : (
+            // Alert mode: Show single OK button
+            <button
+              onClick={onClose}
+              className={`w-full px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
+            >
+              {confirmText}
+            </button>
+          )}
         </div>
       </div>
     </div>

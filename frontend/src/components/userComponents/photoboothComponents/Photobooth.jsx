@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import axios from "axios";
-import { RotateCcw, Download, X } from "lucide-react";
+import { RotateCcw, Download, X, SwitchCamera } from "lucide-react";
 import PhotoboothSlider from "./photoboothSlider";
 // import { baseFilters } from "./basefilter"; // REMOVED - use only admin-uploaded filters
 import "../../../Photobooth.css";
@@ -34,6 +34,7 @@ export default function Photobooth() {
   const [capturedImage, setCapturedImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const preloadedRef = useRef(new Set());
+  const [facingMode, setFacingMode] = useState("user"); // "user" = front, "environment" = rear
   const [notification, setNotification] = useState({
     isOpen: false,
     type: "info",
@@ -255,7 +256,9 @@ export default function Photobooth() {
               return;
             }
             try {
-              bestVideoSettings.flipX = true;
+              // Configure camera based on facing mode
+              bestVideoSettings.facingMode = facingMode;
+              bestVideoSettings.flipX = facingMode === "user"; // Only flip for front camera
             } catch {}
             JZ.init({
               canvasId: "jeeFaceFilterCanvas",
@@ -362,7 +365,7 @@ export default function Photobooth() {
       } catch {}
       scheduleCameraStop(0);
     };
-  }, [cameraKey]);
+  }, [cameraKey, facingMode]);
 
   // Reinitialize camera when returning to the app (fix black camera on resume)
   useEffect(() => {
@@ -383,6 +386,19 @@ export default function Photobooth() {
       window.removeEventListener("visibilitychange", handleVisible);
       window.removeEventListener("focus", handleVisible);
     };
+  }, []);
+
+  // Toggle camera function
+  const toggleCamera = useCallback(() => {
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+    // Reinitialize camera with new facing mode
+    try {
+      if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
+        window.JEELIZFACEFILTER.destroy();
+      }
+    } catch {}
+    setJeelizReady(false);
+    setCameraKey((k) => k + 1);
   }, []);
 
   const retakePhoto = useCallback(() => {
@@ -598,6 +614,14 @@ export default function Photobooth() {
               >
                 <polyline points="15 18 9 12 15 6"></polyline>
               </svg>
+            </button>
+            <button
+              className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all active:scale-90"
+              onClick={toggleCamera}
+              title={facingMode === "user" ? "Switch to Rear Camera" : "Switch to Front Camera"}
+              aria-label="Switch camera"
+            >
+              <SwitchCamera size={20} />
             </button>
             <button
               className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white text-2xl hover:bg-black/40 transition-all active:scale-90"

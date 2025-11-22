@@ -89,6 +89,10 @@ export default function TripArchivesPage() {
   const [expandedItineraries, setExpandedItineraries] = useState({}); // Track which itinerary names are expanded
   const [expandedDescriptions, setExpandedDescriptions] = useState({}); // Track which descriptions are expanded
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    reviewId: null,
+  });
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -433,10 +437,16 @@ export default function TripArchivesPage() {
     }
   };
 
-  const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm("Are you sure you want to delete this review?")) {
-      return;
-    }
+  const handleDeleteReview = (reviewId) => {
+    // Show confirmation modal
+    setDeleteConfirmation({
+      isOpen: true,
+      reviewId: reviewId,
+    });
+  };
+
+  const confirmDeleteReview = async () => {
+    const reviewId = deleteConfirmation.reviewId;
 
     try {
       await axios.delete(`${BACKEND_URL}/api/reviews/${reviewId}`, config);
@@ -1445,6 +1455,18 @@ export default function TripArchivesPage() {
           title={notification.title}
           message={notification.message}
           type={notification.type}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <NotificationModal
+          isOpen={deleteConfirmation.isOpen}
+          onClose={() => setDeleteConfirmation({ isOpen: false, reviewId: null })}
+          title="Delete Review"
+          message="Are you sure you want to delete this review? This action cannot be undone."
+          type="warning"
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={confirmDeleteReview}
         />
       </div>
     </>

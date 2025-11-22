@@ -418,23 +418,31 @@ export default function SiteModalFullScreen({
       >
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
-          <div className="h-[70vh] rounded-xl overflow-hidden">
+          <div className="h-[90vh] rounded-xl overflow-hidden">
             {scannedArUrl ? (
               <div className="flex flex-col h-full">
                 <iframe
                   src={scannedArUrl}
                   title="AR Experience"
-                  className="flex-1 w-full"
-                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; xr-spatial-tracking *; device-orientation *; geolocation *; web-share *; clipboard-write *; autoplay *; fullscreen *"
+                  className="flex-1 w-full border-0"
+                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; ambient-light-sensor *; xr *; xr-spatial-tracking *; device-orientation *; geolocation *; web-share *; clipboard-write *; autoplay *; fullscreen *; display-capture *; picture-in-picture *"
                   allowFullScreen
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    minHeight: '80vh'
+                  }}
                 />
                 <button
                   onClick={() => {
                     setShowAR(false);
                     setScannedArUrl(null);
                   }}
-                  className="mt-3 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 text-base font-medium rounded-lg shadow transition-colors"
+                  className="mt-2 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
                 >
+                  <X className="w-4 h-4" />
                   Exit AR Experience
                 </button>
               </div>
