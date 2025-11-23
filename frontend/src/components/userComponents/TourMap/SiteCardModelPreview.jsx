@@ -36,22 +36,18 @@ class ErrorBoundary extends Component {
 }
 
 function Model({ url }) {
-  try {
-    const { scene } = useGLTF(url, true, true, (loader) => {
-      // Configure loader for better CORS handling
-      loader.setCrossOrigin('anonymous');
-      loader.setWithCredentials(false);
-    });
-    
-    if (!scene) {
-      throw new Error('Model scene is empty');
-    }
-    
-    return <primitive object={scene} scale={0.5} rotation={[0, 0, 0]} />;
-  } catch (error) {
-    console.error('Error loading GLB model:', error);
-    throw error;
+  const { scene } = useGLTF(url, true, true, (loader) => {
+    // Configure loader for better CORS handling
+    loader.setCrossOrigin('anonymous');
+    loader.setWithCredentials(false);
+  });
+  
+  if (!scene) {
+    // This will be caught by ErrorBoundary if it's a real error
+    return null;
   }
+  
+  return <primitive object={scene} scale={0.5} rotation={[0, 0, 0]} />;
 }
 
 export default function SiteCardModelPreview({ url }) {

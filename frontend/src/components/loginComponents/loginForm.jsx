@@ -268,49 +268,54 @@ export default function LoginForm({ toggleForm }) {
 
       {!showForgot ? (
         <>
-          {/* Email */}
-          <div>
-            <label htmlFor="login-email" className="sr-only">Email Address</label>
-            <input
-              id="login-email"
-              type="email"
-              placeholder="Email"
-              aria-label="Email Address"
-              className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+          {/* Login Form */}
+          <form onSubmit={(e) => { e.preventDefault(); handleEmailLogin(); }}>
+            {/* Email */}
+            <div className="mb-3">
+              <label htmlFor="login-email" className="sr-only">Email Address</label>
+              <input
+                id="login-email"
+                type="email"
+                placeholder="Email"
+                aria-label="Email Address"
+                className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
 
-          {/* Password with reveal toggle */}
-          <div className="relative w-full">
-            <label htmlFor="login-password" className="sr-only">Password</label>
-            <input
-              id="login-password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              aria-label="Password"
-              className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm pr-10"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            {/* Password with reveal toggle */}
+            <div className="relative w-full mb-3">
+              <label htmlFor="login-password" className="sr-only">Password</label>
+              <input
+                id="login-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                aria-label="Password"
+                className="w-full p-2.5 sm:p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 text-sm pr-10"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            {/* Login button */}
             <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              type="submit"
+              className="w-full bg-[#f04e37] text-white font-semibold px-4 py-2.5 sm:py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 text-sm sm:text-base"
             >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              Login
             </button>
-          </div>
-
-          {/* Login button */}
-          <button
-            onClick={handleEmailLogin}
-            className="w-full bg-[#f04e37] text-white font-semibold px-4 py-2.5 sm:py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 text-sm sm:text-base"
-          >
-            Login
-          </button>
+          </form>
 
           {/* Forgot password */}
           <div className="text-center">
@@ -371,7 +376,7 @@ export default function LoginForm({ toggleForm }) {
         <>
           {/* Step 1: Request OTP */}
           {step === 1 && (
-            <>
+            <form onSubmit={(e) => { e.preventDefault(); handleForgotRequest(); }}>
               <label htmlFor="forgot-email" className="sr-only">Email Address for Password Reset</label>
               <input
                 id="forgot-email"
@@ -381,19 +386,20 @@ export default function LoginForm({ toggleForm }) {
                 className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
               />
               <button
-                onClick={handleForgotRequest}
-                className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95"
+                type="submit"
+                className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 mt-3"
               >
                 Send OTP
               </button>
-            </>
+            </form>
           )}
 
           {/* Step 2: Enter OTP + Reset password */}
           {step === 2 && (
-            <>
+            <form onSubmit={(e) => { e.preventDefault(); handleResetPassword(); }}>
               <p className="text-sm text-gray-600">
                 Enter the 6-digit OTP sent to your email.
               </p>
@@ -409,6 +415,7 @@ export default function LoginForm({ toggleForm }) {
                     onChange={(e) => handleOtpChange(e.target.value, i)}
                     onKeyDown={(e) => handleKeyDown(e, i)}
                     ref={(el) => (inputRefs.current[i] = el)}
+                    autoComplete="off"
                   />
                 ))}
               </div>
@@ -445,6 +452,7 @@ export default function LoginForm({ toggleForm }) {
                   className="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[#f04e37] focus:outline-none text-gray-800 pr-10"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
@@ -457,12 +465,12 @@ export default function LoginForm({ toggleForm }) {
               </div>
 
               <button
-                onClick={handleResetPassword}
+                type="submit"
                 className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 mt-3"
               >
                 Reset Password
               </button>
-            </>
+            </form>
           )}
         </>
       )}

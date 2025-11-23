@@ -18,7 +18,7 @@ const S3_BUCKET = process.env.S3_BUCKET_NAME || 'juander-frontend';
 const storage = multerS3({
   s3: s3Client,
   bucket: S3_BUCKET,
-  // Note: ACL disabled on bucket - using bucket policy instead for public access to uploads/*
+  acl: 'public-read', // Make all uploaded files publicly readable
   contentType: (req, file, cb) => {
     // Explicitly set content type for videos
     const mimeType = file.mimetype;

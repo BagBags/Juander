@@ -74,6 +74,32 @@ app.use(
   })
 );
 
+// Security Headers Middleware
+app.use((req, res, next) => {
+  // Anti-clickjacking protection
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  
+  // Content Security Policy (backend API responses)
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; frame-ancestors 'self'"
+  );
+  
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // XSS Protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // Referrer Policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Remove X-Powered-By header
+  res.removeHeader('X-Powered-By');
+  
+  next();
+});
+
 // Increase payload size limits for video uploads
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

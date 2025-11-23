@@ -662,7 +662,7 @@ export default function Photobooth() {
                   data-category={selectedMeta?.category || "general"}
                   loading="eager"
                   decoding="async"
-                  fetchPriority="high"
+                  fetchpriority="high"
                   onLoad={(e) => {
                     const src = e.currentTarget.getAttribute("src") || "";
                     // Trust our backend proxy path as CORS-ready

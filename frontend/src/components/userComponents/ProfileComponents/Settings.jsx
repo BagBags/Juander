@@ -116,17 +116,15 @@ export default function Settings() {
           getPhotoboothTourStatus(),
           getTripArchiveTourStatus(),
         ]);
-        const allCompleted = statuses.every((s) => {
-          return (
-            s.hasCompletedTour ||
-            s.hasCompletedCreateItineraryTour ||
-            s.hasCompletedEmergencyTour ||
-            s.hasCompletedProfileTour ||
-            s.hasCompletedTourMapTour ||
-            s.hasCompletedPhotoboothTour ||
-            s.hasCompletedTripArchiveTour
-          );
-        });
+        // Check if ALL tutorials are completed by checking each specific property
+        const allCompleted = 
+          statuses[0]?.hasCompletedTour &&
+          statuses[1]?.hasCompletedCreateItineraryTour &&
+          statuses[2]?.hasCompletedEmergencyTour &&
+          statuses[3]?.hasCompletedProfileTour &&
+          statuses[4]?.hasCompletedTourMapTour &&
+          statuses[5]?.hasCompletedPhotoboothTour &&
+          statuses[6]?.hasCompletedTripArchiveTour;
         setAllTutorialsEnabled(!allCompleted);
       } catch {
         setAllTutorialsEnabled(true);

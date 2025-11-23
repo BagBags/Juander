@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, X, AlertCircle } from 'lucide-react';
-import jsQR from 'jsqr';
 
 const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   const webcamRef = useRef(null);
@@ -10,6 +9,17 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   const [error, setError] = useState(null);
   const [scannedUrl, setScannedUrl] = useState(null);
   const scanIntervalRef = useRef(null);
+  const jsQRRef = useRef(null);
+  
+  // Load jsQR dynamically when component mounts
+  useEffect(() => {
+    import('jsqr').then((module) => {
+      jsQRRef.current = module.default || module;
+    }).catch((err) => {
+      console.error('Failed to load jsQR library:', err);
+      setError('Failed to load QR scanner library. Please refresh the page.');
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -76,7 +86,9 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       
       // Scan for QR code
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      if (!jsQRRef.current) return;
+      
+      const code = jsQRRef.current(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
       });
 

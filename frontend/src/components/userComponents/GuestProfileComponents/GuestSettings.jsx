@@ -27,9 +27,16 @@ export default function GuestSettings() {
     // Load tutorial switches from localStorage
     const homepage = localStorage.getItem("guestReplayTutorial") === "true";
     const map = localStorage.getItem("mapTourForceStart") === "true";
+    const guestProfile = localStorage.getItem("guestProfileTourForceStart") === "true";
+    const guestPhotobooth = localStorage.getItem("guestPhotoboothTourForceStart") === "true";
+    const guestEmergency = localStorage.getItem("guestEmergencyTourForceStart") === "true";
+    const tutorialsDisabled = localStorage.getItem("guestTutorialsDisabled") === "true";
+    
     setHomepageTutorialEnabled(homepage);
     setMapTutorialEnabled(map);
-    setAllTutorialsEnabled(homepage || map);
+    
+    // Check if ALL tutorials are disabled (not if ANY are enabled)
+    setAllTutorialsEnabled(!tutorialsDisabled);
   }, []);
 
   const handleToggleFortModal = () => {
