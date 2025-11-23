@@ -25,43 +25,43 @@ import LoginPage from "./components/loginComponents/loginPage";
 import { UserProvider } from "./contexts/UserContext";
 
 // Admin Side
-import AdminHome from "./components/adminComponents/adminHomeComponents/adminHome";
-import AdminContent from "./components/adminComponents/adminContentComponents/adminContent";
-import ManageEmergency from "./components/adminComponents/manageEmergencyComponents/manageEmergency";
-import AdminPhotobooth from "./components/adminComponents/adminPhotoboothComponents/adminPhotobooth";
-import AdminRole from "./components/adminComponents/adminRoleComponents/adminRole";
-import AdminLog from "./components/adminComponents/adminLogComponents/adminLog";
-import AdminChatbot from "./components/adminComponents/adminChatbotComponents/adminChatbot";
-import AdminMap from "./components/adminComponents/adminTourMapComponents/AdminTourMap";
-import AdminItinerary from "./components/adminComponents/adminItineraryComponents/adminItinerary";
-import AdminReviews from "./components/adminComponents/adminReviewsComponents/adminReviews";
-import AdminReports from "./components/adminComponents/adminReportsComponents/adminReports";
-import AdminProfileLayout from "./components/adminComponents/adminProfileComponents/adminProfileLayout";
-import AdminProfile from "./components/adminComponents/adminProfileComponents/adminProfile";
-import AdminAccount from "./components/adminComponents/adminProfileComponents/adminAccount";
-import AdminBirthday from "./components/adminComponents/adminProfileComponents/adminBirthday";
-import AdminGender from "./components/adminComponents/adminProfileComponents/adminGender";
-import AdminCountry from "./components/adminComponents/adminProfileComponents/adminCountry";
-import AdminLanguage from "./components/adminComponents/adminProfileComponents/adminLanguage";
+const LazyAdminHome = React.lazy(() => import("./components/adminComponents/adminHomeComponents/adminHome"));
+const LazyAdminContent = React.lazy(() => import("./components/adminComponents/adminContentComponents/adminContent"));
+const LazyManageEmergency = React.lazy(() => import("./components/adminComponents/manageEmergencyComponents/manageEmergency"));
+const LazyAdminPhotobooth = React.lazy(() => import("./components/adminComponents/adminPhotoboothComponents/adminPhotobooth"));
+const LazyAdminRole = React.lazy(() => import("./components/adminComponents/adminRoleComponents/adminRole"));
+const LazyAdminLog = React.lazy(() => import("./components/adminComponents/adminLogComponents/adminLog"));
+const LazyAdminChatbot = React.lazy(() => import("./components/adminComponents/adminChatbotComponents/adminChatbot"));
+const LazyAdminMap = React.lazy(() => import("./components/adminComponents/adminTourMapComponents/AdminTourMap"));
+const LazyAdminItinerary = React.lazy(() => import("./components/adminComponents/adminItineraryComponents/adminItinerary"));
+const LazyAdminReviews = React.lazy(() => import("./components/adminComponents/adminReviewsComponents/adminReviews"));
+const LazyAdminReports = React.lazy(() => import("./components/adminComponents/adminReportsComponents/adminReports"));
+const LazyAdminProfileLayout = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminProfileLayout"));
+const LazyAdminProfile = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminProfile"));
+const LazyAdminAccount = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminAccount"));
+const LazyAdminBirthday = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminBirthday"));
+const LazyAdminGender = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminGender"));
+const LazyAdminCountry = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminCountry"));
+const LazyAdminLanguage = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminLanguage"));
 // Tourist Side
-import Homepage from "./components/userComponents/HomepageComponents/Homepage";
-import EmergencyPage from "./components/userComponents/EmegencyComponents/EmergencyPage";
-import ProfilePage from "./components/userComponents/ProfileComponents/Profile";
-import Photobooth from "./components/userComponents/photoboothComponents/Photobooth";
-import Account from "./components/userComponents/ProfileComponents/Account";
-import ProfileLayout from "./components/userComponents/ProfileComponents/ProfileLayout";
+const LazyHomepage = React.lazy(() => import("./components/userComponents/HomepageComponents/Homepage"));
+const LazyEmergencyPage = React.lazy(() => import("./components/userComponents/EmegencyComponents/EmergencyPage"));
+const LazyProfilePage = React.lazy(() => import("./components/userComponents/ProfileComponents/Profile"));
+const LazyPhotobooth = React.lazy(() => import("./components/userComponents/photoboothComponents/Photobooth"));
+const LazyAccount = React.lazy(() => import("./components/userComponents/ProfileComponents/Account"));
+const LazyProfileLayout = React.lazy(() => import("./components/userComponents/ProfileComponents/ProfileLayout"));
 import "./App.css";
-import Birthday from "./components/userComponents/ProfileComponents/Birthday";
-import Gender from "./components/userComponents/ProfileComponents/Gender";
-import Country from "./components/userComponents/ProfileComponents/Country";
-import Language from "./components/userComponents/ProfileComponents/Language";
-import Settings from "./components/userComponents/ProfileComponents/Settings";
-import TripArchives from "./components/userComponents/TripArchive/TripArchive";
-import CreateItineraryPage from "./components/userComponents/CreateItinerary/CreateItinerary";
+const LazyBirthday = React.lazy(() => import("./components/userComponents/ProfileComponents/Birthday"));
+const LazyGender = React.lazy(() => import("./components/userComponents/ProfileComponents/Gender"));
+const LazyCountry = React.lazy(() => import("./components/userComponents/ProfileComponents/Country"));
+const LazyLanguage = React.lazy(() => import("./components/userComponents/ProfileComponents/Language"));
+const LazySettings = React.lazy(() => import("./components/userComponents/ProfileComponents/Settings"));
+const LazyTripArchives = React.lazy(() => import("./components/userComponents/TripArchive/TripArchive"));
+const LazyCreateItineraryPage = React.lazy(() => import("./components/userComponents/CreateItinerary/CreateItinerary"));
 import TourMap from "./components/userComponents/TourMap/LazyUserMap";
-import Chatbot from "./components/userComponents/ChatbotComponents/Chatbot";
-import TouristItinerary from "./components/userComponents/HomepageComponents/TouristItinerary";
-import TouristItineraryMap from "./components/userComponents/HomepageComponents/TouristItinerariesMap";
+const LazyChatbot = React.lazy(() => import("./components/userComponents/ChatbotComponents/Chatbot"));
+const LazyTouristItinerary = React.lazy(() => import("./components/userComponents/HomepageComponents/TouristItinerary"));
+const LazyTouristItineraryMap = React.lazy(() => import("./components/userComponents/HomepageComponents/TouristItinerariesMap"));
 import ttsService from "./utils/textToSpeech";
 import {
   setPhotoboothRouteActive,
@@ -70,19 +70,20 @@ import {
 } from "./utils/cameraLifecycle";
 
 // Guest Side
-import GuestHomepage from "./components/userComponents/HomepageComponents/GuestHomepage";
-import GuestProfile from "./components/userComponents/GuestProfileComponents/GuestProfile";
-import GuestProfileLayout from "./components/userComponents/GuestProfileComponents/GuestProfileLayout";
+const LazyGuestHomepage = React.lazy(() => import("./components/userComponents/HomepageComponents/GuestHomepage"));
+const LazyGuestProfile = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestProfile"));
+const LazyGuestProfileLayout = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestProfileLayout"));
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TouristProtectedRoute from "./components/TouristProtectedRoute";
-import GuestLanguage from "./components/userComponents/GuestProfileComponents/GuestLanguage";
-import GuestItinerary from "./components/userComponents/GuestItineraryComponents/GuestItinerary";
-import GuestItineraryMap from "./components/userComponents/GuestItineraryComponents/GuestItineraryMap";
+const LazyGuestLanguage = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestLanguage"));
+const LazyGuestItinerary = React.lazy(() => import("./components/userComponents/GuestItineraryComponents/GuestItinerary"));
+const LazyGuestItineraryMap = React.lazy(() => import("./components/userComponents/GuestItineraryComponents/GuestItineraryMap"));
 import TourProvider from "./components/TourComponents/TourProvider";
 import { mapTourSteps, emergencyTourSteps, profileTourSteps, guestProfileTourSteps, tourMapSteps, photoboothTourSteps, tripArchiveTourSteps } from "./components/TourComponents/tourSteps";
-import GuestSettings from "./components/userComponents/GuestProfileComponents/GuestSettings";
-import NotFound from "./components/NotFound";
-import CompleteProfile from "./components/userComponents/CompleteProfile";
+const LazyGuestSettings = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestSettings"));
+const LazyNotFound = React.lazy(() => import("./components/NotFound"));
+import ModernLoader from "./components/shared/ModernLoader";
+const LazyCompleteProfile = React.lazy(() => import("./components/userComponents/CompleteProfile"));
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
 
 // Helper wrapper to inject location for AnimatePresence
@@ -95,10 +96,10 @@ function AnimatedRoutes() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupForm />} />
-        <Route path="/CompleteProfile" element={<CompleteProfile />} />
+        <Route path="/CompleteProfile" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyCompleteProfile /> </React.Suspense>} />
         {/* Public Pages */}\
-        <Route path="/GuestHomepage" element={<GuestHomepage />} />
-        <Route path="/GuestItinerary" element={<GuestItinerary />} />
+        <Route path="/GuestHomepage" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestHomepage /> </React.Suspense>} />
+        <Route path="/GuestItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestItinerary /> </React.Suspense>} />
         <Route
           path="/GuestItineraryMap/:itineraryId"
           element={
@@ -109,7 +110,7 @@ function AnimatedRoutes() {
               disableScrolling={true}
               tourType="map"
             >
-              <GuestItineraryMap />
+              <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestItineraryMap /> </React.Suspense>
             </TourProvider>
           }
         />
@@ -127,7 +128,7 @@ function AnimatedRoutes() {
             </TourProvider>
           }
         />
-        <Route path="/Chatbot" element={<Chatbot />} />
+        <Route path="/Chatbot" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyChatbot /> </React.Suspense>} />
         <Route
           path="/Emergency"
           element={
@@ -138,7 +139,7 @@ function AnimatedRoutes() {
               disableScrolling={true}
               tourType="emergency"
             >
-              <EmergencyPage />
+              <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyEmergencyPage /> </React.Suspense>
             </TourProvider>
           }
         />
@@ -152,12 +153,12 @@ function AnimatedRoutes() {
               disableScrolling={true}
               tourType="photobooth"
             >
-              <Photobooth />
+              <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyPhotobooth /> </React.Suspense>
             </TourProvider>
           }
         />
         {/* Guest Profile Section */}
-        <Route path="/GuestProfile" element={<GuestProfileLayout />}>
+        <Route path="/GuestProfile" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestProfileLayout /> </React.Suspense>}> 
           <Route
             index
             element={
@@ -168,38 +169,38 @@ function AnimatedRoutes() {
                 disableScrolling={true}
                 tourType="guestProfile"
               >
-                <GuestProfile />
+                <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestProfile /> </React.Suspense>
               </TourProvider>
             }
           />
-          <Route path="GuestLanguage" element={<GuestLanguage />} />
-          <Route path="GuestSettings" element={<GuestSettings />} />
+          <Route path="GuestLanguage" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestLanguage /> </React.Suspense>} />
+          <Route path="GuestSettings" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestSettings /> </React.Suspense>} />
         </Route>
         <Route element={<AdminProtectedRoute />}>
           {/* Admin */}
-          <Route path="/AdminHome" element={<AdminHome />} />
-          <Route path="/AdminManageContent" element={<AdminContent />} />
-          <Route path="/AdminManageEmergency" element={<ManageEmergency />} />
-          <Route path="/AdminManageRole" element={<AdminRole />} />
-          <Route path="/AdminLog" element={<AdminLog />} />
-          <Route path="/AdminTourMap" element={<AdminMap />} />
-          <Route path="/AdminManageChatbot" element={<AdminChatbot />} />
-          <Route path="/AdminItinerary" element={<AdminItinerary />} />
-          <Route path="/AdminPhotobooth" element={<AdminPhotobooth />} />
-          <Route path="/AdminReviews" element={<AdminReviews />} />
-          <Route path="/AdminReports" element={<AdminReports />} />
-          <Route path="/AdminProfile" element={<AdminProfileLayout />}>
-            <Route index element={<AdminProfile />} />
-            <Route path="Account" element={<AdminAccount />} />
-            <Route path="Birthday" element={<AdminBirthday />} />
-            <Route path="Gender" element={<AdminGender />} />
-            <Route path="Country" element={<AdminCountry />} />
-            <Route path="Language" element={<AdminLanguage />} />
+          <Route path="/AdminHome" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminHome /> </React.Suspense>} />
+          <Route path="/AdminManageContent" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminContent /> </React.Suspense>} />
+          <Route path="/AdminManageEmergency" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyManageEmergency /> </React.Suspense>} />
+          <Route path="/AdminManageRole" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminRole /> </React.Suspense>} />
+          <Route path="/AdminLog" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminLog /> </React.Suspense>} />
+          <Route path="/AdminTourMap" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminMap /> </React.Suspense>} />
+          <Route path="/AdminManageChatbot" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminChatbot /> </React.Suspense>} />
+          <Route path="/AdminItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminItinerary /> </React.Suspense>} />
+          <Route path="/AdminPhotobooth" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminPhotobooth /> </React.Suspense>} />
+          <Route path="/AdminReviews" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminReviews /> </React.Suspense>} />
+          <Route path="/AdminReports" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminReports /> </React.Suspense>} />
+          <Route path="/AdminProfile" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminProfileLayout /> </React.Suspense>}>
+            <Route index element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminProfile /> </React.Suspense>} />
+            <Route path="Account" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminAccount /> </React.Suspense>} />
+            <Route path="Birthday" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminBirthday /> </React.Suspense>} />
+            <Route path="Gender" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminGender /> </React.Suspense>} />
+            <Route path="Country" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminCountry /> </React.Suspense>} />
+            <Route path="Language" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminLanguage /> </React.Suspense>} />
           </Route>
         </Route>
         <Route element={<TouristProtectedRoute />}>
           {/* Tourist */}
-          <Route path="/Homepage" element={<Homepage />} />{" "}
+          <Route path="/Homepage" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyHomepage /> </React.Suspense>} />{" "}
           <Route
             path="/TripArchive"
             element={
@@ -210,12 +211,12 @@ function AnimatedRoutes() {
                 disableScrolling={true}
                 tourType="tripArchive"
               >
-                <TripArchives />
+                <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyTripArchives /> </React.Suspense>
               </TourProvider>
             }
           />
-          <Route path="/CreateItinerary" element={<CreateItineraryPage />} />
-          <Route path="/TouristItinerary" element={<TouristItinerary />} />
+          <Route path="/CreateItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyCreateItineraryPage /> </React.Suspense>} />
+          <Route path="/TouristItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyTouristItinerary /> </React.Suspense>} />
           <Route
             path="/TouristItineraryMap/:itineraryId"
             element={
@@ -226,12 +227,19 @@ function AnimatedRoutes() {
                 disableScrolling={true}
                 tourType="map"
               >
-                <TouristItineraryMap />
+                <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyTouristItineraryMap /> </React.Suspense>
               </TourProvider>
             }
           />
           {/* Profile Section with Persistent Header */}
-          <Route path="/Profile" element={<ProfileLayout />}>
+          <Route
+            path="/Profile"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                <LazyProfileLayout />
+              </React.Suspense>
+            }
+          >
             <Route
               index
               element={
@@ -242,22 +250,22 @@ function AnimatedRoutes() {
                   disableScrolling={true}
                   tourType="profile"
                 >
-                  <ProfilePage />
+                  <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyProfilePage /> </React.Suspense>
                 </TourProvider>
               }
             />
-            <Route path="Account" element={<Account />} />
-            <Route path="Birthday" element={<Birthday />} />
-            <Route path="Gender" element={<Gender />} />
-            <Route path="Country" element={<Country />} />
-            <Route path="Language" element={<Language />} />
-            <Route path="Settings" element={<Settings />} />
+            <Route path="Account" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAccount /> </React.Suspense>} />
+            <Route path="Birthday" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyBirthday /> </React.Suspense>} />
+            <Route path="Gender" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGender /> </React.Suspense>} />
+            <Route path="Country" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyCountry /> </React.Suspense>} />
+            <Route path="Language" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyLanguage /> </React.Suspense>} />
+            <Route path="Settings" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazySettings /> </React.Suspense>} />
           </Route>
         </Route>
         {/* <Route element={<GuestProtectedRoute />}> */}
         {/* </Route> */}
         {/* 404 Not Found - Must be last */}
-        <Route path="*" element={<NotFound />} />
+        <Route path="*" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyNotFound /> </React.Suspense>} />
       </Routes>
     </AnimatePresence>
   );

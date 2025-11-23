@@ -4,15 +4,16 @@ import { useTranslation } from "react-i18next";
 
 export default function SideButtons({ userType = "tourist" }) {
   const { t } = useTranslation();
-  
+
   // Detect if running in PWA mode
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                window.navigator.standalone || 
-                document.referrer.includes('android-app://');
+  const isPWA =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone ||
+    document.referrer.includes("android-app://");
 
   const allIcons = [
     {
-      url: "icons/SideIcons/TourMap.png",
+      url: "icons/SideIcons1/TourMap.webp",
       label: "tourMap",
       to: "/TourMap",
       Device: userType === "guest" ? "All" : "Mobile",
@@ -20,7 +21,7 @@ export default function SideButtons({ userType = "tourist" }) {
       tourClass: "side-button-map", // Tour target
     },
     {
-      url: "icons/SideIcons/Itineraries.png",
+      url: "icons/SideIcons1/Itineraries.webp",
       label: "createItinerary",
       to: "/CreateItinerary",
       Device: "All",
@@ -28,7 +29,7 @@ export default function SideButtons({ userType = "tourist" }) {
       tourClass: "side-button-itinerary", // Tour target
     },
     {
-      url: "icons/SideIcons/Photobooth.png",
+      url: "icons/SideIcons1/Photobooth.webp",
       label: "photobooth",
       to: "/Photobooth",
       Device: "Mobile",
@@ -36,7 +37,7 @@ export default function SideButtons({ userType = "tourist" }) {
       tourClass: "side-button-photobooth", // Tour target
     },
     {
-      url: "icons/SideIcons/Hotlines.png",
+      url: "icons/SideIcons1/Hotlines.webp",
       label: "hotlines",
       to: "/Emergency",
       Device: "Mobile",
@@ -44,7 +45,7 @@ export default function SideButtons({ userType = "tourist" }) {
       tourClass: "side-button-emergency", // Tour target
     },
     {
-      url: "icons/SideIcons/Profile.png",
+      url: "icons/SideIcons1/Profile.webp",
       label: "profile",
       to: userType === "guest" ? "/GuestProfile" : "/Profile",
       Device: "All",
@@ -52,7 +53,7 @@ export default function SideButtons({ userType = "tourist" }) {
       tourClass: "side-button-profile", // Tour target
     },
     {
-      url: "icons/SideIcons/Archive.png",
+      url: "icons/SideIcons1/Archive.webp",
       label: "tripArchives",
       to: "/TripArchive",
       Device: "All",
@@ -62,12 +63,12 @@ export default function SideButtons({ userType = "tourist" }) {
   ];
 
   // Filter icons based on userType
-  const icons = allIcons.filter(icon => icon.allowedFor.includes(userType));
+  const icons = allIcons.filter((icon) => icon.allowedFor.includes(userType));
 
   return (
     <div
       className={`fixed top-1/2 -translate-y-1/2 flex flex-col z-50
-                right-2 max-[375px]:right-1 ${isPWA ? 'gap-3' : 'gap-5'}`}
+                right-2 max-[375px]:right-1 ${isPWA ? "gap-3" : "gap-5"}`}
     >
       {icons.map((icon, index) => {
         let visibilityClass = "";
@@ -88,7 +89,9 @@ export default function SideButtons({ userType = "tourist" }) {
           <Link
             to={icon.to}
             key={index}
-            className={`${visibilityClass} ${icon.tourClass || ''} flex flex-col items-center group`}
+            className={`${visibilityClass} ${
+              icon.tourClass || ""
+            } flex flex-col items-center group`}
           >
             <div
               className={`${buttonSize}
@@ -104,12 +107,17 @@ export default function SideButtons({ userType = "tourist" }) {
             </div>
 
             <span
-              className={`${isPWA 
-                ? 'text-[9px] max-[375px]:text-[8px] sm:text-[10px] lg:text-xs mt-1' 
-                : 'text-[11px] sm:text-xs lg:text-sm mt-1.5'} 
+              className={`${
+                isPWA
+                  ? "text-[9px] max-[375px]:text-[8px] sm:text-[10px] lg:text-xs mt-1"
+                  : "text-[11px] sm:text-xs lg:text-sm mt-1.5"
+              } 
                 text-white font-semibold opacity-80 group-hover:opacity-100 transition-opacity duration-300
-                text-center leading-tight ${isPWA ? 'max-w-[50px]' : ''}`}
-              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.4)' }}
+                text-center leading-tight ${isPWA ? "max-w-[50px]" : ""}`}
+              style={{
+                textShadow:
+                  "0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.4)",
+              }}
             >
               {t(icon.label)}
             </span>

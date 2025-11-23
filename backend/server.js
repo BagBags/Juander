@@ -60,6 +60,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // Development
+      "http://localhost:4173",
       "http://juander-frontend.s3-website-ap-southeast-2.amazonaws.com", // Production S3
       "https://d39zx5gyblzxjs.cloudfront.net", // Production Frontend CloudFront
       "https://d3des4qdhz53rp.cloudfront.net", // Production Backend CloudFront

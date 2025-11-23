@@ -8,7 +8,7 @@ import { registerServiceWorker } from "./registerSW.js";
 
 // CONDITIONAL SERVICE WORKER CLEANUP - Only in development mode
 // This runs BEFORE React renders to ensure clean state
-const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isDevelopment = import.meta.env.DEV;
 
 if (isDevelopment && 'serviceWorker' in navigator) {
   // Unregister all service workers

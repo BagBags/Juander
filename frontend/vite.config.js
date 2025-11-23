@@ -8,6 +8,30 @@ import path from "path";
 
 export default defineConfig({
   base: "", // Empty string for relative paths
+  optimizeDeps: {
+    include: [
+      // Ensure stable resolution for transitive deps used by UI libs
+      "use-sync-external-store",
+      "use-sync-external-store/with-selector",
+      "react-redux",
+      // Prebundle map libs to ensure proper ESM default exports in dev
+      "mapbox-gl",
+      "react-map-gl",
+    ],
+    exclude: [
+      // Defer heavy libs; keep UI libs for correct ESM resolution in dev
+      "jspdf",
+      "jspdf-autotable",
+      "react-chartjs-2",
+      "chart.js",
+      "jsqr",
+      "lucide-react",
+      "framer-motion",
+    ],
+    esbuildOptions: {
+      minify: true,
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -230,6 +254,22 @@ export default defineConfig({
           react: ["react", "react-dom"],
           three: ["three", "@react-three/fiber", "@react-three/drei"],
           mapbox: ["mapbox-gl", "react-map-gl"],
+          icons_fa: ["react-icons/fa"],
+          icons_md: ["react-icons/md"],
+          icons_gi: ["react-icons/gi"],
+          icons_io5: ["react-icons/io5"],
+          icons_fa6: ["react-icons/fa6"],
+          fontawesome: [
+            "@fortawesome/react-fontawesome",
+            "@fortawesome/free-solid-svg-icons",
+            "@fortawesome/fontawesome-svg-core",
+          ],
+          pdf: ["jspdf", "jspdf-autotable"],
+          charts: ["react-chartjs-2", "chart.js/auto"],
+          qr: ["jsqr"],
+          joyride: ["react-joyride"],
+          dnd: ["@hello-pangea/dnd"],
+          framer: ["framer-motion"],
           admin: [
             "./src/components/adminComponents/adminTourMapComponents/AdminPinCard.jsx",
             "./src/components/adminComponents/adminTourMapComponents/AddPinModal.jsx",
