@@ -147,7 +147,19 @@ export default function CompleteProfile() {
     "July", "August", "September", "October", "November", "December"
   ];
 
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+  // Calculate max days in selected month (handles leap years)
+  const getDaysInMonth = (month, year) => {
+    if (!month) return 31;
+    const monthIndex = months.indexOf(month);
+    if (monthIndex === -1) return 31;
+    
+    // Use provided year or current year for leap year calculation
+    const yearToUse = year || new Date().getFullYear();
+    return new Date(yearToUse, monthIndex + 1, 0).getDate();
+  };
+
+  const maxDays = getDaysInMonth(formData.birthday.month, formData.birthday.year);
+  const days = Array.from({ length: maxDays }, (_, i) => i + 1);
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
   // Filtered country list
@@ -259,10 +271,16 @@ export default function CompleteProfile() {
                 </label>
                 <select
                   value={formData.birthday.month}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    birthday: { ...formData.birthday, month: e.target.value }
-                  })}
+                  onChange={(e) => {
+                    const newMonth = e.target.value;
+                    const newMaxDays = getDaysInMonth(newMonth, formData.birthday.year);
+                    // Reset date if current date is invalid for new month
+                    const newDate = formData.birthday.date > newMaxDays ? "" : formData.birthday.date;
+                    setFormData({
+                      ...formData,
+                      birthday: { ...formData.birthday, month: newMonth, date: newDate }
+                    });
+                  }}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
                   <option value="">Month</option>
@@ -297,10 +315,16 @@ export default function CompleteProfile() {
                 </label>
                 <select
                   value={formData.birthday.year}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    birthday: { ...formData.birthday, year: e.target.value }
-                  })}
+                  onChange={(e) => {
+                    const newYear = e.target.value;
+                    const newMaxDays = getDaysInMonth(formData.birthday.month, newYear);
+                    // Reset date if current date is invalid for new year (leap year check)
+                    const newDate = formData.birthday.date > newMaxDays ? "" : formData.birthday.date;
+                    setFormData({
+                      ...formData,
+                      birthday: { ...formData.birthday, year: newYear, date: newDate }
+                    });
+                  }}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
                   <option value="">Year</option>

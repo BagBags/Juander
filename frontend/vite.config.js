@@ -76,14 +76,125 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         runtimeCaching: [
-          // Photobooth filter images proxied through our backend
+          // ========================================
+          // CRITICAL: NEVER CACHE (Dynamic/Sensitive Data)
+          // ========================================
+          
+          // Authentication & User-specific endpoints - NetworkOnly
           {
-            urlPattern: /\/api\/photobooth\/filters\/proxy\?.*/i,
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries|visited-sites|itinerary-progress|logs)\/.*/i,
+            handler: "NetworkOnly",
+          },
+          
+          // User review mutations - NetworkOnly
+          {
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/reviews$/i,
+            handler: "NetworkOnly",
+            method: "POST",
+          },
+          {
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/reviews\/.*/i,
+            handler: "NetworkOnly",
+            method: "PUT",
+          },
+          {
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/reviews\/.*/i,
+            handler: "NetworkOnly",
+            method: "DELETE",
+          },
+          
+          // Emergency contacts - StaleWhileRevalidate (SAFETY-CRITICAL - MUST WORK OFFLINE!)
+          {
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/emergency.*/i,
+            handler: "StaleWhileRevalidate",
+            method: "GET",
+            options: {
+              cacheName: "emergency-contacts-cache",
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days (rarely change)
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+
+          // ========================================
+          // TOUR-CRITICAL: OFFLINE-READY PUBLIC DATA
+          // ========================================
+          
+          // All pins (GET) - StaleWhileRevalidate (FAST + OFFLINE-READY)
+          {
+            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/pins(\/.*)?$/i,
+            handler: "StaleWhileRevalidate",
+            method: "GET",
+            options: {
+              cacheName: "tour-pins-cache",
+              expiration: {
+                maxEntries: 150,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          
+          // All public itineraries (GET) - StaleWhileRevalidate (OFFLINE-READY)
+          {
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/itineraries\/.*/i,
+            handler: "StaleWhileRevalidate",
+            method: "GET",
+            options: {
+              cacheName: "tour-itineraries-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          
+          // All public reviews (GET) - StaleWhileRevalidate
+          {
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/reviews(\/[^\/]+)?(\?.*)?$/i,
+            handler: "StaleWhileRevalidate",
+            method: "GET",
+            options: {
+              cacheName: "tour-reviews-cache",
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 3, // 3 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+
+          // ========================================
+          // S3 CLOUDFRONT ASSETS - TOUR-CRITICAL
+          // ========================================
+          
+          // Pin facades, AR models & Emergency icons - CacheFirst (OFFLINE-READY)
+          {
+            urlPattern:
+              /^https:\/\/(d39zx5gyblzxjs\.cloudfront\.net|d3des4qdhz53rp\.cloudfront\.net|juander-frontend\.s3\.ap-southeast-2\.amazonaws\.com)\/uploads\/(facades|arModels|emergency)\/.*/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "photobooth-filter-images",
+              cacheName: "tour-static-assets",
               expiration: {
-                maxEntries: 300,
+                maxEntries: 250,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
               },
               cacheableResponse: {
@@ -91,145 +202,164 @@ export default defineConfig({
               },
             },
           },
-          // Chatbot API calls - Bot entries and OpenAI
+          
+          // Admin itinerary images - StaleWhileRevalidate
           {
             urlPattern:
-              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai).*/i,
-            handler: "NetworkFirst",
+              /^https:\/\/(d39zx5gyblzxjs\.cloudfront\.net|d3des4qdhz53rp\.cloudfront\.net|juander-frontend\.s3\.ap-southeast-2\.amazonaws\.com)\/uploads\/itineraries\/.*/i,
+            handler: "StaleWhileRevalidate",
             options: {
-              cacheName: "chatbot-api-cache",
+              cacheName: "tour-itinerary-images",
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 1 day for chatbot responses
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
-              networkTimeoutSeconds: 30, // Longer timeout for OpenAI API
               cacheableResponse: {
                 statuses: [0, 200],
               },
             },
           },
-          // Guest API calls - Public endpoints only (pins, reviews)
+          
+          // User-uploaded content - NetworkFirst (updates priority)
           {
             urlPattern:
-              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(pins|reviews|itineraries\/admin)\/.*/i,
+              /^https:\/\/(d39zx5gyblzxjs\.cloudfront\.net|d3des4qdhz53rp\.cloudfront\.net|juander-frontend\.s3\.ap-southeast-2\.amazonaws\.com)\/uploads\/(profile|reviews|userItineraries|media)\/.*/i,
             handler: "NetworkFirst",
             options: {
-              cacheName: "guest-api-cache",
+              cacheName: "s3-user-content",
               expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days for guest content
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 2, // 2 days
               },
-              networkTimeoutSeconds: 10,
+              networkTimeoutSeconds: 5,
               cacheableResponse: {
                 statuses: [0, 200],
               },
             },
           },
-          // Exclude authenticated endpoints from caching
+
+          // ========================================
+          // OTHER API ENDPOINTS
+          // ========================================
+          
+          // Chatbot API - NetworkFirst (AI responses)
           {
             urlPattern:
-              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries)\/.*/i,
-            handler: "NetworkOnly",
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(bot|openai|gemini).*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "chatbot-cache",
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24, // 1 day
+              },
+              networkTimeoutSeconds: 30,
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
           },
-          // Images - Cache First (with stale-while-revalidate)
+
+          // ========================================
+          // STATIC ASSETS - AGGRESSIVE CACHING
+          // ========================================
+          
+          // Local images - CacheFirst (versioned by build)
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "image-cache",
+              cacheName: "local-images-cache",
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
               },
             },
           },
-          // Videos - Cache First
+          
+          // Videos - CacheFirst
           {
             urlPattern: /\.(?:mp4|webm|ogg|mov)$/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "video-cache",
+              cacheName: "videos-cache",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
               },
               rangeRequests: true,
             },
           },
-          // 3D Models - Cache First
+          
+          // 3D Models - CacheFirst
           {
             urlPattern: /\.(?:glb|gltf)$/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "3d-model-cache",
+              cacheName: "3d-models-cache",
               expiration: {
-                maxEntries: 30,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 90, // 90 days
               },
             },
           },
-          // Fonts - Cache First
+          
+          // Fonts - CacheFirst
           {
             urlPattern: /\.(?:woff|woff2|ttf|eot)$/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "font-cache",
+              cacheName: "fonts-cache",
               expiration: {
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
               },
             },
           },
-          // Mapbox tiles - Cache First (better for offline)
+
+          // ========================================
+          // EXTERNAL RESOURCES - TOUR-CRITICAL
+          // ========================================
+          
+          // Mapbox tiles - CacheFirst (OFFLINE MAPS)
           {
             urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
             handler: "CacheFirst",
             options: {
-              cacheName: "mapbox-cache",
+              cacheName: "mapbox-tiles-cache",
               expiration: {
-                maxEntries: 1000,
+                maxEntries: 2000, // Large cache for offline maps
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
               },
               cacheableResponse: {
                 statuses: [0, 200],
               },
-              // Add plugins for better offline handling
-              plugins: [
-                {
-                  handlerDidError: async () => {
-                    // Return a fallback response when map tiles fail
-                    return new Response(
-                      JSON.stringify({
-                        error: "Offline - Map tiles unavailable",
-                      }),
-                      {
-                        status: 503,
-                        statusText: "Service Unavailable",
-                        headers: { "Content-Type": "application/json" },
-                      }
-                    );
-                  },
-                },
-              ],
             },
           },
-          // External CDN resources
+          
+          // Google Fonts & CDN - CacheFirst
           {
             urlPattern:
-              /^https:\/\/(cdn|unpkg|fonts\.googleapis|fonts\.gstatic)\.com\/.*/i,
-            handler: "StaleWhileRevalidate",
+              /^https:\/\/(fonts\.googleapis|fonts\.gstatic|cdn\.jsdelivr\.net|unpkg\.com|www\.gstatic)\.com\/.*/i,
+            handler: "CacheFirst",
             options: {
-              cacheName: "cdn-cache",
+              cacheName: "external-cdn-cache",
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
               },
             },
           },
         ],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [
-          /^\/api/, // Only block API calls
+          /^\/api/, // Prevent API calls from falling back to index.html
         ],
       },
       devOptions: {

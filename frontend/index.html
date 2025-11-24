@@ -6,12 +6,19 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"
     />
+    
+    <!-- Performance optimizations -->
+    <link rel="dns-prefetch" href="https://api.mapbox.com" />
+    <link rel="dns-prefetch" href="https://d3des4qdhz53rp.cloudfront.net" />
+    <link rel="dns-prefetch" href="https://d39zx5gyblzxjs.cloudfront.net" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 
     <!-- Content Security Policy for Mapbox, Workers, APIs, and 3D Models -->
-    <!-- Note: 'unsafe-inline' and 'unsafe-eval' required for React, Vite, Mapbox, and TensorFlow.js -->
+    <!-- Note: Some 'unsafe-inline' and 'unsafe-eval' needed for Mapbox GL JS and dev tools -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://accounts.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com/draco/ blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://d3des4qdhz53rp.cloudfront.net https://d39zx5gyblzxjs.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://flagcdn.com; media-src 'self' https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://d3des4qdhz53rp.cloudfront.net https://d39zx5gyblzxjs.cloudfront.net blob: data:; connect-src 'self' http://localhost:5000 https://api.mapbox.com https://events.mapbox.com https://d3des4qdhz53rp.cloudfront.net https://d39zx5gyblzxjs.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://accounts.google.com https://api.openai.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com https://www.kaggle.com https://tfhub.dev https://www.gstatic.com blob: wss:; frame-src 'self' https://accounts.google.com;"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.mapbox.com https://accounts.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com https://www.gstatic.com/draco/ blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://d3des4qdhz53rp.cloudfront.net https://d39zx5gyblzxjs.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://api.mapbox.com; media-src 'self' https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://d3des4qdhz53rp.cloudfront.net https://d39zx5gyblzxjs.cloudfront.net blob: data:; connect-src 'self' http://localhost:5000 https://api.mapbox.com https://events.mapbox.com https://d3des4qdhz53rp.cloudfront.net https://d39zx5gyblzxjs.cloudfront.net https://juander-frontend.s3.ap-southeast-2.amazonaws.com https://accounts.google.com https://api.openai.com https://cdn.jsdelivr.net https://unpkg.com https://storage.googleapis.com https://www.kaggle.com https://tfhub.dev https://www.gstatic.com blob: wss:; frame-src 'self' https://accounts.google.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests;"
     />
     <!-- App Title -->
     <title>Juander - Intramuros Tour Guide</title>
@@ -61,17 +68,28 @@
     <meta name="theme-color" content="#f04e37" />
     <meta name="background-color" content="#ffffff" />
 
-    <!-- Preconnect & Preload Fonts -->
+    <!-- Preconnect & Preload Critical Resources -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.mapbox.com" />
+    <link rel="preconnect" href="https://d3des4qdhz53rp.cloudfront.net" />
     <link
       rel="preload"
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
       as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
   </head>
 

@@ -39,6 +39,9 @@ const { verifyAdmin } = require("./middleware/authMiddleware");
 // Needed for resolving __dirname in CommonJS
 const app = express();
 
+// Disable Express fingerprinting
+app.disable('x-powered-by');
+
 // Health check endpoint (for EB)
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -77,25 +80,45 @@ app.use(
 // Security Headers Middleware
 app.use((req, res, next) => {
   // Anti-clickjacking protection
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Frame-Options', 'DENY');
   
-  // Content Security Policy (backend API responses)
+  // Content Security Policy (strict for API responses)
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; frame-ancestors 'self'"
+    "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
   );
   
   // Prevent MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
   
-  // XSS Protection
-  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Referrer Policy (strict)
+  res.setHeader('Referrer-Policy', 'no-referrer');
   
-  // Referrer Policy
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Permissions Policy (restrict features)
+  res.setHeader(
+    'Permissions-Policy',
+    'geolocation=(self), camera=(self), microphone=(), payment=(), usb=()'
+  );
   
-  // Remove X-Powered-By header
+  // Cache-Control for API responses
+  if (req.path.startsWith('/api/')) {
+    // Dynamic API responses - no cache
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  } else if (req.path.startsWith('/uploads/')) {
+    // Static assets - aggressive caching
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  
+  // HSTS - Force HTTPS (only in production)
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  // Remove server fingerprinting headers
   res.removeHeader('X-Powered-By');
+  res.removeHeader('Server');
   
   next();
 });
@@ -172,10 +195,16 @@ app.use(
 //   });
 // }
 
-// Global error handler
+// Global error handler (prevent stack trace leaks)
 app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err.stack);
-  res.status(500).json({ error: "Internal Server Error" });
+  
+  // Don't leak error details in production
+  const isDev = process.env.NODE_ENV !== 'production';
+  res.status(err.status || 500).json({ 
+    error: isDev ? err.message : "Internal Server Error",
+    ...(isDev && { stack: err.stack }) // Only include stack in development
+  });
 });
 
 // Start server with HTTPS

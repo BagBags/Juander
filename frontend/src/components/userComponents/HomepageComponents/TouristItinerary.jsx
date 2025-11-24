@@ -207,7 +207,28 @@ export default function TouristItinerary() {
 }
 
 function InstructionModal() {
-  const [show, setShow] = useState(true);
+  const [show, setShow] = useState(false);
+  
+  useEffect(() => {
+    const checkTutorialStatus = async () => {
+      try {
+        // Check if user has disabled Tour Map tutorial in settings
+        const { getTourMapTourStatus } = await import("../../../utils/tourApi");
+        const status = await getTourMapTourStatus();
+        
+        // Only show if tutorial is not completed (i.e., enabled in settings)
+        if (!status.hasCompletedTourMapTour) {
+          setShow(true);
+        }
+      } catch (err) {
+        // If API fails or user is not logged in, don't show modal by default
+        console.error("Error checking tutorial status:", err);
+      }
+    };
+    
+    checkTutorialStatus();
+  }, []);
+  
   if (!show) return null;
   const step = {
     title: "Choose Itinerary",

@@ -36,6 +36,17 @@ export default function Birthday() {
     "Dec",
   ];
 
+  // Calculate max days in selected month (handles leap years)
+  const getDaysInMonth = (monthShort, year) => {
+    if (!monthShort) return 31;
+    const monthIndex = months.indexOf(monthShort);
+    if (monthIndex === -1) return 31;
+    
+    // Use provided year or current year for leap year calculation
+    const yearToUse = year || new Date().getFullYear();
+    return new Date(yearToUse, monthIndex + 1, 0).getDate();
+  };
+
   // Fetch birthday on mount
   useEffect(() => {
     const fetchBirthday = async () => {
@@ -92,6 +103,21 @@ export default function Birthday() {
           message: t("fillOutAllFields") || "Fill out all fields.",
           autoClose: true,
           autoCloseDuration: 2000,
+        });
+        return;
+      }
+
+      // Validate date is valid for selected month
+      const maxDays = getDaysInMonth(month, year);
+      const dateNum = parseInt(date, 10);
+      if (dateNum < 1 || dateNum > maxDays) {
+        setNotification({
+          isOpen: true,
+          type: "warning",
+          title: t("invalidDate") || "Invalid Date",
+          message: `${month} only has ${maxDays} days. Please select a valid date.`,
+          autoClose: true,
+          autoCloseDuration: 3000,
         });
         return;
       }
@@ -159,9 +185,16 @@ export default function Birthday() {
             type="number"
             placeholder={t("date")}
             min="1"
-            max="31"
+            max={month ? getDaysInMonth(month, year) : 31}
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              const maxDays = month ? getDaysInMonth(month, year) : 31;
+              // Only allow values within valid range
+              if (value === "" || (parseInt(value, 10) >= 1 && parseInt(value, 10) <= maxDays)) {
+                setDate(value);
+              }
+            }}
             className="border border-gray-300 rounded-md px-3 py-2 w-20 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
           />
 
