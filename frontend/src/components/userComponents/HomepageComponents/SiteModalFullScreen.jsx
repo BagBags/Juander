@@ -427,7 +427,8 @@ export default function SiteModalFullScreen({
                   className="flex-1 w-full border-0"
                   allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; ambient-light-sensor *; xr *; xr-spatial-tracking *; device-orientation *; geolocation *; web-share *; clipboard-write *; autoplay *; fullscreen *; display-capture *; picture-in-picture *"
                   allowFullScreen
-                  sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
+                  referrerPolicy="no-referrer-when-downgrade"
                   style={{
                     width: '100%',
                     height: '100%',

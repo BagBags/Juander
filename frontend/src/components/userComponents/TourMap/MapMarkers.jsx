@@ -40,7 +40,7 @@ export const PinMarkers = ({ pins, selectedPin, onPinClick }) => {
 
           {/* Pin centered on the facade */}
           <div
-            className="absolute top-1/2 left-1/2 w-5 h-5 rounded-full border-2 border-white shadow-md"
+            className="absolute top-1/2 left-1/2 w-5 h-5 rounded-full border-2 border-white shadow-md opacity-60"
             style={{
               transform: "translate(-50%, -50%)",
               backgroundColor:

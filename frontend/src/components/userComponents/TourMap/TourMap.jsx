@@ -39,7 +39,6 @@ export default function TourMap() {
   const mapRef = useRef(null);
   const [selectedPin, setSelectedPin] = useState(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW);
-  const [showLegend, setShowLegend] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [mapError, setMapError] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -207,11 +206,9 @@ export default function TourMap() {
         <MapLayers mask={mask} inverseMask={inverseMask} route={null} />
       </Map>
 
-      {/* Control Buttons: Search + Legend */}
+      {/* Control Buttons: Search */}
       <TourMapControlButtons
         onOpenSearch={() => setShowSearchModal(true)}
-        showLegend={showLegend}
-        setShowLegend={setShowLegend}
       />
 
       {/* UI Overlays */}
@@ -219,9 +216,6 @@ export default function TourMap() {
         selectedPin={selectedPin}
         distance={null}
         onCloseCard={handleCloseCard}
-        showLegend={showLegend}
-        setShowLegend={setShowLegend}
-        showLegendButton={false}
       />
 
       {/* Search Modal */}

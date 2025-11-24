@@ -1,40 +1,12 @@
 // components/userComponents/MapOverlays.jsx
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { createPortal } from "react-dom";
 import SiteCard from "./SiteCard";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfo } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLegend, showLegendButton = true }) => {
+const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const legendRef = useRef(null);
-
-  // Auto-close legend when clicking outside or pressing Escape
-  useEffect(() => {
-    if (!showLegend) return;
-    const onDocClick = (e) => {
-      if (legendRef.current && !legendRef.current.contains(e.target)) {
-        setShowLegend(false);
-      }
-    };
-    const onEsc = (e) => {
-      if (e.key === 'Escape') setShowLegend(false);
-    };
-    document.addEventListener('mousedown', onDocClick);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', onDocClick);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [showLegend, setShowLegend]);
-
-  // Close legend if path changes (leaving TourMap)
-  useEffect(() => {
-    setShowLegend(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
 
   const backHeader = (
     <div 
@@ -98,44 +70,6 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard, showLegend, setShowLe
       {/* Back Header - Rendered via Portal */}
       {createPortal(backHeader, document.body)}
 
-      {/* Legend Button - optionally rendered */}
-      {showLegendButton && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log('Legend button clicked, current state:', showLegend);
-            setShowLegend((prev) => !prev);
-          }}
-          title="Map Legend"
-          aria-label="Toggle map legend"
-          className="absolute top-28 right-4 z-30 p-2.5 rounded-lg shadow-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
-          style={{
-            backgroundColor: showLegend ? '#eff6ff' : 'white',
-            color: showLegend ? '#2563eb' : '#374151'
-          }}
-        >
-          <FontAwesomeIcon icon={faInfo} className="text-lg" />
-        </button>
-      )}
-      
-      {/* Legend Panel */}
-      {showLegend && (
-        <div ref={legendRef} className="absolute top-40 right-4 z-40 bg-white rounded-lg shadow-lg w-52 p-4 text-gray-800 animate-fadeIn pointer-events-auto">
-          <h4 className="font-semibold mb-3 text-lg border-b pb-1">
-            Map Legend
-          </h4>
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-center space-x-2">
-              <span className="w-4 h-4 rounded-full bg-red-600 border border-white shadow-sm"></span>
-              <span>Active Site</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <span className="w-4 h-4 rounded-full bg-blue-600 border border-white shadow-sm"></span>
-              <span>Disabled Site</span>
-            </li>
-          </ul>
-        </div>
-      )}
 
       {/* Site card */}
       {selectedPin && (

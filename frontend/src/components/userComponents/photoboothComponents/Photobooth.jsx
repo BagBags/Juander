@@ -107,6 +107,11 @@ export default function Photobooth() {
                 }
               } catch {}
             }
+            // Add cache-busting timestamp to force fresh load
+            const cacheBuster = `?t=${Date.now()}`;
+            const imageUrlWithCache = imageUrl + cacheBuster;
+            const originalUrlWithCache = originalUrl + cacheBuster;
+            
             return {
               ...f,
               label: f.label || f.name,
@@ -114,8 +119,8 @@ export default function Photobooth() {
                 f.value ||
                 f.name?.toLowerCase().replace(/\s+/g, "-") ||
                 `filter-${Date.now()}`,
-              image: imageUrl,
-              originalImage: originalUrl,
+              image: imageUrlWithCache,
+              originalImage: originalUrlWithCache,
               category: f.category || "general",
               id:
                 f._id ||
@@ -167,6 +172,7 @@ export default function Photobooth() {
     if (!url || preloadedRef.current.has(url)) return Promise.resolve();
     return new Promise((resolve) => {
       const img = new Image();
+      img.crossOrigin = "anonymous"; // Request CORS headers
       img.onload = () => {
         preloadedRef.current.add(url);
         resolve();
