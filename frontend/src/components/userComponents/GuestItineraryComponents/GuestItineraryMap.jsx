@@ -1617,48 +1617,46 @@ export default function GuestItineraryMap() {
         )}
 
         {/* Directions Panel */}
-        {!showGpsModal && (
-          <DirectionsPanel
-        steps={steps}
-        currentStepIndex={currentStepIndex}
-        setCurrentStepIndex={setCurrentStepIndex}
-        eta={eta}
-        distance={distance}
-        arrivalTime={arrivalTime}
-        transportMode={transportMode}
-        isRouting={isRouting}
-        userLocation={userLocation}
-        activePin={activePin}
-        onPrevSite={handlePrevSite}
-        onSkipSite={handleSkipSite}
-        onNextSite={handleNextSite}
-        hasPrevSite={currentPinIndex > 0}
-        hasNextSite={true}
-        isLastSite={currentPinIndex >= optimizedPins.length - 1}
-        onArriveAtDestination={() => {
-          if (!isTourRunning && !showGpsModal && activePin) {
-            setSelectedPin(activePin);
-            setShowFullModal(true);
-          }
-        }}
-          />
-        )}
+        <DirectionsPanel
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            setCurrentStepIndex={setCurrentStepIndex}
+            eta={eta}
+            distance={distance}
+            arrivalTime={arrivalTime}
+            transportMode={transportMode}
+            isRouting={isRouting}
+            userLocation={userLocation}
+            activePin={activePin}
+            onPrevSite={handlePrevSite}
+            onSkipSite={handleSkipSite}
+            onNextSite={handleNextSite}
+            hasPrevSite={currentPinIndex > 0}
+            hasNextSite={true}
+            isLastSite={currentPinIndex >= optimizedPins.length - 1}
+            onArriveAtDestination={() => {
+              if (!isTourRunning && !showGpsModal && activePin) {
+                setSelectedPin(activePin);
+                setShowFullModal(true);
+              }
+            }}
+        />
 
         {/* Control Buttons */}
-        {!showGpsModal && !showFullModal && (
+        {!showFullModal && (
           <MapControlButtons
-          userLocation={userLocation}
-          selectedPin={selectedPin}
-          pins={optimizedPins}
-          currentPinIndex={currentPinIndex}
-          setViewState={setViewState}
-          setSelectedPin={setSelectedPin}
-          setManuallyDismissed={setManuallyDismissed}
-          enableTransportMode={true}
-          showTransportPanel={showTransportPanel}
-          setShowTransportPanel={setShowTransportPanel}
-          transportMode={transportMode}
-          setTransportMode={setTransportMode}
+              userLocation={userLocation}
+              selectedPin={selectedPin}
+              pins={optimizedPins}
+              currentPinIndex={currentPinIndex}
+              setViewState={setViewState}
+              setSelectedPin={setSelectedPin}
+              setManuallyDismissed={setManuallyDismissed}
+              enableTransportMode={true}
+              showTransportPanel={showTransportPanel}
+              setShowTransportPanel={setShowTransportPanel}
+              transportMode={transportMode}
+              setTransportMode={setTransportMode}
           />
         )}
 

@@ -14,7 +14,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const buildEmailHtml = ({ title, message, otp, actionUrl, actionText }) => {
   const brand = "#f04e37";
   const brandLight = "#ff6b54";
-  const logoUrl = `${process.env.FRONTEND_URL || ""}/Logo.svg`;
+  const logoUrl = "https://d39zx5gyblzxjs.cloudfront.net/Logo.svg";
   const safeAction = actionUrl || `${process.env.FRONTEND_URL || ""}/login`;
   const btnText = actionText || "Complete your registration";
   return `
@@ -34,7 +34,6 @@ const buildEmailHtml = ({ title, message, otp, actionUrl, actionText }) => {
           <div style="margin-top:18px">
             <a href="${safeAction}" style="display:inline-block;background:${brand};color:#fff;text-decoration:none;border-radius:999px;padding:12px 20px;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,0.06)">${btnText}</a>
           </div>
-          <p style="margin:14px 0 0;font-size:13px;color:#667085">or <a href="${safeAction}" style="color:${brand};text-decoration:none;font-weight:600">log in</a> to your account</p>
         </div>
       </div>
       <div style="text-align:center;color:#98a2b3;font-size:12px;margin-top:16px">Juander · All rights reserved</div>
