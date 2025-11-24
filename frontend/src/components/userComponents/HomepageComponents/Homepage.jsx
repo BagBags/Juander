@@ -26,42 +26,21 @@ export default function Homepage() {
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Monitor online/offline status - IMPROVED detection
+  // Monitor online/offline status - simplified (no backend health fetch)
   useEffect(() => {
-    // Test actual connectivity instead of just navigator.onLine
-    const checkConnectivity = async () => {
-      try {
-        // Try to fetch backend health endpoint
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
-        await fetch('http://192.168.100.10:5000/health', {
-          signal: controller.signal,
-          cache: 'no-store'
-        });
-        
-        clearTimeout(timeoutId);
-        setIsOffline(false);
-        setShowOfflineBanner(false);
-      } catch (error) {
-        // Only set offline if backend is truly unreachable
-        console.warn('[Connectivity] Backend check failed:', error.message);
-        setIsOffline(true);
-        setShowOfflineBanner(true);
-      }
-    };
-
-    // Check connectivity on mount
-    checkConnectivity();
-
-    // Listen to browser events as backup
     const handleOnline = () => {
-      checkConnectivity();
+      setIsOffline(false);
+      setShowOfflineBanner(false);
     };
     const handleOffline = () => {
       setIsOffline(true);
       setShowOfflineBanner(true);
     };
+
+    // Initial state from browser
+    if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+      navigator.onLine ? handleOnline() : handleOffline();
+    }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);

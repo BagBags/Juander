@@ -272,7 +272,7 @@ export default function SignupForm({ toggleForm }) {
       )}
 
       {step === "form" ? (
-        <form onSubmit={handleFormSubmit} className="space-y-3">
+        <form onSubmit={handleFormSubmit} noValidate className="space-y-3">
           <div className="flex gap-2">
             <div className="w-1/2">
               <label htmlFor="signup-firstname" className="sr-only">First Name</label>
@@ -317,7 +317,9 @@ export default function SignupForm({ toggleForm }) {
             <label htmlFor="signup-email" className="sr-only">Email Address</label>
             <input
               id="signup-email"
-              type="email"
+              type="text"
+              inputMode="email"
+              autoComplete="email"
               name="email"
               placeholder="Email"
               aria-label="Email Address"

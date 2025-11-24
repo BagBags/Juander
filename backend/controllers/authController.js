@@ -11,9 +11,41 @@ const PendingUser = require("../models/pendingUserModel"); // make sure you have
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const buildEmailHtml = ({ title, message, otp, actionUrl, actionText }) => {
+  const brand = "#f04e37";
+  const brandLight = "#ff6b54";
+  const logoUrl = `${process.env.FRONTEND_URL || ""}/Logo.svg`;
+  const safeAction = actionUrl || `${process.env.FRONTEND_URL || ""}/login`;
+  const btnText = actionText || "Complete your registration";
+  return `
+  <div style="background:#ffffff;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:560px;margin:0 auto;">
+      <div style="background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 8px 24px rgba(16,24,40,0.12);border:1px solid #f1f1f3">
+        <div style="background:${brand};background-image:linear-gradient(135deg, ${brand}, ${brandLight});height:120px;display:flex;align-items:center;justify-content:center">
+          <img src="${logoUrl}" alt="Juander" style="height:44px;display:block;margin:auto"/>
+        </div>
+        <div style="padding:24px;text-align:center">
+          <h1 style="margin:0 0 8px;font-size:22px;color:#101828;letter-spacing:-0.2px">${title}</h1>
+          <p style="margin:0 0 16px;font-size:14px;color:#475467">${message}</p>
+          ${otp ? `<div style="margin:18px 0;padding:14px 18px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;display:inline-block">
+            <div style="font-size:12px;color:#667085;letter-spacing:.6px;text-transform:uppercase">Your OTP</div>
+            <div style="font-size:26px;font-weight:700;color:${brand};letter-spacing:2px">${otp}</div>
+          </div>` : ""}
+          <div style="margin-top:18px">
+            <a href="${safeAction}" style="display:inline-block;background:${brand};color:#fff;text-decoration:none;border-radius:999px;padding:12px 20px;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,0.06)">${btnText}</a>
+          </div>
+          <p style="margin:14px 0 0;font-size:13px;color:#667085">or <a href="${safeAction}" style="color:${brand};text-decoration:none;font-weight:600">log in</a> to your account</p>
+        </div>
+      </div>
+      <div style="text-align:center;color:#98a2b3;font-size:12px;margin-top:16px">Juander · All rights reserved</div>
+    </div>
+  </div>`;
+};
+
 exports.register = async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
+    const COOLDOWN_MS = parseInt(process.env.OTP_COOLDOWN_MS || "60000", 10);
 
     // Check if already exists in main User collection
     const existingUser = await User.findOne({ email });
@@ -22,7 +54,10 @@ exports.register = async (req, res) => {
 
     // Also check PendingUser
     const pending = await PendingUser.findOne({ email });
-    if (pending) await PendingUser.deleteOne({ email }); // clean old pending
+    if (pending && pending.otpLastSent && Date.now() - new Date(pending.otpLastSent).getTime() < COOLDOWN_MS) {
+      return res.status(429).json({ message: "Please wait before requesting another OTP." });
+    }
+    if (pending) await PendingUser.deleteOne({ email });
 
     const hashedPassword = await argon2.hash(password);
 
@@ -52,8 +87,18 @@ exports.register = async (req, res) => {
       from: `"Juander" <${process.env.MAIL_USER}>`,
       to: email,
       subject: "Verify your email",
+      html: buildEmailHtml({
+        title: "Thank you for your registration",
+        message: "Use the OTP below to complete your registration. It expires in 10 minutes.",
+        otp,
+        actionUrl: `${process.env.FRONTEND_URL || ""}/login`,
+        actionText: "Complete your registration",
+      }),
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
     });
+
+    newPendingUser.otpLastSent = new Date();
+    await newPendingUser.save();
 
     res.status(201).json({
       message:
@@ -73,6 +118,7 @@ exports.sendEmailVerificationOtp = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "Email is required" });
+    const COOLDOWN_MS = parseInt(process.env.OTP_COOLDOWN_MS || "60000", 10);
 
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -81,6 +127,12 @@ exports.sendEmailVerificationOtp = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser && existingUser._id.toString() !== user._id.toString()) {
       return res.status(400).json({ message: "Email is already in use" });
+    }
+
+    // Rate-limit OTP sends
+    if (user.otpLastSent && Date.now() - new Date(user.otpLastSent).getTime() < COOLDOWN_MS) {
+      const waitSec = Math.ceil((COOLDOWN_MS - (Date.now() - new Date(user.otpLastSent).getTime())) / 1000);
+      return res.status(429).json({ message: `Please wait ${waitSec}s before requesting another OTP.` });
     }
 
     // Generate and send OTP
@@ -98,8 +150,18 @@ exports.sendEmailVerificationOtp = async (req, res) => {
       from: `"Juander" <${process.env.MAIL_USER}>`,
       to: email,
       subject: "Verify your new email",
+      html: buildEmailHtml({
+        title: "Verify your new email",
+        message: "Use the OTP below to verify your new email. It expires in 10 minutes.",
+        otp,
+        actionUrl: `${process.env.FRONTEND_URL || ""}/login`,
+        actionText: "Verify email",
+      }),
       text: `Your OTP is ${otp}. It will expire in 10 minutes.`,
     });
+
+    user.otpLastSent = new Date();
+    await user.save();
 
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (err) {
@@ -142,11 +204,18 @@ exports.sendOtp = async (req, res) => {
   try {
     const { email } = req.body;
     console.log("Sending OTP to:", email); // debug log
+    const COOLDOWN_MS = parseInt(process.env.OTP_COOLDOWN_MS || "60000", 10);
 
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Rate-limit OTP sends
+    if (user.otpLastSent && Date.now() - new Date(user.otpLastSent).getTime() < COOLDOWN_MS) {
+      const waitSec = Math.ceil((COOLDOWN_MS - (Date.now() - new Date(user.otpLastSent).getTime())) / 1000);
+      return res.status(429).json({ message: `Please wait ${waitSec}s before requesting another OTP.` });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
@@ -167,10 +236,19 @@ exports.sendOtp = async (req, res) => {
       from: `"Juander" <${process.env.MAIL_USER}>`,
       to: email,
       subject: "OTP for Password Reset",
+      html: buildEmailHtml({
+        title: "Reset your password",
+        message: "Use the OTP below to reset your password. It expires in 10 minutes.",
+        otp,
+        actionUrl: `${process.env.FRONTEND_URL || ""}/login`,
+        actionText: "Reset password",
+      }),
       text: `Your password reset OTP is ${otp}. It will expire in 10 minutes.`,
     });
 
     console.log("Email sent:", info.response); // debug log
+    user.otpLastSent = new Date();
+    await user.save();
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (err) {
     console.error("Send OTP error:", err); // full error
@@ -182,6 +260,7 @@ exports.resendSignupOtp = async (req, res) => {
   try {
     const { email } = req.body;
     console.log("Resending signup OTP to:", email);
+    const COOLDOWN_MS = parseInt(process.env.OTP_COOLDOWN_MS || "60000", 10);
 
     if (!email) return res.status(400).json({ message: "Email is required" });
 
@@ -191,6 +270,12 @@ exports.resendSignupOtp = async (req, res) => {
       return res.status(404).json({ 
         message: "No pending registration found for this email" 
       });
+    }
+
+    // Rate-limit OTP sends
+    if (user.otpLastSent && Date.now() - new Date(user.otpLastSent).getTime() < COOLDOWN_MS) {
+      const waitSec = Math.ceil((COOLDOWN_MS - (Date.now() - new Date(user.otpLastSent).getTime())) / 1000);
+      return res.status(429).json({ message: `Please wait ${waitSec}s before requesting another OTP.` });
     }
 
     // Generate new OTP
@@ -213,11 +298,20 @@ exports.resendSignupOtp = async (req, res) => {
     const info = await transporter.sendMail({
       from: `"Juander" <${process.env.MAIL_USER}>`,
       to: email,
-      subject: "Verify Your Account - OTP Resent",
+      subject: "Verify Your Account",
+      html: buildEmailHtml({
+        title: "Verify your email",
+        message: "Use the OTP below to continue. It expires in 10 minutes.",
+        otp,
+        actionUrl: `${process.env.FRONTEND_URL || ""}/login`,
+        actionText: "Verify now",
+      }),
       text: `Your verification OTP is ${otp}. It will expire in 10 minutes.`,
     });
 
     console.log("Resend OTP email sent:", info.response);
+    user.otpLastSent = new Date();
+    await user.save();
     res.status(200).json({ message: "OTP resent successfully" });
   } catch (err) {
     console.error("Resend signup OTP error:", err);
@@ -497,7 +591,7 @@ exports.uploadProfilePicture = async (req, res) => {
 // Save account info (firstName, lastName, email, password)
 exports.saveAccount = async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { firstName, lastName, email, password, currentPassword } = req.body;
 
     // Fetch current user data before updating
     const currentUser = await User.findById(req.user._id);
@@ -530,6 +624,19 @@ exports.saveAccount = async (req, res) => {
     }
 
     if (password) {
+      if (currentUser.authProvider !== "local") {
+        return res.status(400).json({ message: "Password change is only available for local login accounts" });
+      }
+
+      if (!currentPassword) {
+        return res.status(400).json({ message: "Current password is required" });
+      }
+
+      const isValidCurrent = await argon2.verify(currentUser.password, currentPassword);
+      if (!isValidCurrent) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
       updates.password = await argon2.hash(password);
       changedFields.push("password");
     }

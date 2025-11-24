@@ -441,7 +441,7 @@ export default function Settings() {
       className="min-h-full bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
     >
       <PullToRefresh onRefresh={async () => { await new Promise((r) => setTimeout(r, 1000)); }}>
-      <div className="w-full max-w-md flex flex-col flex-1">
+      <div className="w-full max-w-md flex flex-col min-h-full">
         <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
           <h2 className="text-xl font-bold text-gray-800 mb-6">
             Notification Settings
@@ -546,11 +546,13 @@ export default function Settings() {
           autoCloseDuration={3000}
         />
 
-        <p className="mt-auto mb-8 text-xs text-center text-gray-400">
-          © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
-          College of Information and Computing Sciences.
-        </p>
-
+        </div>
+        <div className="mt-auto">
+          <div className="border-t border-gray-100 pt-4" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
+            <p className="text-center text-xs text-gray-400">
+              © {new Date().getFullYear()} Intramuros Administration. Developed by UST College of Information and Computing Sciences.
+            </p>
+          </div>
         </div>
       </div>
       
