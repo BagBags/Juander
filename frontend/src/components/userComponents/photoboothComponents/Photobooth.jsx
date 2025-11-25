@@ -339,8 +339,8 @@ export default function Photobooth() {
                       offsetY = -0.25;
                     } else if (category === "general") {
                       // Expand general stickers to cover the face area
-                      widthRatio = 1.5;
-                      heightRatio = 1.5;
+                      widthRatio = 0.9;
+                      heightRatio = 2.4;
                       offsetY = 0.0;
                     }
 

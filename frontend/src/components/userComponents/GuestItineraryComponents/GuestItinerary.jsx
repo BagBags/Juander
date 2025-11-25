@@ -51,6 +51,13 @@ export default function GuestItinerary() {
         className="text-white"
       />
 
+      {/* Notice */}
+      <div className="px-4 md:px-0 mt-2 text-center">
+        <p className="text-xs sm:text-sm text-white/90 bg-black/20 rounded-lg inline-block px-3 py-1 backdrop-blur-sm">
+          In order to start your tour, you should be inside Intramuros.
+        </p>
+      </div>
+
       {/* Main Content */}
       <PullToRefresh onRefresh={handleRefresh}>
         <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">

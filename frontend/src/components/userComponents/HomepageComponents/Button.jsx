@@ -5,12 +5,22 @@ import { Compass } from "lucide-react";
 export default function Button({ navigate }) {
   const { t } = useTranslation();
 
+  // Track viewport width to adjust behavior & label
+  const DESKTOP_BREAKPOINT = 1400; // treat anything below this as mobile/tablet
+  const [isDesktop, setIsDesktop] = React.useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const handleClick = () => {
-    if (window.innerWidth >= 1024) {
-      // Desktop view
+    if (isDesktop) {
       navigate("/TourMap");
     } else {
-      // Mobile/Tablet view
       navigate("/TouristItinerary");
     }
   };
@@ -36,10 +46,7 @@ export default function Button({ navigate }) {
     flex items-center justify-center gap-2 z-40"
     >
       <Compass className="w-5 h-5" />
-      {/* Label for Mobile/Tablet */}
-      <span className="block lg:hidden">{t("startTour")}</span>
-      {/* Label for Desktop */}
-      <span className="hidden lg:block">{t("explore")}</span>
+      <span>{isDesktop ? t("explore") : t("startTour")}</span>
     </button>
   );
 }

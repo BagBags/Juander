@@ -24,6 +24,15 @@ export default function BackHeader({ title, className = "", noMargin = false }) 
       <button
         className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-white/10"
         onClick={() => {
+          const path = location.pathname;
+          if (path.startsWith('/GuestItinerary')) {
+            navigate('/GuestHomepage', { replace: true });
+            return;
+          }
+          if (path.startsWith('/TouristItinerary')) {
+            navigate('/Homepage', { replace: true });
+            return;
+          }
           if (location.key !== "default") {
             navigate(-1);
           } else {

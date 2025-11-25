@@ -1975,11 +1975,11 @@ export default function TouristItineraryMap() {
           isOpen={showLocationBlockModal}
           onClose={() => {
             setShowLocationBlockModal(false);
-            navigate('/Homepage');
+            navigate('/TouristItinerary');
           }}
           onConfirm={() => {
             setShowLocationBlockModal(false);
-            navigate('/Homepage');
+            navigate('/TouristItinerary');
           }}
           title="Location Required"
           message="Please ensure you are within Intramuros to access this tour. Move to the area and try again."
