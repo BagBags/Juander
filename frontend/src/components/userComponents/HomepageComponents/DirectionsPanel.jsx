@@ -22,6 +22,7 @@ const DirectionsPanel = memo(function DirectionsPanel({
   hasNextSite,
   isLastSite = false,
   onArriveAtDestination,
+  isNearby = false, // New: proximity check for Next Site button
 }) {
   // Track the last spoken displayed instruction to avoid repeats
   const lastSpokenInstructionRef = useRef("");
@@ -492,12 +493,13 @@ const DirectionsPanel = memo(function DirectionsPanel({
         {/* Next/End Tour Button */}
         <button
           onClick={onNextSite}
-          disabled={!hasNextSite}
+          disabled={!hasNextSite || !isNearby}
           className={`direction-next-btn flex-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow flex items-center justify-center gap-1.5 transition-all whitespace-nowrap ${
-            hasNextSite
+            hasNextSite && isNearby
               ? "bg-[#f04e37] text-white hover:bg-[#d9442f] active:scale-95"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
+          title={!isNearby && hasNextSite ? "Move within 15m of the site to continue" : ""}
         >
           {isLastSite ? "End Tour" : "Next Site"}
           <ChevronRight className="w-4 h-4" />

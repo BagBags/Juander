@@ -31,6 +31,7 @@ import ConfirmModal from "../../shared/ConfirmModal";
 import ResumeItineraryModal from "../../shared/ResumeItineraryModal";
 import ttsService from "../../../utils/textToSpeech";
 import { useTour } from "../../TourComponents/TourContext";
+import { isUserWithinIntramuros } from "../../../utils/geolocationCheck";
 
 export default function GuestItineraryMap() {
   const { startTour, isTourRunning } = useTour?.() || { startTour: () => {}, isTourRunning: false };
@@ -127,6 +128,8 @@ export default function GuestItineraryMap() {
   const [fortModalConfirm, setFortModalConfirm] = useState(null);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [savedProgress, setSavedProgress] = useState(null);
+  const [isOutsideBounds, setIsOutsideBounds] = useState(false);
+  const [showLocationBlockModal, setShowLocationBlockModal] = useState(false);
 
   // Use localStorage for guest users (for persistence across tabs)
   const token = localStorage.getItem("token");
@@ -145,6 +148,22 @@ export default function GuestItineraryMap() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Check if user is within Intramuros boundaries
+  useEffect(() => {
+    if (!userLocation || !mask?.geometry) return;
+
+    const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
+    
+    if (!withinBounds) {
+      console.warn('⚠️ User is outside Intramuros boundaries');
+      setIsOutsideBounds(true);
+      setShowLocationBlockModal(true);
+    } else {
+      setIsOutsideBounds(false);
+      setShowLocationBlockModal(false);
+    }
+  }, [userLocation, mask]);
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -905,7 +924,7 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     if (!userLocation || optimizedPins.length === 0) return;
 
-    const radius = 10; // meters - show preview when within 10m
+    const radius = 15; // meters - show preview when within 15m (required for Next Site button)
 
     const pin = optimizedPins[currentPinIndex];
     if (!pin) return;
@@ -1616,6 +1635,7 @@ export default function GuestItineraryMap() {
           </Map>
         )}
 
+
         {/* Directions Panel */}
         <DirectionsPanel
             steps={steps}
@@ -1634,6 +1654,7 @@ export default function GuestItineraryMap() {
             hasPrevSite={currentPinIndex > 0}
             hasNextSite={true}
             isLastSite={currentPinIndex >= optimizedPins.length - 1}
+            isNearby={isNearby}
             onArriveAtDestination={() => {
               if (!isTourRunning && !showGpsModal && activePin) {
                 setSelectedPin(activePin);
@@ -1727,6 +1748,24 @@ export default function GuestItineraryMap() {
         itineraryName={itineraryName}
         totalSites={optimizedPins.length || pins.length}
       />)}
+
+      {/* Location Block Modal - User outside Intramuros */}
+      <ConfirmModal
+        isOpen={showLocationBlockModal}
+        onClose={() => {
+          setShowLocationBlockModal(false);
+          navigate('/GuestItinerary');
+        }}
+        onConfirm={() => {
+          setShowLocationBlockModal(false);
+          navigate('/GuestItinerary');
+        }}
+        title="Location Required"
+        message="Please ensure you are within Intramuros to access this tour. Move to the area and try again."
+        confirmText="Go Back"
+        cancelText=""
+        type="error"
+      />
         
         {/* Hidden restart button for testing - can be removed or styled properly */}
         {/* <button 

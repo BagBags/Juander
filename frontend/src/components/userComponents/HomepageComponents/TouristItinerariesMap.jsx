@@ -30,6 +30,7 @@ import ItineraryCompletionModal from "../../shared/ItineraryCompletionModal";
 import ConfirmModal from "../../shared/ConfirmModal";
 import { useTour } from "../../TourComponents/TourContext";
 import ttsService from "../../../utils/textToSpeech";
+import { isUserWithinIntramuros } from "../../../utils/geolocationCheck";
 
 export default function TouristItineraryMap() {
   const { startTour, isTourRunning } = useTour?.() || { startTour: () => {}, isTourRunning: false };
@@ -125,6 +126,8 @@ export default function TouristItineraryMap() {
   const [isSimulatingHome, setIsSimulatingHome] = useState(false);
   const [showFortDrivingModal, setShowFortDrivingModal] = useState(false);
   const [fortModalConfirm, setFortModalConfirm] = useState(null);
+  const [isOutsideBounds, setIsOutsideBounds] = useState(false);
+  const [showLocationBlockModal, setShowLocationBlockModal] = useState(false);
 
   // Get fresh config for each API call to avoid stale token
   const getConfig = useCallback(() => {
@@ -516,6 +519,22 @@ export default function TouristItineraryMap() {
     };
     fetchMask();
   }, []);
+
+  // Check if user is within Intramuros boundaries
+  useEffect(() => {
+    if (!userLocation || !mask?.geometry) return;
+
+    const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
+    
+    if (!withinBounds) {
+      console.warn('⚠️ User is outside Intramuros boundaries');
+      setIsOutsideBounds(true);
+      setShowLocationBlockModal(true);
+    } else {
+      setIsOutsideBounds(false);
+      setShowLocationBlockModal(false);
+    }
+  }, [userLocation, mask]);
 
   /** Fetch itinerary sites */
   useEffect(() => {
@@ -1359,7 +1378,7 @@ export default function TouristItineraryMap() {
   useEffect(() => {
     if (!userLocation || optimizedPins.length === 0) return;
 
-    const radius = 10; // meters - show preview when within 10m
+    const radius = 15; // meters - show preview when within 15m (required for Next Site button)
 
     const pin = optimizedPins[currentPinIndex];
     if (!pin) return;
@@ -1845,6 +1864,7 @@ export default function TouristItineraryMap() {
         )}
         </Map>
 
+
         {/* Directions Panel */}
         <DirectionsPanel
             steps={steps}
@@ -1863,6 +1883,7 @@ export default function TouristItineraryMap() {
             hasPrevSite={currentPinIndex > 0}
             hasNextSite={true}
             isLastSite={currentPinIndex >= optimizedPins.length - 1}
+            isNearby={isNearby}
             onArriveAtDestination={() => {
               if (!isTourRunning && activePin) {
                 setSelectedPin(activePin);
@@ -1947,6 +1968,24 @@ export default function TouristItineraryMap() {
           confirmText="Walk Mode"
           cancelText="Cancel"
           type="warning"
+        />
+
+        {/* Location Block Modal - User outside Intramuros */}
+        <ConfirmModal
+          isOpen={showLocationBlockModal}
+          onClose={() => {
+            setShowLocationBlockModal(false);
+            navigate('/Homepage');
+          }}
+          onConfirm={() => {
+            setShowLocationBlockModal(false);
+            navigate('/Homepage');
+          }}
+          title="Location Required"
+          message="Please ensure you are within Intramuros to access this tour. Move to the area and try again."
+          confirmText="Go Back"
+          cancelText=""
+          type="error"
         />
       </div>
     </div>

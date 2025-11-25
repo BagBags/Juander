@@ -23,6 +23,24 @@ const SiteCard = ({ pin, onClose, distance }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
 
+  // iOS 26+ detection helper
+  const isiOS26Plus = () => {
+    const ua = navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua);
+    const match = ua.match(/OS (\d+)_/);
+    if (iOS && match) {
+      const version = parseInt(match[1]);
+      return version >= 26; // iOS 26+
+    }
+    return false;
+  };
+
+  // PWA detection helper
+  const isPWA = () => {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  };
+
   // Fetch user language preference
   useEffect(() => {
     const fetchUserLanguage = async () => {
@@ -139,10 +157,11 @@ const SiteCard = ({ pin, onClose, distance }) => {
             {scannedArUrl ? (
               <div className="flex flex-col h-full">
                 <iframe
+                  id="arloopa-frame"
                   src={scannedArUrl}
                   title="AR Experience"
                   className="flex-1 w-full border-0"
-                  allow="camera *; microphone *; gyroscope *; accelerometer *; magnetometer *; ambient-light-sensor *; xr *; xr-spatial-tracking *; device-orientation *; geolocation *; web-share *; clipboard-write *; autoplay *; fullscreen *; display-capture *; picture-in-picture *"
+                  allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
                   allowFullScreen
                   sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
                   referrerPolicy="no-referrer-when-downgrade"
@@ -167,8 +186,30 @@ const SiteCard = ({ pin, onClose, distance }) => {
             ) : (
               <QRScanner
                 onScanSuccess={(url) => {
-                  setScannedArUrl(url);
-                  ttsService.speak("QR Code scanned successfully");
+                  // Check if iOS 26+ in PWA mode - show prompt to open in new tab
+                  if (isiOS26Plus() && isPWA()) {
+                    const confirmOpen = window.confirm(
+                      "iOS 26+ AR Compatibility Notice\n\n" +
+                      "Your device is running iOS 26 or higher in PWA mode. " +
+                      "AR experiences may not work properly within the app due to browser restrictions.\n\n" +
+                      "Would you like to open the AR experience in a new browser tab instead? " +
+                      "This will provide the best AR experience with full sensor access."
+                    );
+                    
+                    if (confirmOpen) {
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                      ttsService.speak("Opening AR experience in new tab");
+                      setShowAR(false);
+                      setScannedArUrl(null);
+                    } else {
+                      // User declined, close AR scanner
+                      setShowAR(false);
+                      setScannedArUrl(null);
+                    }
+                  } else {
+                    setScannedArUrl(url);
+                    ttsService.speak("QR Code scanned successfully");
+                  }
                 }}
                 onClose={() => {
                   setShowAR(false);

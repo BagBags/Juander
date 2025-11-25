@@ -72,7 +72,7 @@ export default function SideButtons({ userType = "tourist" }) {
     >
       {icons.map((icon, index) => {
         let visibilityClass = "";
-        if (icon.Device === "Mobile") visibilityClass = "block md:hidden";
+        if (icon.Device === "Mobile") visibilityClass = "block xl:hidden";
         else visibilityClass = "block";
 
         // Uniform sizes across all icons for consistency
