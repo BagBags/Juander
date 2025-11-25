@@ -90,7 +90,8 @@ export default function Photobooth() {
                 const urlObj = new URL(imageUrl);
                 const isRemote = urlObj.origin !== ORIGIN;
                 // Skip proxy for S3 URLs - they should have CORS configured
-                const isS3Url = imageUrl.includes('.s3.') || imageUrl.includes('.s3-');
+                const isS3Url =
+                  imageUrl.includes(".s3.") || imageUrl.includes(".s3-");
                 if (isRemote && !isS3Url) {
                   const apiOrigin = new URL(API_BASE, window.location.href)
                     .origin;
@@ -111,7 +112,7 @@ export default function Photobooth() {
             const cacheBuster = `?t=${Date.now()}`;
             const imageUrlWithCache = imageUrl + cacheBuster;
             const originalUrlWithCache = originalUrl + cacheBuster;
-            
+
             return {
               ...f,
               label: f.label || f.name,
@@ -130,7 +131,10 @@ export default function Photobooth() {
             };
           });
           console.log("✅ Loaded filters from backend:", normalized.length);
-          console.log("📋 Filter URLs:", normalized.map(f => ({ name: f.label, url: f.image })));
+          console.log(
+            "📋 Filter URLs:",
+            normalized.map((f) => ({ name: f.label, url: f.image }))
+          );
           setFilters(normalized);
         }
       } catch (err) {
@@ -325,13 +329,19 @@ export default function Photobooth() {
                     let heightRatio = 0.5;
                     let offsetY = 0;
                     if (category === "head") {
-                      widthRatio = 3.2;
-                      heightRatio = 2.0;
-                      offsetY = -0.7;
+                      // Reduce hat size and keep it above the head
+                      widthRatio = 2.2;
+                      heightRatio = 2.2;
+                      offsetY = -1.5;
                     } else if (category === "eyes") {
-                      widthRatio = 1.5;
-                      heightRatio = 0.5;
+                      widthRatio = 3.5;
+                      heightRatio = 1.5;
                       offsetY = -0.25;
+                    } else if (category === "general") {
+                      // Expand general stickers to cover the face area
+                      widthRatio = 1.5;
+                      heightRatio = 1.5;
+                      offsetY = 0.0;
                     }
 
                     const frameW = s * width; // detection frame side
@@ -495,9 +505,9 @@ export default function Photobooth() {
         try {
           const currentSrc = img.getAttribute("src") || "";
           const rawUrl = selectedMeta?.originalImage || currentSrc;
-          const isS3Url = rawUrl.includes('.s3.') || rawUrl.includes('.s3-');
+          const isS3Url = rawUrl.includes(".s3.") || rawUrl.includes(".s3-");
           const origin = window.location.origin;
-          
+
           let proxySrc = currentSrc;
           // Only proxy non-S3 URLs since S3 has public-read ACL and CORS configured
           if (!currentSrc.includes("/photobooth/filters/proxy") && !isS3Url) {
@@ -507,7 +517,7 @@ export default function Photobooth() {
             // Use S3 URL directly - it has proper ACL and CORS
             proxySrc = rawUrl;
           }
-          
+
           const tmpImg = new Image();
           tmpImg.crossOrigin = "anonymous";
           const loaded = await new Promise((resolve, reject) => {
@@ -624,7 +634,11 @@ export default function Photobooth() {
             <button
               className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/40 transition-all active:scale-90"
               onClick={toggleCamera}
-              title={facingMode === "user" ? "Switch to Rear Camera" : "Switch to Front Camera"}
+              title={
+                facingMode === "user"
+                  ? "Switch to Rear Camera"
+                  : "Switch to Front Camera"
+              }
               aria-label="Switch camera"
             >
               <SwitchCamera size={20} />
@@ -754,12 +768,20 @@ export default function Photobooth() {
           <div className="preview-modal">
             <div className="preview-header">
               <h2 className="preview-title">Preview</h2>
-              <button onClick={retakePhoto} className="preview-close" aria-label="Close preview">
+              <button
+                onClick={retakePhoto}
+                className="preview-close"
+                aria-label="Close preview"
+              >
                 <X size={28} />
               </button>
             </div>
             <div className="preview-image-wrapper">
-              <img src={capturedImage} alt="Captured" className="preview-image" />
+              <img
+                src={capturedImage}
+                alt="Captured"
+                className="preview-image"
+              />
             </div>
             <div className="preview-actions">
               <div className="action-bar">
