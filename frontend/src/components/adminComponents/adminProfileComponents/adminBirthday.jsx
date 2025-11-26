@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getAge } from "../../../utils/age";
 import { motion } from "framer-motion";
 import axios from "axios";
 
@@ -6,6 +7,7 @@ export default function Birthday() {
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [year, setYear] = useState("");
+  const [parentalConsent, setParentalConsent] = useState(false);
   const [message, setMessage] = useState("");
 
   const months = [
@@ -89,11 +91,21 @@ export default function Birthday() {
         return;
       }
 
+      const age = getAge(year, months.indexOf(month), parseInt(date,10));
+      if (age < 13) {
+        setMessage("Users must be at least 13 years old.");
+        return;
+      }
+      if (age < 18 && !parentalConsent) {
+        setMessage("Parental consent required for users 13-17.");
+        return;
+      }
+
       const { data } = await axios.post(
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/auth/birthday`,
-        { month, date, year },
+        { month, date, year, parentalConsent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -162,6 +174,15 @@ export default function Birthday() {
             className="border border-gray-300 rounded-md px-3 py-2 w-28 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
           />
         </div>
+        <label className="flex items-start gap-2 text-sm mt-2">
+          <input
+            type="checkbox"
+            checked={parentalConsent}
+            onChange={(e)=>setParentalConsent(e.target.checked)}
+            className="mt-1 w-4 h-4 text-[#cf3325] border-gray-300 rounded focus:ring-[#cf3325] focus:ring-2"
+          />
+          <span>Parental consent (for 13-17&nbsp;yrs)</span>
+        </label>
 
         <button
           className="mt-4 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"

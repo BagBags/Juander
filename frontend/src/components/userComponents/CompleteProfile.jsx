@@ -16,6 +16,7 @@ export default function CompleteProfile() {
     birthday: { month: "", date: "", year: "" },
     gender: "",
     country: "",
+    parentalConsent: false,
   });
   const [countrySearch, setCountrySearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,8 +37,28 @@ export default function CompleteProfile() {
       birthday: { month: "", date: "", year: "" },
       gender: user.gender || "",
       country: user.country || "",
+      parentalConsent: false,
     });
   }, [navigate]);
+
+  // Helper: allow only valid name characters (letters, spaces, hyphens, apostrophes)
+  const validateNameInput = (val) => /^[\p{L}\s'-]*$/u.test(val);
+
+  // Validation helpers
+  const isValidName = (name) => {
+    const trimmed = name.trim();
+    const nameRegex = /^[\p{L}\s'-]+$/u;
+    const repeatedCharRegex = /(.)\1{2,}/;
+    const hasTriple = (str)=>str.split(/\s+/).some(w=>repeatedCharRegex.test(w));
+    const invalidCharRegex = /[0-9!@#$%^&*()_+\=[\]{};:\"\\|,.<>/?~`]+/;
+    return (
+      trimmed &&
+      nameRegex.test(trimmed) &&
+      trimmed.length>=2 && trimmed.length<=50 &&
+      !hasTriple(trimmed) &&
+      !invalidCharRegex.test(trimmed)
+    );
+  };
 
   const handleNext = async () => {
     setError("");
@@ -48,8 +69,17 @@ export default function CompleteProfile() {
 
       // Validation and save for each step
       if (step === 1) {
-        if (!formData.firstName || !formData.lastName) {
+        // Name validation logic similar to signup
+        const firstName = formData.firstName.trim();
+        const lastName = formData.lastName.trim();
+
+        if (!firstName || !lastName) {
           setError("Please enter your first and last name");
+          setLoading(false);
+          return;
+        }
+        if (!isValidName(firstName) || !isValidName(lastName)) {
+          setError("Please enter a valid name (letters, spaces, hyphens, apostrophes; 2-50 characters)");
           setLoading(false);
           return;
         }
@@ -72,10 +102,28 @@ export default function CompleteProfile() {
         // Save birthday immediately (convert date and year to integers)
         // Convert full month name to short format (e.g., "January" -> "Jan")
         const monthShort = formData.birthday.month.substring(0, 3);
+        const ageCalc = () => {
+          const yr=parseInt(formData.birthday.year,10);
+          const mnIdx=months.indexOf(formData.birthday.month);
+          const dt=parseInt(formData.birthday.date,10);
+          if(isNaN(yr)||mnIdx<0||isNaN(dt)) return null;
+          const today=new Date();
+          let age=today.getFullYear()-yr;
+          const m=today.getMonth()-mnIdx;
+          if(m<0||(m===0&&today.getDate()<dt)) age--;
+          return age;
+        };
+        const age=ageCalc();
+        if(age!==null && age<18 && !formData.parentalConsent){
+          setError("Parental consent required for users 13-17.");
+          setLoading(false);
+          return;
+        }
         const birthdayPayload = {
           month: monthShort,
           date: parseInt(formData.birthday.date, 10),
           year: parseInt(formData.birthday.year, 10),
+          parentalConsent: formData.parentalConsent,
         };
         console.log("Sending birthday payload:", birthdayPayload);
         await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/birthday`, birthdayPayload, {
@@ -84,6 +132,15 @@ export default function CompleteProfile() {
       }
 
       if (step === 3) {
+        const age = new Date().getFullYear() - formData.birthday.year;
+        if (age < 13) {
+          setError("Sorry, you must be at least 13 years old to use Juander. You will be logged out.");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setLoading(false);
+          setTimeout(()=>navigate("/"),1500);
+          return;
+        }
         if (!formData.gender) {
           setError("Please select your gender");
           setLoading(false);
@@ -159,6 +216,25 @@ export default function CompleteProfile() {
   };
 
   const maxDays = getDaysInMonth(formData.birthday.month, formData.birthday.year);
+
+  // Disable logic helpers
+  const invalidNames = !(isValidName(formData.firstName) && isValidName(formData.lastName));
+  // Detect if user is minor (<18)
+  const ageNeedsConsent = () => {
+    const { month, year, date } = formData.birthday;
+    if (!month || !year || !date) return false;
+    const yr = parseInt(year, 10);
+    const mnIdx = months.indexOf(month);
+    const dt = parseInt(date, 10);
+    if (isNaN(yr) || mnIdx < 0 || isNaN(dt)) return false;
+    const today = new Date();
+    let age = today.getFullYear() - yr;
+    const m = today.getMonth() - mnIdx;
+    if (m < 0 || (m === 0 && today.getDate() < dt)) age--;
+    return age < 18;
+  };
+  const minorNeedsConsent = ageNeedsConsent() && !formData.parentalConsent;
+  const disableNext = loading || (step === 1 && invalidNames) || (step === 2 && minorNeedsConsent);
   const days = Array.from({ length: maxDays }, (_, i) => i + 1);
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
@@ -229,7 +305,11 @@ export default function CompleteProfile() {
               <input
                 type="text"
                 value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!validateNameInput(val)) return;
+                  setFormData({ ...formData, firstName: val });
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 placeholder="Enter your first name"
               />
@@ -242,7 +322,11 @@ export default function CompleteProfile() {
               <input
                 type="text"
                 value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!validateNameInput(val)) return;
+                  setFormData({ ...formData, lastName: val });
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 placeholder="Enter your last name"
               />
@@ -334,6 +418,17 @@ export default function CompleteProfile() {
                 </select>
               </div>
             </div>
+
+            {/* Parental consent checkbox */}
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={formData.parentalConsent}
+                onChange={(e)=>setFormData({...formData, parentalConsent: e.target.checked})}
+                className="mt-1 w-4 h-4 text-[#f04e37] border-gray-300 rounded focus:ring-[#f04e37] focus:ring-2"
+              />
+              <span>I have parental consent to use this application (required if you are 13-17&nbsp;years&nbsp;old).</span>
+            </label>
           </motion.div>
         )}
 
@@ -428,6 +523,7 @@ export default function CompleteProfile() {
               ))}
             </div>
 
+
             {/* Selected Country Display */}
             {formData.country && (
               <div className="text-center text-sm text-gray-600 mt-3">
@@ -449,8 +545,9 @@ export default function CompleteProfile() {
           )}
           <button
             onClick={handleNext}
-            disabled={loading}
-            className="flex-1 px-6 py-3 bg-[#f04e37] text-white rounded-lg hover:bg-[#b42c21] transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={disableNext}
+            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all
+              ${disableNext ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#f04e37] text-white hover:bg-[#b42c21]'}`}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

@@ -111,9 +111,18 @@ export default function Account() {
     return `${mins}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
+  // Helper: allow only valid name characters in real-time
+  const validateNameInput = (val) => /^[\p{L}\s'-]*$/u.test(val);
+
   // Input handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Real-time filtering for name fields
+    if (name === "firstName" || name === "lastName") {
+      if (!validateNameInput(value)) return; // Ignore invalid char
+    }
+
     setUser((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
     setSuccessMessage("");
@@ -257,8 +266,39 @@ export default function Account() {
 
   const validate = () => {
     const newErrors = {};
-    if (!user.firstName.trim()) newErrors.firstName = t("firstNameRequired");
-    if (!user.lastName.trim()) newErrors.lastName = t("lastNameRequired");
+
+    // Name validation rules
+    const firstName = user.firstName.trim();
+    const lastName = user.lastName.trim();
+    const nameRegex = /^[\p{L}\s'-]+$/u;
+    const repeatedCharRegex = /(.)\1{2,}/;
+    const invalidCharRegex = /[0-9!@#$%^&*()_+\=[\]{};:\"\\|,.<>/?~`]+/;
+
+    // First name validation
+    if (!firstName) {
+      newErrors.firstName = t("firstNameRequired");
+    } else if (!nameRegex.test(firstName)) {
+      newErrors.firstName = "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
+    } else if (firstName.length < 2 || firstName.length > 50) {
+      newErrors.firstName = "First name must be between 2 and 50 characters";
+    } else if (repeatedCharRegex.test(firstName)) {
+      newErrors.firstName = "Please enter a valid name";
+    } else if (invalidCharRegex.test(firstName)) {
+      newErrors.firstName = "Names cannot contain numbers or special characters";
+    }
+
+    // Last name validation
+    if (!lastName) {
+      newErrors.lastName = t("lastNameRequired");
+    } else if (!nameRegex.test(lastName)) {
+      newErrors.lastName = "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
+    } else if (lastName.length < 2 || lastName.length > 50) {
+      newErrors.lastName = "Last name must be between 2 and 50 characters";
+    } else if (repeatedCharRegex.test(lastName)) {
+      newErrors.lastName = "Please enter a valid name";
+    } else if (invalidCharRegex.test(lastName)) {
+      newErrors.lastName = "Names cannot contain numbers or special characters";
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!user.email) newErrors.email = t("emailRequired");
     else if (!emailRegex.test(user.email)) newErrors.email = t("invalidEmail");

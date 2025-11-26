@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { useTranslation } from "react-i18next";
 import NotificationModal from "../../shared/NotificationModal";
+import { getAge } from "../../../utils/age";
 import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function Birthday() {
@@ -12,6 +13,7 @@ export default function Birthday() {
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [year, setYear] = useState("");
+  const [parentalConsent, setParentalConsent] = useState(false);
   const [notification, setNotification] = useState({
     isOpen: false,
     type: "info",
@@ -122,11 +124,36 @@ export default function Birthday() {
         return;
       }
 
+      // Age check
+      const age = getAge(year, months.indexOf(month), parseInt(date,10));
+      if (age < 13) {
+        setNotification({
+          isOpen: true,
+          type: "error",
+          title: "Minimum age 13",
+          message: "Users must be at least 13 years old.",
+          autoClose: true,
+          autoCloseDuration: 3000,
+        });
+        return;
+      }
+      if (age < 18 && !parentalConsent) {
+        setNotification({
+          isOpen: true,
+          type: "warning",
+          title: "Parental consent required",
+          message: "Users aged 13-17 must have parental consent.",
+          autoClose: true,
+          autoCloseDuration: 3000,
+        });
+        return;
+      }
+
       const { data } = await axios.post(
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/auth/birthday`,
-        { month, date, year },
+        { month, date, year, parentalConsent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -208,6 +235,17 @@ export default function Birthday() {
             className="border border-gray-300 rounded-md px-3 py-2 w-28 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
           />
         </div>
+
+        {/* Parental consent checkbox */}
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={parentalConsent}
+            onChange={(e)=>setParentalConsent(e.target.checked)}
+            className="mt-1 w-4 h-4 text-[#cf3325] border-gray-300 rounded focus:ring-[#cf3325] focus:ring-2"
+          />
+          <span> I have parental consent to use this application (required if you are 13-17&nbsp;years&nbsp;old).</span>
+        </label>
 
         <button
           className="mt-4 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"

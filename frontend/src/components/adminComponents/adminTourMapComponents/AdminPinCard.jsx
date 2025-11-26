@@ -654,7 +654,7 @@ const AdminPinCard = ({
             {pin.glbUrl && (
               <ModelErrorBoundary>
                 <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
-                  <Canvas>
+                  <Canvas onCreated={({gl})=>gl.setClearColor('#e5e7eb',1)}>
                     <Suspense fallback={null}>
                       <ambientLight intensity={1.2} />
                       <directionalLight position={[10, 10, 10]} intensity={1.5} />

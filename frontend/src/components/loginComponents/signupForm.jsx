@@ -54,16 +54,56 @@ export default function SignupForm({ toggleForm }) {
     return `${mins}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
+  // Helper: allow only valid name characters in real-time
+  const validateNameInput = (value) => /^[\p{L}\s'-]*$/u.test(value);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" });
+    const { name, value } = e.target;
+
+    if (name === 'firstName' || name === 'lastName') {
+      // Filter invalid characters on the fly
+      if (!validateNameInput(value)) return; // Ignore invalid char
+    }
+
+    setForm({ ...form, [name]: value });
+    setErrors({ ...errors, [name]: "" });
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!form.firstName.trim()) newErrors.firstName = "First name is required";
-    if (!form.lastName.trim()) newErrors.lastName = "Last name is required";
+    // Name validation rules
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+    const nameRegex = /^[\p{L}\s'-]+$/u;
+    const repeatedCharRegex = /(.)\1{2,}/;
+    const invalidCharRegex = /[0-9!@#$%^&*()_+=[\]{};:\"\\|,.<>/?~`]+/;
+
+    // Validate first name
+    if (!firstName) {
+      newErrors.firstName = "First name is required";
+    } else if (!nameRegex.test(firstName)) {
+      newErrors.firstName = "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
+    } else if (firstName.length < 2 || firstName.length > 50) {
+      newErrors.firstName = "First name must be between 2 and 50 characters";
+    } else if (repeatedCharRegex.test(firstName)) {
+      newErrors.firstName = "Please enter a valid name";
+    } else if (invalidCharRegex.test(firstName)) {
+      newErrors.firstName = "Names cannot contain numbers or special characters";
+    }
+
+    // Validate last name
+    if (!lastName) {
+      newErrors.lastName = "Last name is required";
+    } else if (!nameRegex.test(lastName)) {
+      newErrors.lastName = "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
+    } else if (lastName.length < 2 || lastName.length > 50) {
+      newErrors.lastName = "Last name must be between 2 and 50 characters";
+    } else if (repeatedCharRegex.test(lastName)) {
+      newErrors.lastName = "Please enter a valid name";
+    } else if (invalidCharRegex.test(lastName)) {
+      newErrors.lastName = "Names cannot contain numbers or special characters";
+    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!form.email) newErrors.email = "Email is required";

@@ -40,7 +40,7 @@ export default function ThreeDModelPreview({ url }) {
   return (
     <ErrorBoundary>
       <div className="w-full h-64 border rounded-lg mt-3">
-        <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
+        <Canvas camera={{ position: [0, 0, 5], fov: 50 }} onCreated={({gl})=>gl.setClearColor('#e5e7eb',1)}>
           <Suspense fallback={null}>
             <ambientLight intensity={1.2} />
             <directionalLight position={[10, 10, 10]} intensity={1.5} />

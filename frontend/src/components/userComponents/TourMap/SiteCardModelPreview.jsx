@@ -98,7 +98,7 @@ export default function SiteCardModelPreview({ url }) {
         >
           <Canvas
             onCreated={({ gl }) => {
-              gl.setClearColor('#f9fafb', 1);
+              gl.setClearColor('#e5e7eb', 1);
             }}
             onError={(error) => {
               console.error('Canvas error:', error);
