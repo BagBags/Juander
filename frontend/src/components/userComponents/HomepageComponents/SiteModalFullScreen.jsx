@@ -400,7 +400,7 @@ export default function SiteModalFullScreen({
     >
       {/* Modern Header with Close Button */}
       <div 
-        className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 flex items-center justify-between shadow-sm z-10"
+        className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 flex items-center justify-between shadow-sm z-50"
         style={{
           paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)',
           paddingBottom: '16px'
@@ -464,6 +464,19 @@ export default function SiteModalFullScreen({
                 >
                   <X className="w-4 h-4" />
                   Exit AR Experience
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Open AR experience in new browser tab?')) {
+                      window.open(scannedArUrl, '_blank', 'noopener,noreferrer');
+                      setShowAR(false);
+                      setScannedArUrl(null);
+                    }
+                  }}
+                  className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
+                >
+                  <Glasses className="w-4 h-4" />
+                  Open in Browser
                 </button>
               </div>
             ) : (

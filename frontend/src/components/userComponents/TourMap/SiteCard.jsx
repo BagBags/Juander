@@ -126,7 +126,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
       }}
     >
       {/* Modern Header with Close Button */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 py-4 flex items-center justify-between shadow-sm z-10">
+      <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 py-4 flex items-center justify-between shadow-sm z-50">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Site Information</h2>
           <p className="text-xs text-gray-500 mt-0.5">Explore the details</p>
@@ -181,6 +181,19 @@ const SiteCard = ({ pin, onClose, distance }) => {
                 >
                   <X className="w-4 h-4" />
                   Exit AR Experience
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Open AR experience in new browser tab?')) {
+                      window.open(scannedArUrl, '_blank', 'noopener,noreferrer');
+                      setShowAR(false);
+                      setScannedArUrl(null);
+                    }
+                  }}
+                  className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
+                >
+                  <Glasses className="w-4 h-4" />
+                  Open in Browser
                 </button>
               </div>
             ) : (
