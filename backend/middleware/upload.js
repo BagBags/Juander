@@ -181,23 +181,27 @@ const deleteFile = (filePath) => {
 const deleteFromS3 = async (fileUrl) => {
   try {
     // Check if it's an S3 URL or local path
-    if (fileUrl.includes('s3.amazonaws.com') || fileUrl.includes('s3.ap-southeast-2.amazonaws.com')) {
-      // It's an S3 URL - extract the key
-      const urlParts = fileUrl.split('.com/');
-      const key = urlParts[1] || fileUrl;
+    const { extractKey } = require("../utils/cdnUtil");
 
-      const command = new DeleteObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: key,
-      });
-
-      await s3Client.send(command);
-      console.log(`File deleted from S3: ${key}`);
-      return true;
-    } else {
-      // It's a local file path - use local deletion
-      return deleteFile(fileUrl);
+    // Determine the object key from either a CloudFront or direct S3 URL.
+    const key = extractKey(fileUrl);
+    if (key) {
+      try {
+        const command = new DeleteObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: key,
+        });
+        await s3Client.send(command);
+        console.log(`File deleted from S3: ${key}`);
+        return true;
+      } catch (err) {
+        console.error("AWS delete error", err);
+        return false;
+      }
     }
+
+    // Not an S3 / CloudFront URL – treat as local path.
+    return deleteFile(fileUrl);
   } catch (err) {
     console.error(`Error deleting from S3: ${fileUrl}`, err);
     return false;

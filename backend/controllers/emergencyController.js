@@ -1,6 +1,7 @@
 const EmergencyContact = require("../models/emergencyModel");
 const Log = require("../models/logModel"); // import Log model
 const { deleteFromS3 } = require("../middleware/upload");
+const { toCdnUrl } = require("../utils/cdnUtil");
 
 // CREATE
 exports.createContact = async (req, res) => {
@@ -11,7 +12,7 @@ exports.createContact = async (req, res) => {
       name: req.body.name,
       contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
       position: req.body.position ?? count,
-      icon: req.file ? (req.file.location || `/uploads/emergency/${req.file.filename}`) : null,
+      icon: req.file ? (require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/emergency/${req.file.filename}`)) : null,
     });
 
     res.status(201).json(contact);
@@ -28,7 +29,7 @@ exports.updateContact = async (req, res) => {
       name: req.body.name,
       contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
     };
-    if (req.file) updatedData.icon = req.file.location || `/uploads/emergency/${req.file.filename}`;
+    if (req.file) updatedData.icon = require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/emergency/${req.file.filename}`);
 
     const updated = await EmergencyContact.findByIdAndUpdate(
       req.params.id,
@@ -47,7 +48,14 @@ exports.getContacts = async (req, res) => {
   try {
     // Fetch only non-archived contacts in sorted order
     // Use $ne: true to also include documents without isArchived field (existing records)
-    const contacts = await EmergencyContact.find({ isArchived: { $ne: true } }).sort({ position: 1 });
+    const contacts = await EmergencyContact.find({ isArchived: { $ne: true } })
+      .sort({ position: 1 })
+      .lean();
+
+    // Ensure icon uses CloudFront URL before sending
+    contacts.forEach((c) => {
+      if (typeof c.icon === "string") c.icon = toCdnUrl(c.icon);
+    });
 
     res.status(200).json(contacts);
   } catch (error) {
@@ -59,7 +67,14 @@ exports.getContacts = async (req, res) => {
 // GET ARCHIVED
 exports.getArchivedContacts = async (req, res) => {
   try {
-    const contacts = await EmergencyContact.find({ isArchived: true }).sort({ updatedAt: -1 });
+    const contacts = await EmergencyContact.find({ isArchived: true })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    contacts.forEach((c) => {
+      if (typeof c.icon === "string") c.icon = toCdnUrl(c.icon);
+    });
+
     res.status(200).json(contacts);
   } catch (error) {
     console.error("Error fetching archived contacts:", error);

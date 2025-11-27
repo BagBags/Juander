@@ -71,7 +71,7 @@ const createFilter = async (req, res) => {
 
     if (req.file) {
       // Use S3 URL if available, fallback to local path
-      imagePath = req.file.location || `/uploads/photobooth/${req.file.filename}`;
+      imagePath = require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/photobooth/${req.file.filename}`);
       console.log("✅ Image path from file:", imagePath);
       console.log("📦 S3 URL:", req.file.location);
     } else if (req.body.image) {
@@ -122,7 +122,7 @@ const updateFilter = async (req, res) => {
     // If new file is uploaded, delete the old one
     if (req.file) {
       // Use S3 URL if available, fallback to local path
-      updateData.image = req.file.location || `/uploads/photobooth/${req.file.filename}`;
+      updateData.image = require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/photobooth/${req.file.filename}`);
       console.log("✅ Updated image path:", updateData.image);
       console.log("📦 S3 URL:", req.file.location);
       

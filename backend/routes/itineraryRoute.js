@@ -17,8 +17,10 @@ router.post(
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-      // ✅ Use S3 URL if available (multer-s3), otherwise construct local path
-      const imageUrl = req.file.location || `/uploads/${req.baseUrl.includes("userItineraries") ? "userItineraries" : "itineraries"}/${req.file.filename}`;
+      // Use CloudFront CDN URL when S3 URL is available
+      const { toCdnUrl } = require("../utils/cdnUtil");
+      let imageUrl = req.file.location || `/uploads/${req.baseUrl.includes("userItineraries") ? "userItineraries" : "itineraries"}/${req.file.filename}`;
+      imageUrl = toCdnUrl(imageUrl);
 
       console.log("Image uploaded successfully:", imageUrl);
       res.status(200).json({ imageUrl });

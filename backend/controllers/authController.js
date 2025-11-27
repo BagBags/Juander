@@ -555,7 +555,7 @@ exports.uploadProfilePicture = async (req, res) => {
     // The S3 key might have 'undefined' in it because req.user wasn't available during multer processing
     // We'll use the location directly since it's the full URL
     if (req.file.location) {
-      user.profilePicture = req.file.location;
+      user.profilePicture = require("../utils/cdnUtil").toCdnUrl(req.file.location);
     } else {
       // Fallback for local uploads
       user.profilePicture = `/uploads/profile/${req.file.filename}`;
@@ -729,7 +729,7 @@ exports.updateProfile = async (req, res) => {
 // Save Birthday
 exports.saveBirthday = async (req, res) => {
   try {
-    const { month, date, year } = req.body;
+    const { month, date, year, parentalConsent = false } = req.body;
 
     if (!month || !date || !year) {
       return res.status(400).json({ message: "All fields are required" });
@@ -758,10 +758,33 @@ exports.saveBirthday = async (req, res) => {
     // Construct a Date object
     const birthday = new Date(year, monthIndex, date);
 
+    // Age calculation
+    const today = new Date();
+    let age = today.getFullYear() - birthday.getFullYear();
+    const m = today.getMonth() - birthday.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthday.getDate())) age--;
+
+    if (age < 13) {
+      return res
+        .status(400)
+        .json({ message: "Users must be at least 13 years old." });
+    }
+
+    if (age < 18 && !parentalConsent) {
+      return res
+        .status(400)
+        .json({ message: "Parental consent required for users 13-17." });
+    }
+
+    const update = {
+      birthday,
+      parentalConsent: age < 18 ? Boolean(parentalConsent) : false,
+    };
+
     // Update user
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { birthday },
+      update,
       { new: true, select: "-password -otp -otpExpires" }
     );
 

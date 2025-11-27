@@ -213,7 +213,7 @@ export default function Account() {
     const firstName = user.firstName.trim();
     const lastName = user.lastName.trim();
     const nameRegex = /^[\p{L}\s'-]+$/u;
-    const repeatedCharRegex = /(.)\1{3,}/;
+    const repeatedCharRegex = /(.)\1{2,}/;
     const invalidCharRegex = /[0-9!@#$%^&*()_+\=[\]{};:\"\\|,.<>/?~`]+/;
 
     // Validate first name

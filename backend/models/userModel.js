@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema(
     birthday: {
       type: Date,
     },
+    parentalConsent: {
+      type: Boolean,
+      default: false,
+    },
     gender: {
       type: String,
       enum: ["Male", "Female", "Other"],

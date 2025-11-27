@@ -50,8 +50,8 @@ router.post("/upload-ar", upload.single("arModel"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-  // multer-s3 provides req.file.location (S3 URL)
-  const fileUrl = req.file.location || `/uploads/arModels/${req.file.filename}`;
+  const { toCdnUrl } = require("../utils/cdnUtil");
+  const fileUrl = toCdnUrl(req.file.location || `/uploads/arModels/${req.file.filename}`);
   return res.json({ url: fileUrl });
 });
 
@@ -60,8 +60,8 @@ router.post("/upload-facade-temp", upload.single("facade"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
-  // multer-s3 provides req.file.location (S3 URL)
-  const fileUrl = req.file.location || `/uploads/facades/${req.file.filename}`;
+  const { toCdnUrl } = require("../utils/cdnUtil");
+  const fileUrl = toCdnUrl(req.file.location || `/uploads/facades/${req.file.filename}`);
   return res.json({ url: fileUrl });
 });
 
@@ -70,8 +70,8 @@ router.post("/:id/upload-facade", upload.single("facade"), async (req, res) => {
     const pin = await Pin.findById(req.params.id);
     if (!pin) return res.status(404).json({ msg: "Pin not found" });
 
-    // multer-s3 provides req.file.location (S3 URL)
-    pin.facadeUrl = req.file.location || `/uploads/facades/${req.file.filename}`;
+    const { toCdnUrl } = require("../utils/cdnUtil");
+    pin.facadeUrl = toCdnUrl(req.file.location || `/uploads/facades/${req.file.filename}`);
     await pin.save();
 
     res.json({ success: true, facadeUrl: pin.facadeUrl });
@@ -155,11 +155,15 @@ router.post("/upload-media", (req, res) => {
       return res.status(400).json({ message: "No files uploaded" });
     }
     
+    const { toCdnUrl } = require("../utils/cdnUtil");
     // multer-s3 provides file.location (S3 URL)
-    const uploadedFiles = req.files.map((file) => ({
-      url: file.location || `/uploads/media/${file.filename}`,
-      type: file.mimetype.startsWith("video/") ? "video" : "image",
-    }));
+    const uploadedFiles = req.files.map((file) => {
+      const rawUrl = file.location || `/uploads/media/${file.filename}`;
+      return {
+        url: toCdnUrl(rawUrl),
+        type: file.mimetype.startsWith("video/") ? "video" : "image",
+      };
+    });
     
     return res.json({ files: uploadedFiles });
   });
@@ -179,7 +183,7 @@ router.delete("/:id/remove-media/:index", async (req, res) => {
     const mediaFile = pin.mediaFiles[index];
     
     // Delete from S3 if it's an S3 URL, otherwise delete from local filesystem
-    if (mediaFile.url.startsWith('http')) {
+    if (typeof mediaFile.url === 'string' && mediaFile.url.startsWith('http')) {
       // S3 URL - use deleteFromS3
       await deleteFromS3(mediaFile.url);
     } else {

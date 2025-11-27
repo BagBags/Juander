@@ -1,5 +1,6 @@
 const Pin = require("../models/pinModel");
 const Log = require("../models/logModel");
+const { toCdnUrl } = require("../utils/cdnUtil");
 
 // Helper to format pin for logs
 const formatPinLabel = (pin) => {
@@ -11,9 +12,32 @@ const formatPinLabel = (pin) => {
 };
 
 // GET all pins (excluding archived)
+// Helper to convert URL fields on a pin object (mutates object)
+const applyCdnUrls = (pin) => {
+  const convertIfString = (val) => (typeof val === "string" ? toCdnUrl(val) : val);
+
+  pin.mediaUrl = convertIfString(pin.mediaUrl);
+  pin.arLink = convertIfString(pin.arLink);
+  pin.glbUrl = convertIfString(pin.glbUrl);
+  pin.facadeUrl = convertIfString(pin.facadeUrl);
+
+  if (Array.isArray(pin.mediaFiles)) {
+    pin.mediaFiles = pin.mediaFiles.map((f) => ({
+      ...f,
+      url: convertIfString(f.url),
+    }));
+  }
+  return pin;
+};
+
 exports.getPins = async (req, res) => {
   try {
-    const pins = await Pin.find({ isArchived: { $ne: true } }).populate("category", "name");
+    const pins = await Pin.find({ isArchived: { $ne: true } })
+      .populate("category", "name")
+      .lean();
+
+    pins.forEach(applyCdnUrls);
+
     res.json(pins);
   } catch (err) {
     console.error("❌ Error fetching pins:", err.message);
@@ -152,7 +176,11 @@ exports.deletePin = async (req, res) => {
 // GET archived pins
 exports.getArchivedPins = async (req, res) => {
   try {
-    const archivedPins = await Pin.find({ isArchived: true }).populate("category", "name");
+    const archivedPins = await Pin.find({ isArchived: true })
+      .populate("category", "name")
+      .lean();
+
+    archivedPins.forEach(applyCdnUrls);
     res.json(archivedPins);
   } catch (err) {
     console.error("❌ Error fetching archived pins:", err.message);

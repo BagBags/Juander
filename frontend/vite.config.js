@@ -190,7 +190,7 @@ export default defineConfig({
           {
             urlPattern:
               /^https:\/\/(d39zx5gyblzxjs\.cloudfront\.net|d3des4qdhz53rp\.cloudfront\.net|juander-frontend\.s3\.ap-southeast-2\.amazonaws\.com)\/uploads\/(facades|arModels|emergency)\/.*/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "tour-static-assets",
               expiration: {
@@ -267,7 +267,7 @@ export default defineConfig({
           // Local images - CacheFirst (versioned by build)
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "local-images-cache",
               expiration: {
@@ -283,7 +283,7 @@ export default defineConfig({
           // Videos - CacheFirst
           {
             urlPattern: /\.(?:mp4|webm|ogg|mov)$/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "videos-cache",
               expiration: {
@@ -293,11 +293,16 @@ export default defineConfig({
               rangeRequests: true,
             },
           },
+          {
+  urlPattern: /index\.html/,
+  handler: "NetworkFirst",
+},
+
           
           // 3D Models - CacheFirst
           {
             urlPattern: /\.(?:glb|gltf)$/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "3d-models-cache",
               expiration: {
@@ -310,7 +315,7 @@ export default defineConfig({
           // Fonts - CacheFirst
           {
             urlPattern: /\.(?:woff|woff2|ttf|eot)$/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "fonts-cache",
               expiration: {
@@ -327,7 +332,7 @@ export default defineConfig({
           // Mapbox tiles - CacheFirst (OFFLINE MAPS)
           {
             urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "mapbox-tiles-cache",
               expiration: {
@@ -344,7 +349,7 @@ export default defineConfig({
           {
             urlPattern:
               /^https:\/\/(fonts\.googleapis|fonts\.gstatic|cdn\.jsdelivr\.net|unpkg\.com|www\.gstatic)\.com\/.*/i,
-            handler: "CacheFirst",
+handler: "StaleWhileRevalidate",
             options: {
               cacheName: "external-cdn-cache",
               expiration: {
