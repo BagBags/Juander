@@ -602,9 +602,11 @@ export default function CreateItineraryPage() {
       <div
         className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
         style={{
-          height: "100dvh",
-          overflow: "hidden",
-          overscrollBehavior: "none",
+          height: '100dvh',
+          overflow: 'hidden',
+          overscrollBehavior: 'none',
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)'
         }}
       >
         {/* Fort Santiago Modal */}

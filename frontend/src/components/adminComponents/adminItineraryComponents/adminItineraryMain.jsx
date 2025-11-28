@@ -942,7 +942,7 @@ export default function AdminItineraryMain() {
                 <span className="text-gray-500 text-sm">Click to upload</span>
                 <input
                   type="file"
-                  accept="image/png"
+                  accept="image/png, image/jpeg, image/webp"
                   onChange={(e) => {
                     handleFileChange(e);
                     if (errors.image) {

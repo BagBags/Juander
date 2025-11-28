@@ -483,7 +483,7 @@ export default function TripArchivesPage() {
           }
         }
       `}</style>
-      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col text-sm relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}>
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col text-sm relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <TripArchiveTourAutostart running={isTourRunning} completed={hasCompletedTour} onStart={startTour} />
         {/* Decorative Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">

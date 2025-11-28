@@ -24,7 +24,9 @@ export default function ProfileLayout() {
         // Lock layout to viewport to prevent body scroll bounce
         height: '100dvh',
         overflow: 'hidden',
-        overscrollBehavior: 'none'
+        overscrollBehavior: 'none',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)'
       }}
     >
       <BackHeader title={getTitle()} />

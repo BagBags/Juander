@@ -45,7 +45,7 @@ export default function GuestItinerary() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f04e37] relative overflow-hidden" style={{ overscrollBehavior: 'none', touchAction: 'pan-y' }}>
+    <div className="min-h-screen bg-[#f04e37] relative overflow-hidden" style={{ overscrollBehavior: 'none', touchAction: 'pan-y', height: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <BackHeader
         title={<span className="text-white">Available Itineraries</span>}
         className="text-white"
