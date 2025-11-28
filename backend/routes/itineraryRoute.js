@@ -7,6 +7,7 @@ const Review = require("../models/reviewModel");
 const { verifyToken, verifyAdmin } = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload"); // your Multer setup
 const { deleteFromS3 } = require("../middleware/upload");
+const { toCdnUrl } = require("../utils/cdnUtil");
 
 // Upload itinerary image (for both admin and user itineraries)
 router.post(
@@ -87,6 +88,8 @@ router.post("/", verifyToken, async (req, res) => {
       isAdminCreated: isAdminCreated || false,
     });
 
+    const processedImageUrl = imageUrl ? toCdnUrl(imageUrl) : imageUrl;
+
     const itinerary = new Itinerary({
       name,
       description,
@@ -97,6 +100,9 @@ router.post("/", verifyToken, async (req, res) => {
       createdBy: req.user._id,
       isAdminCreated: isAdminCreated || false,
     });
+
+    // Ensure CloudFront URL stored in DB
+    itinerary.imageUrl = processedImageUrl;
 
     await itinerary.save();
 
@@ -245,7 +251,7 @@ router.put("/:id", verifyToken, async (req, res) => {
     itinerary.description = description || itinerary.description;
     // Allow empty string to clear imageUrl
     if (imageUrl !== undefined) {
-      itinerary.imageUrl = imageUrl;
+      itinerary.imageUrl = imageUrl ? toCdnUrl(imageUrl) : imageUrl;
     }
     // Allow duration to be set to 0 or any number; only fallback to existing when undefined
     if (duration !== undefined) {
