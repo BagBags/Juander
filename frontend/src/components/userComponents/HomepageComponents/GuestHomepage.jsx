@@ -13,7 +13,13 @@ import { Compass, UserPlus } from "lucide-react";
 
 export default function GuestHomepage() {
   return (
-    <TourProvider steps={guestTourSteps} userRole="guest" scrollToFirstStep={false} disableScrolling={true} tourType="homepage">
+    <TourProvider
+      steps={guestTourSteps}
+      userRole="guest"
+      scrollToFirstStep={false}
+      disableScrolling={true}
+      tourType="homepage"
+    >
       <GuestHomepageContent />
     </TourProvider>
   );
@@ -31,16 +37,17 @@ function GuestHomepageContent() {
   useEffect(() => {
     let mounted = true;
     let progressLocked = false; // Prevent progress from going backwards
-    
+
     const updateProgress = (value) => {
       if (!progressLocked && mounted) {
-        setLoadingProgress(prev => Math.max(prev, value)); // Never go backwards
+        setLoadingProgress((prev) => Math.max(prev, value)); // Never go backwards
       }
     };
-    
+
     const loadResources = async () => {
       try {
-        const alreadyLoaded = localStorage.getItem('guest_homepage_preloaded') === 'true';
+        const alreadyLoaded =
+          localStorage.getItem("guest_homepage_preloaded") === "true";
         if (alreadyLoaded) {
           setBgLoaded(true);
           setComponentsLoaded(true);
@@ -50,63 +57,63 @@ function GuestHomepageContent() {
         }
         // Step 1: Initial load (20%)
         updateProgress(20);
-        
+
         // Step 2: Load background (50%)
         const isMobile = window.innerWidth < 640;
         const bgImage = new Image();
-        bgImage.src = isMobile ? '/icons/BGEnhanced4.png' : '/JuanderBGWeb.svg';
-        
+        bgImage.src = isMobile ? "/icons/BGEnhanced4.png" : "/JuanderBGWeb.svg";
+
         await new Promise((resolve) => {
           bgImage.onload = resolve;
           bgImage.onerror = resolve;
           setTimeout(resolve, 2000); // Timeout fallback
         });
-        
+
         if (!mounted) return;
         setBgLoaded(true);
         updateProgress(50);
 
         // Step 3: Preload logo (70%)
         const logo = new Image();
-        logo.src = '/icons/logo.png';
+        logo.src = "/icons/logo.png";
         await new Promise((resolve) => {
           logo.onload = resolve;
           logo.onerror = resolve;
           setTimeout(resolve, 1000); // Timeout fallback
         });
-        
+
         if (!mounted) return;
         updateProgress(70);
 
         // Step 4: Wait for components (85%)
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         if (!mounted) return;
         updateProgress(85);
 
         // Step 5: Final preparations (100%)
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise((resolve) => setTimeout(resolve, 150));
         if (!mounted) return;
         updateProgress(100);
         progressLocked = true; // Lock at 100%
-        
-        await new Promise(resolve => setTimeout(resolve, 200));
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
         if (!mounted) return;
         setComponentsLoaded(true);
-        localStorage.setItem('guest_homepage_preloaded', 'true');
+        localStorage.setItem("guest_homepage_preloaded", "true");
       } catch (error) {
-        console.error('Error loading resources:', error);
+        console.error("Error loading resources:", error);
         if (mounted) {
           setBgLoaded(true);
           updateProgress(100);
           progressLocked = true;
           setComponentsLoaded(true);
-          localStorage.setItem('guest_homepage_preloaded', 'true');
+          localStorage.setItem("guest_homepage_preloaded", "true");
         }
       }
     };
 
     loadResources();
-    return () => { 
+    return () => {
       mounted = false;
       progressLocked = true; // Prevent any updates after unmount
     };
@@ -135,12 +142,15 @@ function GuestHomepageContent() {
 
   // Track viewport width to decide desktop vs mobile/tablet
   const DESKTOP_BREAKPOINT = 1400;
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
+  const [isDesktop, setIsDesktop] = useState(
+    () => window.innerWidth >= DESKTOP_BREAKPOINT
+  );
 
   useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const handleResize = () =>
+      setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Don't render until components are loaded
@@ -150,10 +160,9 @@ function GuestHomepageContent() {
 
   return (
     <>
-      
       <div
         className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative
-          bg-[url('/icons/BGEnhanced4.png')] sm:bg-[url('/JuanderBG3.png')]"
+          bg-[url('/icons/BGEnhanced4.png')] sm:bg-[url('/JuanderBG3.png')] select-none"
         style={{
           backgroundColor: "#d9d9d9",
           backgroundSize: "cover",
@@ -161,49 +170,55 @@ function GuestHomepageContent() {
           backgroundRepeat: "no-repeat",
           paddingTop: "env(safe-area-inset-top)",
           paddingBottom: "env(safe-area-inset-bottom)",
-          touchAction: "pan-y",
+          touchAction: "none",
           overscrollBehavior: "none",
           WebkitOverscrollBehavior: "none",
+          WebkitUserSelect: "none",
+          userSelect: "none",
+          WebkitTouchCallout: "none",
         }}
+        draggable={false}
       >
         {/* Logo Header */}
         <header className="w-full mt-6 flex justify-center px-4">
           <LogoHeader />
         </header>
 
-      {/* Main Content Area */}
-      <main className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6 flex-1 w-full">
-        <h1
-          className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
+        {/* Main Content Area */}
+        <main className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6 flex-1 w-full">
+          <h1
+            className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
              font-bold tracking-tight leading-[1.1] 
              text-white
              drop-shadow-[0_2px_20px_rgba(0,0,0,0.3)]
              mb-3"
-        >
-          {t("homepageTitle")}
-        </h1>
-        <p className="text-sm sm:text-base md:text-lg text-white/95 font-normal
+          >
+            {t("homepageTitle")}
+          </h1>
+          <p
+            className="text-sm sm:text-base md:text-lg text-white/95 font-normal
            drop-shadow-[0_2px_12px_rgba(0,0,0,0.25)]
-           max-w-sm mx-auto">
-          Discover the historic walled city
-        </p>
-      </main>
+           max-w-sm mx-auto"
+          >
+            Discover the historic walled city
+          </p>
+        </main>
 
-      {/* Side Buttons - Using shared component with guest filter */}
-      <SideButtons userType="guest" />
+        {/* Side Buttons - Using shared component with guest filter */}
+        <SideButtons userType="guest" />
 
-      {/* Dynamic Explore / Start Tour Button */}
-      <button
-        onClick={() => navigate(isDesktop ? '/TourMap' : '/GuestItinerary')}
-        className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl w-48 sm:w-52 lg:w-56 h-14 sm:h-16 lg:h-16 text-lg sm:text-xl lg:text-xl hover:bg-[#f04e37] hover:text-white hover:shadow-[0_8px_32px_rgba(240,78,55,0.4)] hover:-translate-y-0.5 active:translate-y-0 focus:outline-none transition-all duration-300 ease-out border border-white/50 flex items-center justify-center gap-2 z-40"
-      >
-        <Compass className="w-5 h-5" />
-        <span>{isDesktop ? t('explore') : t('startTour')}</span>
-      </button>
+        {/* Dynamic Explore / Start Tour Button */}
+        <button
+          onClick={() => navigate(isDesktop ? "/TourMap" : "/GuestItinerary")}
+          className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md text-[#f04e37] font-bold shadow-[0_4px_24px_rgba(0,0,0,0.15)] rounded-2xl w-48 sm:w-52 lg:w-56 h-14 sm:h-16 lg:h-16 text-lg sm:text-xl lg:text-xl hover:bg-[#f04e37] hover:text-white hover:shadow-[0_8px_32px_rgba(240,78,55,0.4)] hover:-translate-y-0.5 active:translate-y-0 focus:outline-none transition-all duration-300 ease-out border border-white/50 flex items-center justify-center gap-2 z-40"
+        >
+          <Compass className="w-5 h-5" />
+          <span>{isDesktop ? t("explore") : t("startTour")}</span>
+        </button>
 
-      {/* Floating Chatbot (Juan Mascot) */}
-      <FloatingChatbot />
-    </div>
+        {/* Floating Chatbot (Juan Mascot) */}
+        <FloatingChatbot />
+      </div>
     </>
   );
 }

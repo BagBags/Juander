@@ -1,5 +1,6 @@
 // components/userComponents/MapOverlays.jsx
 import React from "react";
+import { AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import SiteCard from "./SiteCard";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -9,14 +10,14 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
   const location = useLocation();
 
   const backHeader = (
-    <div 
+    <div
       className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
       style={{
-        paddingTop: 'max(env(safe-area-inset-top), 16px)',
-        paddingBottom: '8px',
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        pointerEvents: 'auto'
+        paddingTop: "max(env(safe-area-inset-top), 16px)",
+        paddingBottom: "8px",
+        paddingLeft: "16px",
+        paddingRight: "16px",
+        pointerEvents: "auto",
       }}
     >
       <div className="flex items-center gap-2">
@@ -31,18 +32,18 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
           }}
           aria-label="Go back"
           style={{
-            textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-            color: 'inherit'
+            textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+            color: "inherit",
           }}
         >
           ‹
         </button>
-        <h1 
+        <h1
           className="font-bold text-xl truncate"
           style={{
-            textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+            textShadow: "0 1px 2px rgba(0,0,0,0.1)",
             margin: 0,
-            padding: 0
+            padding: 0,
           }}
         >
           Tour Map
@@ -56,34 +57,37 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
       {createPortal(
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
-            height: 'max(env(safe-area-inset-top), 0px)',
-            backgroundColor: '#0f1115',
+            height: "max(env(safe-area-inset-top), 0px)",
+            backgroundColor: "#0f1115",
             zIndex: 9998,
-            pointerEvents: 'none',
+            pointerEvents: "none",
           }}
-        />, document.body
+        />,
+        document.body
       )}
       {/* Back Header - Rendered via Portal */}
       {createPortal(backHeader, document.body)}
 
-
       {/* Site card */}
-      {selectedPin && (
-        <SiteCard
-          pin={{
-            ...selectedPin,
-            imageUrl: `${import.meta.env.VITE_API_BASE}/uploads/${
-              selectedPin.image
-            }`,
-          }}
-          distance={distance}
-          onClose={onCloseCard}
-        />
-      )}
+      <AnimatePresence>
+        {selectedPin && (
+          <SiteCard
+            key={selectedPin._id}
+            pin={{
+              ...selectedPin,
+              imageUrl: `${import.meta.env.VITE_API_BASE}/uploads/${
+                selectedPin.image
+              }`,
+            }}
+            distance={distance}
+            onClose={onCloseCard}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Next site button */}
       {selectedPin && (
@@ -93,8 +97,6 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
           </button>
         </div>
       )}
-
-      
     </>
   );
 };

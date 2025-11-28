@@ -1,5 +1,6 @@
 // components/userComponents/MapMarkers.jsx
 import React from "react";
+import { motion } from "framer-motion";
 import { Marker } from "react-map-gl";
 
 // User Location Marker
@@ -29,13 +30,17 @@ export const PinMarkers = ({ pins, selectedPin, onPinClick }) => {
         >
           {/* Facade image */}
           {pin.facadeUrl && (
-            <img
-              src={pin.facadeUrl}
-              alt={pin.siteName}
-              className={`object-contain transition-transform duration-700 ease-out ${
-                isSelected ? "w-64 h-64 scale-150" : "w-24 h-24 scale-100"
-              }`}
-            />
+            <div className="relative w-24 h-24 md:w-28 md:h-28">
+              <motion.img
+                src={pin.facadeUrl}
+                alt={pin.siteName}
+                initial={false}
+                animate={{ scale: isSelected ? 1.22 : 1 }}
+                transition={{ type: "spring", stiffness: 280, damping: 22, mass: 0.7 }}
+                style={{ transformOrigin: "bottom center", willChange: "transform" }}
+                className="absolute inset-0 object-contain pointer-events-none select-none"
+              />
+            </div>
           )}
 
           {/* Pin centered on the facade */}

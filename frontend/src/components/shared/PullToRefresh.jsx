@@ -1,11 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
 
 /**
  * Modern Pull-to-Refresh Component
  * Displays a smooth refresh animation when user pulls down
  */
-export default function PullToRefresh({ onRefresh, children, activationAreaPx = 80 }) {
+export default function PullToRefresh({
+  onRefresh,
+  children,
+  activationAreaPx = 80,
+  textClassName = "text-white",
+}) {
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
@@ -17,6 +22,12 @@ export default function PullToRefresh({ onRefresh, children, activationAreaPx = 
     if (!container) return;
 
     const handleTouchStart = (e) => {
+      const noPullTarget =
+        e.target && e.target.closest && e.target.closest("[data-no-pull]");
+      if (noPullTarget) {
+        setTouchStart(0);
+        return;
+      }
       // Only trigger if scrolled to top AND touch originates within top activation area
       if (container.scrollTop !== 0) return;
       const rect = container.getBoundingClientRect();
@@ -30,6 +41,9 @@ export default function PullToRefresh({ onRefresh, children, activationAreaPx = 
     };
 
     const handleTouchMove = (e) => {
+      const noPullTarget =
+        e.target && e.target.closest && e.target.closest("[data-no-pull]");
+      if (noPullTarget) return;
       if (touchStart === 0 || container.scrollTop > 0) return;
 
       const touchY = e.touches[0].clientY;
@@ -44,15 +58,22 @@ export default function PullToRefresh({ onRefresh, children, activationAreaPx = 
       }
     };
 
-    const handleTouchEnd = async () => {
+    const handleTouchEnd = async (e) => {
+      const noPullTarget =
+        e.target && e.target.closest && e.target.closest("[data-no-pull]");
+      if (noPullTarget) {
+        setPullDistance(0);
+        setTouchStart(0);
+        return;
+      }
       if (pullDistance >= threshold && !isRefreshing) {
         setIsRefreshing(true);
         setPullDistance(threshold);
-        
+
         try {
           await onRefresh();
         } catch (error) {
-          console.error('Refresh error:', error);
+          console.error("Refresh error:", error);
         } finally {
           setTimeout(() => {
             setIsRefreshing(false);
@@ -66,14 +87,18 @@ export default function PullToRefresh({ onRefresh, children, activationAreaPx = 
       }
     };
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    container.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
     };
   }, [touchStart, pullDistance, isRefreshing, onRefresh, threshold]);
 
@@ -82,35 +107,43 @@ export default function PullToRefresh({ onRefresh, children, activationAreaPx = 
   const scale = Math.min(pullDistance / threshold, 1);
 
   return (
-    <div ref={containerRef} className="relative flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+    <div
+      ref={containerRef}
+      className="relative flex-1 overflow-y-auto"
+      style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+    >
       {/* Pull-to-refresh indicator */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-center transition-all duration-200"
         style={{
           height: `${pullDistance}px`,
           opacity: opacity,
-          pointerEvents: 'none',
+          pointerEvents: "none",
         }}
       >
         <div
           className="flex flex-col items-center gap-2"
           style={{
             transform: `scale(${scale})`,
-            transition: 'transform 0.2s ease-out',
+            transition: "transform 0.2s ease-out",
           }}
         >
           <div
             className={`w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center ${
-              isRefreshing ? 'animate-spin' : ''
+              isRefreshing ? "animate-spin" : ""
             }`}
             style={{
-              transform: isRefreshing ? 'none' : `rotate(${rotation}deg)`,
+              transform: isRefreshing ? "none" : `rotate(${rotation}deg)`,
             }}
           >
             <RefreshCw className="w-5 h-5 text-[#f04e37]" />
           </div>
-          <span className="text-xs font-medium text-white">
-            {isRefreshing ? 'Refreshing...' : pullDistance >= threshold ? 'Release to refresh' : 'Pull to refresh'}
+          <span className={`text-xs font-medium ${textClassName}`}>
+            {isRefreshing
+              ? "Refreshing..."
+              : pullDistance >= threshold
+              ? "Release to refresh"
+              : "Pull to refresh"}
           </span>
         </div>
       </div>
@@ -119,7 +152,7 @@ export default function PullToRefresh({ onRefresh, children, activationAreaPx = 
       <div
         style={{
           paddingTop: `${pullDistance}px`,
-          transition: isRefreshing ? 'padding-top 0.3s ease-out' : 'none',
+          transition: isRefreshing ? "padding-top 0.3s ease-out" : "none",
         }}
       >
         {children}

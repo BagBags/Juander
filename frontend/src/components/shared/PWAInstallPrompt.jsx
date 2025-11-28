@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Download, X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Download, X } from "lucide-react";
 
 const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -7,15 +7,16 @@ const PWAInstallPrompt = () => {
 
   useEffect(() => {
     // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia("(display-mode: standalone)").matches) {
       return;
     }
 
     // Check if user has dismissed the prompt before
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    const dismissed = localStorage.getItem("pwa-install-dismissed");
     if (dismissed) {
       const dismissedTime = parseInt(dismissed);
-      const daysSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
+      const daysSinceDismissed =
+        (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
       if (daysSinceDismissed < 7) {
         return; // Don't show again for 7 days
       }
@@ -30,10 +31,13 @@ const PWAInstallPrompt = () => {
       }, 30000);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt
+      );
     };
   }, []);
 
@@ -42,15 +46,19 @@ const PWAInstallPrompt = () => {
 
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
-    console.log(`User ${outcome === 'accepted' ? 'accepted' : 'dismissed'} the install prompt`);
-    
+
+    console.log(
+      `User ${
+        outcome === "accepted" ? "accepted" : "dismissed"
+      } the install prompt`
+    );
+
     setDeferredPrompt(null);
     setShowPrompt(false);
   };
 
   const handleDismiss = () => {
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    localStorage.setItem("pwa-install-dismissed", Date.now().toString());
     setShowPrompt(false);
   };
 
@@ -70,7 +78,7 @@ const PWAInstallPrompt = () => {
         <div className="bg-blue-100 p-3 rounded-lg">
           <Download className="w-6 h-6 text-blue-600" />
         </div>
-        
+
         <div className="flex-1">
           <h3 className="font-semibold text-gray-900 mb-1">
             Install Juander App
@@ -78,7 +86,7 @@ const PWAInstallPrompt = () => {
           <p className="text-sm text-gray-600 mb-3">
             Install our app for a better experience and offline access!
           </p>
-          
+
           <div className="flex gap-2">
             <button
               onClick={handleInstall}

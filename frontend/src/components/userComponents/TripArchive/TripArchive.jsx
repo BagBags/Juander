@@ -670,168 +670,188 @@ export default function TripArchivesPage() {
                         }
                         return list;
                       })().map((site, index) => (
-                        <SiteCard
-                          className={index === 0 ? "trip-place-card" : ""}
-                          key={
-                            site?._id ||
-                            `${site.siteId?._id || "site"}-${index}`
-                          }
-                          site={site}
-                          resolveUrl={resolveUrl}
-                        >
+                        site?._id === "placeholder" ? (
                           <div
-                            className="mb-2"
-                            style={{ overflow: "hidden", width: "100%" }}
+                            key={`placeholder-${index}`}
+                            className="bg-white/90 rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm"
+                          >
+                            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-[#f04e37]/15 to-orange-500/10 flex items-center justify-center mb-3">
+                              <MapPin className="w-7 h-7 text-[#f04e37]" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-800">No visited places yet</h3>
+                            <p className="text-sm text-gray-500 mt-1">Places you visit will appear here.</p>
+                            <button
+                              type="button"
+                              onClick={() => navigate("/TourMap")}
+                              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f04e37] text-white font-semibold text-sm shadow-md hover:bg-[#d63b2a] transition"
+                            >
+                              Explore Map
+                            </button>
+                          </div>
+                        ) : (
+                          <SiteCard
+                            className={index === 0 ? "trip-place-card" : ""}
+                            key={
+                              site?._id ||
+                              `${site.siteId?._id || "site"}-${index}`
+                            }
+                            site={site}
+                            resolveUrl={resolveUrl}
                           >
                             <div
-                              className="flex items-center gap-2 text-sm text-gray-600"
-                              style={{ minWidth: 0, width: "100%" }}
+                              className="mb-2"
+                              style={{ overflow: "hidden", width: "100%" }}
                             >
-                              <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
-                              <span
-                                className={
-                                  expandedItineraries[
-                                    `place-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "break-words"
-                                    : "truncate"
-                                }
-                                style={{
-                                  overflow: expandedItineraries[
-                                    `place-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "visible"
-                                    : "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: expandedItineraries[
-                                    `place-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "normal"
-                                    : "nowrap",
-                                  wordBreak: expandedItineraries[
-                                    `place-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "break-word"
-                                    : "normal",
-                                  minWidth: 0,
-                                  maxWidth: "100%",
-                                }}
+                              <div
+                                className="flex items-center gap-2 text-sm text-gray-600"
+                                style={{ minWidth: 0, width: "100%" }}
                               >
-                                {site.itineraryId?.name || "Unknown Itinerary"}
+                                <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
+                                <span
+                                  className={
+                                    expandedItineraries[
+                                      `place-${
+                                        site?._id || site.siteId?._id || index
+                                      }`
+                                    ]
+                                      ? "break-words"
+                                      : "truncate"
+                                  }
+                                  style={{
+                                    overflow: expandedItineraries[
+                                      `place-${
+                                        site?._id || site.siteId?._id || index
+                                      }`
+                                    ]
+                                      ? "visible"
+                                      : "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: expandedItineraries[
+                                      `place-${
+                                        site?._id || site.siteId?._id || index
+                                      }`
+                                    ]
+                                      ? "normal"
+                                      : "nowrap",
+                                    wordBreak: expandedItineraries[
+                                      `place-${
+                                        site?._id || site.siteId?._id || index
+                                      }`
+                                    ]
+                                      ? "break-word"
+                                      : "normal",
+                                    minWidth: 0,
+                                    maxWidth: "100%",
+                                  }}
+                                >
+                                  {site.itineraryId?.name || "Unknown Itinerary"}
+                                </span>
+                              </div>
+                              {site.itineraryId?.name?.length > 30 && (
+                                <button
+                                  onClick={() =>
+                                    setExpandedItineraries((prev) => ({
+                                      ...prev,
+                                      [`place-${
+                                        site?._id || site.siteId?._id || index
+                                      }`]:
+                                        !prev[
+                                          `place-${
+                                            site?._id || site.siteId?._id || index
+                                          }`
+                                        ],
+                                    }))
+                                  }
+                                  className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
+                                >
+                                  {expandedItineraries[
+                                    `place-${
+                                      site?._id || site.siteId?._id || index
+                                    }`
+                                  ]
+                                    ? "See less"
+                                    : "See more"}
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                              <Calendar className="w-3 h-3 text-gray-400" />
+                              <span>
+                                Visited: {" "}
+                                {new Date(site.visitedAt).toLocaleDateString()}
                               </span>
                             </div>
-                            {site.itineraryId?.name?.length > 30 && (
-                              <button
-                                onClick={() =>
-                                  setExpandedItineraries((prev) => ({
-                                    ...prev,
-                                    [`place-${
+                            <div>
+                              {expandedDescriptions[
+                                `place-desc-${
+                                  site?._id || site.siteId?._id || index
+                                }`
+                              ] ? (
+                                <div
+                                  className="text-sm text-gray-600 space-y-2"
+                                  style={{
+                                    width: "100%",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {(
+                                    site.siteId?.siteDescription ||
+                                    "No description available"
+                                  )
+                                    .split("\n\n")
+                                    .map((paragraph, idx) => (
+                                      <p key={idx}>{paragraph.trim()}</p>
+                                    ))}
+                                </div>
+                              ) : (
+                                <p
+                                  className="text-sm text-gray-600"
+                                  style={{
+                                    overflow: "hidden",
+                                    width: "100%",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {(site.siteId?.siteDescription?.length || 0) >
+                                  200
+                                    ? `${site.siteId.siteDescription.slice(
+                                        0,
+                                        200
+                                      )}...`
+                                    : site.siteId?.siteDescription ||
+                                      "No description available"}
+                                </p>
+                              )}
+                              {(site.siteId?.siteDescription?.length || 0) >
+                                200 && (
+                                <button
+                                  onClick={() =>
+                                    setExpandedDescriptions((prev) => ({
+                                      ...prev,
+                                      [`place-desc-${
+                                        site?._id || site.siteId?._id || index
+                                      }`]:
+                                        !prev[
+                                          `place-desc-${
+                                            site?._id || site.siteId?._id || index
+                                          }`
+                                        ],
+                                    }))
+                                  }
+                                  className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
+                                >
+                                  {expandedDescriptions[
+                                    `place-desc-${
                                       site?._id || site.siteId?._id || index
-                                    }`]:
-                                      !prev[
-                                        `place-${
-                                          site?._id || site.siteId?._id || index
-                                        }`
-                                      ],
-                                  }))
-                                }
-                                className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
-                              >
-                                {expandedItineraries[
-                                  `place-${
-                                    site?._id || site.siteId?._id || index
-                                  }`
-                                ]
-                                  ? "See less"
-                                  : "See more"}
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                            <Calendar className="w-3 h-3 text-gray-400" />
-                            <span>
-                              Visited:{" "}
-                              {new Date(site.visitedAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div>
-                            {expandedDescriptions[
-                              `place-desc-${
-                                site?._id || site.siteId?._id || index
-                              }`
-                            ] ? (
-                              <div
-                                className="text-sm text-gray-600 space-y-2"
-                                style={{
-                                  width: "100%",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {(
-                                  site.siteId?.siteDescription ||
-                                  "No description available"
-                                )
-                                  .split("\n\n")
-                                  .map((paragraph, idx) => (
-                                    <p key={idx}>{paragraph.trim()}</p>
-                                  ))}
-                              </div>
-                            ) : (
-                              <p
-                                className="text-sm text-gray-600"
-                                style={{
-                                  overflow: "hidden",
-                                  width: "100%",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {(site.siteId?.siteDescription?.length || 0) >
-                                200
-                                  ? `${site.siteId.siteDescription.slice(
-                                      0,
-                                      200
-                                    )}...`
-                                  : site.siteId?.siteDescription ||
-                                    "No description available"}
-                              </p>
-                            )}
-                            {(site.siteId?.siteDescription?.length || 0) >
-                              200 && (
-                              <button
-                                onClick={() =>
-                                  setExpandedDescriptions((prev) => ({
-                                    ...prev,
-                                    [`place-desc-${
-                                      site?._id || site.siteId?._id || index
-                                    }`]:
-                                      !prev[
-                                        `place-desc-${
-                                          site?._id || site.siteId?._id || index
-                                        }`
-                                      ],
-                                  }))
-                                }
-                                className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
-                              >
-                                {expandedDescriptions[
-                                  `place-desc-${
-                                    site?._id || site.siteId?._id || index
-                                  }`
-                                ]
-                                  ? "See less"
-                                  : "See more"}
-                              </button>
-                            )}
-                          </div>
-                        </SiteCard>
+                                    }`
+                                  ]
+                                    ? "See less"
+                                    : "See more"}
+                                </button>
+                              )}
+                            </div>
+                          </SiteCard>
+                        )
                       ))}
                     </div>
 
@@ -1013,6 +1033,9 @@ export default function TripArchivesPage() {
                         const list = showAllReviews
                           ? filtered
                           : filtered.slice(0, 4);
+                        if (!list.length) {
+                          return [{ _id: "placeholder-review" }];
+                        }
                         return list;
                       })().map((site, index) => {
                         const existingReview = reviews.find(
@@ -1021,6 +1044,30 @@ export default function TripArchivesPage() {
                             r.itineraryId?._id === site.itineraryId?._id
                         );
 
+                        if (site?._id === "placeholder-review") {
+                          return (
+                            <div
+                              key={`placeholder-review-${index}`}
+                              className="bg-white/90 rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm"
+                            >
+                              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400/20 to-orange-500/15 flex items-center justify-center mb-3">
+                                <StarIcon className="w-7 h-7 text-yellow-500" />
+                              </div>
+                              <h3 className="text-lg font-semibold text-gray-800">No reviews yet</h3>
+                              <p className="text-sm text-gray-500 mt-1">Share your experience with others.</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const first = visitedSites[0];
+                                  if (first) handleOpenReviewModal(first);
+                                }}
+                                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f04e37] text-white font-semibold text-sm shadow-md hover:bg-[#d63b2a] transition"
+                              >
+                                Write a Review
+                              </button>
+                            </div>
+                          );
+                        }
                         return (
                           <SiteCard
                             key={

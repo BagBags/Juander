@@ -37,6 +37,7 @@ const INITIAL_VIEW = {
 export default function TourMap() {
   const { t } = useTranslation();
   const mapRef = useRef(null);
+  const isProgrammaticMoveRef = useRef(false);
   const [selectedPin, setSelectedPin] = useState(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -54,35 +55,53 @@ export default function TourMap() {
     };
     const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
   // Remove non-itinerary TTS announcements
   // No TTS here; voice guidance is exclusive to itinerary maps
 
+  const BOUNDS_EXPANSION = 0.006;
+  const MAX_BOUNDS = [
+    [
+      INTRAMUROS_BOUNDS[0][0] - BOUNDS_EXPANSION,
+      INTRAMUROS_BOUNDS[0][1] - BOUNDS_EXPANSION,
+    ],
+    [
+      INTRAMUROS_BOUNDS[1][0] + BOUNDS_EXPANSION,
+      INTRAMUROS_BOUNDS[1][1] + BOUNDS_EXPANSION,
+    ],
+  ];
+  const EXIT_UNZOOM_ZOOM = 17.2;
+
   // ------------------ Fly to pin ------------------
   const flyToPin = (pinData, callback) => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
 
+    isProgrammaticMoveRef.current = true;
     map.flyTo({
       center: [pinData.longitude, pinData.latitude],
       zoom: 19.5, // Reduced from 20.2 for better performance
       bearing: 30,
       pitch: 60, // Reduced from 75 for smoother rendering
-      speed: 1.8, // Increased from 1.2 for faster, smoother animation
+      duration: 1600,
+      speed: 1.2,
       curve: 1.2, // Reduced from 1.5 for more direct path
       essential: true,
       easing: (t) => t * (2 - t), // Ease-out quad for smoother deceleration
     });
 
-    map.once("moveend", () => callback?.());
+    map.once("moveend", () => {
+      isProgrammaticMoveRef.current = false;
+      callback?.();
+    });
   };
 
   // ------------------ Handle map clicks ------------------
@@ -109,75 +128,109 @@ export default function TourMap() {
   }, [pins]);
 
   // ------------------ Open pin ------------------
-  const openPin = useCallback(
-    (pinData) => {
-      if (!pinData) return;
+  const openPin = useCallback((pinData) => {
+    if (!pinData) return;
 
-      flyToPin(pinData, () => {
-        setSelectedPin(pinData);
-      });
-    },
-    []
-  );
+    flyToPin(pinData, () => {
+      setSelectedPin(pinData);
+    });
+  }, []);
 
   // ------------------ Close card (reset view) ------------------
   const handleCloseCard = () => {
+    const pin = selectedPin;
     setSelectedPin(null);
-
     const map = mapRef.current?.getMap?.();
-    if (map) {
+    if (map && pin) {
+      let hadBounds = false;
+      try {
+        const currentMax =
+          typeof map.getMaxBounds === "function" ? map.getMaxBounds() : null;
+        if (currentMax) hadBounds = true;
+        if (typeof map.setMaxBounds === "function") map.setMaxBounds(null);
+      } catch {}
+
+      isProgrammaticMoveRef.current = true;
       map.flyTo({
-        center: [INITIAL_VIEW.longitude, INITIAL_VIEW.latitude],
-        zoom: INITIAL_VIEW.zoom,
+        center: [pin.longitude, pin.latitude],
+        zoom: EXIT_UNZOOM_ZOOM,
         bearing: INITIAL_VIEW.bearing,
         pitch: INITIAL_VIEW.pitch,
-        speed: 1.8, // Faster animation to reduce lag
-        curve: 1.2, // More direct path
+        duration: 1600,
+        speed: 1.2,
+        curve: 1.2,
         essential: true,
-        easing: (t) => t * (2 - t), // Smooth ease-out
+        easing: (t) => t * (2 - t),
+      });
+      map.once("moveend", () => {
+        isProgrammaticMoveRef.current = false;
+        try {
+          if (hadBounds && typeof map.setMaxBounds === "function") {
+            map.setMaxBounds(MAX_BOUNDS);
+          }
+        } catch {}
       });
     }
   };
 
   return (
-    <div className="relative w-full" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none', paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <div
+      className="relative w-full"
+      style={{
+        height: "100dvh",
+        overflow: "hidden",
+        overscrollBehavior: "none",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
       <TourMapTourAutostart />
-      {/* Offline Map Warning */}
-      {!isOnline && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <span className="font-semibold">Offline Mode - Showing cached map tiles</span>
-        </div>
-      )}
 
       {/* Map */}
       <Map
         ref={mapRef}
         initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5, maxZoom: 20 }}
-        maxBounds={INTRAMUROS_BOUNDS}
+        maxBounds={MAX_BOUNDS}
         mapboxAccessToken={MAPBOX_TOKEN}
         attributionControl={false}
         onMove={(evt) => {
-          // Clamp longitude and latitude to bounds with padding for web view
+          if (isProgrammaticMoveRef.current) {
+            setViewState(evt.viewState);
+            return;
+          }
           const [minLng, minLat] = INTRAMUROS_BOUNDS[0];
           const [maxLng, maxLat] = INTRAMUROS_BOUNDS[1];
-          
-          // Add tighter padding for web view (wider screens)
-          const isWideScreen = window.innerWidth > 768;
-          const padding = isWideScreen ? 0.001 : 0; // Tighter bounds for desktop
-          
-          const clampedLng = Math.max(minLng + padding, Math.min(maxLng - padding, evt.viewState.longitude));
-          const clampedLat = Math.max(minLat + padding, Math.min(maxLat - padding, evt.viewState.latitude));
-          
-          // Restrict pitch to prevent showing white background (max 60 degrees)
+          const prevLng = viewState.longitude;
+          const prevLat = viewState.latitude;
+          const incomingLng = evt.viewState.longitude;
+          const incomingLat = evt.viewState.latitude;
+
+          let nextLng = incomingLng;
+          let nextLat = incomingLat;
+
+          const withinLng = prevLng >= minLng && prevLng <= maxLng;
+          const withinLat = prevLat >= minLat && prevLat <= maxLat;
+
+          if (withinLng) {
+            if (incomingLng > maxLng) nextLng = prevLng;
+            if (incomingLng < minLng) nextLng = prevLng;
+          } else {
+            if (prevLng > maxLng) nextLng = Math.min(prevLng, incomingLng);
+            if (prevLng < minLng) nextLng = Math.max(prevLng, incomingLng);
+          }
+
+          if (withinLat) {
+            if (incomingLat > maxLat) nextLat = prevLat;
+            if (incomingLat < minLat) nextLat = prevLat;
+          } else {
+            if (prevLat > maxLat) nextLat = Math.min(prevLat, incomingLat);
+            if (prevLat < minLat) nextLat = Math.max(prevLat, incomingLat);
+          }
           const clampedPitch = Math.min(60, Math.max(0, evt.viewState.pitch));
-          
           setViewState({
             ...evt.viewState,
-            longitude: clampedLng,
-            latitude: clampedLat,
+            longitude: nextLng,
+            latitude: nextLat,
             pitch: clampedPitch,
           });
         }}
@@ -189,9 +242,11 @@ export default function TourMap() {
         maxPitch={60}
         renderWorldCopies={false}
         onError={(e) => {
-          console.error('Map error:', e);
+          console.error("Map error:", e);
           if (!navigator.onLine) {
-            setMapError('Map tiles unavailable offline. Showing cached tiles only.');
+            setMapError(
+              "Map tiles unavailable offline. Showing cached tiles only."
+            );
           }
         }}
       >
@@ -207,9 +262,7 @@ export default function TourMap() {
       </Map>
 
       {/* Control Buttons: Search */}
-      <TourMapControlButtons
-        onOpenSearch={() => setShowSearchModal(true)}
-      />
+      <TourMapControlButtons onOpenSearch={() => setShowSearchModal(true)} />
 
       {/* UI Overlays */}
       <MapOverlays

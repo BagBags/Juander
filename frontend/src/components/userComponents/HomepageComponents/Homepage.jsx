@@ -11,7 +11,9 @@ import ModernLoader from "../../shared/ModernLoader";
 const LogoHeader = lazy(() => import("./logoHeader"));
 const MainLayout = lazy(() => import("../MainLayout"));
 const Button = lazy(() => import("./Button"));
-const FloatingChatbot = lazy(() => import("../ChatbotComponents/FloatingChatbot"));
+const FloatingChatbot = lazy(() =>
+  import("../ChatbotComponents/FloatingChatbot")
+);
 const TourProvider = lazy(() => import("../../TourComponents/TourProvider"));
 const { homepageTourSteps } = await import("../../TourComponents/tourSteps");
 
@@ -38,16 +40,19 @@ export default function Homepage() {
     };
 
     // Initial state from browser
-    if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.onLine === "boolean"
+    ) {
       navigator.onLine ? handleOnline() : handleOffline();
     }
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
@@ -55,16 +60,17 @@ export default function Homepage() {
   useEffect(() => {
     let mounted = true;
     let progressLocked = false; // Prevent progress from going backwards
-    
+
     const updateProgress = (value) => {
       if (!progressLocked && mounted) {
-        setLoadingProgress(prev => Math.max(prev, value)); // Never go backwards
+        setLoadingProgress((prev) => Math.max(prev, value)); // Never go backwards
       }
     };
-    
+
     const loadResources = async () => {
       try {
-        const alreadyLoaded = localStorage.getItem('homepage_preloaded') === 'true';
+        const alreadyLoaded =
+          localStorage.getItem("homepage_preloaded") === "true";
         if (alreadyLoaded) {
           setBgLoaded(true);
           setComponentsLoaded(true);
@@ -74,64 +80,64 @@ export default function Homepage() {
         }
         // Step 1: Initial load (20%)
         updateProgress(20);
-        
+
         // Step 2: Load background image (50%)
         const isMobile = window.innerWidth < 640;
         const bgImage = new Image();
-        bgImage.src = isMobile ? '/icons/BGEnhanced4.png' : '/JuanderBG3.png';
-        
+        bgImage.src = isMobile ? "/icons/BGEnhanced4.png" : "/JuanderBG3.png";
+
         await new Promise((resolve) => {
           bgImage.onload = resolve;
           bgImage.onerror = resolve;
           setTimeout(resolve, 2000); // Timeout fallback
         });
-        
+
         if (!mounted) return;
         setBgLoaded(true);
         updateProgress(50);
 
         // Step 3: Preload logo (70%)
         const logo = new Image();
-        logo.src = '/icons/logo.png';
+        logo.src = "/icons/logo.png";
         await new Promise((resolve) => {
           logo.onload = resolve;
           logo.onerror = resolve;
           setTimeout(resolve, 1000); // Timeout fallback
         });
-        
+
         if (!mounted) return;
         updateProgress(70);
 
         // Step 4: Wait for critical components (85%)
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         if (!mounted) return;
         updateProgress(85);
 
         // Step 5: Final preparations (100%)
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise((resolve) => setTimeout(resolve, 150));
         if (!mounted) return;
         updateProgress(100);
         progressLocked = true; // Lock at 100%
-        
+
         // Small delay before showing content
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
         if (!mounted) return;
         setComponentsLoaded(true);
-        localStorage.setItem('homepage_preloaded', 'true');
+        localStorage.setItem("homepage_preloaded", "true");
       } catch (error) {
-        console.error('Error loading resources:', error);
+        console.error("Error loading resources:", error);
         if (mounted) {
           setBgLoaded(true);
           updateProgress(100);
           progressLocked = true;
           setComponentsLoaded(true);
-          localStorage.setItem('homepage_preloaded', 'true');
+          localStorage.setItem("homepage_preloaded", "true");
         }
       }
     };
 
     loadResources();
-    return () => { 
+    return () => {
       mounted = false;
       progressLocked = true; // Prevent any updates after unmount
     };
@@ -150,7 +156,8 @@ export default function Homepage() {
 
       try {
         // Always try to fetch from backend - don't check navigator.onLine
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://192.168.100.10:5000/api";
+        const apiUrl =
+          import.meta.env.VITE_API_BASE_URL || "http://192.168.100.10:5000/api";
         const res = await fetch(`${apiUrl}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -158,15 +165,15 @@ export default function Homepage() {
         if (res.ok) {
           const userData = await res.json();
           setCurrentUser(userData);
-          localStorage.setItem('cached_user', JSON.stringify(userData));
+          localStorage.setItem("cached_user", JSON.stringify(userData));
           setFromCache(false);
         } else if (res.status === 401) {
           // Token expired
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
         } else {
           // Other error - try cache
-          const cachedUser = localStorage.getItem('cached_user');
+          const cachedUser = localStorage.getItem("cached_user");
           if (cachedUser) {
             setCurrentUser(JSON.parse(cachedUser));
             setFromCache(true);
@@ -175,7 +182,7 @@ export default function Homepage() {
       } catch (err) {
         console.error("[Homepage] Error fetching user:", err);
         // Network error - try cache
-        const cachedUser = localStorage.getItem('cached_user');
+        const cachedUser = localStorage.getItem("cached_user");
         if (cachedUser) {
           setCurrentUser(JSON.parse(cachedUser));
           setFromCache(true);
@@ -193,57 +200,65 @@ export default function Homepage() {
 
   return (
     <Suspense fallback={<ModernLoader progress={loadingProgress} />}>
-      <TourProvider steps={homepageTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={true} tourType="homepage">
+      <TourProvider
+        steps={homepageTourSteps}
+        userRole="tourist"
+        scrollToFirstStep={false}
+        disableScrolling={true}
+        tourType="homepage"
+      >
         {/* Autostart inside Provider to satisfy hook context */}
         <HomepageTourAutostart />
-      
-      <div
-        className="
+
+        <div
+          className="
       min-h-screen bg-cover bg-no-repeat bg-center 
       flex flex-col items-center justify-start 
       overflow-hidden relative
       bg-[url('/icons/BGEnhanced4.png')] 
       sm:bg-[url('/JuanderBG3.png')]
     "
-        style={{
-          backgroundColor: "#d9d9d9",
-          backgroundSize: "cover",
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          touchAction: "none",
-          overscrollBehavior: "none",
-          WebkitOverscrollBehavior: "none",
-        }}
-      >
-      {/* Logo Header */}
-      <div className="w-full flex justify-center px-4 mt-6">
-        <LogoHeader />
-      </div>
+          style={{
+            backgroundColor: "#d9d9d9",
+            backgroundSize: "cover",
+            paddingTop: "env(safe-area-inset-top)",
+            paddingBottom: "env(safe-area-inset-bottom)",
+            touchAction: "none",
+            overscrollBehavior: "none",
+            WebkitOverscrollBehavior: "none",
+          }}
+        >
+          {/* Logo Header */}
+          <div className="w-full flex justify-center px-4 mt-6">
+            <LogoHeader />
+          </div>
 
-      {/* Title with modern, clean styling */}
-      <div className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6">
-        <h1
-          className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
+          {/* Title with modern, clean styling */}
+          <div className="mt-10 sm:mt-12 md:mt-16 lg:mt-20 text-center relative z-10 px-6">
+            <h1
+              className="text-[44px] sm:text-[56px] md:text-[68px] lg:text-[76px]
              font-bold tracking-tight leading-[1.1] 
              text-white
              drop-shadow-[0_2px_20px_rgba(0,0,0,0.3)]
              mb-3"
-        >
-          {t("homepageTitle")}
-        </h1>
-        <p className="text-sm sm:text-base md:text-lg text-white/95 font-normal
+            >
+              {t("homepageTitle")}
+            </h1>
+            <p
+              className="text-sm sm:text-base md:text-lg text-white/95 font-normal
            drop-shadow-[0_2px_12px_rgba(0,0,0,0.25)]
-           max-w-sm mx-auto">
-          Discover the historic walled city
-        </p>
-      </div>
+           max-w-sm mx-auto"
+            >
+              Discover the historic walled city
+            </p>
+          </div>
 
-      {/* Buttons */}
-      <MainLayout>
-        <Button navigate={navigate} />
-      </MainLayout>
-        <FloatingChatbot />
-      </div>
+          {/* Buttons */}
+          <MainLayout>
+            <Button navigate={navigate} />
+          </MainLayout>
+          <FloatingChatbot />
+        </div>
       </TourProvider>
     </Suspense>
   );
