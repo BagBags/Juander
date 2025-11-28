@@ -128,6 +128,7 @@ export default function AdminTourMapMain() {
     longitude: "",
     facadeUrl: "",
     mediaFiles: "",
+    averageTimeSpent: "",
   });
 
   const adminMapRef = useRef(null);
@@ -477,6 +478,13 @@ export default function AdminTourMapMain() {
     
     if (!pin.mediaFiles || pin.mediaFiles.length === 0) {
       errors.mediaFiles = "At least 1 media file is required";
+    }
+
+    if (pin.averageTimeSpent !== null && pin.averageTimeSpent !== undefined) {
+      const ats = Number(pin.averageTimeSpent);
+      if (!Number.isFinite(ats) || ats < 1) {
+        errors.averageTimeSpent = "Average time must be a positive number of minutes";
+      }
     }
     
     if (Object.keys(errors).length > 0) {

@@ -15,7 +15,14 @@ import {
   FaTrash,
   FaEdit,
 } from "react-icons/fa";
-import { Info, X, Filter as FilterIcon } from "lucide-react";
+import {
+  Info,
+  X,
+  Filter as FilterIcon,
+  Clock,
+  MapPin,
+  Tag,
+} from "lucide-react";
 import TourProvider from "../../TourComponents/TourProvider";
 import { useTour } from "../../TourComponents/TourContext";
 import { createItineraryTourSteps } from "../../TourComponents/tourSteps";
@@ -186,7 +193,8 @@ export default function CreateItineraryPage() {
   const [offlineMessage, setOfflineMessage] = useState("");
   const [hideFortModalPreference, setHideFortModalPreference] = useState(false);
   const [showDeleteImageModal, setShowDeleteImageModal] = useState(false);
-  const [showDeleteItineraryModal, setShowDeleteItineraryModal] = useState(false);
+  const [showDeleteItineraryModal, setShowDeleteItineraryModal] =
+    useState(false);
   const [itineraryToDelete, setItineraryToDelete] = useState(null);
   // Search and filter state for Available Sites
   const [siteSearchQuery, setSiteSearchQuery] = useState("");
@@ -197,6 +205,8 @@ export default function CreateItineraryPage() {
     title: "",
     message: "",
   });
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsItinerary, setDetailsItinerary] = useState(null);
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -223,11 +233,20 @@ export default function CreateItineraryPage() {
     };
     window.addEventListener("tour:openMyItineraries", openMyItineraries);
     window.addEventListener("tour:expandFirstItinerary", expandFirstItinerary);
-    window.addEventListener("tour:returnToCreateItinerary", returnToCreateItinerary);
+    window.addEventListener(
+      "tour:returnToCreateItinerary",
+      returnToCreateItinerary
+    );
     return () => {
       window.removeEventListener("tour:openMyItineraries", openMyItineraries);
-      window.removeEventListener("tour:expandFirstItinerary", expandFirstItinerary);
-      window.removeEventListener("tour:returnToCreateItinerary", returnToCreateItinerary);
+      window.removeEventListener(
+        "tour:expandFirstItinerary",
+        expandFirstItinerary
+      );
+      window.removeEventListener(
+        "tour:returnToCreateItinerary",
+        returnToCreateItinerary
+      );
     };
   }, []);
 
@@ -349,6 +368,26 @@ export default function CreateItineraryPage() {
     }${url}`;
   };
 
+  const formatMinutesToClock = (min) => {
+    if (min === undefined || min === null) return "";
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hh = h % 12 || 12;
+    const mm = String(m).padStart(2, "0");
+    return `${hh}:${mm} ${ampm}`;
+  };
+  const roundToStep = (min, step = 5) => Math.round(min / step) * step;
+
+  const openDetails = (itinerary) => {
+    setDetailsItinerary(itinerary);
+    setShowDetailsModal(true);
+  };
+  const closeDetails = () => {
+    setShowDetailsModal(false);
+    setDetailsItinerary(null);
+  };
+
   const toggleSelection = (siteId) => {
     const site = sites.find((s) => s._id === siteId);
 
@@ -421,9 +460,9 @@ export default function CreateItineraryPage() {
           config
         );
         // Clear all itinerary cache to force refresh in Start Tour
-        localStorage.removeItem('user_itineraries');
-        localStorage.removeItem('tourist_itineraries_cache');
-        localStorage.removeItem('tourist_itinerary_preloaded_v2');
+        localStorage.removeItem("user_itineraries");
+        localStorage.removeItem("tourist_itineraries_cache");
+        localStorage.removeItem("tourist_itinerary_preloaded_v2");
         setNotification({
           isOpen: true,
           type: "success",
@@ -439,9 +478,9 @@ export default function CreateItineraryPage() {
           config
         );
         // Clear all itinerary cache to force refresh in Start Tour
-        localStorage.removeItem('user_itineraries');
-        localStorage.removeItem('tourist_itineraries_cache');
-        localStorage.removeItem('tourist_itinerary_preloaded_v2');
+        localStorage.removeItem("user_itineraries");
+        localStorage.removeItem("tourist_itineraries_cache");
+        localStorage.removeItem("tourist_itinerary_preloaded_v2");
         setUserItineraries((prev) => [res.data, ...prev]);
         setNotification({
           isOpen: true,
@@ -491,15 +530,17 @@ export default function CreateItineraryPage() {
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
         }/itineraries/${itineraryToDelete}`,
         config
-        );
+      );
       // Clear all itinerary cache to force refresh in Start Tour
-      localStorage.removeItem('user_itineraries');
-      localStorage.removeItem('tourist_itineraries_cache');
-      localStorage.removeItem('tourist_itinerary_preloaded_v2');
-      setUserItineraries(userItineraries.filter((i) => i._id !== itineraryToDelete));
+      localStorage.removeItem("user_itineraries");
+      localStorage.removeItem("tourist_itineraries_cache");
+      localStorage.removeItem("tourist_itinerary_preloaded_v2");
+      setUserItineraries(
+        userItineraries.filter((i) => i._id !== itineraryToDelete)
+      );
       setShowDeleteItineraryModal(false);
       setItineraryToDelete(null);
-      
+
       // Show success notification
       setNotification({
         isOpen: true,
@@ -550,373 +591,597 @@ export default function CreateItineraryPage() {
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <TourProvider steps={createItineraryTourSteps} userRole="tourist" scrollToFirstStep={false} disableScrolling={false} tourType="createItinerary">
-    <CreateItineraryTourAutostart />
-    <div className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}>
-      {/* Fort Santiago Modal */}
-      {showFortModal && (
-        <FortSantiagoModal
-          isOpen={showFortModal}
-          onClose={() => setShowFortModal(false)}
-          onDontShowAgain={handleDontShowAgain}
-        />
-      )}
-
-      {/* Delete Image Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteImageModal}
-        onClose={() => setShowDeleteImageModal(false)}
-        onConfirm={handleDeleteImage}
-        title="Delete Image?"
-        message="Are you sure you want to remove this image? This action cannot be undone."
-        confirmText="Delete Image"
-        type="danger"
-      />
-
-      {/* Delete Itinerary Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteItineraryModal}
-        onClose={() => {
-          setShowDeleteItineraryModal(false);
-          setItineraryToDelete(null);
+    <TourProvider
+      steps={createItineraryTourSteps}
+      userRole="tourist"
+      scrollToFirstStep={false}
+      disableScrolling={false}
+      tourType="createItinerary"
+    >
+      <CreateItineraryTourAutostart />
+      <div
+        className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
+        style={{
+          height: "100dvh",
+          overflow: "hidden",
+          overscrollBehavior: "none",
         }}
-        onConfirm={confirmDelete}
-        title="Delete Itinerary?"
-        message="Are you sure you want to delete this itinerary? This action cannot be undone."
-        confirmText="Delete Itinerary"
-        type="danger"
-      />
+      >
+        {/* Fort Santiago Modal */}
+        {showFortModal && (
+          <FortSantiagoModal
+            isOpen={showFortModal}
+            onClose={() => setShowFortModal(false)}
+            onDontShowAgain={handleDontShowAgain}
+          />
+        )}
 
-      {/* Notification Modal */}
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        type={notification.type}
-        title={notification.title}
-        message={notification.message}
-      />
+        {/* Delete Image Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteImageModal}
+          onClose={() => setShowDeleteImageModal(false)}
+          onConfirm={handleDeleteImage}
+          title="Delete Image?"
+          message="Are you sure you want to remove this image? This action cannot be undone."
+          confirmText="Delete Image"
+          type="danger"
+        />
 
-      {/* Global TTS Button */}
+        {/* Delete Itinerary Confirmation Modal */}
+        <ConfirmModal
+          isOpen={showDeleteItineraryModal}
+          onClose={() => {
+            setShowDeleteItineraryModal(false);
+            setItineraryToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+          title="Delete Itinerary?"
+          message="Are you sure you want to delete this itinerary? This action cannot be undone."
+          confirmText="Delete Itinerary"
+          type="danger"
+        />
 
-      <BackHeader title="Itinerary Manager" className="text-white" />
+        {/* Notification Modal */}
+        <NotificationModal
+          isOpen={notification.isOpen}
+          onClose={() => setNotification({ ...notification, isOpen: false })}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+        />
 
-      {/* === TAB NAVIGATION === */}
-      <div className="px-4 pt-6 pb-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20">
-            {/* Sliding Background */}
-            <div
-              className="absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] bg-white rounded-xl shadow-lg transition-transform duration-300 ease-out"
-              style={{
-                transform:
-                  activeTab === "create"
-                    ? "translateX(0)"
-                    : "translateX(calc(100% + 0.75rem))",
-              }}
-            />
+        {/* Global TTS Button */}
 
-            {/* Tab Buttons */}
-            <div className="relative grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => setActiveTab("create")}
-                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 itinerary-tab-create-btn ${
-                  activeTab === "create"
-                    ? "text-[#f04e37]"
-                    : "text-white hover:text-white/80"
-                }`}
-              >
-                {editingItineraryId ? "Update Itinerary" : "Create Itinerary"}
-              </button>
-              <button
-                onClick={() => setActiveTab("myItineraries")}
-                className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 my-itineraries-tab-btn ${
-                  activeTab === "myItineraries"
-                    ? "text-[#f04e37]"
-                    : "text-white hover:text-white/80"
-                }`}
-              >
-                My Itineraries
-              </button>
+        <BackHeader title="Itinerary Manager" className="text-white" />
+
+        {/* === TAB NAVIGATION === */}
+        <div className="px-4 pt-6 pb-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20">
+              {/* Sliding Background */}
+              <div
+                className="absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] bg-white rounded-xl shadow-lg transition-transform duration-300 ease-out"
+                style={{
+                  transform:
+                    activeTab === "create"
+                      ? "translateX(0)"
+                      : "translateX(calc(100% + 0.75rem))",
+                }}
+              />
+
+              {/* Tab Buttons */}
+              <div className="relative grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setActiveTab("create")}
+                  className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 itinerary-tab-create-btn ${
+                    activeTab === "create"
+                      ? "text-[#f04e37]"
+                      : "text-white hover:text-white/80"
+                  }`}
+                >
+                  {editingItineraryId ? "Update Itinerary" : "Create Itinerary"}
+                </button>
+                <button
+                  onClick={() => setActiveTab("myItineraries")}
+                  className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 my-itineraries-tab-btn ${
+                    activeTab === "myItineraries"
+                      ? "text-[#f04e37]"
+                      : "text-white hover:text-white/80"
+                  }`}
+                >
+                  My Itineraries
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* === MAIN CONTENT === */}
-      <MainLayout includeSideButtons={false}>
-        <PullToRefresh onRefresh={async () => { await fetchSites(); await fetchItineraries(); }} activationAreaPx={96}>
-          <div className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto tour-page-scroll" style={{ WebkitOverflowScrolling: 'touch' }}>
-          {/* CREATE ITINERARY TAB */}
-          {activeTab === "create" && (
-            <div className="space-y-6 animate-fadeIn">
-              {/* Form Section */}
-              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20 available-sites-section">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
-                  {editingItineraryId
-                    ? "Update Your Itinerary"
-                    : "Create New Itinerary"}
-                </h2>
+        {/* === MAIN CONTENT === */}
+        <MainLayout includeSideButtons={false}>
+          <PullToRefresh
+            onRefresh={async () => {
+              await fetchSites();
+              await fetchItineraries();
+            }}
+            activationAreaPx={96}
+          >
+            <div
+              className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto tour-page-scroll"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              {/* CREATE ITINERARY TAB */}
+              {activeTab === "create" && (
+                <div className="space-y-6 animate-fadeIn">
+                  {/* Form Section */}
+                  <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20 available-sites-section">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
+                      {editingItineraryId
+                        ? "Update Your Itinerary"
+                        : "Create New Itinerary"}
+                    </h2>
 
-                <div className="space-y-4">
-                  {/* Itinerary Name */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Itinerary Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={itineraryName}
-                      onChange={(e) => setItineraryName(e.target.value)}
-                      placeholder="e.g., Historical Tour, Weekend Adventure"
-                      className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
-                    />
+                    <div className="space-y-4">
+                      {/* Itinerary Name */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Itinerary Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={itineraryName}
+                          onChange={(e) => setItineraryName(e.target.value)}
+                          placeholder="e.g., Historical Tour, Weekend Adventure"
+                          className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                        />
+                      </div>
+
+                      {/* Image Upload */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Cover Image (Optional)
+                        </label>
+                        {imageUrl ? (
+                          <div className="relative group">
+                            <img
+                              src={getFullImageUrl(imageUrl)}
+                              alt="Itinerary Preview"
+                              className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
+                            />
+                            <button
+                              onClick={() => setShowDeleteImageModal(true)}
+                              className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-red-600 shadow-lg transition opacity-0 group-hover:opacity-100"
+                              title="Remove image"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#f04e37] hover:bg-gray-50 transition-all group">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-10 h-10 text-gray-400 group-hover:text-[#f04e37] transition-colors"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                            <span className="mt-2 text-sm text-gray-500 group-hover:text-[#f04e37] transition-colors">
+                              Click to upload cover image
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Selected Sites Counter */}
+                      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
+                        <span className="text-sm font-semibold text-gray-700">
+                          Sites Selected
+                        </span>
+                        <span className="text-2xl font-bold text-[#f04e37]">
+                          {selected.length}
+                        </span>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={handleSave}
+                          className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 create-itinerary-save-btn"
+                        >
+                          {editingItineraryId
+                            ? "Update Itinerary"
+                            : "Save Itinerary"}
+                        </button>
+                        {editingItineraryId && (
+                          <button
+                            onClick={handleCancelUpdate}
+                            className="px-6 py-3.5 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Cover Image (Optional)
-                    </label>
-                    {imageUrl ? (
-                      <div className="relative group">
-                        <img
-                          src={getFullImageUrl(imageUrl)}
-                          alt="Itinerary Preview"
-                          className="w-full h-48 object-cover rounded-xl border-2 border-gray-200"
+                  {/* Available Sites Section */}
+                  <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
+                      Available Sites
+                    </h2>
+                    {/* Search and Category Filter (Category on the right of Search, all breakpoints) */}
+                    <div className="flex flex-row items-center gap-3 mb-4">
+                      <div className="flex-1">
+                        <label className="sr-only">Search Sites</label>
+                        <div className="relative">
+                          <svg
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                          </svg>
+                          <input
+                            type="text"
+                            value={siteSearchQuery}
+                            onChange={(e) => setSiteSearchQuery(e.target.value)}
+                            placeholder="Search by name or description"
+                            className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none create-itinerary-search"
+                          />
+                        </div>
+                      </div>
+                      <div className="w-14 sm:w-16 flex-shrink-0">
+                        <label className="sr-only">Category</label>
+                        <CategoryFilterButton
+                          value={selectedCategoryFilter}
+                          onChange={setSelectedCategoryFilter}
+                          categories={Array.from(
+                            new Set(
+                              (sites || [])
+                                .map((s) => {
+                                  const cat = s.category;
+                                  return typeof cat === "object"
+                                    ? cat?.name || ""
+                                    : "";
+                                })
+                                .filter(Boolean)
+                            )
+                          ).sort((a, b) => a.localeCompare(b))}
                         />
+                      </div>
+                    </div>
+
+                    {/* Compute filtered sites */}
+                    {(() => {
+                      const query = siteSearchQuery.trim().toLowerCase();
+                      const filtered = (sites || []).filter((s) => {
+                        const name = (s.siteName || "").toLowerCase();
+                        const desc = (s.siteDescription || "").toLowerCase();
+                        const matchesQuery = query
+                          ? name.includes(query) || desc.includes(query)
+                          : true;
+                        const catName =
+                          typeof s.category === "object"
+                            ? s.category?.name || ""
+                            : "";
+                        const matchesCategory =
+                          selectedCategoryFilter === "all"
+                            ? true
+                            : catName === selectedCategoryFilter;
+                        return matchesQuery && matchesCategory;
+                      });
+                      return (
+                        <SmoothScrollSiteList
+                          sites={filtered}
+                          selected={selected}
+                          descriptionToggles={descriptionToggles}
+                          toggleDescription={toggleDescription}
+                          toggleSelection={toggleSelection}
+                          getFullImageUrl={getFullImageUrl}
+                        />
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* MY ITINERARIES TAB */}
+              {activeTab === "myItineraries" && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
+                      My Itineraries
+                    </h2>
+
+                    {userItineraries.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg
+                            className="w-10 h-10 text-gray-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                        </div>
+                        <p className="text-gray-500 text-lg font-medium mb-2">
+                          No itineraries yet
+                        </p>
+                        <p className="text-gray-400 text-sm mb-6">
+                          Create your first itinerary to get started
+                        </p>
                         <button
-                          onClick={() => setShowDeleteImageModal(true)}
-                          className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-red-600 shadow-lg transition opacity-0 group-hover:opacity-100"
-                          title="Remove image"
+                          onClick={() => setActiveTab("create")}
+                          className="bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-xl hover:scale-105 transition-all"
                         >
-                          <X size={20} />
+                          Create Itinerary
                         </button>
                       </div>
                     ) : (
-                      <label className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#f04e37] hover:bg-gray-50 transition-all group">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="w-10 h-10 text-gray-400 group-hover:text-[#f04e37] transition-colors"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      <div
+                        className="space-y-4"
+                        style={{ touchAction: "pan-y pinch-zoom" }}
+                      >
+                        {userItineraries.map((itinerary, idx) => (
+                          <ItineraryCard
+                            key={itinerary._id}
+                            itinerary={itinerary}
+                            expanded={expandedIndex === idx}
+                            toggleExpand={() => toggleExpand(idx)}
+                            handleDelete={handleDelete}
+                            handleEdit={handleEdit}
+                            getFullImageUrl={getFullImageUrl}
+                            onOpenDetails={openDetails}
                           />
-                        </svg>
-                        <span className="mt-2 text-sm text-gray-500 group-hover:text-[#f04e37] transition-colors">
-                          Click to upload cover image
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
-                  </div>
-
-                  {/* Selected Sites Counter */}
-                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
-                    <span className="text-sm font-semibold text-gray-700">
-                      Sites Selected
-                    </span>
-                    <span className="text-2xl font-bold text-[#f04e37]">
-                      {selected.length}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-2">
-                    <button
-                      onClick={handleSave}
-                      className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 create-itinerary-save-btn"
-                    >
-                      {editingItineraryId
-                        ? "Update Itinerary"
-                        : "Save Itinerary"}
-                    </button>
-                    {editingItineraryId && (
-                      <button
-                        onClick={handleCancelUpdate}
-                        className="px-6 py-3.5 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all"
-                      >
-                        Cancel
-                      </button>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* Available Sites Section */}
-              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
-                  Available Sites
-                </h2>
-                {/* Search and Category Filter (Category on the right of Search, all breakpoints) */}
-                <div className="flex flex-row items-center gap-3 mb-4">
-                  <div className="flex-1">
-                    <label className="sr-only">Search Sites</label>
-                    <div className="relative">
-                      <svg
-                        className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                      </svg>
-                      <input
-                        type="text"
-                        value={siteSearchQuery}
-                        onChange={(e) => setSiteSearchQuery(e.target.value)}
-                        placeholder="Search by name or description"
-                        className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none create-itinerary-search"
-                      />
-                    </div>
-                  </div>
-                  <div className="w-14 sm:w-16 flex-shrink-0">
-                    <label className="sr-only">Category</label>
-                    <CategoryFilterButton
-                      value={selectedCategoryFilter}
-                      onChange={setSelectedCategoryFilter}
-                      categories={Array.from(
-                        new Set(
-                          (sites || [])
-                            .map((s) => {
-                              const cat = s.category;
-                              return typeof cat === "object"
-                                ? cat?.name || ""
-                                : "";
-                            })
-                            .filter(Boolean)
-                        )
-                      ).sort((a, b) => a.localeCompare(b))}
-                    />
-                  </div>
-                </div>
-
-                {/* Compute filtered sites */}
-                {(() => {
-                  const query = siteSearchQuery.trim().toLowerCase();
-                  const filtered = (sites || []).filter((s) => {
-                    const name = (s.siteName || "").toLowerCase();
-                    const desc = (s.siteDescription || "").toLowerCase();
-                    const matchesQuery = query
-                      ? name.includes(query) || desc.includes(query)
-                      : true;
-                    const catName =
-                      typeof s.category === "object"
-                        ? s.category?.name || ""
-                        : "";
-                    const matchesCategory =
-                      selectedCategoryFilter === "all"
-                        ? true
-                        : catName === selectedCategoryFilter;
-                    return matchesQuery && matchesCategory;
-                  });
-                  return (
-                    <SmoothScrollSiteList
-                      sites={filtered}
-                      selected={selected}
-                      descriptionToggles={descriptionToggles}
-                      toggleDescription={toggleDescription}
-                      toggleSelection={toggleSelection}
-                      getFullImageUrl={getFullImageUrl}
-                    />
-                  );
-                })()}
-              </div>
+              )}
+              <p className="mt-8 mb-8 text-xs text-center text-white">
+                © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed
+                by UST College of Information and Computing Sciences.
+              </p>
             </div>
-          )}
+          </PullToRefresh>
+        </MainLayout>
 
-          {/* MY ITINERARIES TAB */}
-          {activeTab === "myItineraries" && (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
-                  My Itineraries
-                </h2>
+        {/* Offline Modal */}
+        <OnlineRequiredModal
+          isOpen={showOfflineModal}
+          onClose={() => setShowOfflineModal(false)}
+          message={offlineMessage}
+          showLoginOption={false}
+        />
 
-                {userItineraries.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg
-                        className="w-10 h-10 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-lg font-medium mb-2">
-                      No itineraries yet
-                    </p>
-                    <p className="text-gray-400 text-sm mb-6">
-                      Create your first itinerary to get started
-                    </p>
-                    <button
-                      onClick={() => setActiveTab("create")}
-                      className="bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-xl hover:scale-105 transition-all"
-                    >
-                      Create Itinerary
-                    </button>
+        {showDetailsModal && detailsItinerary && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={closeDetails}
+            />
+            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn max-h-[90vh] sm:max-h-[85vh]">
+              <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <Info className="w-6 h-6 text-[#f04e37]" />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {detailsItinerary.name}
+                    </h3>
+                    <p className="text-xs text-gray-500">Itinerary overview</p>
                   </div>
-                ) : (
-                  <div
-                    className="space-y-4"
-                    style={{ touchAction: "pan-y pinch-zoom" }}
-                  >
-                    {userItineraries.map((itinerary, idx) => (
-                      <ItineraryCard
-                        key={itinerary._id}
-                        itinerary={itinerary}
-                        expanded={expandedIndex === idx}
-                        toggleExpand={() => toggleExpand(idx)}
-                        handleDelete={handleDelete}
-                        handleEdit={handleEdit}
-                        getFullImageUrl={getFullImageUrl}
-                      />
-                    ))}
+                </div>
+                <button
+                  onClick={closeDetails}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {getFullImageUrl(detailsItinerary.imageUrl) && (
+                <div className="h-36 sm:h-56 md:h-64 w-full overflow-hidden">
+                  <img
+                    src={getFullImageUrl(detailsItinerary.imageUrl)}
+                    alt={detailsItinerary.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <Clock className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {(() => {
+                        const totalMinutes = (
+                          detailsItinerary.sites || []
+                        ).reduce((sum, s) => {
+                          const v =
+                            typeof s?.averageTimeSpent === "number"
+                              ? s.averageTimeSpent
+                              : Number(s?.averageTimeSpent);
+                          return sum + (isNaN(v) || v <= 0 ? 0 : v);
+                        }, 0);
+                        const computedHours =
+                          Math.round((totalMinutes / 60) * 2) / 2;
+                        const value =
+                          detailsItinerary.duration &&
+                          detailsItinerary.duration > 0
+                            ? detailsItinerary.duration
+                            : computedHours;
+                        return value && value > 0
+                          ? `${value} ${value === 1 ? "hour" : "hours"}`
+                          : "Flexible";
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <MapPin className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {(detailsItinerary.sites || []).length} site(s)
+                    </span>
+                  </div>
+                </div>
+
+                {detailsItinerary.description && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                      Description
+                    </h4>
+                    <p className="text-gray-800 text-sm leading-relaxed">
+                      {detailsItinerary.description}
+                    </p>
+                    {typeof detailsItinerary.recommendedStartMinutes ===
+                      "number" && (
+                      <div className="mt-3 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-gray-50 border border-gray-200">
+                        <Clock className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm text-gray-700">
+                          Recommended Start:{" "}
+                          {formatMinutesToClock(
+                            detailsItinerary.recommendedStartMinutes
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
+
+                {(() => {
+                  const start =
+                    typeof detailsItinerary.recommendedStartMinutes === "number"
+                      ? detailsItinerary.recommendedStartMinutes
+                      : 8 * 60;
+                  let cursor = roundToStep(start, 5);
+                  const items = (detailsItinerary.sites || []).map((site) => {
+                    const v =
+                      typeof site?.averageTimeSpent === "number"
+                        ? site.averageTimeSpent
+                        : Number(site?.averageTimeSpent);
+                    const item = { time: roundToStep(cursor, 5), site };
+                    cursor = roundToStep(
+                      cursor + (isNaN(v) || v <= 0 ? 0 : v),
+                      5
+                    );
+                    return item;
+                  });
+                  if (!items.length) return null;
+                  return (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                        Suggested Schedule
+                      </h4>
+                      <div className="space-y-3 sm:space-y-4">
+                        {items.map(({ time, site }, i) => (
+                          <div
+                            key={site._id || i}
+                            className="flex items-start gap-4 sm:gap-5 py-1.5"
+                          >
+                            <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5">
+                              <Clock className="w-4 h-4 text-gray-600" />
+                              <span className="text-sm sm:text-base font-semibold text-gray-900">
+                                {formatMinutesToClock(time)}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800">
+                                {site.siteName || site.title}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                    Included Sites
+                  </h4>
+                  <div className="space-y-3 pr-2">
+                    {(detailsItinerary.sites || []).map((site) => {
+                      const thumb =
+                        site.mediaFiles?.find((m) => m.type === "image")?.url ||
+                        site.mediaUrl;
+                      const img = thumb ? getFullImageUrl(thumb) : "";
+                      return (
+                        <div
+                          key={site._id}
+                          className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white"
+                        >
+                          <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            {img ? (
+                              <img
+                                src={img}
+                                alt={site.siteName || site.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <MapPin className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-semibold text-gray-900 truncate">
+                              {site.siteName || site.title}
+                            </p>
+                            {site.category && (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
+                                  <Tag className="w-3 h-3" />
+                                  {site.category?.name || site.category}
+                                </span>
+                              </div>
+                            )}
+                            {site.siteDescription && (
+                              <p className="text-sm text-gray-700 mt-1 line-clamp-3">
+                                {site.siteDescription}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-          <p className="mt-8 mb-8 text-xs text-center text-white">
-            © {new Date().getFullYear()} {t("intramurosAdmin")}.
-            Developed by UST College of Information and Computing Sciences.
-          </p>
           </div>
-        </PullToRefresh>
-      </MainLayout>
-
-      {/* Offline Modal */}
-      <OnlineRequiredModal
-        isOpen={showOfflineModal}
-        onClose={() => setShowOfflineModal(false)}
-        message={offlineMessage}
-        showLoginOption={false}
-      />
-    </div>
+        )}
+      </div>
     </TourProvider>
   );
 }
@@ -1134,7 +1399,7 @@ function SiteCard({
         )}
       </div>
 
-      <h3 
+      <h3
         className="font-bold text-gray-800 text-base mb-1"
         style={{
           display: "-webkit-box",
@@ -1193,14 +1458,22 @@ function SiteCard({
             isExpanded ? (
               <div className="space-y-2">
                 {site.siteDescription.split("\n\n").map((paragraph, idx) => (
-                  <p key={idx} style={{ wordWrap: "break-word", overflowWrap: "break-word" }}>
+                  <p
+                    key={idx}
+                    style={{
+                      wordWrap: "break-word",
+                      overflowWrap: "break-word",
+                    }}
+                  >
                     {paragraph.trim()}
                   </p>
                 ))}
               </div>
             ) : (
-              <span style={{ wordWrap: "break-word", overflowWrap: "break-word" }}>
-                {site.siteDescription.replace(/\n\n/g, ' ')}
+              <span
+                style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
+              >
+                {site.siteDescription.replace(/\n\n/g, " ")}
               </span>
             )
           ) : (
@@ -1253,10 +1526,22 @@ function ItineraryCard({
   handleDelete,
   handleEdit,
   getFullImageUrl,
+  onOpenDetails,
 }) {
   const [descExpanded, setDescExpanded] = useState({});
   const toggleSiteDescription = (idx) =>
     setDescExpanded((prev) => ({ ...prev, [idx]: !prev[idx] }));
+
+  const formatMinutesToClock = (min) => {
+    if (min === undefined || min === null) return "";
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hh = h % 12 || 12;
+    const mm = String(m).padStart(2, "0");
+    return `${hh}:${mm} ${ampm}`;
+  };
+  const roundToStep = (min, step = 5) => Math.round(min / step) * step;
 
   return (
     <div
@@ -1320,28 +1605,69 @@ function ItineraryCard({
               </button>
             </div>
             <button
-              onClick={toggleExpand}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all my-itinerary-view-sites-btn"
+              onClick={() => onOpenDetails && onOpenDetails(itinerary)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 font-semibold rounded-lg hover:bg-gray-200 transition-all my-itinerary-view-sites-btn"
             >
-              {expanded ? (
-                <>
-                  <FaChevronUp className="text-sm" />
-                  <span>Hide Sites</span>
-                </>
-              ) : (
-                <>
-                  <FaChevronDown className="text-sm" />
-                  <span>View/Hide Sites</span>
-                </>
-              )}
+              <Info className="w-4 h-4" />
+              <span>Info</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Expanded Sites List */}
+      {/* Expanded Details & Sites */}
       {expanded && itinerary.sites?.length > 0 && (
-        <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fadeIn">
+        <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fadeIn space-y-5">
+          {(() => {
+            const start =
+              typeof itinerary.recommendedStartMinutes === "number"
+                ? itinerary.recommendedStartMinutes
+                : 8 * 60;
+            let cursor = roundToStep(start, 5);
+            const items = (itinerary.sites || []).map((site) => {
+              const v =
+                typeof site?.averageTimeSpent === "number"
+                  ? site.averageTimeSpent
+                  : Number(site?.averageTimeSpent);
+              const item = { time: roundToStep(cursor, 5), site };
+              cursor = roundToStep(cursor + (isNaN(v) || v <= 0 ? 0 : v), 5);
+              return item;
+            });
+            if (!items.length) return null;
+            return (
+              <div>
+                <div className="mb-2 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-white border border-gray-200">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm text-gray-700">
+                    Recommended Start: {formatMinutesToClock(start)}
+                  </span>
+                </div>
+                <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                  Suggested Schedule
+                </h4>
+                <div className="space-y-3 sm:space-y-4">
+                  {items.map(({ time, site }, i) => (
+                    <div
+                      key={site._id || i}
+                      className="flex items-start gap-4 sm:gap-5 py-1.5"
+                    >
+                      <div className="flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-3 py-1.5">
+                        <Clock className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm sm:text-base font-semibold text-gray-900">
+                          {formatMinutesToClock(time)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">
+                          {site.siteName || site.title}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4">
             Included Sites
           </h4>
@@ -1370,7 +1696,7 @@ function ItineraryCard({
                     }}
                   />
                   <div className="flex-1 min-w-0">
-                    <h5 
+                    <h5
                       className="font-semibold text-gray-800 text-sm mb-1"
                       style={{
                         display: "-webkit-box",
@@ -1383,7 +1709,7 @@ function ItineraryCard({
                     >
                       {site.siteName}
                     </h5>
-                    <p 
+                    <p
                       className="text-xs text-gray-500"
                       style={{
                         display: "-webkit-box",
@@ -1427,7 +1753,9 @@ function CreateItineraryTourAutostart() {
         try {
           if (!isTourRunning) {
             didStartRef.current = true;
-            setTimeout(() => { startTour(); }, 600);
+            setTimeout(() => {
+              startTour();
+            }, 600);
           }
         } catch {}
       }

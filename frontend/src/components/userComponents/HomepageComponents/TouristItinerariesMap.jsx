@@ -12,7 +12,15 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "./TouristItinerariesMap.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { Navigation, MapPin, Car, Bike, Footprints, User } from "lucide-react";
+import {
+  Navigation,
+  MapPin,
+  Car,
+  Bike,
+  Footprints,
+  User,
+  ListOrdered,
+} from "lucide-react";
 import {
   optimizeRoute,
   getNextSite,
@@ -151,6 +159,13 @@ export default function TouristItineraryMap() {
   const [isOutsideBounds, setIsOutsideBounds] = useState(false);
   const [showLocationBlockModal, setShowLocationBlockModal] = useState(false);
   const [suppressPreviewCard, setSuppressPreviewCard] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(true);
+  const [isBackdropActive, setIsBackdropActive] = useState(false);
+  const [gpsApproved, setGpsApproved] = useState(false);
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [isGuidanceRunning, setIsGuidanceRunning] = useState(false);
+  const [tourMode, setTourMode] = useState(null);
+  const hasLoadedProgressRef = useRef(false);
 
   // Get fresh config for each API call to avoid stale token
   const getConfig = useCallback(() => {
@@ -491,60 +506,15 @@ export default function TouristItineraryMap() {
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
-  /** Check GPS permission on mount */
+  // GPS permission is requested only after user clicks Start Tour
+
+  /** Continuous location tracking - gated by GPS approval and active tour */
   useEffect(() => {
-    const checkGpsPermission = async () => {
-      if (!navigator.geolocation) {
-        setGpsError("Geolocation is not supported by your browser");
-        setShowGpsModal(true);
-        return;
-      }
-
-      try {
-        // Try to get current position to check if GPS is accessible
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            // GPS is accessible and working
-            setUserLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
-            setShowGpsModal(false);
-          },
-          (error) => {
-            // GPS is not accessible or denied
-            if (error.code === error.PERMISSION_DENIED) {
-              setGpsError(
-                "Location access denied. Please enable location services."
-              );
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-              setGpsError("Location information unavailable.");
-            } else if (error.code === error.TIMEOUT) {
-              setGpsError("Location request timed out.");
-            }
-            setShowGpsModal(true);
-          },
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-        );
-      } catch (err) {
-        console.error("Error checking GPS:", err);
-        setShowGpsModal(true);
-      }
-    };
-
-    checkGpsPermission();
-  }, []);
-
-  /** Continuous location tracking */
-  useEffect(() => {
+    if (!(gpsApproved && isGuidanceRunning)) return;
     let watchId = null;
 
     const startLocationTracking = () => {
-      if (!navigator.geolocation) {
-        console.warn("Geolocation not supported");
-        return;
-      }
-
+      if (!navigator.geolocation) return;
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const newLocation = {
@@ -556,7 +526,7 @@ export default function TouristItineraryMap() {
           const haversineMeters = (lat1, lng1, lat2, lng2) => {
             const R = 6371000;
             const dLat = toRad(lat2 - lat1);
-            const dLng = toRad(lng2 - lng1);
+            const dLng = toRad(lat2 - lat1);
             const a =
               Math.sin(dLat / 2) ** 2 +
               Math.cos(toRad(lat1)) *
@@ -598,22 +568,13 @@ export default function TouristItineraryMap() {
           lastRawLocRef.current = newLocation;
           lastUpdateTimeRef.current = now;
           setUserLocation(smoothLocation);
-
-          // Update heading if available from GPS
           if (
             position.coords.heading !== null &&
             position.coords.heading !== undefined
           ) {
             const smoothHeading = normalizeHeading(position.coords.heading);
             setUserHeading(smoothHeading);
-            console.log(
-              "🧭 Heading updated from GPS:",
-              position.coords.heading
-            );
           }
-
-          // Don't auto-center the map on location updates to avoid disrupting user interaction
-          // Only update if user hasn't manually moved the map
         },
         (error) => {
           console.error("Location tracking error:", error);
@@ -624,25 +585,16 @@ export default function TouristItineraryMap() {
             setShowGpsModal(true);
           }
         },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 15000,
-        }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
       );
     };
 
-    // Start tracking after a short delay to allow initial GPS check to complete
-    const timeoutId = setTimeout(startLocationTracking, 1000);
-
+    const timeoutId = setTimeout(startLocationTracking, 500);
     return () => {
       clearTimeout(timeoutId);
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        console.log("🛑 Location tracking stopped");
-      }
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     };
-  }, []);
+  }, [gpsApproved, isGuidanceRunning]);
 
   /** Fetch mask */
   useEffect(() => {
@@ -1012,6 +964,7 @@ export default function TouristItineraryMap() {
   // Run optimization when userLocation becomes available WITH saved progress (on refresh)
   useEffect(() => {
     if (
+      isGuidanceRunning &&
       userLocation &&
       pins.length > 0 &&
       optimizedPins.length === 0 &&
@@ -1061,6 +1014,7 @@ export default function TouristItineraryMap() {
   // Run optimization when userLocation becomes available (ONLY for first time, no saved progress)
   useEffect(() => {
     if (
+      isGuidanceRunning &&
       userLocation &&
       pins.length > 0 &&
       optimizedPins.length === 0 &&
@@ -1508,15 +1462,18 @@ export default function TouristItineraryMap() {
 
   /** Trigger geolocate control on mount and enable watch mode */
   useEffect(() => {
-    if (geolocateControlRef.current && !showGpsModal) {
-      // Trigger the geolocate control to start tracking
+    if (
+      geolocateControlRef.current &&
+      !showGpsModal &&
+      gpsApproved &&
+      isGuidanceRunning
+    ) {
       const timer = setTimeout(() => {
         geolocateControlRef.current?.trigger();
-      }, 1000); // Small delay to ensure map is loaded
-
+      }, 800);
       return () => clearTimeout(timer);
     }
-  }, [showGpsModal]);
+  }, [showGpsModal, gpsApproved, isGuidanceRunning]);
 
   /** Check if route stays within Intramuros bounds */
   const isRouteWithinBounds = (routeGeometry) => {
@@ -1696,6 +1653,7 @@ export default function TouristItineraryMap() {
   /** Build route to current pin */
   useEffect(() => {
     if (
+      isGuidanceRunning &&
       userLocation &&
       optimizedPins.length > 0 &&
       optimizedPins[currentPinIndex]
@@ -1706,7 +1664,8 @@ export default function TouristItineraryMap() {
 
   /** Detect arrival to auto-show preview card and auto-mark last site */
   useEffect(() => {
-    if (!userLocation || optimizedPins.length === 0) return;
+    if (!isGuidanceRunning || !userLocation || optimizedPins.length === 0)
+      return;
 
     const radius = 15; // meters - show preview when within 15m (required for Next Site button)
 
@@ -1754,7 +1713,7 @@ export default function TouristItineraryMap() {
 
   // Step advancement logic - SENSITIVE: auto-advance immediately when user turns to another street
   useEffect(() => {
-    if (!userLocation || steps.length === 0) return;
+    if (!isGuidanceRunning || !userLocation || steps.length === 0) return;
     const toRad = (v) => (v * Math.PI) / 180;
     const haversineMeters = (lat1, lng1, lat2, lng2) => {
       const R = 6371000;
@@ -1911,7 +1870,7 @@ export default function TouristItineraryMap() {
       isOpen: true,
       type: "success",
       title: "Site Visited!",
-        {selectedPin && !showFullModal && !isTourRunning && (
+      message: "Marked as visited. Moving to next stop.",
     });
 
     // Go to next site, passing the site we just marked as done
@@ -1932,32 +1891,10 @@ export default function TouristItineraryMap() {
       fetchSiteReviews(selectedPin._id);
     } else {
       setShowReviews(false);
-                setSelectedPin(null);
       setRoute(null);
       setSteps([]);
-      return;
     }
-
-    const nextIndex = optimizedPins.findIndex((p) => p._id === nextPin._id);
-    console.log("✅ Next site:", nextPin.siteName, "at index", nextIndex);
-
-    // Update current site to next in original optimized order
-    setCurrentPinIndex(nextIndex);
-    setSelectedPin(nextPin);
-    setActivePin(nextPin);
-    setManuallyDismissed(false); // Reset manual dismissal for new site
-
-    // Save progress to database
-    saveProgress(
-      nextIndex,
-      updatedVisited,
-      skippedSites,
-      userLocation,
-      optimizedPins
-    );
-
-    if (userLocation) buildRoute(userLocation, nextPin);
-  };
+  }, [selectedPin]);
 
   // Memoize onMove handler to prevent unnecessary re-renders
   const handleMapMove = useCallback((evt) => {
@@ -2046,7 +1983,6 @@ export default function TouristItineraryMap() {
         errorMessage={gpsError}
         onEnable={() => {
           if (gpsPermissionDenied) {
-            // If permission was denied, show instructions to enable in settings
             setGpsError(
               "GPS permission was denied. Please enable location access in your browser/device settings, then refresh this page."
             );
@@ -2055,10 +1991,32 @@ export default function TouristItineraryMap() {
 
           if (navigator?.geolocation) {
             navigator.geolocation.getCurrentPosition(
-              () => {
-                setGpsError("");
+              (pos) => {
+                const loc = {
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                };
+                setUserLocation(loc);
+
+                let within = true;
+                try {
+                  if (mask?.geometry)
+                    within = isUserWithinIntramuros(loc, mask.geometry);
+                } catch {}
+
                 setShowGpsModal(false);
                 setGpsPermissionDenied(false);
+                setGpsError("");
+
+                if (!within) {
+                  setShowLocationBlockModal(true);
+                  setIsBackdropActive(false);
+                  return;
+                }
+
+                setGpsApproved(true);
+                setIsBackdropActive(false);
+                setShowModeModal(true);
               },
               (err) => {
                 if (err.code === err.PERMISSION_DENIED) {
@@ -2071,18 +2029,22 @@ export default function TouristItineraryMap() {
                     "We couldn't access your location. Please enable GPS in device settings or use Tour Map features from the homepage."
                   );
                 }
+                setShowGpsModal(false);
+                setIsBackdropActive(false);
               },
-              { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+              { enableHighAccuracy: true, maximumAge: 0, timeout: 6000 }
             );
           } else {
             setGpsError(
               "GPS is unavailable in this browser. Please use Tour Map features from the homepage."
             );
+            setShowGpsModal(false);
+            setIsBackdropActive(false);
           }
         }}
         onDecline={() => {
-          // Navigate back to homepage without logging out
-          navigate("/", { replace: true });
+          setShowGpsModal(false);
+          setIsBackdropActive(false);
         }}
       />
 
@@ -2165,27 +2127,25 @@ export default function TouristItineraryMap() {
             </Source>
           )}
 
-          {/* GeolocateControl for tracking user location */}
-          <GeolocateControl
-            ref={geolocateControlRef}
-            positionOptions={{
-              enableHighAccuracy: true,
-              maximumAge: 0,
-              timeout: 6000,
-            }}
-            trackUserLocation={true}
-            showUserHeading={false}
-            onGeolocate={handleGeolocate}
-            onError={handleGeolocateError}
-            style={{
-              position: "absolute",
-              bottom: 10,
-              right: 10,
-            }}
-          />
+          {/* GeolocateControl appears after GPS approval */}
+          {gpsApproved && (
+            <GeolocateControl
+              ref={geolocateControlRef}
+              positionOptions={{
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 6000,
+              }}
+              trackUserLocation={true}
+              showUserHeading={false}
+              onGeolocate={handleGeolocate}
+              onError={handleGeolocateError}
+              style={{ position: "absolute", bottom: 10, right: 10 }}
+            />
+          )}
 
-          {/* Site markers - numbered by optimized route */}
-          {optimizedPins.map((pin, idx) => {
+          {/* Site markers - preview uses raw pins, tour uses optimized */}
+          {(isGuidanceRunning ? optimizedPins : pins).map((pin, idx) => {
             const isVisited = visitedSites.has(pin._id);
             return (
               <Marker
@@ -2201,7 +2161,8 @@ export default function TouristItineraryMap() {
                   if (!activePin || activePin._id === pin._id) {
                     setCurrentPinIndex(idx);
                     setActivePin(pin);
-                    if (userLocation) buildRoute(userLocation, pin);
+                    if (isGuidanceRunning && userLocation)
+                      buildRoute(userLocation, pin);
                   }
                 }}
               >
@@ -2233,39 +2194,41 @@ export default function TouristItineraryMap() {
           )}
         </Map>
 
-        {/* Directions Panel */}
-        <DirectionsPanel
-          steps={steps}
-          currentStepIndex={currentStepIndex}
-          setCurrentStepIndex={setCurrentStepIndex}
-          eta={eta}
-          distance={distance}
-          arrivalTime={arrivalTime}
-          isRouting={isRouting}
-          transportMode={transportMode}
-          userLocation={userLocation}
-          activePin={activePin}
-          onPrevSite={handlePrevSite}
-          onSkipSite={handleSkipSite}
-          onNextSite={handleNextSite}
-          hasPrevSite={currentPinIndex > 0}
-          hasNextSite={true}
-          isLastSite={currentPinIndex >= optimizedPins.length - 1}
-          isNearby={isNearby}
-          onArriveAtDestination={() => {
-            if (!isTourRunning && activePin) {
-              setSelectedPin(activePin);
-              setShowFullModal(true);
-            }
-          }}
-        />
+        {/* Directions Panel - only during active tour */}
+        {isGuidanceRunning && (
+          <DirectionsPanel
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            setCurrentStepIndex={setCurrentStepIndex}
+            eta={eta}
+            distance={distance}
+            arrivalTime={arrivalTime}
+            isRouting={isRouting}
+            transportMode={transportMode}
+            userLocation={userLocation}
+            activePin={activePin}
+            onPrevSite={handlePrevSite}
+            onSkipSite={handleSkipSite}
+            onNextSite={handleNextSite}
+            hasPrevSite={currentPinIndex > 0}
+            hasNextSite={true}
+            isLastSite={currentPinIndex >= optimizedPins.length - 1}
+            isNearby={isNearby}
+            onArriveAtDestination={() => {
+              if (!isTourRunning && activePin) {
+                setSelectedPin(activePin);
+                setShowFullModal(true);
+              }
+            }}
+          />
+        )}
 
         {/* Control Buttons */}
         {!showFullModal && (
           <MapControlButtons
             userLocation={userLocation}
             selectedPin={selectedPin}
-            pins={optimizedPins}
+            pins={isGuidanceRunning ? optimizedPins : pins}
             currentPinIndex={currentPinIndex}
             setViewState={setViewState}
             setSelectedPin={setSelectedPin}
@@ -2381,18 +2344,124 @@ export default function TouristItineraryMap() {
           isOpen={showLocationBlockModal}
           onClose={() => {
             setShowLocationBlockModal(false);
-            navigate("/TouristItinerary");
           }}
           onConfirm={() => {
             setShowLocationBlockModal(false);
-            navigate("/TouristItinerary");
           }}
           title="Location Required"
           message="Please ensure you are within Intramuros to access this tour. Move to the area and try again."
-          confirmText="Go Back"
+          confirmText="Okay"
           cancelText=""
           type="error"
         />
+
+        {/* Backdrop to prevent bypass during GPS validation */}
+        {isBackdropActive && (
+          <div className="fixed inset-0 z-[9998] bg-black/40" />
+        )}
+
+        {/* Preview bottom action */}
+        {isPreviewMode && !isGuidanceRunning && (
+          <div className="fixed bottom-0 left-0 right-0 z-[9999] pointer-events-none">
+            <div className="mx-4 mb-6 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBackdropActive(true);
+                  setShowGpsModal(true);
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
+              >
+                <Navigation className="w-5 h-5" /> Start Tour
+              </button>
+              <p className="text-center text-xs text-gray-600 mt-2">
+                Preview mode — pins are visible; GPS starts after you begin
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Tour Mode Choice */}
+        {showModeModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900">
+                  Choose How You Want to Follow the Tour
+                </h3>
+              </div>
+              <div className="p-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <button
+                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
+                  onClick={async () => {
+                    setTourMode("optimized");
+                    setShowModeModal(false);
+                    const optimized = optimizeRoute(
+                      userLocation,
+                      pins,
+                      visitedSites
+                    );
+                    setOptimizedPins(optimized);
+                    if (optimized.length > 0) {
+                      setCurrentPinIndex(0);
+                      setSelectedPin(optimized[0]);
+                      setActivePin(optimized[0]);
+                      await saveProgress(
+                        0,
+                        visitedSites,
+                        skippedSites,
+                        userLocation,
+                        optimized
+                      );
+                      buildRoute(userLocation, optimized[0]);
+                    }
+                    setIsPreviewMode(false);
+                    setIsGuidanceRunning(true);
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-blue-600 font-semibold">
+                    <Navigation className="w-5 h-5" /> Optimized Route
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    Automatically arranges the sites based on your current
+                    location for the fastest route.
+                  </p>
+                </button>
+                <button
+                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
+                  onClick={async () => {
+                    setTourMode("original");
+                    setShowModeModal(false);
+                    const original = [...pins];
+                    setOptimizedPins(original);
+                    if (original.length > 0) {
+                      setCurrentPinIndex(0);
+                      setSelectedPin(original[0]);
+                      setActivePin(original[0]);
+                      await saveProgress(
+                        0,
+                        visitedSites,
+                        skippedSites,
+                        userLocation,
+                        original
+                      );
+                      buildRoute(userLocation, original[0]);
+                    }
+                    setIsPreviewMode(false);
+                    setIsGuidanceRunning(true);
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-gray-800 font-semibold">
+                    <ListOrdered className="w-5 h-5" /> Original Order
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    Follow the sites in the order they were originally added.
+                  </p>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

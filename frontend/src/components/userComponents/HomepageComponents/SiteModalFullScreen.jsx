@@ -16,10 +16,10 @@ export default function SiteModalFullScreen({
   distance,
   currentPinIndex,
   pinsLength,
-  goToNextStop,
+  goToNextStop = () => {},
   siteReviews = [],
   reviewsLoading = false,
-  simulateGoToNextSite,
+  simulateGoToNextSite = () => {},
   isGuestMode = false,
   onReviewSubmitted,
 }) {

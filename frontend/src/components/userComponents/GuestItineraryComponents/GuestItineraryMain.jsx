@@ -1,34 +1,46 @@
 // GuestItineraryMain.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, MapPin, Clock, FileText, Map } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  Clock,
+  FileText,
+  Map,
+  Info,
+  X,
+  Tag,
+  CheckCircle,
+  DollarSign,
+} from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
 
 export default function GuestItineraryMain() {
   const [adminItineraries, setAdminItineraries] = useState([]);
-  const [isOffline, setIsOffline] = useState(false);
-  const [fromCache, setFromCache] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
   const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
   const carouselRef = useRef(null);
   const navigate = useNavigate();
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsItinerary, setDetailsItinerary] = useState(null);
+  const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
+  const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
+  const siteDetailsModalRef = useRef(null);
+  const lastActiveSiteElementRef = useRef(null);
 
   useEffect(() => {
     const fetchItineraries = async () => {
       try {
         const result = await guestApi.getAdminItineraries();
         setAdminItineraries(result.data || []);
-        setIsOffline(result.offline);
-        setFromCache(result.fromCache);
-      } catch (err) {
+      } catch {
         // Try to load from cache even on error
-        const cached = localStorage.getItem('guest_admin_itineraries');
+        const cached = localStorage.getItem("guest_admin_itineraries");
         if (cached) {
           const { data } = JSON.parse(cached);
           setAdminItineraries(data || []);
-          setFromCache(true);
-          setIsOffline(true);
         }
       }
     };
@@ -57,7 +69,7 @@ export default function GuestItineraryMain() {
   const handleTouchStart = (e) => {
     setTouchStart({
       x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY
+      y: e.targetTouches[0].clientY,
     });
     setTouchEnd({ x: 0, y: 0 });
   };
@@ -65,22 +77,22 @@ export default function GuestItineraryMain() {
   const handleTouchMove = (e) => {
     const currentX = e.targetTouches[0].clientX;
     const currentY = e.targetTouches[0].clientY;
-    
+
     setTouchEnd({
       x: currentX,
-      y: currentY
+      y: currentY,
     });
   };
 
   const handleTouchEnd = () => {
     if (!touchStart.x || !touchEnd.x) return;
-    
+
     const distanceX = touchStart.x - touchEnd.x;
     const distanceY = touchStart.y - touchEnd.y;
-    
+
     // Calculate if the swipe is more horizontal than vertical
     const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
-    
+
     // Only trigger carousel navigation if it's primarily a horizontal swipe
     if (isHorizontalSwipe) {
       const isLeftSwipe = distanceX > 50;
@@ -98,6 +110,73 @@ export default function GuestItineraryMain() {
     setTouchEnd({ x: 0, y: 0 });
   };
 
+  const resolveUrl = (url) => {
+    if (!url || url.trim() === "") return null;
+    if (url.startsWith("http")) return url;
+    const path = url.startsWith("/") ? url : `/${url}`;
+    return `${
+      import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+      "http://localhost:5000"
+    }${path}`;
+  };
+
+  const formatMinutesToClock = (min) => {
+    if (min === undefined || min === null) return "";
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hh = h % 12 || 12;
+    const mm = String(m).padStart(2, "0");
+    return `${hh}:${mm} ${ampm}`;
+  };
+  const roundToStep = (min, step = 5) => Math.round(min / step) * step;
+
+  const openDetails = (itinerary) => {
+    setDetailsItinerary(itinerary);
+    setShowDetailsModal(true);
+  };
+
+  const closeDetails = () => {
+    setShowDetailsModal(false);
+    setDetailsItinerary(null);
+  };
+
+  useEffect(() => {
+    if (showSiteDetailsModal) {
+      lastActiveSiteElementRef.current = document.activeElement;
+      const el = siteDetailsModalRef.current;
+      if (!el) return;
+      const onKeyDown = (e) => {
+        if (e.key === "Escape") {
+          setShowSiteDetailsModal(false);
+          setDetailsSelectedSite(null);
+        }
+        if (e.key === "Tab") {
+          const focusable = el.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable.length === 0) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      };
+      document.addEventListener("keydown", onKeyDown);
+      el.focus();
+      return () => {
+        document.removeEventListener("keydown", onKeyDown);
+        const prev = lastActiveSiteElementRef.current;
+        if (prev && prev.focus) prev.focus();
+      };
+    }
+  }, [showSiteDetailsModal]);
+
   return (
     <div className="flex flex-col items-center justify-start">
       {/* Suggested itineraries - Horizontal Carousel */}
@@ -114,7 +193,7 @@ export default function GuestItineraryMain() {
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              style={{ touchAction: 'pan-x' }}
+              style={{ touchAction: "pan-x" }}
             >
               {/* Slides */}
               <div
@@ -122,13 +201,11 @@ export default function GuestItineraryMain() {
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
                 {adminItineraries.map((itinerary) => (
-                  <div
-                    key={itinerary._id}
-                    className="min-w-full px-4 md:px-8"
-                  >
+                  <div key={itinerary._id} className="min-w-full px-4 md:px-8">
                     <ItineraryCard
                       itinerary={itinerary}
                       navigate={navigate}
+                      onOpenDetails={openDetails}
                     />
                   </div>
                 ))}
@@ -188,21 +265,363 @@ export default function GuestItineraryMain() {
           </p>
         )}
       </div>
+
+      {showDetailsModal && detailsItinerary && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={closeDetails}
+          />
+          <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn max-h-[90vh] sm:max-h-[85vh]">
+            <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <Info className="w-6 h-6 text-[#f04e37]" />
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    {detailsItinerary.name}
+                  </h3>
+                  <p className="text-xs text-gray-500">Itinerary overview</p>
+                </div>
+              </div>
+              <button
+                onClick={closeDetails}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {resolveUrl(detailsItinerary.imageUrl) && (
+              <div className="h-36 sm:h-56 md:h-64 w-full overflow-hidden">
+                <img
+                  src={resolveUrl(detailsItinerary.imageUrl)}
+                  alt={detailsItinerary.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {detailsItinerary.duration
+                      ? `${detailsItinerary.duration} ${
+                          detailsItinerary.duration === 1 ? "hour" : "hours"
+                        }`
+                      : "Flexible"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <MapPin className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {(detailsItinerary.sites || []).length} site(s)
+                  </span>
+                </div>
+              </div>
+
+              {detailsItinerary.description && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                    Description
+                  </h4>
+                  <p className="text-gray-800 text-sm leading-relaxed">
+                    {detailsItinerary.description}
+                  </p>
+                  {typeof detailsItinerary.recommendedStartMinutes ===
+                    "number" && (
+                    <div className="mt-3 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-gray-50 border border-gray-200">
+                      <Clock className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm text-gray-700">
+                        Recommended Start:{" "}
+                        {formatMinutesToClock(
+                          detailsItinerary.recommendedStartMinutes
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(() => {
+                const start =
+                  typeof detailsItinerary.recommendedStartMinutes === "number"
+                    ? detailsItinerary.recommendedStartMinutes
+                    : 8 * 60;
+                let cursor = roundToStep(start, 5);
+                const items = (detailsItinerary.sites || []).map((site) => {
+                  const v =
+                    typeof site?.averageTimeSpent === "number"
+                      ? site.averageTimeSpent
+                      : Number(site?.averageTimeSpent);
+                  const item = { time: roundToStep(cursor, 5), site };
+                  cursor = roundToStep(
+                    cursor + (isNaN(v) || v <= 0 ? 0 : v),
+                    5
+                  );
+                  return item;
+                });
+                if (!items.length) return null;
+                return (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                      Suggested Schedule
+                    </h4>
+                    <div className="space-y-3 sm:space-y-4">
+                      {items.map(({ time, site }, i) => (
+                        <div
+                          key={site._id || i}
+                          className="flex items-start gap-4 sm:gap-5 py-1.5"
+                        >
+                          <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5">
+                            <Clock className="w-4 h-4 text-gray-600" />
+                            <span className="text-sm sm:text-base font-semibold text-gray-900">
+                              {formatMinutesToClock(time)}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800">
+                              {site.siteName || site.title}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Sites */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                  Included Sites
+                </h4>
+                <div className="space-y-3 pr-2">
+                  {(detailsItinerary.sites || []).map((site) => {
+                    const thumb =
+                      site.mediaFiles?.find((m) => m.type === "image")?.url ||
+                      site.mediaUrl;
+                    const img = resolveUrl(thumb);
+                    return (
+                      <button
+                        key={site._id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailsSelectedSite(site);
+                          setShowSiteDetailsModal(true);
+                        }}
+                        className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white hover:border-[#f04e37] hover:bg-orange-50/30"
+                      >
+                        <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {img ? (
+                            <img
+                              src={img}
+                              alt={site.siteName || site.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <MapPin className="w-6 h-6" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start">
+                            <p className="text-base font-semibold text-gray-900 truncate">
+                              {site.siteName || site.title}
+                            </p>
+                          </div>
+                          {site.category && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
+                                <Tag className="w-3 h-3" />
+                                {site.category.name || site.category}
+                              </span>
+                            </div>
+                          )}
+                          {site.siteDescription && (
+                            <p className="text-sm text-gray-700 mt-1 line-clamp-3">
+                              {site.siteDescription}
+                            </p>
+                          )}
+                          {site.feeType && site.feeType !== "none" && (
+                            <p className="text-xs text-[#f04e37] font-medium mt-1">
+                              Entrance fee may apply
+                            </p>
+                          )}
+                          {site.status === "inactive" && (
+                            <p className="text-xs text-orange-600 font-medium mt-1">
+                              Currently unavailable
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSiteDetailsModal && detailsSelectedSite && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => {
+              setShowSiteDetailsModal(false);
+              setDetailsSelectedSite(null);
+            }}
+          />
+          <div
+            ref={siteDetailsModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="guest-site-details-title"
+            aria-describedby="guest-site-details-content"
+            tabIndex={-1}
+            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn max-h-[90vh] sm:max-h-[85vh]"
+          >
+            <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[#f04e37]" />
+                <h3
+                  id="guest-site-details-title"
+                  className="text-lg font-bold text-gray-900"
+                >
+                  {detailsSelectedSite.siteName || detailsSelectedSite.title}
+                </h3>
+              </div>
+              <button
+                className="p-2 rounded-lg hover:bg-gray-100"
+                onClick={() => {
+                  setShowSiteDetailsModal(false);
+                  setDetailsSelectedSite(null);
+                }}
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {(() => {
+              const thumb =
+                detailsSelectedSite.mediaFiles?.find((m) => m.type === "image")
+                  ?.url || detailsSelectedSite.mediaUrl;
+              const img = resolveUrl(thumb);
+              return img ? (
+                <div className="h-36 sm:h-48 w-full overflow-hidden">
+                  <img
+                    src={img}
+                    alt={
+                      detailsSelectedSite.siteName || detailsSelectedSite.title
+                    }
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : null;
+            })()}
+
+            <div
+              id="guest-site-details-content"
+              className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto custom-scrollbar"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                {detailsSelectedSite.category && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
+                    <Tag className="w-3 h-3" />
+                    {detailsSelectedSite.category?.name ||
+                      detailsSelectedSite.category}
+                  </span>
+                )}
+                {detailsSelectedSite.feeType &&
+                  detailsSelectedSite.feeType !== "none" && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-700">
+                      <DollarSign className="w-3 h-3" />
+                      Entrance fee may apply
+                    </span>
+                  )}
+              </div>
+
+              {(() => {
+                const first =
+                  (detailsSelectedSite.siteDescription || "")
+                    .split(/\r?\n+/)
+                    .find((p) => p.trim()) || "";
+                return first ? (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                      Description
+                    </h4>
+                    <p className="text-gray-800 text-sm leading-relaxed">
+                      {first}
+                    </p>
+                  </div>
+                ) : null;
+              })()}
+
+              {(() => {
+                const raw = detailsSelectedSite.feeAmount;
+                const hasFee =
+                  raw !== null &&
+                  raw !== undefined &&
+                  String(raw).trim() !== "" &&
+                  String(raw) !== "0";
+                if (!hasFee) return null;
+                const rawDisc = detailsSelectedSite.feeAmountDiscounted;
+                const hasDisc =
+                  rawDisc !== null &&
+                  rawDisc !== undefined &&
+                  String(rawDisc).trim() !== "" &&
+                  String(rawDisc) !== "0";
+                return (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-semibold text-gray-800">
+                        Entrance Fee
+                      </span>
+                      <span className="text-[#f04e37] font-bold">₱{raw}</span>
+                    </div>
+                    {hasDisc && (
+                      <div className="flex items-center justify-between bg-white/50 p-2 rounded-md">
+                        <span className="text-xs text-gray-700">
+                          Student/PWD/Senior
+                        </span>
+                        <span className="text-green-600 font-bold">
+                          ₱{rawDisc}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ItineraryCard({ itinerary, navigate }) {
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
-  
+function ItineraryCard({ itinerary, navigate, onOpenDetails }) {
+  const [isDescriptionExpanded, setIsDescriptionExpanded] =
+    React.useState(false);
+
   // Resolve image URL (prepend localhost if needed)
   const getImageUrl = (url) => {
     if (!url || url.trim() === "") return null;
     if (url.startsWith("http")) return url;
     const path = url.startsWith("/") ? url : `/${url}`;
-    return `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000"}${path}`;
+    return `${
+      import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+      "http://localhost:5000"
+    }${path}`;
   };
-  
+
   const imageSrc = getImageUrl(itinerary.imageUrl);
 
   // Determine completion for Guest mode based on localStorage progress
@@ -219,15 +638,13 @@ function ItineraryCard({ itinerary, navigate }) {
       if (activeSiteIds.length === 0) return false;
       // Completed when all active sites are included in visitedIds
       return activeSiteIds.every((id) => visitedIds.includes(id));
-    } catch (_) {
+    } catch {
       return false;
     }
   })();
 
   return (
-    <div
-      className="bg-white rounded-3xl shadow-lg overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]"
-    >
+    <div className="bg-white rounded-3xl shadow-lg overflow-hidden transform hover:scale-105 hover:shadow-2xl transition-all duration-300 flex flex-col h-[600px]">
       <div
         className="cursor-pointer"
         onClick={() =>
@@ -242,50 +659,66 @@ function ItineraryCard({ itinerary, navigate }) {
             alt={itinerary.name}
             className="w-full h-48 object-cover flex-shrink-0"
             onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling.style.display = 'flex';
+              e.currentTarget.style.display = "none";
+              e.currentTarget.nextElementSibling.style.display = "flex";
             }}
           />
         ) : null}
-        
+
         {/* Placeholder for missing images */}
-        <div 
+        <div
           className="w-full h-48 bg-gradient-to-br from-orange-50 to-red-50 flex flex-col items-center justify-center flex-shrink-0 border-b-2 border-[#f04e37]/10"
-          style={{ display: imageSrc ? 'none' : 'flex' }}
+          style={{ display: imageSrc ? "none" : "flex" }}
         >
           <div className="relative">
             <div className="absolute inset-0 bg-[#f04e37]/10 rounded-full blur-xl"></div>
-            <MapPin className="w-20 h-20 text-[#f04e37] relative" strokeWidth={1.5} />
+            <MapPin
+              className="w-20 h-20 text-[#f04e37] relative"
+              strokeWidth={1.5}
+            />
           </div>
-          
         </div>
       </div>
 
       <div className="p-5 flex flex-col flex-1 overflow-hidden">
-        <h2 className="text-xl font-semibold text-gray-800 mb-3 flex-shrink-0 flex items-center gap-2">
-          {itinerary.name}
-          {isCompleted && (
-            // Filled check-circle icon
-            <svg
-              viewBox="0 0 24 24"
-              className="w-5 h-5 text-green-600 drop-shadow-sm"
-              aria-hidden="true"
-            >
-              <path
-                fill="currentColor"
-                d="M12,2A10,10 0,1,0 22,12A10,10 0,0,0 12,2M10,17L5,12L6.41,10.59L10,14.17L17.59,6.58L19,8L10,17Z"
-              />
-            </svg>
-          )}
-        </h2>
-        
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {itinerary.name}
+          </h2>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetails && onOpenDetails(itinerary);
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700"
+            aria-label="View itinerary details"
+            title="View full details"
+          >
+            <Info className="w-4 h-4" />
+            Info
+          </button>
+        </div>
+        {isCompleted && (
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-semibold">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Completed
+            </span>
+          </div>
+        )}
+
         {itinerary.description && (
           <div className="flex-shrink-0 mb-3">
             <div className="flex items-center gap-1.5 mb-1">
               <FileText className="w-3.5 h-3.5 text-gray-500" />
               <p className="text-xs font-semibold text-gray-500">Description</p>
             </div>
-            <p className={`text-gray-700 text-sm ${isDescriptionExpanded ? '' : 'line-clamp-2'}`}>
+            <p
+              className={`text-gray-700 text-sm ${
+                isDescriptionExpanded ? "" : "line-clamp-2"
+              }`}
+            >
               {itinerary.description}
             </p>
             {itinerary.description.length > 100 && (
@@ -296,12 +729,12 @@ function ItineraryCard({ itinerary, navigate }) {
                 }}
                 className="text-[#f04e37] text-xs font-semibold mt-1 hover:underline focus:outline-none"
               >
-                {isDescriptionExpanded ? 'Read Less' : 'Read More'}
+                {isDescriptionExpanded ? "Read Less" : "Read More"}
               </button>
             )}
           </div>
         )}
-        
+
         {itinerary.duration && (
           <div className="flex-shrink-0 mb-3">
             <div className="flex items-center gap-1.5 mb-1">
@@ -309,11 +742,11 @@ function ItineraryCard({ itinerary, navigate }) {
               <p className="text-xs font-semibold text-gray-500">Duration</p>
             </div>
             <p className="text-gray-700 text-sm font-medium">
-              {itinerary.duration} {itinerary.duration === 1 ? 'hour' : 'hours'}
+              {itinerary.duration} {itinerary.duration === 1 ? "hour" : "hours"}
             </p>
           </div>
         )}
-        
+
         {itinerary.sites?.length > 0 ? (
           <div className="text-gray-700 text-sm flex-1 overflow-hidden flex flex-col">
             <div className="flex items-center gap-1.5 mb-1 flex-shrink-0">
@@ -322,7 +755,9 @@ function ItineraryCard({ itinerary, navigate }) {
             </div>
             <ul className="list-disc list-inside space-y-0.5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
               {itinerary.sites.map((site) => (
-                <li key={site._id} className="text-sm text-gray-700">{site.siteName || site.title}</li>
+                <li key={site._id} className="text-sm text-gray-700">
+                  {site.siteName || site.title}
+                </li>
               ))}
             </ul>
           </div>

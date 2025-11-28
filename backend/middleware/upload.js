@@ -4,98 +4,134 @@ const fs = require("fs");
 const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const multerS3 = require("multer-s3");
 
-// S3 Client Configuration
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'ap-southeast-2',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+// Decide storage: S3 when credentials are present; otherwise local disk
+const hasAwsCreds = Boolean(
+  process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+);
+const S3_BUCKET = process.env.S3_BUCKET_NAME || "juander-frontend";
 
-const S3_BUCKET = process.env.S3_BUCKET_NAME || 'juander-frontend';
+let storage;
 
-const storage = multerS3({
-  s3: s3Client,
-  bucket: S3_BUCKET,
-  acl: 'public-read', // Make all uploaded files publicly readable
-  contentType: (req, file, cb) => {
-    // Explicitly set content type for videos
-    const mimeType = file.mimetype;
-    if (mimeType.startsWith('video/')) {
-      cb(null, mimeType); // Use the detected video mime type
-    } else {
-      cb(null, file.mimetype); // Use original mime type for other files
-    }
-  },
-  key: (req, file, cb) => {
-    let folder = '';
-    let filename = '';
-    
-    console.log('🔧 Multer-S3 key function - req.baseUrl:', req.baseUrl);
-    console.log('🔧 Multer-S3 key function - req.user:', req.user?._id);
-    
-    // Determine folder based on route
-    if (req.baseUrl.includes("auth")) {
-      folder = "uploads/profile";
-      const ext = path.extname(file.originalname);
-      // Use timestamp + random string if req.user is not available yet
-      const userId = req.user?._id || `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      filename = `${userId}${ext}`;
-      console.log('🔧 Profile upload - userId:', userId, 'filename:', filename);
-    } else if (req.baseUrl.includes("pins")) {
-      if (file.fieldname === "facade") {
-        folder = "uploads/facades";
+if (hasAwsCreds) {
+  const s3Client = new S3Client({
+    region: process.env.AWS_REGION || "ap-southeast-2",
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
+
+  storage = multerS3({
+    s3: s3Client,
+    bucket: S3_BUCKET,
+    acl: "public-read",
+    contentType: (req, file, cb) => {
+      const mimeType = file.mimetype;
+      if (mimeType.startsWith("video/")) {
+        cb(null, mimeType);
+      } else {
+        cb(null, file.mimetype);
+      }
+    },
+    key: (req, file, cb) => {
+      let folder = "";
+      let filename = "";
+
+      if (req.baseUrl.includes("auth")) {
+        folder = "uploads/profile";
+        const ext = path.extname(file.originalname);
+        const userId =
+          req.user?._id ||
+          `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        filename = `${userId}${ext}`;
+      } else if (req.baseUrl.includes("pins")) {
+        if (file.fieldname === "facade") {
+          folder = "uploads/facades";
+          filename = file.originalname;
+        } else if (file.fieldname === "mediaFiles") {
+          folder = "uploads/media";
+          const timestamp = Date.now();
+          const ext = path.extname(file.originalname);
+          const basename = path.basename(file.originalname, ext);
+          filename = `${timestamp}-${basename}${ext}`;
+        } else if (file.fieldname === "arModel" || file.fieldname === "glb") {
+          folder = "uploads/arModels";
+          filename = file.originalname;
+        } else {
+          folder = "uploads/media";
+          filename = file.originalname;
+        }
+      } else if (req.baseUrl.includes("itineraries")) {
+        folder = "uploads/itineraries";
+        const timestamp = Date.now();
+        filename = `${timestamp}-${file.originalname}`;
+      } else if (req.baseUrl.includes("userItineraries")) {
+        folder = "uploads/userItineraries";
+        const timestamp = Date.now();
+        filename = `${timestamp}-${file.originalname}`;
+      } else if (req.baseUrl.includes("emergency")) {
+        folder = "uploads/emergency";
         filename = file.originalname;
-      } else if (file.fieldname === "mediaFiles") {
-        folder = "uploads/media";
+      } else if (req.baseUrl.includes("reviews")) {
+        folder = "uploads/reviews";
         const timestamp = Date.now();
         const ext = path.extname(file.originalname);
         const basename = path.basename(file.originalname, ext);
-        filename = `${timestamp}-${basename}${ext}`;
-      } else if (file.fieldname === "arModel" || file.fieldname === "glb") {
-        // 3D models go to arModels folder
-        folder = "uploads/arModels";
-        filename = file.originalname;
+        filename = `${timestamp}-${req.user._id}-${basename}${ext}`;
       } else {
-        folder = "uploads/media";
-        filename = file.originalname;
+        folder = "uploads/photobooth";
+        const timestamp = Date.now();
+        const ext = path.extname(file.originalname);
+        const basename = path
+          .basename(file.originalname, ext)
+          .replace(/[^a-zA-Z0-9-_]/g, "_")
+          .replace(/_+/g, "_")
+          .replace(/^_|_$/g, "");
+        filename = `${timestamp}-${basename}${ext}`;
       }
-    } else if (req.baseUrl.includes("itineraries")) {
-      folder = "uploads/itineraries";
+
+      const key = `${folder}/${filename}`;
+      cb(null, key);
+    },
+  });
+} else {
+  const diskStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      let folder = "";
+      if (req.baseUrl.includes("auth")) folder = "uploads/profile";
+      else if (req.baseUrl.includes("pins")) {
+        if (file.fieldname === "facade") folder = "uploads/facades";
+        else if (file.fieldname === "mediaFiles") folder = "uploads/media";
+        else if (file.fieldname === "arModel" || file.fieldname === "glb")
+          folder = "uploads/arModels";
+        else folder = "uploads/media";
+      } else if (req.baseUrl.includes("itineraries"))
+        folder = "uploads/itineraries";
+      else if (req.baseUrl.includes("userItineraries"))
+        folder = "uploads/userItineraries";
+      else if (req.baseUrl.includes("emergency")) folder = "uploads/emergency";
+      else if (req.baseUrl.includes("reviews")) folder = "uploads/reviews";
+      else folder = "uploads/photobooth";
+
+      const dest = path.join(__dirname, "..", folder);
+      try {
+        fs.mkdirSync(dest, { recursive: true });
+      } catch {}
+      cb(null, dest);
+    },
+    filename: (req, file, cb) => {
       const timestamp = Date.now();
       const ext = path.extname(file.originalname);
-      filename = `${timestamp}-${file.originalname}`;
-    } else if (req.baseUrl.includes("userItineraries")) {
-      folder = "uploads/userItineraries";
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname);
-      filename = `${timestamp}-${file.originalname}`;
-    } else if (req.baseUrl.includes("emergency")) {
-      folder = "uploads/emergency";
-      filename = file.originalname;
-    } else if (req.baseUrl.includes("reviews")) {
-      folder = "uploads/reviews";
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname);
-      const basename = path.basename(file.originalname, ext);
-      filename = `${timestamp}-${req.user._id}-${basename}${ext}`;
-    } else {
-      folder = "uploads/photobooth";
-      // Sanitize filename for photobooth filters to avoid URL encoding issues
-      const timestamp = Date.now();
-      const ext = path.extname(file.originalname);
-      const basename = path.basename(file.originalname, ext)
-        .replace(/[^a-zA-Z0-9-_]/g, '_') // Replace special chars with underscore
-        .replace(/_+/g, '_') // Replace multiple underscores with single
-        .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
-      filename = `${timestamp}-${basename}${ext}`;
-    }
-    
-    const key = `${folder}/${filename}`;
-    cb(null, key);
-  },
-});
+      const basename = path
+        .basename(file.originalname, ext)
+        .replace(/[^a-zA-Z0-9-_]/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+      cb(null, `${timestamp}-${basename}${ext}`);
+    },
+  });
+  storage = diskStorage;
+}
 
 // File filter logic
 const fileFilter = (req, file, cb) => {
@@ -119,7 +155,10 @@ const fileFilter = (req, file, cb) => {
     ) {
       cb(null, true);
     } else {
-      cb(new Error("Only image, video, or .glb files are allowed for pins!"), false);
+      cb(
+        new Error("Only image, video, or .glb files are allowed for pins!"),
+        false
+      );
     }
   } else if (
     req.baseUrl.includes("itineraries") ||
@@ -147,22 +186,23 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ 
-  storage, 
+const upload = multer({
+  storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit for video files
-  }
+    fileSize: 50 * 1024 * 1024,
+  },
 });
-
 
 // Helper function to delete files from local storage
 const deleteFile = (filePath) => {
   try {
     // Remove leading slash if present
-    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-    const fullPath = path.join(__dirname, '..', cleanPath);
-    
+    const cleanPath = filePath.startsWith("/")
+      ? filePath.substring(1)
+      : filePath;
+    const fullPath = path.join(__dirname, "..", cleanPath);
+
     if (fs.existsSync(fullPath)) {
       fs.unlinkSync(fullPath);
       console.log(`File deleted successfully: ${fullPath}`);
@@ -187,11 +227,18 @@ const deleteFromS3 = async (fileUrl) => {
     const key = extractKey(fileUrl);
     if (key) {
       try {
+        const client = new S3Client({
+          region: process.env.AWS_REGION || "ap-southeast-2",
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+          },
+        });
         const command = new DeleteObjectCommand({
           Bucket: S3_BUCKET,
           Key: key,
         });
-        await s3Client.send(command);
+        await client.send(command);
         console.log(`File deleted from S3: ${key}`);
         return true;
       } catch (err) {

@@ -19,7 +19,13 @@ router.post(
 
       // Use CloudFront CDN URL when S3 URL is available
       const { toCdnUrl } = require("../utils/cdnUtil");
-      let imageUrl = req.file.location || `/uploads/${req.baseUrl.includes("userItineraries") ? "userItineraries" : "itineraries"}/${req.file.filename}`;
+      let imageUrl =
+        req.file.location ||
+        `/uploads/${
+          req.baseUrl.includes("userItineraries")
+            ? "userItineraries"
+            : "itineraries"
+        }/${req.file.filename}`;
       imageUrl = toCdnUrl(imageUrl);
 
       console.log("Image uploaded successfully:", imageUrl);
@@ -62,8 +68,15 @@ const getUserName = (user) =>
 // CREATE a new itinerary (user or admin)
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { name, description, imageUrl, duration, sites, isAdminCreated } =
-      req.body;
+    const {
+      name,
+      description,
+      imageUrl,
+      duration,
+      sites,
+      isAdminCreated,
+      recommendedStartMinutes,
+    } = req.body;
 
     console.log("Creating itinerary with data:", {
       name,
@@ -79,6 +92,7 @@ router.post("/", verifyToken, async (req, res) => {
       description,
       imageUrl,
       duration,
+      recommendedStartMinutes,
       sites,
       createdBy: req.user._id,
       isAdminCreated: isAdminCreated || false,
@@ -116,7 +130,7 @@ router.get("/", verifyToken, async (req, res) => {
       isArchived: false,
     }).populate({
       path: "sites",
-      populate: { path: "category", select: "name" }
+      populate: { path: "category", select: "name" },
     });
 
     res.json(itineraries);
@@ -133,7 +147,7 @@ router.get("/archived", verifyAdmin, async (req, res) => {
     })
       .populate({
         path: "sites",
-        populate: { path: "category", select: "name" }
+        populate: { path: "category", select: "name" },
       })
       .sort({ updatedAt: -1 });
 
@@ -151,7 +165,7 @@ router.get("/guest", async (req, res) => {
       isArchived: false,
     }).populate({
       path: "sites",
-      populate: { path: "category", select: "name" }
+      populate: { path: "category", select: "name" },
     });
     res.json(itineraries);
   } catch (err) {
@@ -164,7 +178,7 @@ router.get("/guest/:id", async (req, res) => {
   try {
     const itinerary = await Itinerary.findById(req.params.id).populate({
       path: "sites",
-      populate: { path: "category", select: "name" }
+      populate: { path: "category", select: "name" },
     });
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
@@ -186,7 +200,7 @@ router.get("/:id", verifyToken, async (req, res) => {
   try {
     const itinerary = await Itinerary.findById(req.params.id).populate({
       path: "sites",
-      populate: { path: "category", select: "name" }
+      populate: { path: "category", select: "name" },
     });
     if (!itinerary)
       return res.status(404).json({ error: "Itinerary not found" });
@@ -219,7 +233,14 @@ router.put("/:id", verifyToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    const { name, description, imageUrl, sites, duration } = req.body;
+    const {
+      name,
+      description,
+      imageUrl,
+      sites,
+      duration,
+      recommendedStartMinutes,
+    } = req.body;
     itinerary.name = name || itinerary.name;
     itinerary.description = description || itinerary.description;
     // Allow empty string to clear imageUrl
@@ -231,6 +252,9 @@ router.put("/:id", verifyToken, async (req, res) => {
       itinerary.duration = Number(duration) || 0;
     }
     itinerary.sites = sites || itinerary.sites;
+    if (recommendedStartMinutes !== undefined) {
+      itinerary.recommendedStartMinutes = Number(recommendedStartMinutes);
+    }
 
     await itinerary.save();
 
@@ -243,10 +267,12 @@ router.put("/:id", verifyToken, async (req, res) => {
       targetId: itinerary._id,
     });
 
-    res.json(await itinerary.populate({
-      path: "sites",
-      populate: { path: "category", select: "name" }
-    }));
+    res.json(
+      await itinerary.populate({
+        path: "sites",
+        populate: { path: "category", select: "name" },
+      })
+    );
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -332,7 +358,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
 
     // CASCADE DELETE: Find and delete all reviews associated with this itinerary
     const reviews = await Review.find({ itineraryId: req.params.id });
-    
+
     // Delete S3 photos from reviews
     for (const review of reviews) {
       if (review.photos && review.photos.length > 0) {
@@ -341,20 +367,31 @@ router.delete("/:id", verifyToken, async (req, res) => {
             await deleteFromS3(photoUrl);
             console.log(`Deleted review photo from S3: ${photoUrl}`);
           } catch (err) {
-            console.error(`Failed to delete review photo from S3: ${photoUrl}`, err);
+            console.error(
+              `Failed to delete review photo from S3: ${photoUrl}`,
+              err
+            );
             // Continue even if S3 deletion fails
           }
         }
       }
     }
-    
+
     // Delete all reviews for this itinerary
-    const deletedReviewsCount = await Review.deleteMany({ itineraryId: req.params.id });
-    console.log(`Deleted ${deletedReviewsCount.deletedCount} reviews for itinerary ${req.params.id}`);
+    const deletedReviewsCount = await Review.deleteMany({
+      itineraryId: req.params.id,
+    });
+    console.log(
+      `Deleted ${deletedReviewsCount.deletedCount} reviews for itinerary ${req.params.id}`
+    );
 
     // CASCADE DELETE: Delete all visited sites associated with this itinerary
-    const deletedVisitedSitesCount = await VisitedSite.deleteMany({ itineraryId: req.params.id });
-    console.log(`Deleted ${deletedVisitedSitesCount.deletedCount} visited sites for itinerary ${req.params.id}`);
+    const deletedVisitedSitesCount = await VisitedSite.deleteMany({
+      itineraryId: req.params.id,
+    });
+    console.log(
+      `Deleted ${deletedVisitedSitesCount.deletedCount} visited sites for itinerary ${req.params.id}`
+    );
 
     // Delete the itinerary itself
     await itinerary.deleteOne();
@@ -368,10 +405,10 @@ router.delete("/:id", verifyToken, async (req, res) => {
       targetId: itinerary._id,
     });
 
-    res.json({ 
+    res.json({
       message: "Itinerary permanently deleted",
       deletedVisitedSites: deletedVisitedSitesCount.deletedCount,
-      deletedReviews: deletedReviewsCount.deletedCount
+      deletedReviews: deletedReviewsCount.deletedCount,
     });
   } catch (err) {
     console.error("Error deleting itinerary:", err);

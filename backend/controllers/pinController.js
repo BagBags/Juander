@@ -49,6 +49,13 @@ exports.getPins = async (req, res) => {
 exports.createPin = async (req, res) => {
   try {
     const pinData = { ...req.body };
+    if (pinData.averageTimeSpent === '') {
+      pinData.averageTimeSpent = null;
+    }
+    if (pinData.averageTimeSpent !== undefined && pinData.averageTimeSpent !== null) {
+      const n = Number(pinData.averageTimeSpent);
+      pinData.averageTimeSpent = Number.isFinite(n) ? n : null;
+    }
     
     // Ensure feeType has a default if not provided
     if (!pinData.feeType) {
@@ -86,8 +93,15 @@ exports.updatePin = async (req, res) => {
     console.log("📝 Updating pin:", req.params.id);
     console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
     
-    // Prepare update data
-    const updateData = { ...req.body };
+  // Prepare update data
+  const updateData = { ...req.body };
+  if (updateData.averageTimeSpent === '') {
+    updateData.averageTimeSpent = null;
+  }
+  if (updateData.averageTimeSpent !== undefined && updateData.averageTimeSpent !== null) {
+    const n = Number(updateData.averageTimeSpent);
+    updateData.averageTimeSpent = Number.isFinite(n) ? n : null;
+  }
     
     // Ensure feeType has a default if not provided
     if (!updateData.feeType) {

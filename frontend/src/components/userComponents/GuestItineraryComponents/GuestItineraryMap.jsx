@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { createPortal } from "react-dom";
 import Map, { Marker, Source, Layer, GeolocateControl } from "react-map-gl";
 import mapboxgl from "mapbox-gl";
@@ -6,9 +12,13 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "./GuestItineraryMap.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { WifiOff } from "lucide-react";
+import { WifiOff, Navigation, ListOrdered } from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
-import { optimizeRoute, getNextSite, calculateDistance } from "../../../utils/routeOptimizer";
+import {
+  optimizeRoute,
+  getNextSite,
+  calculateDistance,
+} from "../../../utils/routeOptimizer";
 
 import {
   MAPBOX_TOKEN,
@@ -34,7 +44,10 @@ import { useTour } from "../../TourComponents/TourContext";
 import { isUserWithinIntramuros } from "../../../utils/geolocationCheck";
 
 export default function GuestItineraryMap() {
-  const { startTour, isTourRunning } = useTour?.() || { startTour: () => {}, isTourRunning: false };
+  const { startTour, isTourRunning } = useTour?.() || {
+    startTour: () => {},
+    isTourRunning: false,
+  };
   const { itineraryId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,9 +55,16 @@ export default function GuestItineraryMap() {
   const [pins, setPins] = useState([]);
   const [optimizedPins, setOptimizedPins] = useState([]); // Optimized route order
   const [hasLoadedProgress, setHasLoadedProgress] = useState(false); // Track if we've loaded saved progress
-  const [notification, setNotification] = useState({ isOpen: false, type: 'success', title: '', message: '' });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+  });
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [itineraryName, setItineraryName] = useState(location.state?.itinerary?.name || "");
+  const [itineraryName, setItineraryName] = useState(
+    location.state?.itinerary?.name || ""
+  );
   const [viewState, setViewState] = useState({
     latitude: 14.5896,
     longitude: 120.9747,
@@ -66,7 +86,11 @@ export default function GuestItineraryMap() {
   const [gpsError, setGpsError] = useState("");
   const smoothedLocRef = useRef(null);
   const lastRawLocRef = useRef(null);
-  const stepSwitchCandidateRef = useRef({ index: null, startedAt: 0, count: 0 });
+  const stepSwitchCandidateRef = useRef({
+    index: null,
+    startedAt: 0,
+    count: 0,
+  });
   const lastUpdateTimeRef = useRef(0);
   const nearestPointOnRoute = useRef(null);
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
@@ -130,6 +154,12 @@ export default function GuestItineraryMap() {
   const [savedProgress, setSavedProgress] = useState(null);
   const [isOutsideBounds, setIsOutsideBounds] = useState(false);
   const [showLocationBlockModal, setShowLocationBlockModal] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(true);
+  const [isBackdropActive, setIsBackdropActive] = useState(false);
+  const [gpsApproved, setGpsApproved] = useState(false);
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [isGuidanceRunning, setIsGuidanceRunning] = useState(false);
+  const [tourMode, setTourMode] = useState(null);
 
   // Use localStorage for guest users (for persistence across tabs)
   const token = localStorage.getItem("token");
@@ -140,12 +170,12 @@ export default function GuestItineraryMap() {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
@@ -154,9 +184,9 @@ export default function GuestItineraryMap() {
     if (!userLocation || !mask?.geometry) return;
 
     const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
-    
+
     if (!withinBounds) {
-      console.warn('⚠️ User is outside Intramuros boundaries');
+      console.warn("⚠️ User is outside Intramuros boundaries");
       setIsOutsideBounds(true);
       setShowLocationBlockModal(true);
     } else {
@@ -168,64 +198,22 @@ export default function GuestItineraryMap() {
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
     if (!url) return "";
-    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
+    const BACKEND_URL =
+      import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+      "http://localhost:5000";
     return url.startsWith("http")
       ? url
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
-  /** Check GPS permission on mount */
+  // GPS permission is requested only after user clicks Start Tour
+
+  /** Continuous location tracking - gated by GPS approval and active tour */
   useEffect(() => {
-    const checkGpsPermission = async () => {
-      if (!navigator.geolocation) {
-        setGpsError("Geolocation is not supported by your browser");
-        setShowGpsModal(true);
-        return;
-      }
-
-      try {
-        // Try to get current position to check if GPS is accessible
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            // GPS is accessible and working
-            setUserLocation({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            });
-            setShowGpsModal(false);
-          },
-          (error) => {
-            // GPS is not accessible or denied
-            if (error.code === error.PERMISSION_DENIED) {
-              setGpsError("Location access denied. Please enable location services.");
-            } else if (error.code === error.POSITION_UNAVAILABLE) {
-              setGpsError("Location information unavailable.");
-            } else if (error.code === error.TIMEOUT) {
-              setGpsError("Location request timed out.");
-            }
-            setShowGpsModal(true);
-          },
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-        );
-      } catch (err) {
-        console.error("Error checking GPS:", err);
-        setShowGpsModal(true);
-      }
-    };
-
-    checkGpsPermission();
-  }, []);
-
-  /** Continuous location tracking */
-  useEffect(() => {
+    if (!(gpsApproved && isGuidanceRunning)) return;
     let watchId = null;
-
     const startLocationTracking = () => {
-      if (!navigator.geolocation) {
-        console.warn("Geolocation not supported");
-        return;
-      }
-
+      if (!navigator.geolocation) return;
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const newLocation = {
@@ -237,8 +225,12 @@ export default function GuestItineraryMap() {
           const haversineMeters = (lat1, lng1, lat2, lng2) => {
             const R = 6371000;
             const dLat = toRad(lat2 - lat1);
-            const dLng = toRad(lng2 - lng1);
-            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            const dLng = toRad(lng2 - lat1);
+            const a =
+              Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) *
+                Math.cos(toRad(lat2)) *
+                Math.sin(dLng / 2) ** 2;
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
           };
@@ -246,8 +238,14 @@ export default function GuestItineraryMap() {
           const dynamicThreshold = Math.min(5, Math.max(0.5, acc * 0.05));
           const now = Date.now();
           if (prevRaw) {
-            const jitter = haversineMeters(prevRaw.latitude, prevRaw.longitude, newLocation.latitude, newLocation.longitude);
-            const recentlyUpdated = now - (lastUpdateTimeRef.current || 0) < 1500;
+            const jitter = haversineMeters(
+              prevRaw.latitude,
+              prevRaw.longitude,
+              newLocation.latitude,
+              newLocation.longitude
+            );
+            const recentlyUpdated =
+              now - (lastUpdateTimeRef.current || 0) < 1500;
             if (jitter < dynamicThreshold && recentlyUpdated) {
               lastRawLocRef.current = newLocation;
               return;
@@ -257,60 +255,54 @@ export default function GuestItineraryMap() {
           const alpha = 0.35;
           const smoothLocation = prevSmooth
             ? {
-                latitude: prevSmooth.latitude + alpha * (newLocation.latitude - prevSmooth.latitude),
-                longitude: prevSmooth.longitude + alpha * (newLocation.longitude - prevSmooth.longitude),
+                latitude:
+                  prevSmooth.latitude +
+                  alpha * (newLocation.latitude - prevSmooth.latitude),
+                longitude:
+                  prevSmooth.longitude +
+                  alpha * (newLocation.longitude - prevSmooth.longitude),
               }
             : newLocation;
           smoothedLocRef.current = smoothLocation;
           lastRawLocRef.current = newLocation;
-          
-          const now2 = Date.now();
-          lastUpdateTimeRef.current = now2;
-          console.log('📍 Location updated:', smoothLocation);
+          lastUpdateTimeRef.current = now;
           setUserLocation(smoothLocation);
-          
-          // Update heading if available from GPS
-          if (position.coords.heading !== null && position.coords.heading !== undefined) {
+          if (
+            position.coords.heading !== null &&
+            position.coords.heading !== undefined
+          ) {
             const smoothHeading = normalizeHeading(position.coords.heading);
             setUserHeading(smoothHeading);
-            console.log('🧭 Heading updated from GPS:', position.coords.heading);
           }
-          
-          // Don't auto-center the map on location updates to avoid disrupting user interaction
-          // Only update if user hasn't manually moved the map
         },
         (error) => {
           console.error("Location tracking error:", error);
           if (error.code === error.PERMISSION_DENIED) {
-            setGpsError("Location access denied. Please enable location services.");
+            setGpsError(
+              "Location access denied. Please enable location services."
+            );
             setShowGpsModal(true);
           }
         },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 5000,
-          timeout: 15000,
-        }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
       );
     };
-
-    // Start tracking after a short delay to allow initial GPS check to complete
-    const timeoutId = setTimeout(startLocationTracking, 1000);
-
+    const timeoutId = setTimeout(startLocationTracking, 500);
     return () => {
       clearTimeout(timeoutId);
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        console.log('🛑 Location tracking stopped');
-      }
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     };
-  }, []);
+  }, [gpsApproved, isGuidanceRunning]);
 
   /** Fetch mask */
   useEffect(() => {
     const fetchMask = async () => {
       try {
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/mask`);
+        const { data } = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/mask`
+        );
         if (!data?.geometry) return;
 
         const feature = {
@@ -333,7 +325,12 @@ export default function GuestItineraryMap() {
     const fetchItinerary = async () => {
       try {
         const res = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/itineraries/guest/${itineraryId}`
+          `${
+            import.meta.env.VITE_API_BASE_URL ||
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }`
+          }/itineraries/guest/${itineraryId}`
         );
 
         const sites = (res.data.sites || []).filter(
@@ -349,10 +346,11 @@ export default function GuestItineraryMap() {
           siteDescriptionTagalog: s.siteDescriptionTagalog || "",
           mediaType: s.mediaType || "image",
           mediaUrl: resolveUrl(s.mediaUrl),
-          mediaFiles: s.mediaFiles?.map((media) => ({
-            url: resolveUrl(media.url),
-            type: media.type,
-          })) || [],
+          mediaFiles:
+            s.mediaFiles?.map((media) => ({
+              url: resolveUrl(media.url),
+              type: media.type,
+            })) || [],
           glbUrl: resolveUrl(s.glbUrl),
           arEnabled: s.arEnabled === true,
           arLink: s.arLink || "",
@@ -375,50 +373,55 @@ export default function GuestItineraryMap() {
   /** Load saved progress from localStorage */
   useEffect(() => {
     if (!itineraryId || pins.length === 0 || hasLoadedProgress) return;
-    
+
     try {
       // Try to load saved optimized order from localStorage
       if (itineraryId) {
         const orderKey = `guest_optimized_order_${itineraryId}`;
         const savedOrder = localStorage.getItem(orderKey);
-      
+
         if (savedOrder) {
           const optimizedOrder = JSON.parse(savedOrder);
           // Reconstruct optimized pins from saved order
           const restoredPins = optimizedOrder
-            .map(siteId => pins.find(p => p._id === siteId))
+            .map((siteId) => pins.find((p) => p._id === siteId))
             .filter(Boolean);
-          
+
           if (restoredPins.length > 0) {
             setOptimizedPins(restoredPins);
-            console.log('✅ Restored optimized pin order from localStorage');
-            
+            console.log("✅ Restored optimized pin order from localStorage");
+
             // Load visited sites
             const visitedKey = `guest_visited_${itineraryId}`;
             const savedVisited = localStorage.getItem(visitedKey);
-            const visitedSet = savedVisited ? new Set(JSON.parse(savedVisited)) : new Set();
+            const visitedSet = savedVisited
+              ? new Set(JSON.parse(savedVisited))
+              : new Set();
             if (savedVisited) {
               setVisitedSites(visitedSet);
-              console.log('✅ Restored visited sites:', Array.from(visitedSet));
+              console.log("✅ Restored visited sites:", Array.from(visitedSet));
             }
-            
+
             // Load saved current pin index
             const indexKey = `guest_current_index_${itineraryId}`;
             const savedIndex = localStorage.getItem(indexKey);
-            const currentIndex = savedIndex !== null ? parseInt(savedIndex, 10) : 0;
-            
+            const currentIndex =
+              savedIndex !== null ? parseInt(savedIndex, 10) : 0;
+
             // Restore current pin position
             if (currentIndex >= 0 && currentIndex < restoredPins.length) {
               setCurrentPinIndex(currentIndex);
               const currentPin = restoredPins[currentIndex];
               setSelectedPin(currentPin);
               setActivePin(currentPin);
-              console.log('✅ Restored current pin index:', currentIndex);
+              console.log("✅ Restored current pin index:", currentIndex);
             } else {
               // Fallback to first unvisited site
               const nextSite = getNextSite(restoredPins, visitedSet);
               if (nextSite) {
-                const nextIndex = restoredPins.findIndex(p => p._id === nextSite._id);
+                const nextIndex = restoredPins.findIndex(
+                  (p) => p._id === nextSite._id
+                );
                 if (nextIndex !== -1) {
                   setCurrentPinIndex(nextIndex);
                   setSelectedPin(nextSite);
@@ -436,59 +439,76 @@ export default function GuestItineraryMap() {
 
             // Only show Resume/Restart modal if there's actual progress
             const hasProgress = currentIndex > 0 || visitedSet.size > 0;
-            if (hasProgress) {
+            if (hasProgress && isGuidanceRunning) {
               setTimeout(() => setShowResumeModal(true), 100);
             }
-            
+
             setHasLoadedProgress(true);
             return;
           }
         }
       }
-      
+
       // No saved order, will run optimization in next useEffect
       setHasLoadedProgress(true);
     } catch (error) {
-      console.error('Error loading saved progress:', error);
+      console.error("Error loading saved progress:", error);
       setHasLoadedProgress(true);
     }
   }, [itineraryId, pins.length, hasLoadedProgress]);
 
-  /** Optimize route when user location or pins change - ONLY if no saved order */
+  /** Optimize route when user location or pins change - ONLY if no saved order (after tour starts) */
   useEffect(() => {
-    if (userLocation && pins.length > 0 && optimizedPins.length === 0 && hasLoadedProgress) {
+    if (
+      isGuidanceRunning &&
+      userLocation &&
+      pins.length > 0 &&
+      optimizedPins.length === 0 &&
+      hasLoadedProgress
+    ) {
       // Only optimize if we don't have a saved order - optimize ALL sites
-      console.log('🔄 First time opening itinerary - running optimization (Guest)');
-      console.log('📍 User location:', userLocation);
-      console.log('📍 Total pins:', pins.length);
-      console.log('📍 Visited sites:', Array.from(visitedSites));
+      console.log(
+        "🔄 First time opening itinerary - running optimization (Guest)"
+      );
+      console.log("📍 User location:", userLocation);
+      console.log("📍 Total pins:", pins.length);
+      console.log("📍 Visited sites:", Array.from(visitedSites));
       const optimized = optimizeRoute(userLocation, pins, new Set());
-      console.log('📍 Optimized order:', optimized.map((p, i) => `${i+1}. ${p.siteName || p.title}`));
+      console.log(
+        "📍 Optimized order:",
+        optimized.map((p, i) => `${i + 1}. ${p.siteName || p.title}`)
+      );
       setOptimizedPins(optimized);
-      
+
       // Save optimized order to localStorage
       const orderKey = `guest_optimized_order_${itineraryId}`;
-      const optimizedOrder = optimized.map(pin => pin._id);
+      const optimizedOrder = optimized.map((pin) => pin._id);
       localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
-      console.log('✅ Created and saved new optimized route (Guest)');
-      
+      console.log("✅ Created and saved new optimized route (Guest)");
+
       // Set first site as current (start from pin 1)
       setCurrentPinIndex(0);
       setSelectedPin(optimized[0]);
       setActivePin(optimized[0]);
-      
+
       // Save initial current index
       const indexKey = `guest_current_index_${itineraryId}`;
-      localStorage.setItem(indexKey, '0');
+      localStorage.setItem(indexKey, "0");
     }
-  }, [userLocation, pins.length, optimizedPins.length, hasLoadedProgress]);
+  }, [
+    isGuidanceRunning,
+    userLocation,
+    pins.length,
+    optimizedPins.length,
+    hasLoadedProgress,
+  ]);
 
   /** Handle GeolocateControl events */
   const handleGeolocate = useCallback((e) => {
     // Update user location when geolocate control gets position
     const newLoc = {
       latitude: e.coords.latitude,
-      longitude: e.coords.longitude
+      longitude: e.coords.longitude,
     };
     setUserLocation(newLoc);
   }, []);
@@ -504,25 +524,25 @@ export default function GuestItineraryMap() {
     // Normalize incoming heading to 0-360
     let normalized = newHeading % 360;
     if (normalized < 0) normalized += 360;
-    
+
     const lastNormalized = lastHeadingRef.current;
-    
+
     // Calculate shortest angular difference
     let diff = normalized - lastNormalized;
-    
+
     // Adjust diff to be in range [-180, 180]
     if (diff > 180) {
       diff -= 360;
     } else if (diff < -180) {
       diff += 360;
     }
-    
+
     // Add to accumulated rotation (can be any value, not limited to 0-360)
     accumulatedRotationRef.current += diff;
-    
+
     // Update last normalized heading
     lastHeadingRef.current = normalized;
-    
+
     // Return accumulated rotation (this prevents CSS from wrapping)
     return accumulatedRotationRef.current;
   }, []);
@@ -531,17 +551,21 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     const handleOrientation = (event) => {
       let heading = null;
-      
+
       // iOS: webkitCompassHeading (most accurate)
-      if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+      if (
+        event.webkitCompassHeading !== undefined &&
+        event.webkitCompassHeading !== null
+      ) {
         heading = event.webkitCompassHeading;
       }
       // Android: Calculate from alpha
       else if (event.alpha !== null && event.alpha !== undefined) {
         // Get screen orientation
-        const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+        const screenOrientation =
+          window.screen?.orientation?.angle || window.orientation || 0;
         let adjustedAlpha = event.alpha;
-        
+
         // Adjust for screen rotation
         if (screenOrientation === 90) {
           adjustedAlpha = (event.alpha + 90) % 360;
@@ -550,11 +574,11 @@ export default function GuestItineraryMap() {
         } else if (screenOrientation === 180) {
           adjustedAlpha = (event.alpha + 180) % 360;
         }
-        
+
         // Convert to compass bearing (0° = North)
         heading = (360 - adjustedAlpha) % 360;
       }
-      
+
       if (heading !== null) {
         // Normalize to prevent 360° jumps
         const smoothHeading = normalizeHeading(heading);
@@ -563,29 +587,39 @@ export default function GuestItineraryMap() {
     };
 
     // Auto-add listeners for non-iOS devices
-    window.addEventListener('deviceorientationabsolute', handleOrientation, { passive: true });
-    window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+    window.addEventListener("deviceorientationabsolute", handleOrientation, {
+      passive: true,
+    });
+    window.addEventListener("deviceorientation", handleOrientation, {
+      passive: true,
+    });
 
     return () => {
-      window.removeEventListener('deviceorientationabsolute', handleOrientation);
-      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener(
+        "deviceorientationabsolute",
+        handleOrientation
+      );
+      window.removeEventListener("deviceorientation", handleOrientation);
     };
   }, [normalizeHeading]);
 
   /** Fallback: Request orientation permission when geolocate button is clicked (iOS 13+) */
   useEffect(() => {
     if (!mapRef.current) return;
-    
+
     const map = mapRef.current.getMap();
     if (!map) return;
 
     const requestOrientationPermission = async () => {
       // Only for iOS 13+ that requires permission
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      if (
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function"
+      ) {
         try {
           await DeviceOrientationEvent.requestPermission();
         } catch (error) {
-          console.log('Orientation permission request:', error);
+          console.log("Orientation permission request:", error);
         }
       }
     };
@@ -593,9 +627,14 @@ export default function GuestItineraryMap() {
     // Attach click listener to geolocate button
     const setupGeolocateListener = () => {
       setTimeout(() => {
-        const geolocateButton = document.querySelector('.mapboxgl-ctrl-geolocate');
+        const geolocateButton = document.querySelector(
+          ".mapboxgl-ctrl-geolocate"
+        );
         if (geolocateButton) {
-          geolocateButton.addEventListener('click', requestOrientationPermission);
+          geolocateButton.addEventListener(
+            "click",
+            requestOrientationPermission
+          );
         }
       }, 500);
     };
@@ -603,13 +642,18 @@ export default function GuestItineraryMap() {
     if (map.loaded()) {
       setupGeolocateListener();
     } else {
-      map.on('load', setupGeolocateListener);
+      map.on("load", setupGeolocateListener);
     }
 
     return () => {
-      const geolocateButton = document.querySelector('.mapboxgl-ctrl-geolocate');
+      const geolocateButton = document.querySelector(
+        ".mapboxgl-ctrl-geolocate"
+      );
       if (geolocateButton) {
-        geolocateButton.removeEventListener('click', requestOrientationPermission);
+        geolocateButton.removeEventListener(
+          "click",
+          requestOrientationPermission
+        );
       }
     };
   }, []);
@@ -619,32 +663,35 @@ export default function GuestItineraryMap() {
     const map = mapRef.current.getMap();
     if (!map) return;
     if (!userMarkerRef.current) {
-      const el = document.createElement('div');
-      el.className = 'custom-user-marker';
+      const el = document.createElement("div");
+      el.className = "custom-user-marker";
       el.style.cssText = `position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;`;
-      const beamContainer = document.createElement('div');
-      beamContainer.className = 'heading-beam-container';
+      const beamContainer = document.createElement("div");
+      beamContainer.className = "heading-beam-container";
       beamContainer.style.cssText = `position: absolute; width: 100%; height: 100%; transform: rotate(${beamRotationRef.current}deg) translateZ(0); transform-origin: center center; transition: transform 0.15s ease-out; will-change: transform; backface-visibility: hidden; -webkit-backface-visibility: hidden; perspective: 1000px; -webkit-perspective: 1000px; pointer-events: none;`;
-      const beam = document.createElement('div');
-      beam.className = 'heading-cone';
+      const beam = document.createElement("div");
+      beam.className = "heading-cone";
       beam.style.cssText = `position: absolute; width: 70px; height: 90px; background: linear-gradient(to top, rgba(59, 130, 246, 0.7), rgba(59, 130, 246, 0)); top: -50px; left: 50%; transform: translateX(-50%) translateZ(0); -webkit-transform: translateX(-50%) translateZ(0); clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%); -webkit-clip-path: polygon(32% 100%, 38% 100%, 5% 0%, 95% 0%, 62% 100%, 68% 100%); filter: blur(1px); -webkit-filter: blur(1px); backface-visibility: hidden; -webkit-backface-visibility: hidden; pointer-events: none;`;
       beamContainer.appendChild(beam);
       el.appendChild(beamContainer);
-      const pulse = document.createElement('div');
+      const pulse = document.createElement("div");
       pulse.style.cssText = `position: absolute; width: 48px; height: 48px; background-color: rgba(59, 130, 246, 0.2); border-radius: 50%; animation: pulse 2s infinite; pointer-events: none;`;
       el.appendChild(pulse);
-      const accuracyRing = document.createElement('div');
+      const accuracyRing = document.createElement("div");
       accuracyRing.style.cssText = `position: absolute; width: 40px; height: 40px; background-color: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 50%; pointer-events: none;`;
       el.appendChild(accuracyRing);
-      const dot = document.createElement('div');
+      const dot = document.createElement("div");
       dot.style.cssText = `position: relative; width: 20px; height: 20px; background-color: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); z-index: 10; pointer-events: none;`;
       el.appendChild(dot);
-      const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map);
       userMarkerRef.current = marker;
     } else {
-      const snap = nearestPointOnRoute.current?.(userLocation.longitude, userLocation.latitude);
+      const snap = nearestPointOnRoute.current?.(
+        userLocation.longitude,
+        userLocation.latitude
+      );
       const useSnap = snap && snap.meters <= 15;
       const lng = useSnap ? snap.lng : userLocation.longitude;
       const lat = useSnap ? snap.lat : userLocation.latitude;
@@ -656,15 +703,17 @@ export default function GuestItineraryMap() {
   useEffect(() => {
     if (userMarkerRef.current) {
       const el = userMarkerRef.current.getElement();
-      const beamContainer = el.querySelector('.heading-beam-container');
+      const beamContainer = el.querySelector(".heading-beam-container");
       if (beamContainer) {
-        const desired = (userHeading - (viewState?.bearing || 0));
+        const desired = userHeading - (viewState?.bearing || 0);
         const current = beamRotationRef.current;
         const diff = ((desired - current + 540) % 360) - 180; // shortest angular delta
         const next = current + diff;
         beamRotationRef.current = next;
         // Disable transition while user rotates the map to avoid visible spins
-        beamContainer.style.transition = isMapRotatingRef.current ? 'none' : 'transform 0.15s ease-out';
+        beamContainer.style.transition = isMapRotatingRef.current
+          ? "none"
+          : "transform 0.15s ease-out";
         beamContainer.style.transform = `rotate(${next}deg) translateZ(0)`;
       }
     }
@@ -675,25 +724,42 @@ export default function GuestItineraryMap() {
     if (!mapRef.current) return;
     const map = mapRef.current.getMap();
     if (!map) return;
-    const onRotateStart = () => { isMapRotatingRef.current = true; followEnabledRef.current = false; lastUserInteractRef.current = Date.now(); };
-    const onRotateEnd = () => { isMapRotatingRef.current = false; lastUserInteractRef.current = Date.now(); };
-    const onDragStart = () => { followEnabledRef.current = false; lastUserInteractRef.current = Date.now(); };
-    const onDragEnd = () => { lastUserInteractRef.current = Date.now(); };
-    const onPitchStart = () => { followEnabledRef.current = false; lastUserInteractRef.current = Date.now(); };
-    const onPitchEnd = () => { lastUserInteractRef.current = Date.now(); };
-    map.on('rotatestart', onRotateStart);
-    map.on('rotateend', onRotateEnd);
-    map.on('dragstart', onDragStart);
-    map.on('dragend', onDragEnd);
-    map.on('pitchstart', onPitchStart);
-    map.on('pitchend', onPitchEnd);
+    const onRotateStart = () => {
+      isMapRotatingRef.current = true;
+      followEnabledRef.current = false;
+      lastUserInteractRef.current = Date.now();
+    };
+    const onRotateEnd = () => {
+      isMapRotatingRef.current = false;
+      lastUserInteractRef.current = Date.now();
+    };
+    const onDragStart = () => {
+      followEnabledRef.current = false;
+      lastUserInteractRef.current = Date.now();
+    };
+    const onDragEnd = () => {
+      lastUserInteractRef.current = Date.now();
+    };
+    const onPitchStart = () => {
+      followEnabledRef.current = false;
+      lastUserInteractRef.current = Date.now();
+    };
+    const onPitchEnd = () => {
+      lastUserInteractRef.current = Date.now();
+    };
+    map.on("rotatestart", onRotateStart);
+    map.on("rotateend", onRotateEnd);
+    map.on("dragstart", onDragStart);
+    map.on("dragend", onDragEnd);
+    map.on("pitchstart", onPitchStart);
+    map.on("pitchend", onPitchEnd);
     return () => {
-      map.off('rotatestart', onRotateStart);
-      map.off('rotateend', onRotateEnd);
-      map.off('dragstart', onDragStart);
-      map.off('dragend', onDragEnd);
-      map.off('pitchstart', onPitchStart);
-      map.off('pitchend', onPitchEnd);
+      map.off("rotatestart", onRotateStart);
+      map.off("rotateend", onRotateEnd);
+      map.off("dragstart", onDragStart);
+      map.off("dragend", onDragEnd);
+      map.off("pitchstart", onPitchStart);
+      map.off("pitchend", onPitchEnd);
     };
   }, []);
 
@@ -764,7 +830,7 @@ export default function GuestItineraryMap() {
       const timer = setTimeout(() => {
         geolocateControlRef.current?.trigger();
       }, 1000); // Small delay to ensure map is loaded
-      
+
       return () => clearTimeout(timer);
     }
   }, [showGpsModal]);
@@ -774,10 +840,10 @@ export default function GuestItineraryMap() {
     if (!mask?.geometry?.coordinates?.[0]) return true;
 
     const bounds = mask.geometry.coordinates[0];
-    const minLng = Math.min(...bounds.map(c => c[0]));
-    const maxLng = Math.max(...bounds.map(c => c[0]));
-    const minLat = Math.min(...bounds.map(c => c[1]));
-    const maxLat = Math.max(...bounds.map(c => c[1]));
+    const minLng = Math.min(...bounds.map((c) => c[0]));
+    const maxLng = Math.max(...bounds.map((c) => c[0]));
+    const minLat = Math.min(...bounds.map((c) => c[1]));
+    const maxLat = Math.max(...bounds.map((c) => c[1]));
 
     // Check if all route coordinates are within bounds
     for (const coord of routeGeometry.coordinates) {
@@ -796,18 +862,24 @@ export default function GuestItineraryMap() {
     try {
       const reqId = ++routingReqId.current;
       setIsRouting(true);
-      const lang = (typeof localStorage !== 'undefined' && localStorage.getItem('i18nextLng')) || 'en';
-      const url = `https://api.mapbox.com/directions/v5/mapbox/${transportMode}/${start.longitude},${start.latitude};${pin.longitude},${pin.latitude}`
-        + `?steps=true&geometries=geojson&overview=full&voice_instructions=true&banner_instructions=true`
-        + `&alternatives=false&annotations=distance,duration&language=${encodeURIComponent(lang)}&voice_units=metric&continue_straight=true`
-        + `&access_token=${encodeURIComponent(MAPBOX_TOKEN)}`;
+      const lang =
+        (typeof localStorage !== "undefined" &&
+          localStorage.getItem("i18nextLng")) ||
+        "en";
+      const url =
+        `https://api.mapbox.com/directions/v5/mapbox/${transportMode}/${start.longitude},${start.latitude};${pin.longitude},${pin.latitude}` +
+        `?steps=true&geometries=geojson&overview=full&voice_instructions=true&banner_instructions=true` +
+        `&alternatives=false&annotations=distance,duration&language=${encodeURIComponent(
+          lang
+        )}&voice_units=metric&continue_straight=true` +
+        `&access_token=${encodeURIComponent(MAPBOX_TOKEN)}`;
       const resp = await fetch(url);
       const json = await resp.json();
       const routeData = json.routes?.[0];
-      
+
       // Check if route stays within Intramuros bounds
       if (!isRouteWithinBounds(routeData.geometry)) {
-        console.warn('⚠️ Route goes outside Intramuros, using straight line');
+        console.warn("⚠️ Route goes outside Intramuros, using straight line");
         // Use straight line instead
         const straightLine = {
           type: "LineString",
@@ -816,12 +888,12 @@ export default function GuestItineraryMap() {
             [pin.longitude, pin.latitude],
           ],
         };
-        
+
         // Calculate straight-line distance
         const dx = pin.latitude - start.latitude;
         const dy = pin.longitude - start.longitude;
         const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
-        
+
         if (reqId !== routingReqId.current) return;
         setDistance(distance);
         const speedByMode = { walking: 1.4, cycling: 4.0, driving: 8.33 }; // m/s
@@ -833,10 +905,20 @@ export default function GuestItineraryMap() {
           geometry: straightLine,
           properties: {},
         });
-        const verb = transportMode === "driving" ? "Drive" : transportMode === "cycling" ? "Bike" : "Walk";
-        setSteps([{
-          maneuver: { instruction: `${verb} directly to ${pin.siteName}`, location: [start.longitude, start.latitude] }
-        }]);
+        const verb =
+          transportMode === "driving"
+            ? "Drive"
+            : transportMode === "cycling"
+            ? "Bike"
+            : "Walk";
+        setSteps([
+          {
+            maneuver: {
+              instruction: `${verb} directly to ${pin.siteName}`,
+              location: [start.longitude, start.latitude],
+            },
+          },
+        ]);
         setCurrentStepIndex(0);
         setIsRouting(false);
         return;
@@ -860,7 +942,8 @@ export default function GuestItineraryMap() {
       const stepsWithNames = await Promise.all(
         rawSteps.map(async (s) => {
           let roadName = (s.name || "").trim();
-          const generic = !roadName || /^(unnamed|walkway|foot|path|trail)$/i.test(roadName);
+          const generic =
+            !roadName || /^(unnamed|walkway|foot|path|trail)$/i.test(roadName);
           if (generic) {
             try {
               if (map && typeof map.project === "function") {
@@ -881,7 +964,9 @@ export default function GuestItineraryMap() {
                 if (named) roadName = named.properties.name;
               }
               if (!roadName) {
-                const r = await geocodingClient.reverseGeocode({ query: s?.maneuver?.location, limit: 1 }).send();
+                const r = await geocodingClient
+                  .reverseGeocode({ query: s?.maneuver?.location, limit: 1 })
+                  .send();
                 roadName = r?.body?.features?.[0]?.text || roadName;
               }
             } catch {}
@@ -915,7 +1000,11 @@ export default function GuestItineraryMap() {
 
   /** Build route to current pin */
   useEffect(() => {
-    if (userLocation && optimizedPins.length > 0 && optimizedPins[currentPinIndex]) {
+    if (
+      userLocation &&
+      optimizedPins.length > 0 &&
+      optimizedPins[currentPinIndex]
+    ) {
       buildRoute(userLocation, optimizedPins[currentPinIndex]);
     }
   }, [userLocation, optimizedPins, currentPinIndex]);
@@ -931,7 +1020,7 @@ export default function GuestItineraryMap() {
 
     const distance = calculateDistance(userLocation, {
       latitude: pin.latitude,
-      longitude: pin.longitude
+      longitude: pin.longitude,
     });
 
     if (distance < radius) {
@@ -954,11 +1043,13 @@ export default function GuestItineraryMap() {
       const R = 6371000;
       const dLat = toRad(lat2 - lat1);
       const dLng = toRad(lng2 - lng1);
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
-    
+
     // Find closest step to user's current position
     let closestIdx = 0;
     let minMeters = Infinity;
@@ -966,51 +1057,72 @@ export default function GuestItineraryMap() {
       const loc = steps[idx]?.maneuver?.location;
       if (!loc || loc.length < 2) continue;
       const [lng, lat] = loc;
-      const meters = haversineMeters(userLocation.latitude, userLocation.longitude, lat, lng);
+      const meters = haversineMeters(
+        userLocation.latitude,
+        userLocation.longitude,
+        lat,
+        lng
+      );
       if (meters < minMeters) {
         minMeters = meters;
         closestIdx = idx;
       }
     }
-    
+
     // Calculate distance to current step
     const currentLoc = steps[currentStepIndex]?.maneuver?.location;
-    const currentDist = currentLoc && currentLoc.length >= 2
-      ? haversineMeters(userLocation.latitude, userLocation.longitude, currentLoc[1], currentLoc[0])
-      : Infinity;
-    
+    const currentDist =
+      currentLoc && currentLoc.length >= 2
+        ? haversineMeters(
+            userLocation.latitude,
+            userLocation.longitude,
+            currentLoc[1],
+            currentLoc[0]
+          )
+        : Infinity;
+
     if (closestIdx !== currentStepIndex) {
       const now = Date.now();
       const forward = closestIdx > currentStepIndex;
-      
+
       // SENSITIVE thresholds for immediate turn detection:
       // Forward: advance if user is 10m+ away from current step (reduced from 15m)
       // OR if closer to next step and moved 12m+ from current (for tight turns)
-      const isForwardReady = forward && (
-        currentDist > 10 || // Passed maneuver point by 10m
-        (minMeters < currentDist && currentDist > 12) // Closer to next and moved away from current
-      );
+      const isForwardReady =
+        forward &&
+        (currentDist > 10 || // Passed maneuver point by 10m
+          (minMeters < currentDist && currentDist > 12)); // Closer to next and moved away from current
       const isBackwardReady = !forward && currentDist - minMeters > 30; // Only go back if much closer
       const shouldAdvance = isForwardReady || isBackwardReady;
-      
+
       const candidate = stepSwitchCandidateRef.current;
       if (candidate.index !== closestIdx) {
-        stepSwitchCandidateRef.current = { index: closestIdx, startedAt: now, count: 1 };
+        stepSwitchCandidateRef.current = {
+          index: closestIdx,
+          startedAt: now,
+          count: 1,
+        };
       } else {
         candidate.count += 1;
       }
-      
+
       // Fast response: advance after 500ms OR 2 confirmations (reduced from 800ms/3 times)
       const timePassed = now - stepSwitchCandidateRef.current.startedAt > 500;
       const countMet = stepSwitchCandidateRef.current.count >= 2;
       const ready = shouldAdvance && (timePassed || countMet);
-      
+
       if (ready) {
-        console.log(`📍 Step advancement: ${currentStepIndex} → ${closestIdx} (distance from current: ${currentDist.toFixed(1)}m, distance to new: ${minMeters.toFixed(1)}m)`);
+        console.log(
+          `📍 Step advancement: ${currentStepIndex} → ${closestIdx} (distance from current: ${currentDist.toFixed(
+            1
+          )}m, distance to new: ${minMeters.toFixed(1)}m)`
+        );
         setCurrentStepIndex(closestIdx);
-        stepSwitchCandidateRef.current = { index: null, startedAt: 0, count: 0 };
-        
-        
+        stepSwitchCandidateRef.current = {
+          index: null,
+          startedAt: 0,
+          count: 0,
+        };
       }
     } else {
       // Reset candidate when staying at same step
@@ -1025,8 +1137,10 @@ export default function GuestItineraryMap() {
     try {
       // For guest users, store visited sites in localStorage
       const visitedKey = `guest_visited_${itineraryId}`;
-      const existingVisited = JSON.parse(localStorage.getItem(visitedKey) || "[]");
-      
+      const existingVisited = JSON.parse(
+        localStorage.getItem(visitedKey) || "[]"
+      );
+
       if (!existingVisited.includes(pin._id)) {
         existingVisited.push(pin._id);
         localStorage.setItem(visitedKey, JSON.stringify(existingVisited));
@@ -1044,7 +1158,7 @@ export default function GuestItineraryMap() {
     const optimized = optimizeRoute(userLocation, pins, visitedSites);
     setOptimizedPins(optimized);
     const orderKey = `guest_optimized_order_${itineraryId}`;
-    const optimizedOrder = optimized.map(pin => pin._id);
+    const optimizedOrder = optimized.map((pin) => pin._id);
     localStorage.setItem(orderKey, JSON.stringify(optimizedOrder));
     setCurrentPinIndex(0);
     if (optimized.length > 0) {
@@ -1054,7 +1168,7 @@ export default function GuestItineraryMap() {
       buildRoute(userLocation, firstPin);
     }
     const indexKey = `guest_current_index_${itineraryId}`;
-    localStorage.setItem(indexKey, '0');
+    localStorage.setItem(indexKey, "0");
     setShowResumeModal(false);
     setShowCompletionModal(false);
   };
@@ -1074,7 +1188,10 @@ export default function GuestItineraryMap() {
     try {
       setReviewsLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`}/reviews/site/${siteId}`
+        `${
+          import.meta.env.VITE_API_BASE_URL ||
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}`
+        }/reviews/site/${siteId}`
       );
       setSiteReviews(response.data.reviews || []);
       setShowReviews(true);
@@ -1103,9 +1220,9 @@ export default function GuestItineraryMap() {
     // Show confirmation
     setNotification({
       isOpen: true,
-      type: 'success',
-      title: 'Site Visited!',
-      message: `"${currentPin.siteName}" has been marked as visited.`
+      type: "success",
+      title: "Site Visited!",
+      message: `"${currentPin.siteName}" has been marked as visited.`,
     });
 
     // Go to next site, passing the site we just marked as done
@@ -1133,11 +1250,11 @@ export default function GuestItineraryMap() {
   // Skip current site and move to next
   const handleSkipSite = useCallback(() => {
     if (!activePin) return;
-    
+
     const newSkipped = new Set(skippedSites);
     newSkipped.add(activePin._id);
     setSkippedSites(newSkipped);
-    
+
     // Move to next site
     const nextIndex = currentPinIndex + 1;
     if (nextIndex < optimizedPins.length) {
@@ -1148,7 +1265,7 @@ export default function GuestItineraryMap() {
       if (userLocation) {
         buildRoute(userLocation, nextPin);
       }
-      
+
       // Save current index to localStorage
       const indexKey = `guest_current_index_${itineraryId}`;
       localStorage.setItem(indexKey, nextIndex.toString());
@@ -1161,9 +1278,13 @@ export default function GuestItineraryMap() {
     const prevPin = prevIndex >= 0 ? optimizedPins[prevIndex] : null;
 
     // Guard: If prev site is Fort Santiago and transport is car, show modal and block
-    if (prevPin && prevPin.feeType === "fort_santiago" && transportMode === "driving") {
+    if (
+      prevPin &&
+      prevPin.feeType === "fort_santiago" &&
+      transportMode === "driving"
+    ) {
       setFortModalConfirm(() => () => {
-        setTransportMode('walking');
+        setTransportMode("walking");
         setShowFortDrivingModal(false);
         setTimeout(() => {
           // Retry prev navigation under Foot mode
@@ -1176,7 +1297,7 @@ export default function GuestItineraryMap() {
             if (userLocation) {
               buildRoute(userLocation, pp);
             }
-            
+
             // Save current index to localStorage
             const indexKey = `guest_current_index_${itineraryId}`;
             localStorage.setItem(indexKey, pi.toString());
@@ -1195,22 +1316,33 @@ export default function GuestItineraryMap() {
       if (userLocation) {
         buildRoute(userLocation, prevPin2);
       }
-      
+
       // Save current index to localStorage
       const indexKey = `guest_current_index_${itineraryId}`;
       localStorage.setItem(indexKey, prevIndex.toString());
     }
-  }, [currentPinIndex, optimizedPins, userLocation, itineraryId, transportMode]);
+  }, [
+    currentPinIndex,
+    optimizedPins,
+    userLocation,
+    itineraryId,
+    transportMode,
+  ]);
 
   // Go to next site (marks current as visited)
   const handleNextSite = useCallback(async () => {
     // Compute next site and guard Fort Santiago when in car mode
     const nextIndex = currentPinIndex + 1;
-    const nextPin = nextIndex < optimizedPins.length ? optimizedPins[nextIndex] : null;
+    const nextPin =
+      nextIndex < optimizedPins.length ? optimizedPins[nextIndex] : null;
 
-    if (nextPin && nextPin.feeType === "fort_santiago" && transportMode === "driving") {
+    if (
+      nextPin &&
+      nextPin.feeType === "fort_santiago" &&
+      transportMode === "driving"
+    ) {
       setFortModalConfirm(() => () => {
-        setTransportMode('walking');
+        setTransportMode("walking");
         setShowFortDrivingModal(false);
         // Modal closed - user can now click Next again with walking mode
       });
@@ -1224,11 +1356,14 @@ export default function GuestItineraryMap() {
     if (currentPin && !updatedVisited.has(currentPin._id)) {
       updatedVisited.add(currentPin._id);
       setVisitedSites(updatedVisited);
-      
+
       // Save to localStorage
       const visitedKey = `guest_visited_${itineraryId}`;
-      localStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
-      
+      localStorage.setItem(
+        visitedKey,
+        JSON.stringify(Array.from(updatedVisited))
+      );
+
       // Save to permanent visited-sites record
       await markSiteAsVisited(currentPin);
     }
@@ -1241,7 +1376,7 @@ export default function GuestItineraryMap() {
       if (userLocation) {
         buildRoute(userLocation, np);
       }
-      
+
       // Save current index to localStorage
       const indexKey = `guest_current_index_${itineraryId}`;
       localStorage.setItem(indexKey, nextIndex.toString());
@@ -1252,26 +1387,36 @@ export default function GuestItineraryMap() {
       setRoute(null);
       setSteps([]);
     }
-  }, [currentPinIndex, optimizedPins, userLocation, visitedSites, itineraryId, transportMode]);
+  }, [
+    currentPinIndex,
+    optimizedPins,
+    userLocation,
+    visitedSites,
+    itineraryId,
+    transportMode,
+  ]);
 
   /** Go to next stop - follows optimized route order (no re-optimization) */
   const goToNextStop = (justVisitedSiteId = null) => {
     if (!userLocation || optimizedPins.length === 0) return;
 
-    console.log('🔍 goToNextStop called');
-    console.log('Current index:', currentPinIndex);
-    console.log('Current visitedSites:', Array.from(visitedSites));
-    console.log('Just visited site ID:', justVisitedSiteId);
+    console.log("🔍 goToNextStop called");
+    console.log("Current index:", currentPinIndex);
+    console.log("Current visitedSites:", Array.from(visitedSites));
+    console.log("Just visited site ID:", justVisitedSiteId);
 
     // Update visited sites
     const updatedVisited = new Set(visitedSites);
     if (justVisitedSiteId) {
       updatedVisited.add(justVisitedSiteId);
       setVisitedSites(updatedVisited);
-      
+
       // Save to localStorage
       const visitedKey = `guest_visited_${itineraryId}`;
-      localStorage.setItem(visitedKey, JSON.stringify(Array.from(updatedVisited)));
+      localStorage.setItem(
+        visitedKey,
+        JSON.stringify(Array.from(updatedVisited))
+      );
     }
 
     // Get next unvisited site from existing optimized route (don't re-optimize)
@@ -1279,7 +1424,7 @@ export default function GuestItineraryMap() {
 
     if (!nextPin) {
       // No more sites left
-      console.log('🎉 All sites visited!');
+      console.log("🎉 All sites visited!");
       setShowCompletionModal(true);
       setSelectedPin(null);
       setRoute(null);
@@ -1287,8 +1432,8 @@ export default function GuestItineraryMap() {
       return;
     }
 
-    const nextIndex = optimizedPins.findIndex(p => p._id === nextPin._id);
-    console.log('✅ Next site:', nextPin.siteName, 'at index', nextIndex);
+    const nextIndex = optimizedPins.findIndex((p) => p._id === nextPin._id);
+    console.log("✅ Next site:", nextPin.siteName, "at index", nextIndex);
 
     // Update current site to next in original optimized order
     setCurrentPinIndex(nextIndex);
@@ -1296,7 +1441,7 @@ export default function GuestItineraryMap() {
     setManuallyDismissed(false); // Reset manual dismissal for new site
 
     if (userLocation) buildRoute(userLocation, nextPin);
-    
+
     // Save current index to localStorage
     const indexKey = `guest_current_index_${itineraryId}`;
     localStorage.setItem(indexKey, nextIndex.toString());
@@ -1333,7 +1478,8 @@ export default function GuestItineraryMap() {
           const apy = p.y - a.y;
           const ab2 = abx * abx + aby * aby || 1;
           let t = (apx * abx + apy * aby) / ab2;
-          if (t < 0) t = 0; else if (t > 1) t = 1;
+          if (t < 0) t = 0;
+          else if (t > 1) t = 1;
           const projx = a.x + t * abx;
           const projy = a.y + t * aby;
           const dx = p.x - projx;
@@ -1341,11 +1487,14 @@ export default function GuestItineraryMap() {
           const dist2 = dx * dx + dy * dy;
           if (dist2 < best.dist2) {
             const projLat = (projy / R) * (180 / Math.PI);
-            const projLng = ((projx / (R * Math.cos(toRad(lat0)))) * (180 / Math.PI));
+            const projLng =
+              (projx / (R * Math.cos(toRad(lat0)))) * (180 / Math.PI);
             best = { dist2, lng: projLng, lat: projLat };
           }
         }
-        return best.dist2 !== Infinity ? { lng: best.lng, lat: best.lat, meters: Math.sqrt(best.dist2) } : null;
+        return best.dist2 !== Infinity
+          ? { lng: best.lng, lat: best.lat, meters: Math.sqrt(best.dist2) }
+          : null;
       } catch {
         return null;
       }
@@ -1357,7 +1506,9 @@ export default function GuestItineraryMap() {
     // Don't auto-enable - let user control via toggle button
     // TTS service is OFF by default (isEnabled = false)
     return () => {
-      try { ttsService.cancel(); } catch {}
+      try {
+        ttsService.cancel();
+      } catch {}
     };
   }, []);
 
@@ -1377,16 +1528,27 @@ export default function GuestItineraryMap() {
             isOpen: true,
             type: "warning",
             title: "Stay Alert",
-            message: "For your safety, please stay aware of your surroundings and watch the streets while navigating."
+            message:
+              "For your safety, please stay aware of your surroundings and watch the streets while navigating.",
           });
           setTimeout(() => {
-            setNotification((n) => (n.title === "Stay Alert" ? { ...n, isOpen: false } : n));
+            setNotification((n) =>
+              n.title === "Stay Alert" ? { ...n, isOpen: false } : n
+            );
           }, 7000);
         }
       } catch {}
     }, 120000);
     return () => clearInterval(interval);
-  }, [isTourRunning, notification.isOpen, showFullModal, showGpsModal, showResumeModal, showCompletionModal, showFortDrivingModal]);
+  }, [
+    isTourRunning,
+    notification.isOpen,
+    showFullModal,
+    showGpsModal,
+    showResumeModal,
+    showCompletionModal,
+    showFortDrivingModal,
+  ]);
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
@@ -1397,10 +1559,11 @@ export default function GuestItineraryMap() {
         onRestart={handleRestartItinerary}
         onClose={() => setShowResumeModal(false)}
         currentSiteName={
-          savedProgress && 
-          optimizedPins.length > 0 && 
+          savedProgress &&
+          optimizedPins.length > 0 &&
           savedProgress.currentPinIndex < optimizedPins.length
-            ? optimizedPins[savedProgress.currentPinIndex]?.siteName || optimizedPins[savedProgress.currentPinIndex]?.title
+            ? optimizedPins[savedProgress.currentPinIndex]?.siteName ||
+              optimizedPins[savedProgress.currentPinIndex]?.title
             : null
         }
       />
@@ -1415,54 +1578,99 @@ export default function GuestItineraryMap() {
             );
             return;
           }
-          
+
           // Request device orientation permission first (iOS 13+)
-          if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+          ) {
             try {
-              const orientationPermission = await DeviceOrientationEvent.requestPermission();
-              if (orientationPermission === 'granted') {
+              const orientationPermission =
+                await DeviceOrientationEvent.requestPermission();
+              if (orientationPermission === "granted") {
                 // Add orientation listeners
                 const handleOrientation = (event) => {
                   let heading = null;
-                  
-                  if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+
+                  if (
+                    event.webkitCompassHeading !== undefined &&
+                    event.webkitCompassHeading !== null
+                  ) {
                     heading = event.webkitCompassHeading;
-                  } else if (event.alpha !== null && event.alpha !== undefined) {
-                    const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+                  } else if (
+                    event.alpha !== null &&
+                    event.alpha !== undefined
+                  ) {
+                    const screenOrientation =
+                      window.screen?.orientation?.angle ||
+                      window.orientation ||
+                      0;
                     let adjustedAlpha = event.alpha;
-                    
+
                     if (screenOrientation === 90) {
                       adjustedAlpha = (event.alpha + 90) % 360;
-                    } else if (screenOrientation === -90 || screenOrientation === 270) {
+                    } else if (
+                      screenOrientation === -90 ||
+                      screenOrientation === 270
+                    ) {
                       adjustedAlpha = (event.alpha - 90 + 360) % 360;
                     } else if (screenOrientation === 180) {
                       adjustedAlpha = (event.alpha + 180) % 360;
                     }
-                    
+
                     heading = (360 - adjustedAlpha) % 360;
                   }
-                  
+
                   if (heading !== null) {
                     const smoothHeading = normalizeHeading(heading);
                     setUserHeading(smoothHeading);
                   }
                 };
 
-                window.addEventListener('deviceorientationabsolute', handleOrientation, { passive: true });
-                window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+                window.addEventListener(
+                  "deviceorientationabsolute",
+                  handleOrientation,
+                  { passive: true }
+                );
+                window.addEventListener(
+                  "deviceorientation",
+                  handleOrientation,
+                  { passive: true }
+                );
               }
             } catch (error) {
-              console.error('Error requesting device orientation permission:', error);
+              console.error(
+                "Error requesting device orientation permission:",
+                error
+              );
             }
           }
-          
+
           // Then request GPS location
           if (navigator?.geolocation) {
             navigator.geolocation.getCurrentPosition(
-              () => {
+              (pos) => {
+                const loc = {
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                };
+                setUserLocation(loc);
+                let within = true;
+                try {
+                  if (mask?.geometry)
+                    within = isUserWithinIntramuros(loc, mask.geometry);
+                } catch {}
                 setGpsError("");
                 setShowGpsModal(false);
                 setGpsPermissionDenied(false);
+                if (!within) {
+                  setShowLocationBlockModal(true);
+                  setIsBackdropActive(false);
+                  return;
+                }
+                setGpsApproved(true);
+                setIsBackdropActive(false);
+                setShowModeModal(true);
               },
               (err) => {
                 if (err.code === err.PERMISSION_DENIED) {
@@ -1475,6 +1683,8 @@ export default function GuestItineraryMap() {
                     "We couldn't access your location. Please enable GPS in device settings or use Tour Map features from the homepage."
                   );
                 }
+                setShowGpsModal(false);
+                setIsBackdropActive(false);
               },
               { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
             );
@@ -1482,6 +1692,8 @@ export default function GuestItineraryMap() {
             setGpsError(
               "GPS is unavailable in this browser. Please use Tour Map features from the homepage."
             );
+            setShowGpsModal(false);
+            setIsBackdropActive(false);
           }
         }}
         onDecline={() => {
@@ -1489,17 +1701,17 @@ export default function GuestItineraryMap() {
           navigate("/guest-homepage", { replace: true });
         }}
       />
-      
+
       {/* Header - Rendered via Portal */}
       {createPortal(
-        <div 
+        <div
           className="fixed top-0 left-0 right-0 z-[9999] bg-white border-b border-gray-200"
           style={{
-            paddingTop: 'max(env(safe-area-inset-top), 16px)',
-            paddingBottom: '8px',
-            paddingLeft: '16px',
-            paddingRight: '16px',
-            pointerEvents: 'auto'
+            paddingTop: "max(env(safe-area-inset-top), 16px)",
+            paddingBottom: "8px",
+            paddingLeft: "16px",
+            paddingRight: "16px",
+            pointerEvents: "auto",
           }}
         >
           <div className="flex items-center gap-2">
@@ -1514,18 +1726,18 @@ export default function GuestItineraryMap() {
               }}
               aria-label="Go back"
               style={{
-                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                color: 'inherit'
+                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                color: "inherit",
               }}
             >
               ‹
             </button>
-            <h1 
+            <h1
               className="font-bold text-xl truncate"
               style={{
-                textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
                 margin: 0,
-                padding: 0
+                padding: 0,
               }}
             >
               Guest Itinerary Map
@@ -1537,107 +1749,111 @@ export default function GuestItineraryMap() {
 
       {/* Map Container - Takes remaining height */}
       <div className="flex-1 relative overflow-hidden">
-        {!showGpsModal && (
-          <Map
-            ref={mapRef}
-            {...viewState}
-            mapboxAccessToken={MAPBOX_TOKEN}
-            mapStyle="mapbox://styles/mapbox/streets-v11"
-            onMove={handleMapMove}
-            maxBounds={INTRAMUROS_BOUNDS}
-            attributionControl={false}
-            style={{ width: '100%', height: '100%' }}
-          >
-        {/* Greyed out area */}
-        {inverseMask && (
-          <Source id="inverse-mask" type="geojson" data={inverseMask}>
-            <Layer
-              id="inverse-fill"
-              type="fill"
-              paint={{ "fill-color": "#000", "fill-opacity": 0.5 }}
+        <Map
+          ref={mapRef}
+          {...viewState}
+          mapboxAccessToken={MAPBOX_TOKEN}
+          mapStyle="mapbox://styles/mapbox/streets-v11"
+          onMove={handleMapMove}
+          maxBounds={INTRAMUROS_BOUNDS}
+          attributionControl={false}
+          style={{ width: "100%", height: "100%" }}
+        >
+          {/* Greyed out area */}
+          {inverseMask && (
+            <Source id="inverse-mask" type="geojson" data={inverseMask}>
+              <Layer
+                id="inverse-fill"
+                type="fill"
+                paint={{ "fill-color": "#000", "fill-opacity": 0.5 }}
+              />
+            </Source>
+          )}
+
+          {/* Border */}
+          {mask && (
+            <Source id="mask" type="geojson" data={mask}>
+              <Layer
+                id="mask-border"
+                type="line"
+                paint={{ "line-color": "#FF0000", "line-width": 2 }}
+              />
+            </Source>
+          )}
+
+          {/* Mapbox Geolocate Control (button only, custom marker used) */}
+          {gpsApproved && (
+            <GeolocateControl
+              ref={geolocateControlRef}
+              position="top-right"
+              positionOptions={{
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 10000,
+              }}
+              trackUserLocation={true}
+              showUserHeading={false}
+              showAccuracyCircle={false}
+              showUserLocation={false}
+              fitBoundsOptions={{ maxZoom: 18 }}
+              onGeolocate={handleGeolocate}
+              onError={handleGeolocateError}
             />
-          </Source>
-        )}
+          )}
 
-        {/* Border */}
-        {mask && (
-          <Source id="mask" type="geojson" data={mask}>
-            <Layer
-              id="mask-border"
-              type="line"
-              paint={{ "line-color": "#FF0000", "line-width": 2 }}
-            />
-          </Source>
-        )}
+          {/* Site markers - numbered by optimized route */}
+          {(isGuidanceRunning ? optimizedPins : pins).map((pin, idx) => {
+            const isVisited = visitedSites.has(pin._id);
+            return (
+              <Marker
+                key={pin._id}
+                latitude={pin.latitude}
+                longitude={pin.longitude}
+                anchor="bottom"
+                onClick={(e) => {
+                  e.originalEvent.stopPropagation();
+                  setSelectedPin(pin);
+                  setShowFullModal(false); // Show preview card first
+                  // Only build route if this is the active pin or no active pin set
+                  if (!activePin || activePin._id === pin._id) {
+                    setCurrentPinIndex(idx);
+                    setActivePin(pin);
+                    if (isGuidanceRunning && userLocation)
+                      buildRoute(userLocation, pin);
+                  }
+                }}
+              >
+                {/* Number Badge - shows optimized order (never changes) */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg cursor-pointer transition-all ${
+                    idx === currentPinIndex
+                      ? "bg-blue-600 text-white animate-pulse scale-110"
+                      : isVisited
+                      ? "bg-green-500 text-white"
+                      : "bg-red-500 text-white"
+                  }`}
+                >
+                  {idx + 1}
+                </div>
+              </Marker>
+            );
+          })}
 
-        {/* Mapbox Geolocate Control (button only, custom marker used) */}
-        <GeolocateControl
-          ref={geolocateControlRef}
-          position="top-right"
-          positionOptions={{
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
-          }}
-          trackUserLocation={true}
-          showUserHeading={false}
-          showAccuracyCircle={false}
-          showUserLocation={false}
-          fitBoundsOptions={{ maxZoom: 18 }}
-          onGeolocate={handleGeolocate}
-          onError={handleGeolocateError}
-        />
+          {/* Route */}
+          {route && (
+            <Source id="route" type="geojson" data={route}>
+              <Layer
+                id="route-line"
+                type="line"
+                paint={{ "line-color": "#1d4ed8", "line-width": 4 }}
+              />
+            </Source>
+          )}
+        </Map>
 
-        {/* Site markers - numbered by optimized route */}
-        {optimizedPins.map((pin, idx) => {
-          const isVisited = visitedSites.has(pin._id);
-          return (
-          <Marker
-            key={pin._id}
-            latitude={pin.latitude}
-            longitude={pin.longitude}
-            anchor="bottom"
-            onClick={(e) => {
-              e.originalEvent.stopPropagation();
-              setSelectedPin(pin);
-              setShowFullModal(false); // Show preview card first
-              // Only build route if this is the active pin or no active pin set
-              if (!activePin || activePin._id === pin._id) {
-                setCurrentPinIndex(idx);
-                setActivePin(pin);
-                if (userLocation) buildRoute(userLocation, pin);
-              }
-            }}
-          >
-            {/* Number Badge - shows optimized order (never changes) */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-lg cursor-pointer transition-all ${
-              idx === currentPinIndex
-                ? "bg-blue-600 text-white animate-pulse scale-110"
-                : isVisited
-                ? "bg-green-500 text-white"
-                : "bg-red-500 text-white"
-            }`}>
-              {idx + 1}
-            </div>
-          </Marker>
-        )})}
-
-        {/* Route */}
-        {route && (
-          <Source id="route" type="geojson" data={route}>
-            <Layer
-              id="route-line"
-              type="line"
-              paint={{ "line-color": "#1d4ed8", "line-width": 4 }}
-            />
-          </Source>
-        )}
-          </Map>
-        )}
-
-
-        {/* Directions Panel */}
-        <DirectionsPanel
+        {/* Directions Panel - only during active tour */}
+        {isGuidanceRunning && (
+          <DirectionsPanel
             steps={steps}
             currentStepIndex={currentStepIndex}
             setCurrentStepIndex={setCurrentStepIndex}
@@ -1661,112 +1877,227 @@ export default function GuestItineraryMap() {
                 setShowFullModal(true);
               }
             }}
-        />
+          />
+        )}
 
         {/* Control Buttons */}
         {!showFullModal && (
           <MapControlButtons
-              userLocation={userLocation}
-              selectedPin={selectedPin}
-              pins={optimizedPins}
-              currentPinIndex={currentPinIndex}
-              setViewState={setViewState}
-              setSelectedPin={setSelectedPin}
-              setManuallyDismissed={setManuallyDismissed}
-              enableTransportMode={true}
-              showTransportPanel={showTransportPanel}
-              setShowTransportPanel={setShowTransportPanel}
-              transportMode={transportMode}
-              setTransportMode={setTransportMode}
+            userLocation={userLocation}
+            selectedPin={selectedPin}
+            pins={isGuidanceRunning ? optimizedPins : pins}
+            currentPinIndex={currentPinIndex}
+            setViewState={setViewState}
+            setSelectedPin={setSelectedPin}
+            setManuallyDismissed={setManuallyDismissed}
+            enableTransportMode={true}
+            showTransportPanel={showTransportPanel}
+            setShowTransportPanel={setShowTransportPanel}
+            transportMode={transportMode}
+            setTransportMode={setTransportMode}
           />
         )}
 
         {/* Site Preview Card */}
-        {(!isTourRunning && !showGpsModal && selectedPin && !showFullModal) && (
+        {!isTourRunning && !showGpsModal && selectedPin && !showFullModal && (
           <SitePreviewCard
-          selectedPin={selectedPin}
-          distance={distance}
-          isNearby={isNearby}
-          onExpand={() => setShowFullModal(true)}
-          onClose={() => {
-            setSelectedPin(null);
-            setManuallyDismissed(true);
-          }}
+            selectedPin={selectedPin}
+            distance={distance}
+            isNearby={isNearby}
+            onExpand={() => setShowFullModal(true)}
+            onClose={() => {
+              setSelectedPin(null);
+              setManuallyDismissed(true);
+            }}
           />
         )}
 
         {/* Site Modal - Full Screen */}
-        {(!isTourRunning && !showGpsModal && selectedPin && showFullModal) && (
+        {!isTourRunning && !showGpsModal && selectedPin && showFullModal && (
           <SiteModalFullScreen
-          selectedPin={selectedPin}
-          onClose={() => {
-            setShowFullModal(false);
-            setSelectedPin(null);
-          }}
-          distance={distance}
-          currentPinIndex={currentPinIndex}
-          pinsLength={optimizedPins.length}
-          goToNextStop={goToNextStop}
-          siteReviews={siteReviews}
-          reviewsLoading={reviewsLoading}
-          simulateGoToNextSite={simulateGoToNextSite}
-          isGuestMode={true}
+            selectedPin={selectedPin}
+            onClose={() => {
+              setShowFullModal(false);
+              setSelectedPin(null);
+            }}
+            distance={distance}
+            currentPinIndex={currentPinIndex}
+            pinsLength={optimizedPins.length}
+            goToNextStop={goToNextStop}
+            siteReviews={siteReviews}
+            reviewsLoading={reviewsLoading}
+            simulateGoToNextSite={simulateGoToNextSite}
+            isGuestMode={true}
           />
         )}
 
         {/* Floating Chatbot */}
         {!isTourRunning && <FloatingChatbot />}
-        
+
         {/* Notification Modal */}
         {!isTourRunning && (
-        <NotificationModal
-          isOpen={notification.isOpen}
-          onClose={() => setNotification({ ...notification, isOpen: false })}
-          type={notification.type}
-          title={notification.title}
-          message={notification.message}
-        />)}
+          <NotificationModal
+            isOpen={notification.isOpen}
+            onClose={() => setNotification({ ...notification, isOpen: false })}
+            type={notification.type}
+            title={notification.title}
+            message={notification.message}
+          />
+        )}
 
-      {/* Fort Santiago Driving Restriction Modal */}
-      <ConfirmModal
-        isOpen={showFortDrivingModal}
-        onClose={() => setShowFortDrivingModal(false)}
-        onConfirm={fortModalConfirm}
-        title="Fort Santiago – Car Restriction"
-        message="Cars cannot enter Fort Santiago. Please find parking and continue using Foot mode to proceed."
-        confirmText="Walk Mode"
-        cancelText="Cancel"
-        type="warning"
-      />
+        {/* Fort Santiago Driving Restriction Modal */}
+        <ConfirmModal
+          isOpen={showFortDrivingModal}
+          onClose={() => setShowFortDrivingModal(false)}
+          onConfirm={fortModalConfirm}
+          title="Fort Santiago – Car Restriction"
+          message="Cars cannot enter Fort Santiago. Please find parking and continue using Foot mode to proceed."
+          confirmText="Walk Mode"
+          cancelText="Cancel"
+          type="warning"
+        />
 
-      {/* Completion Modal */}
-      {!isTourRunning && (
-      <ItineraryCompletionModal
-        isOpen={showCompletionModal}
-        onRestart={handleRestartItinerary}
-        onClose={() => setShowCompletionModal(false)}
-        itineraryName={itineraryName}
-        totalSites={optimizedPins.length || pins.length}
-      />)}
+        {/* Completion Modal */}
+        {!isTourRunning && (
+          <ItineraryCompletionModal
+            isOpen={showCompletionModal}
+            onRestart={handleRestartItinerary}
+            onClose={() => setShowCompletionModal(false)}
+            itineraryName={itineraryName}
+            totalSites={optimizedPins.length || pins.length}
+          />
+        )}
 
-      {/* Location Block Modal - User outside Intramuros */}
-      <ConfirmModal
-        isOpen={showLocationBlockModal}
-        onClose={() => {
-          setShowLocationBlockModal(false);
-          navigate('/GuestItinerary');
-        }}
-        onConfirm={() => {
-          setShowLocationBlockModal(false);
-          navigate('/GuestItinerary');
-        }}
-        title="Location Required"
-        message="Please ensure you are within Intramuros to access this tour. Move to the area and try again."
-        confirmText="Go Back"
-        cancelText=""
-        type="error"
-      />
-        
+        {/* Location Block Modal - User outside Intramuros */}
+        <ConfirmModal
+          isOpen={showLocationBlockModal}
+          onClose={() => {
+            setShowLocationBlockModal(false);
+          }}
+          onConfirm={() => {
+            setShowLocationBlockModal(false);
+          }}
+          title="Location Required"
+          message="Please ensure you are within Intramuros to access this tour. Move to the area and try again."
+          confirmText="Okay"
+          cancelText=""
+          type="error"
+        />
+
+        {/* Backdrop to prevent bypass during validation */}
+        {isBackdropActive && (
+          <div className="fixed inset-0 z-[9998] bg-black/40" />
+        )}
+
+        {/* Preview bottom action */}
+        {isPreviewMode && !isGuidanceRunning && (
+          <div className="fixed bottom-0 left-0 right-0 z-[9999] pointer-events-none">
+            <div className="mx-4 mb-6 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBackdropActive(true);
+                  setShowGpsModal(true);
+                }}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
+              >
+                <Navigation className="w-5 h-5" /> Start Tour
+              </button>
+              <p className="text-center text-xs text-gray-600 mt-2">
+                Preview mode — pins are visible; GPS starts after you begin
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Tour Mode Choice */}
+        {showModeModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-gray-900">
+                  Choose How You Want to Follow the Tour
+                </h3>
+              </div>
+              <div className="p-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <button
+                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
+                  onClick={() => {
+                    setTourMode("optimized");
+                    setShowModeModal(false);
+                    const optimized = optimizeRoute(
+                      userLocation,
+                      pins,
+                      visitedSites
+                    );
+                    setOptimizedPins(optimized);
+                    if (optimized.length > 0) {
+                      setCurrentPinIndex(0);
+                      setSelectedPin(optimized[0]);
+                      setActivePin(optimized[0]);
+                      try {
+                        const orderKey = `guest_optimized_order_${itineraryId}`;
+                        const optimizedOrder = optimized.map((pin) => pin._id);
+                        localStorage.setItem(
+                          orderKey,
+                          JSON.stringify(optimizedOrder)
+                        );
+                        const indexKey = `guest_current_index_${itineraryId}`;
+                        localStorage.setItem(indexKey, "0");
+                      } catch {}
+                      buildRoute(userLocation, optimized[0]);
+                    }
+                    setIsPreviewMode(false);
+                    setIsGuidanceRunning(true);
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-blue-600 font-semibold">
+                    <Navigation className="w-5 h-5" /> Optimized Route
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    Automatically arranges the sites based on your current
+                    location for the fastest route.
+                  </p>
+                </button>
+                <button
+                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
+                  onClick={() => {
+                    setTourMode("original");
+                    setShowModeModal(false);
+                    const original = [...pins];
+                    setOptimizedPins(original);
+                    if (original.length > 0) {
+                      setCurrentPinIndex(0);
+                      setSelectedPin(original[0]);
+                      setActivePin(original[0]);
+                      try {
+                        const orderKey = `guest_optimized_order_${itineraryId}`;
+                        const optimizedOrder = original.map((pin) => pin._id);
+                        localStorage.setItem(
+                          orderKey,
+                          JSON.stringify(optimizedOrder)
+                        );
+                        const indexKey = `guest_current_index_${itineraryId}`;
+                        localStorage.setItem(indexKey, "0");
+                      } catch {}
+                      buildRoute(userLocation, original[0]);
+                    }
+                    setIsPreviewMode(false);
+                    setIsGuidanceRunning(true);
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-gray-800 font-semibold">
+                    <ListOrdered className="w-5 h-5" /> Original Order
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    Follow the sites in the order they were originally added.
+                  </p>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hidden restart button for testing - can be removed or styled properly */}
         {/* <button 
           onClick={handleRestartItinerary}
