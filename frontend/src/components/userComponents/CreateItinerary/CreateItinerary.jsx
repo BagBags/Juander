@@ -658,7 +658,7 @@ export default function CreateItineraryPage() {
 
     const payload = {
       name: itineraryName.trim(),
-      imageUrl: imageUrl ? imageUrl.trim() : "", // Ensure empty string if no image
+      imageUrl: imageUrl ? imageUrl.trim() : "",
       sites: selected,
       isAdminCreated: false,
       recommendedStartMinutes:
@@ -789,6 +789,7 @@ export default function CreateItineraryPage() {
     setItineraryName(itinerary.name);
     setImageUrl(itinerary.imageUrl || "");
     setSelected(itinerary.sites.map((s) => s._id));
+
     const s = minutesToSelects(itinerary.recommendedStartMinutes);
     setRHour(s.hour || "7");
     setRMinute(s.minute || "00");
@@ -804,6 +805,9 @@ export default function CreateItineraryPage() {
     setItineraryName("");
     setSelected([]);
     setImageUrl("");
+    setRHour("7");
+    setRMinute("00");
+    setRPeriod("AM");
     setRHour("7");
     setRMinute("00");
     setRPeriod("AM");
@@ -967,6 +971,11 @@ export default function CreateItineraryPage() {
                           placeholder="e.g., Historical Tour, Weekend Adventure"
                           className="w-full px-4 py-3 md:py-2.5 md:text-sm rounded-xl md:rounded-lg bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
                         />
+                        {nameError && (
+                          <p className="text-xs text-red-600 mt-1">
+                            {nameError}
+                          </p>
+                        )}
                         {nameError && (
                           <p className="text-xs text-red-600 mt-1">
                             {nameError}
@@ -2209,10 +2218,9 @@ function SiteDetailsBody({
 
       <div className="text-sm text-gray-700">
         {site.siteDescription ? (
-          (() => {
-            const firstParagraph = site.siteDescription.split("\n\n")[0].trim();
-            return <p className="leading-relaxed">{firstParagraph}</p>;
-          })()
+          <p className="leading-relaxed">
+            {site.siteDescription.split("\n\n")[0].trim()}
+          </p>
         ) : (
           <p className="text-gray-400 italic">No description available</p>
         )}
