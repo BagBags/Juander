@@ -1834,8 +1834,8 @@ function ItineraryFilterButton({ value, onChange, options }) {
 }
 // moved into component to avoid invalid hook call
 // Tagalog profanity support and normalization (reuse with English moderation)
-const TAGALOG_BAD_WORDS = React.useMemo(
-  () => [
+const TAGALOG_BAD_WORDS = [
+ 
     "putangina",
     "putang ina",
     "putang-ina",
@@ -1939,9 +1939,8 @@ const TAGALOG_BAD_WORDS = React.useMemo(
     "tite",
     "tungaw",
     "ungas",
-  ],
-  []
-);
+  ];
+
 const normalizeProfanity = (s) => {
   if (!s) return "";
   const map = {
