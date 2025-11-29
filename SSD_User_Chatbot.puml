@@ -1,0 +1,134 @@
+@startuml User_Chatbot_SSD
+
+actor "User\n(Tourist/Guest)" as User
+participant "UI: Chatbot" as UI
+participant "Database" as DB
+participant "OpenAI API" as OpenAI
+
+== Access Chatbot ==
+
+User -> UI: Click floating chatbot icon\n(Juan character)
+activate UI
+
+UI -> UI: Load chat history\n(from localStorage if within 3 days)
+
+UI -> DB: Fetch chatbot knowledge base
+activate DB
+DB --> UI: Return knowledge entries
+deactivate DB
+
+UI --> User: Display chat interface with history
+deactivate UI
+
+== Send Text Message ==
+
+User -> UI: Type message and click send
+activate UI
+
+UI -> UI: Add user message to chat
+
+UI --> User: Display user message
+
+UI -> UI: Show "typing..." indicator
+
+UI -> OpenAI: Send message with:\n- User input\n- Knowledge base context\n- Chat history
+activate OpenAI
+OpenAI --> UI: Return AI response
+deactivate OpenAI
+
+UI -> UI: Add bot response to chat
+
+UI -> UI: Save chat to localStorage\n(with 3-day expiry timestamp)
+
+UI --> User: Display bot response
+deactivate UI
+
+== Voice Input ==
+
+User -> UI: Click microphone icon
+activate UI
+
+UI -> UI: Start speech recognition
+
+UI --> User: Show "Listening..." indicator
+
+User -> UI: Speak message
+
+UI -> UI: Convert speech to text
+
+UI --> User: Display recognized text in input
+
+User -> UI: Click send
+
+UI -> OpenAI: Send recognized text
+activate OpenAI
+OpenAI --> UI: Return AI response
+deactivate OpenAI
+
+UI --> User: Display bot response
+deactivate UI
+
+== Text-to-Speech ==
+
+User -> UI: Toggle TTS on
+activate UI
+
+UI --> User: Enable TTS indicator
+
+UI -> UI: Automatically speak new bot messages
+
+UI --> User: Play audio of bot response
+deactivate UI
+
+User -> UI: Click speaker icon on message
+activate UI
+
+UI -> UI: Speak selected message
+
+UI --> User: Play audio
+deactivate UI
+
+== Drag Chatbot Icon ==
+
+User -> UI: Drag floating chatbot icon
+activate UI
+
+UI -> UI: Update icon position
+
+UI -> UI: Snap to edge when released
+
+UI --> User: Display icon at new position
+deactivate UI
+
+== Close Chatbot ==
+
+User -> UI: Click X or outside chatbot
+activate UI
+
+UI -> UI: Save current chat to localStorage
+
+UI --> User: Close chat interface,\nshow floating icon
+deactivate UI
+
+== Clear Chat History ==
+
+User -> UI: Chat history expires (3 days)
+activate UI
+
+UI -> UI: Clear localStorage:\n- Messages\n- Timestamps
+
+UI --> User: Fresh chat on next open
+deactivate UI
+
+note right of User
+  **Chatbot Features:**
+  • Floating draggable icon (Juan character)
+  • Text and voice input
+  • Text-to-speech output
+  • Chat history saved (3 days)
+  • Knowledge base from admin entries
+  • OpenAI GPT integration
+  • Works for both Tourists and Guests
+end note
+
+@enduml

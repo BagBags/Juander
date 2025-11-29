@@ -1,0 +1,67 @@
+@startuml Admin_Reviews_Management_SSD
+
+actor "Administrator" as Admin
+participant "UI: Reviews Management" as UI
+participant "Database" as DB
+
+== View Reviews ==
+
+Admin -> UI: Access reviews management
+activate UI
+
+UI -> DB: Fetch all reviews
+activate DB
+DB --> UI: Return reviews list
+deactivate DB
+
+UI -> DB: Fetch all sites (for filtering)
+activate DB
+DB --> UI: Return sites list
+deactivate DB
+
+UI --> Admin: Display reviews table with filters
+deactivate UI
+
+== Search and Filter Reviews ==
+
+Admin -> UI: Enter search term or select filters\n(site, sort by rating/date)
+activate UI
+
+UI -> UI: Apply filters:\n- Search (user, site, review text)\n- Filter by site\n- Sort (latest/oldest/highest/lowest rating)
+
+UI --> Admin: Display filtered results
+deactivate UI
+
+== View Review Details ==
+
+Admin -> UI: Click "View" on review
+activate UI
+
+UI --> Admin: Show detail modal\n(user info, site, rating, review text,\nphotos, date)
+
+Admin -> UI: Click "Close"
+
+UI --> Admin: Close modal
+deactivate UI
+
+== Delete Review ==
+
+Admin -> UI: Click "Delete"
+activate UI
+
+UI --> Admin: Show confirmation dialog
+Admin -> UI: Confirm delete
+
+UI -> DB: Remove review record
+activate DB
+DB --> UI: Review deleted
+deactivate DB
+
+UI -> DB: Log admin action
+activate DB
+deactivate DB
+
+UI --> Admin: Show success, refresh list
+deactivate UI
+
+@enduml

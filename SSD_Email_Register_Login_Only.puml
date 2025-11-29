@@ -1,0 +1,189 @@
+@startuml Email_Register_Login_System_Sequence_Diagram
+
+title System Sequence Diagram: Email Registration and Login Function\n(Administrator and Tourist via Email and OTP Verification)\n(Forgot Password - See separate diagram)
+
+actor "User\n(Tourist/Admin)" as User
+participant "UI: Login/Register\nPage" as UI
+participant "Email Service\n(Nodemailer)" as Email
+participant "OTP Verification\nService" as OTPService
+participant "Database\n(MongoDB)" as DB
+participant "Authentication\nService" as Auth
+
+== Registration Flow ==
+
+User -> UI: Enter registration details\n(First Name, Last Name,\nEmail, Password)
+activate UI
+
+UI -> UI: Validate input\n(email format, password strength,\nterms acceptance)
+
+alt Validation Failed
+    UI --> User: Show validation errors
+else Validation Success
+    UI -> DB: POST /api/auth/register\n{firstName, lastName, email, password}
+    activate DB
+    
+    DB -> DB: Check if email exists
+    
+    alt Email Already Exists
+        DB --> UI: Email already registered
+        UI --> User: Show error message
+    else Email Available
+        DB -> DB: Create pending user record\n(status: pending)
+        
+        DB -> DB: Generate 6-digit OTP\n(10-minute expiry)
+        
+        DB --> Email: Trigger OTP email
+        activate Email
+        Email -> Email: Send OTP to user email
+        Email --> User: OTP sent via email
+        deactivate Email
+        
+        DB --> UI: Registration successful,\nOTP sent
+        deactivate DB
+        
+        UI -> UI: Switch to OTP verification step\n(start 10-minute countdown)
+        
+        UI --> User: Display OTP input form\nwith timer
+    end
+end
+
+deactivate UI
+
+== OTP Verification (Registration) ==
+
+User -> UI: Enter 6-digit OTP
+activate UI
+
+UI -> OTPService: POST /api/auth/verify-otp\n{email, otp}
+activate OTPService
+
+OTPService -> DB: Verify OTP and expiry
+activate DB
+
+alt OTP Invalid or Expired
+    DB --> OTPService: Invalid/Expired OTP
+    deactivate DB
+    OTPService --> UI: Verification failed
+    UI --> User: Show error with\nresend option
+else OTP Valid
+    DB -> DB: Activate user account\n(status: active)
+    
+    DB -> Auth: Generate JWT token
+    activate Auth
+    Auth --> DB: Return token
+    deactivate Auth
+    
+    DB --> OTPService: User activated,\ntoken generated
+    deactivate DB
+    
+    OTPService --> UI: {user, token}
+    deactivate OTPService
+    
+    UI -> UI: Store token and user data\nin localStorage
+    
+    UI -> UI: Check profile completion\n(birthday, gender, country)
+    
+    alt Profile Incomplete
+        UI --> User: Redirect to\nComplete Profile page
+    else Profile Complete
+        UI --> User: Redirect to Homepage
+    end
+end
+
+deactivate UI
+
+== Resend OTP (Registration) ==
+
+User -> UI: Click "Resend OTP"\n(60s cooldown)
+activate UI
+
+UI -> Email: POST /api/auth/resend-otp\n{email}
+activate Email
+
+Email -> DB: Generate new OTP\n(10-minute expiry)
+activate DB
+DB --> Email: New OTP generated
+deactivate DB
+
+Email -> Email: Send new OTP email
+Email --> User: New OTP sent
+deactivate Email
+
+Email --> UI: OTP resent successfully
+UI -> UI: Reset countdown timer\n(60s cooldown)
+UI --> User: Show success message
+
+deactivate UI
+
+== Login Flow (Email/Password) ==
+
+User -> UI: Enter email and password
+activate UI
+
+UI -> UI: Validate credentials\n(check if empty)
+
+alt Validation Failed
+    UI --> User: Show validation errors
+else Validation Success
+    UI -> Auth: POST /api/auth/login\n{email, password}
+    activate Auth
+    
+    Auth -> DB: Find user by email
+    activate DB
+    
+    DB --> Auth: Return user record
+    deactivate DB
+    
+    alt User Not Found or Password Incorrect
+        Auth --> UI: Invalid credentials
+        UI --> User: Show error message
+    else Credentials Valid
+        Auth -> Auth: Verify account status\n(must be active)
+        
+        alt Account Not Activated
+            Auth --> UI: Account pending verification
+            UI --> User: Please verify your email first
+        else Account Active
+            Auth -> Auth: Compare password hash
+            
+            alt Password Match
+                Auth -> Auth: Generate JWT token
+                Auth --> UI: {user, token}
+                deactivate Auth
+                
+                UI -> UI: Store token and user data\nin localStorage
+                
+                UI -> UI: Check user role and\nprofile completion
+                
+                alt User is Admin
+                    UI --> User: Redirect to Admin Home
+                else Profile Incomplete
+                    UI --> User: Redirect to\nComplete Profile page
+                else Profile Complete
+                    UI --> User: Redirect to Homepage
+                end
+            else Password Mismatch
+                Auth --> UI: Invalid credentials
+                UI --> User: Show error message
+            end
+        end
+    end
+end
+
+deactivate UI
+
+note right of User
+  **Key Features:**
+  • Email/Password Registration & Login ONLY
+  • OTP expires in 10 minutes
+  • Resend cooldown: 60 seconds
+  • Password requirements: min 8 chars, 
+    1 uppercase, 1 number, 1 special char
+  • Profile completion check after login
+  • Admin/Tourist role-based redirect
+  • JWT token stored in localStorage
+  • Account must be activated via OTP
+    before login is allowed
+end note
+
+@enduml

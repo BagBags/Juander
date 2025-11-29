@@ -1,0 +1,72 @@
+@startuml Guest_Mobile_UseCase_Chapter4
+
+!theme plain
+skinparam actor {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    FontSize 10
+}
+
+title Figure 4.3.2.4 - Use Case Diagram for Guest Mode (Mobile View)
+
+left to right direction
+
+actor Guest
+
+rectangle "Juander - Mobile View" {
+    
+    ' Guest Access
+    usecase "Continue as Guest" as continueguest
+    
+    usecase "View Content" as content
+    usecase "Start Tour" as tour
+    usecase "Photobooth" as photobooth
+    usecase "Emergency Hotlines" as emergency
+    usecase "Manage Profile" as profile
+    usecase "Chatbot" as chatbot
+    
+    ' Extended functionalities
+    usecase "Save Image" as saveimage
+    usecase "View Tour Map" as tourmap
+    usecase "AR Scan" as arscan
+    usecase "View Hotlines" as viewhotlines
+    usecase "Language" as language
+    usecase "Settings" as settings
+    usecase "Create Account" as createaccount
+    usecase "Get Tourism Info" as tourisminfo
+}
+
+' Main relationships
+Guest --> continueguest
+continueguest --> content
+
+' View Content includes main features
+content ..> tour : <<includes>>
+content ..> photobooth : <<includes>>
+content ..> emergency : <<includes>>
+content ..> profile : <<includes>>
+content ..> chatbot : <<includes>>
+
+' Extended functionality relationships
+photobooth ..> saveimage : <<extends>>
+tour ..> tourmap : <<includes>>
+tour ..> arscan : <<extends>>
+emergency ..> viewhotlines : <<includes>>
+profile ..> language : <<includes>>
+profile ..> settings : <<includes>>
+profile ..> createaccount : <<includes>>
+
+' Tour Map and Chatbot relationships
+tourmap ..> chatbot : <<extends>>
+chatbot ..> tourisminfo : <<includes>>
+
+' Note about limitations
+note right of tour : Limited features\ncompared to\nregistered users
+
+note right of photobooth : Photos saved locally\nno cloud backup
+
+@enduml

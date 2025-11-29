@@ -1,0 +1,110 @@
+@startuml User_Photobooth_SSD
+
+actor "User\n(Tourist/Guest)" as User
+participant "UI: Photobooth" as UI
+participant "Camera Service" as Camera
+participant "Database" as DB
+
+== Access Photobooth ==
+
+User -> UI: Access photobooth feature
+activate UI
+
+UI -> Camera: Request camera permission
+activate Camera
+Camera --> User: Show camera permission dialog
+
+alt Permission denied
+    User -> Camera: Deny permission
+    Camera --> UI: Permission denied
+    UI --> User: Show error message
+else Permission granted
+    User -> Camera: Allow camera
+    Camera --> UI: Camera access granted
+    
+    UI -> UI: Initialize face tracking
+    
+    UI -> DB: Fetch available filters
+    activate DB
+    DB --> UI: Return filters list\n(by category: general, head, eyes, frame, border)
+    deactivate DB
+    
+    Camera -> UI: Stream camera feed
+    
+    UI --> User: Display camera view with filters
+end
+
+deactivate Camera
+deactivate UI
+
+== Select Filter ==
+
+User -> UI: Browse and select filter
+activate UI
+
+UI -> UI: Load selected filter image
+
+UI -> UI: Apply filter overlay on camera feed\n(position, scale, rotate based on face tracking)
+
+UI --> User: Display live preview with filter
+deactivate UI
+
+== Capture Photo ==
+
+User -> UI: Click "Capture" button
+activate UI
+
+UI -> UI: Render camera feed + filter overlay\non canvas
+
+UI -> UI: Convert canvas to PNG image
+
+UI --> User: Show photo preview
+deactivate UI
+
+== Review and Save Photo ==
+
+User -> UI: Review captured photo
+activate UI
+
+alt User satisfied
+    User -> UI: Click "Download" button
+    
+    UI -> UI: Trigger download\n(save to device)
+    
+    UI --> User: Photo downloaded
+    
+    UI --> User: Return to camera view
+else User wants to retake
+    User -> UI: Click "Retake" button
+    
+    UI --> User: Return to camera view
+end
+
+deactivate UI
+
+== Change Filter ==
+
+User -> UI: Select different filter
+activate UI
+
+UI -> UI: Load new filter image
+
+UI -> UI: Update overlay on camera feed
+
+UI --> User: Display with new filter
+deactivate UI
+
+== Exit Photobooth ==
+
+User -> UI: Close photobooth
+activate UI
+
+UI -> Camera: Stop camera stream
+activate Camera
+Camera --> UI: Camera stopped
+deactivate Camera
+
+UI --> User: Return to previous page
+deactivate UI
+
+@enduml

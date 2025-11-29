@@ -31,6 +31,7 @@ const reviewRoute = require("./routes/reviewRoute");
 const tourRoute = require("./routes/tourRoute");
 const openaiRoute = require("./routes/openaiRoute");
 const geminiRoute = require("./routes/geminiRoute");
+const ttsRoute = require("./routes/tts");
 const itineraryProgressRoute = require("./routes/itineraryProgressRoute");
 const logRoute = require("./routes/logRoute");
 
@@ -173,6 +174,7 @@ app.use("/api/photobooth/filters", photoboothFilterRoute);
 app.use("/api/visited-sites", visitedSiteRoute);
 app.use("/api/reviews", reviewRoute);
 app.use("/api/openai", openaiRoute);
+app.use("/api/tts", ttsRoute);
 app.use("/api/gemini", geminiRoute);
 app.use("/api/itinerary-progress", itineraryProgressRoute);
 app.use("/api/logs", logRoute);

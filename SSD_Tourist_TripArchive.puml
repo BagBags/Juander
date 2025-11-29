@@ -1,0 +1,142 @@
+@startuml Tourist_Trip_Archive_SSD
+
+actor "Tourist" as Tourist
+participant "UI: Trip Archive" as UI
+participant "Database" as DB
+participant "S3 Storage" as S3
+
+== View Trip Archive ==
+
+Tourist -> UI: Access trip archive page
+activate UI
+
+UI -> DB: Fetch visited sites
+activate DB
+DB --> UI: Return visited sites with itinerary info
+deactivate DB
+
+UI -> DB: Fetch user's reviews
+activate DB
+DB --> UI: Return reviews
+deactivate DB
+
+UI --> Tourist: Display two tabs:\n- Places Visited\n- My Reviews
+deactivate UI
+
+== Filter and Search Places ==
+
+Tourist -> UI: Enter search term or select itinerary filter
+activate UI
+
+UI -> UI: Filter visited sites by:\n- Search (site name)\n- Itinerary name
+
+UI --> Tourist: Display filtered places
+deactivate UI
+
+== View Place Details ==
+
+Tourist -> UI: Click on visited place
+activate UI
+
+UI --> Tourist: Expand to show:\n- Site image\n- Description\n- Visit date\n- Itinerary name\n- Rating (if reviewed)
+
+deactivate UI
+
+== Add/Edit Review ==
+
+Tourist -> UI: Click "Add Review" or "Edit Review"
+activate UI
+
+UI --> Tourist: Show review modal
+
+Tourist -> UI: Enter/modify:\n- Star rating (1-5)\n- Review text\n- Upload photos (optional)
+
+alt Upload photos
+    Tourist -> UI: Select photos
+    
+    UI -> S3: Upload review photos
+    activate S3
+    S3 --> UI: Return S3 URLs
+    deactivate S3
+    
+    UI --> Tourist: Show photo previews
+end
+
+Tourist -> UI: Submit review
+
+UI -> UI: Validate (rating required)
+
+alt Input valid
+    alt New review
+        UI -> DB: Save review record
+        activate DB
+        DB --> UI: Review created
+        deactivate DB
+    else Edit existing
+        UI -> DB: Update review record
+        activate DB
+        DB --> UI: Review updated
+        deactivate DB
+    end
+    
+    UI --> Tourist: Show success, close modal,\nrefresh lists
+else Input invalid
+    UI --> Tourist: Show validation error
+end
+
+deactivate UI
+
+== Delete Review Photos ==
+
+Tourist -> UI: Click delete on photo preview
+activate UI
+
+UI --> Tourist: Show confirmation
+
+Tourist -> UI: Confirm delete
+
+UI -> S3: Delete photo from storage
+activate S3
+deactivate S3
+
+UI --> Tourist: Remove photo from preview
+deactivate UI
+
+== View My Reviews ==
+
+Tourist -> UI: Switch to "My Reviews" tab
+activate UI
+
+UI --> Tourist: Display all user reviews:\n- Site name\n- Rating (stars)\n- Review text preview\n- Photos\n- Date submitted
+
+deactivate UI
+
+== Filter and Search Reviews ==
+
+Tourist -> UI: Enter search term or select itinerary filter
+activate UI
+
+UI -> UI: Filter reviews by:\n- Search (site name, review text)\n- Itinerary name
+
+UI --> Tourist: Display filtered reviews
+deactivate UI
+
+== View Full Review ==
+
+Tourist -> UI: Click on review
+activate UI
+
+UI --> Tourist: Expand to show:\n- Full review text\n- All photos (gallery)\n- Site details\n- Submit date
+
+deactivate UI
+
+== Continue Itinerary ==
+
+Tourist -> UI: Click "Go to Next Site"
+activate UI
+
+UI --> Tourist: Navigate to itinerary map\n(resume at next unvisited site)
+
+deactivate UI
+
+@enduml

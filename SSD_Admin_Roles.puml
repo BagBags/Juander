@@ -1,0 +1,105 @@
+@startuml Admin_Roles_Management_SSD
+
+actor "Super Admin" as SuperAdmin
+actor "Regular Admin" as RegularAdmin
+participant "UI: User Roles" as UI
+participant "Database" as DB
+
+== View User Roles ==
+
+SuperAdmin -> UI: Access user roles management
+activate UI
+
+UI -> DB: Fetch all users
+activate DB
+DB --> UI: Return users list
+deactivate DB
+
+UI -> DB: Fetch current admin info\n(check if Super Admin)
+activate DB
+DB --> UI: Return current user info
+deactivate DB
+
+UI --> SuperAdmin: Display users table\n(with editable role dropdown)
+deactivate UI
+
+note right of SuperAdmin
+  **Super Admins:**
+  • aaronbagain@gmail.com
+  • sophiamikhaela.fabian.cics@ust.edu.ph
+  • juander714@gmail.com
+end note
+
+== Super Admin: Change User Role ==
+
+SuperAdmin -> UI: Select new role from dropdown\n(tourist ↔ admin)
+activate UI
+
+UI --> SuperAdmin: Show confirmation dialog
+SuperAdmin -> UI: Confirm role change
+
+UI -> DB: Update user role
+activate DB
+DB --> UI: Role updated
+deactivate DB
+
+UI -> DB: Log admin action
+activate DB
+deactivate DB
+
+UI --> SuperAdmin: Show success, refresh list
+deactivate UI
+
+== Super Admin: Delete User ==
+
+SuperAdmin -> UI: Click "Delete" button
+activate UI
+
+UI --> SuperAdmin: Show warning dialog\n"This action cannot be undone"
+SuperAdmin -> UI: Confirm delete
+
+UI -> DB: Remove user record
+activate DB
+DB --> UI: User deleted
+deactivate DB
+
+UI --> SuperAdmin: Show success, refresh list
+deactivate UI
+
+== Regular Admin: View Only ==
+
+RegularAdmin -> UI: Access user roles management
+activate UI
+
+UI -> DB: Fetch all users
+activate DB
+DB --> UI: Return users list
+deactivate DB
+
+UI -> DB: Fetch current admin info\n(check if Super Admin)
+activate DB
+DB --> UI: Return current user info\n(Not Super Admin)
+deactivate DB
+
+UI --> RegularAdmin: Display users table\n(with disabled dropdown - View only)
+deactivate UI
+
+note right of RegularAdmin
+  **Regular Admin Restrictions:**
+  • Can view all users
+  • Cannot change roles
+  • Cannot delete users
+  • Role dropdown is disabled
+end note
+
+== Search and Sort ==
+
+SuperAdmin -> UI: Enter search term or sort column
+activate UI
+
+UI -> UI: Filter users by:\n- Name, email, role\nSort by any column
+
+UI --> SuperAdmin: Display filtered/sorted results
+deactivate UI
+
+@enduml

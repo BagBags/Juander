@@ -1,0 +1,67 @@
+@startuml Guest_Profile_Management_SSD
+
+actor "Guest" as Guest
+participant "UI: Guest Profile" as UI
+
+== View Profile ==
+
+Guest -> UI: Access guest profile page
+activate UI
+
+UI --> Guest: Display guest profile\n(default avatar, "Guest User",\n"Exploring Mode")
+deactivate UI
+
+== View Disabled Options ==
+
+Guest -> UI: View profile options
+activate UI
+
+UI --> Guest: Display profile menu:\n• Account (disabled)\n• Birthday (disabled)\n• Gender (disabled)\n• Country (disabled)\n• Language (enabled)\n• Settings (enabled)
+
+deactivate UI
+
+note right of Guest
+  **Guest Restrictions:**
+  • Cannot upload profile picture
+  • Cannot edit account info
+  • Cannot set birthday
+  • Cannot set gender
+  • Cannot set country
+  • Can only change language
+  • Can access basic settings
+end note
+
+== Change Language ==
+
+Guest -> UI: Navigate to Language settings
+activate UI
+
+UI --> Guest: Display language options\n(English/Filipino)
+
+Guest -> UI: Select language
+
+UI -> UI: Update app language\n(save to localStorage as "guestLanguage")
+
+UI --> Guest: Refresh interface with new language
+deactivate UI
+
+== Access Settings ==
+
+Guest -> UI: Navigate to Settings
+activate UI
+
+UI --> Guest: Display guest settings\n(tutorial replay, privacy policy, etc.)
+
+deactivate UI
+
+== Logout ==
+
+Guest -> UI: Click "Logout"
+activate UI
+
+UI -> UI: Clear guest data:\n- localStorage (token, guest, guestLanguage)\n- sessionStorage\n- All guest_* keys
+
+UI --> Guest: Redirect to login page
+deactivate UI
+
+@enduml

@@ -1,0 +1,76 @@
+@startuml Tourist_Mobile_Traditional_UseCase_Chapter4
+
+!theme plain
+skinparam actor {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam usecase {
+    BackgroundColor White
+    BorderColor Black
+    FontSize 10
+}
+
+title Figure 4.3.2.2 - Use Case Diagram for Tourists (Mobile View)
+
+left to right direction
+
+actor Tourist
+
+rectangle "Juander - Mobile View" {
+    
+    usecase "Login" as login
+    usecase "View Content" as content
+    usecase "Chatbot" as chatbot
+    
+    ' View Content includes (homepage features)
+    usecase "Start Tour" as tour
+    usecase "Photobooth" as photobooth
+    usecase "Emergency Hotlines" as emergency
+    usecase "Trip Archives" as archives
+    usecase "Manage Profile" as profile
+    usecase "Tour Map" as tourmap
+    usecase "Create Itinerary" as createitinerary
+    
+    ' Extended functionalities
+    usecase "Register" as register
+    usecase "Save Image" as saveimage
+    usecase "AR Scan" as arscan
+    usecase "View/Add/Edit/Delete\nItineraries" as itineraries
+    usecase "View Hotlines" as viewhotlines
+    usecase "View/Add/Edit/Delete\nReviews" as reviews
+    usecase "View Archives" as viewarchives
+    usecase "View/Edit/Delete\nProfile" as profileedit
+    usecase "Logout" as logout
+    usecase "Get Tourism Info" as tourisminfo
+}
+
+' Main relationships
+Tourist --> login
+Tourist --> content
+
+
+' View Content includes (homepage features)
+content ..> tour : <<includes>>
+content ..> photobooth : <<includes>>
+content ..> emergency : <<includes>>
+content ..> archives : <<includes>>
+content ..> profile : <<includes>>
+content ..> tourmap : <<includes>>
+content ..> createitinerary : <<includes>>
+
+' Extended functionality relationships
+login ..> register : <<extends>>
+login ..> logout : <<extends>>
+photobooth ..> saveimage : <<extends>>
+tour ..> arscan : <<extends>>
+tour ..> chatbot : <<extends>>
+emergency ..> viewhotlines : <<includes>>
+archives ..> reviews : <<includes>>
+archives ..> viewarchives : <<includes>>
+profile ..> profileedit : <<includes>>
+createitinerary ..> itineraries : <<includes>>
+tourmap ..> chatbot : <<extends>>
+chatbot ..> tourisminfo : <<includes>>
+
+@enduml

@@ -1,0 +1,145 @@
+@startuml Admin_Itinerary_Management_SSD
+
+actor "Administrator" as Admin
+participant "UI: Itinerary Management" as UI
+participant "Database" as DB
+participant "S3 Storage" as S3
+
+== View Itineraries ==
+
+Admin -> UI: Access itinerary management
+activate UI
+
+UI -> DB: Fetch all pins (sites)
+activate DB
+DB --> UI: Return pins list
+deactivate DB
+
+UI -> DB: Fetch active itineraries
+activate DB
+DB --> UI: Return active itineraries
+deactivate DB
+
+UI -> DB: Fetch archived itineraries
+activate DB
+DB --> UI: Return archived itineraries
+deactivate DB
+
+UI --> Admin: Display form and itinerary lists (Active/Archived tabs)
+deactivate UI
+
+== Add Itinerary ==
+
+Admin -> UI: Enter itinerary details\n(name, description, duration, image, select sites)
+activate UI
+
+UI -> UI: Validate input
+
+alt Input valid
+    UI --> Admin: Show confirmation dialog
+    Admin -> UI: Confirm add
+    
+    UI -> S3: Upload cover image
+    activate S3
+    S3 --> UI: Return S3 URL
+    deactivate S3
+    
+    UI -> DB: Save itinerary record
+    activate DB
+    DB --> UI: Itinerary created
+    deactivate DB
+    
+    UI --> Admin: Show success, refresh list
+else Input invalid
+    UI --> Admin: Show validation errors
+end
+
+deactivate UI
+
+== Edit Itinerary ==
+
+Admin -> UI: Click "Edit" on itinerary
+activate UI
+
+UI -> UI: Populate form with current data
+
+UI --> Admin: Display filled form
+
+Admin -> UI: Modify details and submit
+
+UI --> Admin: Show confirmation dialog
+Admin -> UI: Confirm update
+
+alt New image uploaded
+    UI -> S3: Delete old image
+    activate S3
+    deactivate S3
+    
+    UI -> S3: Upload new image
+    activate S3
+    S3 --> UI: Return new S3 URL
+    deactivate S3
+end
+
+UI -> DB: Update itinerary record
+activate DB
+DB --> UI: Itinerary updated
+deactivate DB
+
+UI --> Admin: Show success, refresh list
+deactivate UI
+
+== Archive Itinerary ==
+
+Admin -> UI: Click "Archive"
+activate UI
+
+UI --> Admin: Show confirmation dialog
+Admin -> UI: Confirm archive
+
+UI -> DB: Update itinerary (archived: true)
+activate DB
+DB --> UI: Itinerary archived
+deactivate DB
+
+UI --> Admin: Refresh lists
+deactivate UI
+
+== Restore Itinerary ==
+
+Admin -> UI: Switch to Archived tab
+activate UI
+
+Admin -> UI: Click "Restore"
+UI --> Admin: Show confirmation dialog
+Admin -> UI: Confirm restore
+
+UI -> DB: Update itinerary (archived: false)
+activate DB
+DB --> UI: Itinerary restored
+deactivate DB
+
+UI --> Admin: Refresh lists
+deactivate UI
+
+== Delete Itinerary ==
+
+Admin -> UI: Click "Delete" on archived itinerary
+activate UI
+
+UI --> Admin: Show warning dialog
+Admin -> UI: Confirm delete
+
+UI -> S3: Delete cover image
+activate S3
+deactivate S3
+
+UI -> DB: Remove itinerary record
+activate DB
+DB --> UI: Itinerary deleted
+deactivate DB
+
+UI --> Admin: Refresh archived list
+deactivate UI
+
+@enduml

@@ -38,6 +38,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
+  const audioRef = React.useRef(null);
 
   // iOS 26+ detection helper
   const isiOS26Plus = () => {
@@ -109,6 +110,10 @@ const SiteCard = ({ pin, onClose, distance }) => {
         clearInterval(speechCheckIntervalRef.current);
         speechCheckIntervalRef.current = null;
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       ttsService.cancel();
       setIsPlaying(false);
     };
@@ -163,6 +168,52 @@ const SiteCard = ({ pin, onClose, distance }) => {
     }
   };
 
+  const handleToggleDescription = async () => {
+    if (isPlaying) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsPlaying(false);
+      return;
+    }
+    let description = "";
+    if (userLanguage === "tagalog" && pin.siteDescriptionTagalog) {
+      description = pin.siteDescriptionTagalog;
+    } else if (userLanguage === "english" && pin.siteDescription) {
+      description = pin.siteDescription;
+    } else {
+      description =
+        pin.description ||
+        pin.siteDescription ||
+        pin.siteDescriptionTagalog ||
+        "No description available";
+    }
+    if (!description) return;
+    try {
+      setIsPlaying(true);
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: `${pin.title}. ${description}` })
+      });
+      if (!res.ok) throw new Error('TTS request failed');
+      const audioBlob = await res.blob();
+      const url = URL.createObjectURL(audioBlob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+      };
+      audio.play();
+    } catch (err) {
+      console.error('Error playing TTS:', err);
+      setIsPlaying(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.992 }}
@@ -199,6 +250,10 @@ const SiteCard = ({ pin, onClose, distance }) => {
             if (speechCheckIntervalRef.current) {
               clearInterval(speechCheckIntervalRef.current);
               speechCheckIntervalRef.current = null;
+            }
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current = null;
             }
             ttsService.cancel();
             setIsPlaying(false);
@@ -587,65 +642,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
 
               {/* Play/Stop Description Button - Modern Design */}
               <button
-                onClick={() => {
-                  if (isPlaying) {
-                    // Stop the speech
-                    if (speechCheckIntervalRef.current) {
-                      clearInterval(speechCheckIntervalRef.current);
-                      speechCheckIntervalRef.current = null;
-                    }
-                    ttsService.cancel();
-                    setIsPlaying(false);
-                  } else {
-                    // Start playing
-                    let description = "";
-                    if (
-                      userLanguage === "tagalog" &&
-                      pin.siteDescriptionTagalog
-                    ) {
-                      description = pin.siteDescriptionTagalog;
-                    } else if (
-                      userLanguage === "english" &&
-                      pin.siteDescription
-                    ) {
-                      description = pin.siteDescription;
-                    } else {
-                      description =
-                        pin.description ||
-                        pin.siteDescription ||
-                        pin.siteDescriptionTagalog ||
-                        "No description available";
-                    }
-
-                    // Temporarily enable TTS if it's disabled
-                    const wasEnabled = ttsService.isEnabled;
-                    if (!wasEnabled) {
-                      ttsService.enable();
-                    }
-
-                    setIsPlaying(true);
-                    ttsService.speak(`${pin.title}. ${description}`, {
-                      rate: 0.9,
-                    });
-
-                    // Wait 500ms before starting to monitor speech end (to allow speech to actually start)
-                    setTimeout(() => {
-                      speechCheckIntervalRef.current = setInterval(() => {
-                        if (!ttsService.isSpeaking) {
-                          setIsPlaying(false);
-                          if (speechCheckIntervalRef.current) {
-                            clearInterval(speechCheckIntervalRef.current);
-                            speechCheckIntervalRef.current = null;
-                          }
-                          // Restore previous TTS state
-                          if (!wasEnabled) {
-                            ttsService.disable();
-                          }
-                        }
-                      }, 100);
-                    }, 500);
-                  }
-                }}
+                onClick={handleToggleDescription}
                 className="mb-6 w-full text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98"
                 style={{
                   background: isPlaying

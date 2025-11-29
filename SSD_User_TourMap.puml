@@ -1,0 +1,122 @@
+@startuml User_TourMap_SSD
+
+actor "User\n(Tourist/Guest)" as User
+participant "UI: Tour Map" as UI
+participant "Database" as DB
+
+== Access Tour Map ==
+
+User -> UI: Access tour map
+activate UI
+
+UI -> DB: Fetch tour pins (sites)
+activate DB
+DB --> UI: Return pins list
+deactivate DB
+
+UI --> User: Display 3D map with all site pins
+deactivate UI
+
+== View Map with Layers ==
+
+User -> UI: Interact with map\n(zoom, pan, rotate, tilt)
+activate UI
+
+UI -> UI: Render 3D buildings\nand site pins
+
+UI --> User: Display updated map view
+deactivate UI
+
+== Search Site ==
+
+User -> UI: Click "Search" button
+activate UI
+
+UI --> User: Display search modal
+
+User -> UI: Enter site name or browse list
+
+UI -> UI: Filter pins by search term
+
+UI --> User: Display search results
+
+User -> UI: Select site from results
+
+UI -> UI: Fly to selected site\n(zoom in, tilt camera)
+
+UI --> User: Display site pin highlighted
+deactivate UI
+
+== View Site Details ==
+
+User -> UI: Click on site pin
+activate UI
+
+UI -> UI: Fly to site location\n(zoom: 19.5, pitch: 60°)
+
+UI --> User: Display site card with:\n- Site name\n- Description\n- Category\n- Photos (swipeable gallery)\n- Entrance fee\n- AR Model button (if available)
+
+deactivate UI
+
+== View AR Model ==
+
+User -> UI: Click "View AR Model" button
+activate UI
+
+alt AR model available
+    UI --> User: Open AR viewer\n(3D model in AR space)
+else No AR model
+    UI --> User: Show "No AR model available"
+end
+
+deactivate UI
+
+== View Site Photos ==
+
+User -> UI: Swipe through photo gallery
+activate UI
+
+UI --> User: Display photos in carousel
+
+User -> UI: Click photo to enlarge
+
+UI --> User: Open full-screen photo viewer
+deactivate UI
+
+== Toggle Map Legend ==
+
+User -> UI: Click "Legend" button
+activate UI
+
+UI --> User: Show/hide legend\n(site categories with icons)
+
+deactivate UI
+
+== Close Site Details ==
+
+User -> UI: Click "Close" or back
+activate UI
+
+UI -> UI: Reset camera view\n(zoom out to initial view)
+
+UI --> User: Display full map
+deactivate UI
+
+== Access Chatbot ==
+
+User -> UI: Click chatbot icon
+activate UI
+
+UI --> User: Open chatbot interface
+
+User -> UI: Ask questions
+
+UI -> DB: Fetch chatbot responses
+activate DB
+DB --> UI: Return information
+deactivate DB
+
+UI --> User: Display chatbot response
+deactivate UI
+
+@enduml

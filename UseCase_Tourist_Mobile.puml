@@ -1,0 +1,132 @@
+@startuml Tourist_Mobile_UseCase_Chapter4
+
+!theme plain
+skinparam actor {
+    BackgroundColor LightGreen
+    BorderColor Black
+}
+skinparam usecase {
+    BackgroundColor LightYellow
+    BorderColor Black
+}
+
+title Figure 4.3.2.2 - Use Case Diagram for Tourists (Mobile View)
+
+actor Tourist as tourist
+
+rectangle "Juander Tourism Mobile App - Tourist Mode" {
+    
+    ' Authentication & Profile
+    usecase "Register Account" as UC1
+    usecase "Verify OTP" as UC2
+    usecase "Login with Email" as UC3
+    usecase "Login with Google" as UC4
+    usecase "Complete Profile" as UC5
+    usecase "Update Profile Picture" as UC6
+    
+    ' Tour Management
+    usecase "Browse Available Tours" as UC7
+    usecase "View Tour Details" as UC8
+    usecase "Start Guided Tour" as UC9
+    usecase "Track Tour Progress" as UC10
+    usecase "View Current Location" as UC11
+    usecase "Navigate to Next Site" as UC12
+    usecase "Skip Sites" as UC13
+    usecase "Complete Tour" as UC14
+    
+    ' Site Interaction
+    usecase "View Site Information" as UC15
+    usecase "Access AR Features" as UC16
+    usecase "View 3D Models" as UC17
+    usecase "Take Photos with AR Filters" as UC18
+    usecase "Mark Site as Visited" as UC19
+    usecase "Check Site Fees" as UC20
+    
+    ' Review System
+    usecase "Write Site Reviews" as UC21
+    usecase "Rate Sites" as UC22
+    usecase "Upload Review Photos" as UC23
+    usecase "View Other Reviews" as UC24
+    usecase "Edit My Reviews" as UC25
+    
+    ' Personal Features
+    usecase "View Visit History" as UC26
+    usecase "Track Visited Sites" as UC27
+    usecase "View Tour Archive" as UC28
+    usecase "Resume Incomplete Tours" as UC29
+    
+    ' Interactive Features
+    usecase "Use Chatbot Assistant" as UC30
+    usecase "Ask Tourism Questions" as UC31
+    usecase "Get Site Recommendations" as UC32
+    usecase "Access Emergency Contacts" as UC33
+    
+    ' Photobooth Features
+    usecase "Access AR Photobooth" as UC34
+    usecase "Apply AR Filters" as UC35
+    usecase "Capture Photos" as UC36
+    usecase "Save/Share Photos" as UC37
+    
+    ' Settings
+    usecase "Change Language" as UC38
+    usecase "Update Preferences" as UC39
+    usecase "Logout" as UC40
+}
+
+' Relationships
+tourist --> UC1
+tourist --> UC2
+tourist --> UC3
+tourist --> UC4
+tourist --> UC5
+tourist --> UC6
+tourist --> UC7
+tourist --> UC8
+tourist --> UC9
+tourist --> UC10
+tourist --> UC11
+tourist --> UC12
+tourist --> UC13
+tourist --> UC14
+tourist --> UC15
+tourist --> UC16
+tourist --> UC17
+tourist --> UC18
+tourist --> UC19
+tourist --> UC20
+tourist --> UC21
+tourist --> UC22
+tourist --> UC23
+tourist --> UC24
+tourist --> UC25
+tourist --> UC26
+tourist --> UC27
+tourist --> UC28
+tourist --> UC29
+tourist --> UC30
+tourist --> UC31
+tourist --> UC32
+tourist --> UC33
+tourist --> UC34
+tourist --> UC35
+tourist --> UC36
+tourist --> UC37
+tourist --> UC38
+tourist --> UC39
+tourist --> UC40
+
+' Include relationships
+UC1 ..> UC2 : <<include>>
+UC9 ..> UC10 : <<include>>
+UC9 ..> UC11 : <<include>>
+UC21 ..> UC22 : <<include>>
+UC21 ..> UC23 : <<include>>
+UC30 ..> UC31 : <<include>>
+UC34 ..> UC35 : <<include>>
+UC34 ..> UC36 : <<include>>
+
+' Extend relationships
+UC16 ..> UC17 : <<extend>>
+UC18 ..> UC19 : <<extend>>
+
+@enduml

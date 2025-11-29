@@ -1,0 +1,244 @@
+@startuml Juander_ER_Diagram_Chapter4_Updated
+
+!theme plain
+skinparam entity {
+  BackgroundColor LightYellow
+  BorderColor Black
+  FontStyle bold
+}
+
+' left-to-right layout for landscape orientation
+left to right direction
+skinparam nodesep 80
+skinparam ranksep 70
+skinparam linetype ortho
+
+' tune for short-bond portrait when rotated
+scale 1650 width
+skinparam defaultFontSize 11
+skinparam dpi 150
+
+' =====================
+' Entities (from backend models)
+' =====================
+
+entity "User" as user {
+  * userID : ObjectId <<PK>>
+  --
+  firstName : String
+  lastName : String
+  profilePicture : String
+  email : String (unique)
+  password : String (local only)
+  role : {guest|tourist|admin}
+  isVerified : Boolean
+  otp : String
+  otpExpires : Date
+  birthday : Date
+  gender : {Male|Female|Other}
+  country : String
+  language : String
+  authProvider : {local|google}
+  googleId : String
+  profileCompleted : Boolean
+  hideFortSantiagoModal : Boolean
+  hasCompletedTour : Boolean
+  tourCompletedAt : Date
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "Itinerary" as itinerary {
+  * itineraryID : ObjectId <<PK>>
+  --
+  name : String
+  description : String
+  imageUrl : String
+  duration : Number
+  sites : ObjectId[] <<FK Pin[]>>
+  createdBy : ObjectId <<FK User>>
+  isAdminCreated : Boolean
+  isArchived : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "Pin" as pin {
+  * pinID : ObjectId <<PK>>
+  --
+  siteName : String
+  siteDescription : String
+  siteDescriptionTagalog : String
+  latitude : Number
+  longitude : Number
+  mediaUrl : String
+  mediaType : {image|video}
+  mediaFiles : [{url,type}]
+  arEnabled : Boolean
+  arLink : String
+  glbUrl : String
+  facadeUrl : String
+  feeType : {none|fort_santiago|custom_fee}
+  feeAmount : Number
+  feeAmountDiscounted : Number
+  category : ObjectId <<FK Category>>
+  status : {active|inactive}
+  inactiveReason : String
+  inactiveReasonDetails : String
+  isArchived : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "Category" as category {
+  * categoryID : ObjectId <<PK>>
+  --
+  name : String (unique)
+  createdAt : Date
+}
+
+entity "Review" as review {
+  * reviewID : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK User>>
+  itineraryId : ObjectId <<FK Itinerary>>
+  siteId : ObjectId <<FK Pin>>
+  rating : Number [1..5]
+  reviewText : String
+  photos : String[]
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "VisitedSite" as visitedsite {
+  * visitedSiteID : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK User>>
+  itineraryId : ObjectId <<FK Itinerary>>
+  siteId : ObjectId <<FK Pin>>
+  visitedAt : Date
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "ItineraryProgress" as progress {
+  * progressID : ObjectId <<PK>>
+  --
+  userId : ObjectId <<FK User>>
+  itineraryId : ObjectId <<FK Itinerary>>
+  currentPinIndex : Number
+  visitedSites : ObjectId[] <<FK Pin[]>>
+  skippedSites : ObjectId[] <<FK Pin[]>>
+  optimizedOrder : ObjectId[] <<FK Pin[]>>
+  lastPosition : {lat:Number, lng:Number}
+  lastUpdated : Date
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "EmergencyContact" as emergency {
+  * contactID : ObjectId <<PK>>
+  --
+  name : String
+  contactChannels : [{label, number}]
+  position : Number
+  icon : String
+  isArchived : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "PhotoboothFilter" as photobooth {
+  * filterID : ObjectId <<PK>>
+  --
+  name : String
+  image : String
+  category : {general|head|eyes|frame|border}
+  position : Number
+  isArchived : Boolean
+  createdAt : Date
+  updatedAt : Date
+}
+
+entity "Log" as logs {
+  * logID : ObjectId <<PK>>
+  --
+  adminName : String
+  action : String
+  role : {admin|tourist}
+  targetType : {review|itinerary|pin|user|photobooth|other}
+  targetId : ObjectId
+  details : Mixed
+  createdAt : Date
+}
+
+entity "BotEntry" as botentry {
+  * entryID : ObjectId <<PK>>
+  --
+  info_en : String
+  info_fil : String
+  tags : ObjectId[] <<FK Tag[]>>
+  keywords : String[]
+  isArchived : Boolean
+  createdAt : Date
+}
+
+entity "Tag" as tag {
+  * tagID : ObjectId <<PK>>
+  --
+  name : String (unique)
+  createdAt : Date
+}
+
+entity "PendingUser" as pendinguser {
+  * pendingUserID : ObjectId <<PK>>
+  --
+  firstName : String
+  lastName : String
+  email : String
+  password : String
+  otp : String
+  otpExpires : Date
+}
+
+entity "Mask" as mask {
+  * maskID : ObjectId <<PK>>
+  --
+  geometry : Polygon
+  createdAt : Date
+}
+
+' =====================
+' Relationships
+' =====================
+
+' Users create itineraries
+user ||--o{ itinerary : "Creates"
+
+' Itineraries contain many Pins (and Pins can belong to many Itineraries)
+itinerary }o--o{ pin : "Contains"
+
+' Pin belongs to one Category
+pin }o--|| category : "BelongsTo"
+
+' Reviews by users, for itineraries, about pins
+user ||--o{ review : "Writes"
+review }o--|| itinerary : "For"
+review }o--|| pin : "Of"
+
+' Visited sites tracking
+user ||--o{ visitedsite : "Has"
+visitedsite }o--|| itinerary : "In"
+visitedsite }o--|| pin : "Visited"
+
+' Progress per user per itinerary (unique pair)
+user ||--o{ progress : "Tracks"
+progress }o--|| itinerary : "For"
+
+' Bot knowledge base tagging
+botentry }o--o{ tag : "TaggedWith"
+
+' Pending user promotes to real user after verification
+pendinguser ||--|| user : "Becomes"
+
+@enduml

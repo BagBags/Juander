@@ -43,6 +43,7 @@ export default function SiteModalFullScreen({
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
+  const audioRef = React.useRef(null);
 
   // iOS 26+ detection helper
   const isiOS26Plus = () => {
@@ -111,23 +112,24 @@ export default function SiteModalFullScreen({
         clearInterval(speechCheckIntervalRef.current);
         speechCheckIntervalRef.current = null;
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       ttsService.cancel();
       setIsPlaying(false);
     };
   }, []);
 
-  // Handler to manually play/stop description
-  const handleToggleDescription = () => {
+  // Handler to manually play/stop description using backend Google TTS
+  const handleToggleDescription = async () => {
     if (isPlaying) {
-      // Stop the speech
-      if (speechCheckIntervalRef.current) {
-        clearInterval(speechCheckIntervalRef.current);
-        speechCheckIntervalRef.current = null;
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
-      ttsService.cancel();
       setIsPlaying(false);
     } else {
-      // Start playing
       if (selectedPin) {
         let description = '';
         if (userLanguage === 'tagalog' && selectedPin.siteDescriptionTagalog) {
@@ -139,31 +141,28 @@ export default function SiteModalFullScreen({
         }
         
         if (description) {
-          // Temporarily enable TTS if it's disabled
-          const wasEnabled = ttsService.isEnabled;
-          if (!wasEnabled) {
-            ttsService.enable();
+          try {
+            setIsPlaying(true);
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: description })
+            });
+            if (!res.ok) throw new Error('TTS request failed');
+            const audioBlob = await res.blob();
+            const url = URL.createObjectURL(audioBlob);
+            const audio = new Audio(url);
+            audioRef.current = audio;
+            audio.onended = () => {
+              setIsPlaying(false);
+              URL.revokeObjectURL(url);
+              audioRef.current = null;
+            };
+            audio.play();
+          } catch (err) {
+            console.error('Error playing TTS:', err);
+            setIsPlaying(false);
           }
-          
-          setIsPlaying(true);
-          ttsService.speak(description);
-          
-          // Wait 500ms before starting to monitor speech end (to allow speech to actually start)
-          setTimeout(() => {
-            speechCheckIntervalRef.current = setInterval(() => {
-              if (!ttsService.isSpeaking) {
-                setIsPlaying(false);
-                if (speechCheckIntervalRef.current) {
-                  clearInterval(speechCheckIntervalRef.current);
-                  speechCheckIntervalRef.current = null;
-                }
-                // Restore previous TTS state
-                if (!wasEnabled) {
-                  ttsService.disable();
-                }
-              }
-            }, 100);
-          }, 500);
         }
       }
     }
@@ -415,6 +414,10 @@ export default function SiteModalFullScreen({
             if (speechCheckIntervalRef.current) {
               clearInterval(speechCheckIntervalRef.current);
               speechCheckIntervalRef.current = null;
+            }
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current = null;
             }
             ttsService.cancel(); // Stop any ongoing speech
             setIsPlaying(false);

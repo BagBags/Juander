@@ -1,0 +1,305 @@
+@startuml Juander_Tourism_UML_Class_Diagram
+
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam stereotypeCBackgroundColor transparent
+skinparam stereotypeIBackgroundColor transparent
+hide stereotype
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+}
+
+class User {
+    - id : ObjectId
+    - firstName : String
+    - lastName : String
+    - profilePicture : String
+    - email : String
+    - password : String
+    - role : String
+    - isVerified : Boolean
+    - otp : String
+    - otpExpires : Date
+    - birthday : Date
+    - gender : String
+    - country : String
+    - language : String
+    - authProvider : String
+    - googleId : String
+    - profileCompleted : Boolean
+    - hideFortSantiagoModal : Boolean
+    - hasCompletedTour : Boolean
+    - tourCompletedAt : Date
+    --
+    + register() : void
+    + login() : void
+    + verifyOTP() : void
+    + updateProfile() : void
+    + googleAuth() : void
+    + resetPassword() : void
+}
+
+class Admin {
+    - id : ObjectId
+    - adminName : String
+    - role : String
+    - email : String
+    --
+    + login() : void
+    + manageUsers() : void
+    + managePins() : void
+    + manageItineraries() : void
+    + manageEmergencyContacts() : void
+    + managePhotoboothFilters() : void
+    + viewLogs() : void
+}
+
+class Itinerary {
+    - id : ObjectId
+    - name : String
+    - description : String
+    - imageUrl : String
+    - duration : Number
+    - sites : ObjectId[]
+    - createdBy : ObjectId
+    - isAdminCreated : Boolean
+    - isArchived : Boolean
+    --
+    + createItinerary() : void
+    + updateItinerary() : void
+    + deleteItinerary() : void
+    + archiveItinerary() : void
+    + addSite() : void
+    + removeSite() : void
+}
+
+class Pin {
+    - id : ObjectId
+    - siteName : String
+    - siteDescription : String
+    - siteDescriptionTagalog : String
+    - latitude : Number
+    - longitude : Number
+    - mediaUrl : String
+    - mediaType : String
+    - mediaFiles : Object[]
+    - arEnabled : Boolean
+    - arLink : String
+    - glbUrl : String
+    - facadeUrl : String
+    - feeType : String
+    - feeAmount : Number
+    - feeAmountDiscounted : Number
+    - category : ObjectId
+    - status : String
+    - inactiveReason : String
+    - isArchived : Boolean
+    --
+    + createPin() : void
+    + updatePin() : void
+    + deletePin() : void
+    + archivePin() : void
+    + uploadMedia() : void
+    + uploadGLB() : void
+    + uploadFacade() : void
+}
+
+class Category {
+    - id : ObjectId
+    - name : String
+    - createdAt : Date
+    --
+    + createCategory() : void
+    + updateCategory() : void
+    + deleteCategory() : void
+}
+
+class Review {
+    - id : ObjectId
+    - userId : ObjectId
+    - itineraryId : ObjectId
+    - siteId : ObjectId
+    - rating : Number
+    - reviewText : String
+    - photos : String[]
+    --
+    + createReview() : void
+    + updateReview() : void
+    + deleteReview() : void
+    + uploadPhotos() : void
+}
+
+class VisitedSite {
+    - id : ObjectId
+    - userId : ObjectId
+    - itineraryId : ObjectId
+    - siteId : ObjectId
+    - visitedAt : Date
+    --
+    + markAsVisited() : void
+    + unmarkVisited() : void
+    + getVisitedSites() : void
+}
+
+class ItineraryProgress {
+    - id : ObjectId
+    - userId : ObjectId
+    - itineraryId : ObjectId
+    - currentPinIndex : Number
+    - visitedSites : ObjectId[]
+    - skippedSites : ObjectId[]
+    - optimizedOrder : ObjectId[]
+    - lastPosition : Object
+    - lastUpdated : Date
+    --
+    + updateProgress() : void
+    + optimizeRoute() : void
+    + skipSite() : void
+    + resetProgress() : void
+}
+
+class EmergencyContact {
+    - id : ObjectId
+    - name : String
+    - contactChannels : Object[]
+    - position : Number
+    - icon : String
+    - isArchived : Boolean
+    --
+    + createContact() : void
+    + updateContact() : void
+    + deleteContact() : void
+    + archiveContact() : void
+}
+
+class PhotoboothFilter {
+    - id : ObjectId
+    - name : String
+    - image : String
+    - category : String
+    - position : Number
+    - isArchived : Boolean
+    --
+    + createFilter() : void
+    + updateFilter() : void
+    + deleteFilter() : void
+    + archiveFilter() : void
+}
+
+class Log {
+    - id : ObjectId
+    - adminName : String
+    - action : String
+    - role : String
+    - targetType : String
+    - targetId : ObjectId
+    - details : Object
+    - createdAt : Date
+    --
+    + createLog() : void
+    + getLogsByAdmin() : void
+    + getLogsByTarget() : void
+}
+
+class BotEntry {
+    - id : ObjectId
+    - info_en : String
+    - info_fil : String
+    - tags : ObjectId[]
+    - keywords : String[]
+    - isArchived : Boolean
+    --
+    + createEntry() : void
+    + updateEntry() : void
+    + deleteEntry() : void
+    + searchEntries() : void
+}
+
+class Tag {
+    - id : ObjectId
+    - name : String
+    - createdAt : Date
+    --
+    + createTag() : void
+    + updateTag() : void
+    + deleteTag() : void
+}
+
+class PendingUser {
+    - id : ObjectId
+    - firstName : String
+    - lastName : String
+    - email : String
+    - password : String
+    - otp : String
+    - otpExpires : Date
+    --
+    + createPendingUser() : void
+    + verifyAndPromote() : void
+    + cleanupExpired() : void
+}
+
+class Mask {
+    - id : ObjectId
+    - geometry : Object
+    - createdAt : Date
+    --
+    + createMask() : void
+    + updateMask() : void
+    + deleteMask() : void
+    + checkBounds() : void
+}
+
+class Chatbot {
+    - sessionId : String
+    - userQuery : String
+    - response : String
+    - timestamp : Date
+    --
+    + processQuery() : void
+    + searchKnowledge() : void
+    + generateResponse() : void
+}
+
+' Admin Management Relationships
+Admin ||--o{ User : "manages"
+Admin ||--o{ Pin : "manages"
+Admin ||--o{ Itinerary : "manages"
+Admin ||--o{ EmergencyContact : "manages"
+Admin ||--o{ PhotoboothFilter : "manages"
+Admin ||--o{ Category : "manages"
+Admin ||--o{ BotEntry : "manages"
+Admin ||--o{ Tag : "manages"
+Admin ||--o{ Mask : "manages"
+Admin ||--o{ Log : "creates"
+
+' User Relationships
+User ||--o{ Itinerary : "creates"
+User ||--o{ Review : "writes"
+User ||--o{ VisitedSite : "has"
+User ||--o{ ItineraryProgress : "tracks"
+User ||--o{ Chatbot : "uses"
+
+' Itinerary Relationships
+Itinerary }o--o{ Pin : "contains"
+Itinerary ||--o{ Review : "receives"
+Itinerary ||--o{ VisitedSite : "includes"
+Itinerary ||--o{ ItineraryProgress : "has"
+
+' Pin Relationships
+Pin }o--|| Category : "belongs to"
+Pin ||--o{ Review : "gets"
+Pin ||--o{ VisitedSite : "visited as"
+
+' Bot Relationships
+BotEntry }o--o{ Tag : "uses"
+Chatbot ||--o{ BotEntry : "gets knowledge from"
+
+' Authentication Flow
+PendingUser ||--|| User : "becomes after verification"
+
+@enduml
+ 
