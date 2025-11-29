@@ -111,8 +111,8 @@ export default function Account() {
     return `${mins}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  // Helper: allow only valid name characters in real-time
-  const validateNameInput = (val) => /^[\p{L}\s'-]*$/u.test(val);
+  // Helper: allow only letters, numbers, spaces in real-time
+  const validateNameInput = (val) => /^[A-Za-z0-9\s]*$/.test(val);
 
   // Input handlers
   const handleChange = (e) => {
@@ -124,7 +124,15 @@ export default function Account() {
     }
 
     setUser((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
+    if (name === "firstName" || name === "lastName") {
+      if (value.trim() && isProfaneText(value)) {
+        setErrors((prev) => ({ ...prev, [name]: "No bad words allowed" }));
+      } else {
+        setErrors((prev) => ({ ...prev, [name]: "" }));
+      }
+    } else {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
     setSuccessMessage("");
   };
 
@@ -164,10 +172,10 @@ export default function Account() {
       setOtpMessage(t("enterNewEmailFirst"));
       return;
     }
-    
+
     setSendingOtp(true);
     setOtpMessage(""); // Clear previous messages
-    
+
     try {
       await axios.post(
         `${
@@ -186,13 +194,14 @@ export default function Account() {
       console.error("Error details:", {
         status: err.response?.status,
         data: err.response?.data,
-        message: err.message
+        message: err.message,
       });
-      
-      const errorMsg = err.response?.data?.message || 
-                       err.message || 
-                       t("otpSendFailed") || 
-                       "Failed to send OTP. Please check your email and try again.";
+
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        t("otpSendFailed") ||
+        "Failed to send OTP. Please check your email and try again.";
       setOtpMessage(errorMsg);
     } finally {
       setSendingOtp(false);
@@ -268,9 +277,10 @@ export default function Account() {
     const newErrors = {};
 
     // Name validation rules
+    const nameRegex = /^[A-Za-z0-9\s]{2,50}$/;
+
     const firstName = user.firstName.trim();
     const lastName = user.lastName.trim();
-    const nameRegex = /^[\p{L}\s'-]+$/u;
     const repeatedCharRegex = /(.)\1{2,}/;
     const invalidCharRegex = /[0-9!@#$%^&*()_+\=[\]{};:\"\\|,.<>/?~`]+/;
 
@@ -278,20 +288,23 @@ export default function Account() {
     if (!firstName) {
       newErrors.firstName = t("firstNameRequired");
     } else if (!nameRegex.test(firstName)) {
-      newErrors.firstName = "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
+      newErrors.firstName =
+        "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
     } else if (firstName.length < 2 || firstName.length > 50) {
       newErrors.firstName = "First name must be between 2 and 50 characters";
     } else if (repeatedCharRegex.test(firstName)) {
       newErrors.firstName = "Please enter a valid name";
     } else if (invalidCharRegex.test(firstName)) {
-      newErrors.firstName = "Names cannot contain numbers or special characters";
+      newErrors.firstName =
+        "Names cannot contain numbers or special characters";
     }
 
     // Last name validation
     if (!lastName) {
       newErrors.lastName = t("lastNameRequired");
     } else if (!nameRegex.test(lastName)) {
-      newErrors.lastName = "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
+      newErrors.lastName =
+        "Names can only contain letters, spaces, hyphens (-), and apostrophes (')";
     } else if (lastName.length < 2 || lastName.length > 50) {
       newErrors.lastName = "Last name must be between 2 and 50 characters";
     } else if (repeatedCharRegex.test(lastName)) {
@@ -300,11 +313,28 @@ export default function Account() {
       newErrors.lastName = "Names cannot contain numbers or special characters";
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!user.email) newErrors.email = t("emailRequired");
-    else if (!emailRegex.test(user.email)) newErrors.email = t("invalidEmail");
+    const first = (user.firstName || "").trim();
+    const last = (user.lastName || "").trim();
+    if (!first)
+      newErrors.firstName = t("firstNameRequired") || "First name is required";
+    else if (!nameRegex.test(first))
+      newErrors.firstName = "Only letters, numbers, spaces; length 2–50";
+    else if (isProfaneText(first)) newErrors.firstName = "No bad words allowed";
+    if (!last)
+      newErrors.lastName = t("lastNameRequired") || "Last name is required";
+    else if (!nameRegex.test(last))
+      newErrors.lastName = "Only letters, numbers, spaces; length 2–50";
+    else if (isProfaneText(last)) newErrors.lastName = "No bad words allowed";
+    const email = (user.email || "").trim();
+    if (!email) newErrors.email = t("emailRequired");
+    else if (email.length > 254)
+      newErrors.email = "Email must be 254 characters or fewer";
+    else if (!emailRegex.test(email)) newErrors.email = t("invalidEmail");
 
     if (user.authProvider === "local" && changePassword) {
-      if (!user.currentPassword) newErrors.currentPassword = t("currentPasswordRequired") || "Current password is required";
+      if (!user.currentPassword)
+        newErrors.currentPassword =
+          t("currentPasswordRequired") || "Current password is required";
       if (!user.password) newErrors.password = t("passwordRequired");
       else if (!passwordRegex.test(user.password))
         newErrors.password = t("passwordFormat");
@@ -447,465 +477,513 @@ export default function Account() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col min-h-full bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden overscroll-contain touch-pan-y"
     >
-      <PullToRefresh onRefresh={async () => { setRefreshKey((prev) => prev + 1); await new Promise((r) => setTimeout(r, 1000)); }}>
-      <div className="w-full max-w-md flex flex-col min-h-full" key={refreshKey}>
-        <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {successMessage && (
-              <p className="text-green-600 text-sm mb-2">{successMessage}</p>
-            )}
-
-            {/* First Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("firstName")}
-              </label>
-              <input
-                name="firstName"
-                value={user.firstName}
-                onChange={handleChange}
-                placeholder="Enter your first name"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
-                  errors.firstName
-                    ? "border-red-400 focus:ring-red-500"
-                    : "focus:ring-2 focus:ring-[#cf3325]"
-                }`}
-                disabled={loading}
-              />
-              {errors.firstName && (
-                <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>
-              )}
-            </div>
-
-            {/* Last Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("lastName")}
-              </label>
-              <input
-                name="lastName"
-                value={user.lastName}
-                onChange={handleChange}
-                placeholder="Enter your last name"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
-                  errors.lastName
-                    ? "border-red-400 focus:ring-red-500"
-                    : "focus:ring-2 focus:ring-[#cf3325]"
-                }`}
-                disabled={loading}
-              />
-              {errors.lastName && (
-                <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
-              )}
-            </div>
-
-            {/* Email Section */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t("email")}
-              </label>
-              <input
-                name="email"
-                type="email"
-                value={user.email}
-                onChange={handleChange}
-                placeholder="your.email@example.com"
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
-                  errors.email
-                    ? "border-red-400 focus:ring-red-500"
-                    : "focus:ring-2 focus:ring-[#cf3325]"
-                }`}
-                disabled={loading || user.authProvider === "google" || otpStep}
-              />
-              {errors.email && (
-                <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+      <PullToRefresh
+        onRefresh={async () => {
+          setRefreshKey((prev) => prev + 1);
+          await new Promise((r) => setTimeout(r, 1000));
+        }}
+      >
+        <div
+          className="w-full max-w-md flex flex-col min-h-full"
+          key={refreshKey}
+        >
+          <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {successMessage && (
+                <p className="text-green-600 text-sm mb-2">{successMessage}</p>
               )}
 
-              {/* OTP Section */}
-              {user.email !== originalEmail && !otpStep && (
-                <>
-                  {otpSent ? (
-                    <p className="text-green-600 text-sm mt-1">
-                      {t("otpSentToNewEmail")}
-                    </p>
-                  ) : (
-                    <button
-                      type="button"
-                      className="mt-2 mx-auto block px-4 py-2 bg-[#cf3325] hover:bg-[#b42c21] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={sendEmailOtp}
-                      disabled={sendingOtp}
-                    >
-                      {sendingOtp ? "Sending..." : t("Verify New Email")}
-                    </button>
-                  )}
-                  {otpMessage && !otpStep && (
-                    <p className={`text-sm mt-2 ${
-                      otpMessage.includes("successfully") || otpMessage.includes("sent")
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}>
-                      {otpMessage}
-                    </p>
-                  )}
-                </>
-              )}
-
-              {otpStep && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-3">
-                    {t("enterOtpSentTo") || "Enter the OTP sent to"}: <span className="font-semibold">{user.email}</span>
-                  </p>
-                  <div
-                    className="flex justify-center gap-3 flex-wrap"
-                    onPaste={handlePaste}
-                  >
-                    {Array.from({ length: otpLength }).map((_, i) => (
-                      <input
-                        key={i}
-                        type="text"
-                        maxLength="1"
-                        className="w-12 h-12 border rounded-lg text-center text-lg focus:ring-2 focus:ring-[#cf3325]"
-                        value={otp[i] || ""}
-                        onChange={(e) => handleOtpChange(e.target.value, i)}
-                        onKeyDown={(e) => handleKeyDown(e, i)}
-                        ref={(el) => (otpRefs.current[i] = el)}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {t("expiresIn")}: {formatTime(otpTimeLeft)}
-                  </p>
-                  <button
-                    type="button"
-                    className="w-full bg-[#cf3325] text-white py-2 rounded mt-3 hover:bg-[#b42c21] transition"
-                    onClick={verifyEmailOtp}
-                  >
-                    {t("Verify OTP")}
-                  </button>
-
-                  {/* Resend OTP and Cancel Buttons */}
-                  <div className="flex justify-center gap-4 mt-3">
-                    <button
-                      type="button"
-                      onClick={handleResendEmailOtp}
-                      disabled={resendCooldown > 0}
-                      className={`text-sm font-medium ${
-                        resendCooldown > 0
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-[#cf3325] hover:underline"
-                      }`}
-                    >
-                      {resendCooldown > 0
-                        ? `Resend OTP in ${resendCooldown}s`
-                        : "Resend OTP"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpStep(false);
-                        setOtpSent(false);
-                        setOtp("");
-                        setOtpTimeLeft(0);
-                        setOtpMessage("");
-                        setResendCooldown(0);
-                      }}
-                      className="text-sm font-medium text-gray-600 hover:underline"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  {otpMessage && (
-                    <p
-                      className={`text-sm mt-2 ${
-                        otpMessage.includes("successfully") ||
-                        otpMessage.includes("sent")
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {otpMessage}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Password Section */}
-            {user.authProvider === "local" ? (
-              <>
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    id="changePassword"
-                    type="checkbox"
-                    checked={changePassword}
-                    onChange={(e) => {
-                      setChangePassword(e.target.checked);
-                      setUser((prev) => ({
-                        ...prev,
-                        currentPassword: "",
-                        password: "",
-                        confirmPassword: "",
-                      }));
-                      setErrors({});
-                    }}
-                    disabled={loading}
-                  />
-                  <label
-                    htmlFor="changePassword"
-                    className="text-sm text-gray-700"
-                  >
-                    {t("changePassword")}
-                  </label>
-                </div>
-                {changePassword && (
-                  <>
-                    {/* Current Password */}
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Current Password
-                        {errors.currentPassword && (
-                          <span className="ml-2 inline-block text-xs font-semibold text-red-600">• {errors.currentPassword}</span>
-                        )}
-                      </label>
-                      <input
-                        name="currentPassword"
-                        type={showCurrent ? "text" : "password"}
-                        value={user.currentPassword}
-                        onChange={(e) => setUser((prev) => ({ ...prev, currentPassword: e.target.value }))}
-                        placeholder="Enter current password"
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
-                          errors.currentPassword
-                            ? "border-red-400 focus:ring-red-500"
-                            : "focus:ring-2 focus:ring-[#cf3325]"
-                        }`}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-9 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        onClick={() => setShowCurrent((s) => !s)}
-                        tabIndex={-1}
-                        aria-label={
-                          showCurrent ? (t("hidePassword") || "Hide password") : (t("showPassword") || "Show password")
-                        }
-                      >
-                        {showCurrent ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </button>
-                      {errors.currentPassword && (
-                        <p className="text-xs text-red-600 mt-1">{errors.currentPassword}</p>
-                      )}
-                    </div>
-
-                    {/* New Password */}
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("newPassword")}
-                        {errors.password && (
-                          <span className="ml-2 inline-block text-xs font-semibold text-red-600">• {errors.password}</span>
-                        )}
-                      </label>
-                      <input
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        value={user.password}
-                        onChange={handleChange}
-                        placeholder="Enter new password"
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
-                          errors.password
-                            ? "border-red-400 focus:ring-red-500"
-                            : "focus:ring-2 focus:ring-[#cf3325]"
-                        }`}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-9 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        onClick={() => setShowPassword((s) => !s)}
-                        tabIndex={-1}
-                        aria-label={
-                          showPassword ? t("hidePassword") : t("showPassword")
-                        }
-                      >
-                        {showPassword ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </button>
-                      {errors.password && (
-                        <p className="text-xs text-red-600 mt-1">{errors.password}</p>
-                      )}
-                    </div>
-
-                    {/* Confirm Password */}
-                    <div className="relative">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t("confirmNewPassword")}
-                        {errors.confirmPassword && (
-                          <span className="ml-2 inline-block text-xs font-semibold text-red-600">• {errors.confirmPassword}</span>
-                        )}
-                      </label>
-                      <input
-                        name="confirmPassword"
-                        type={showConfirm ? "text" : "password"}
-                        value={user.confirmPassword}
-                        onChange={handleChange}
-                        placeholder="Re-enter new password"
-                        className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
-                          errors.confirmPassword
-                            ? "border-red-400 focus:ring-red-500"
-                            : "focus:ring-2 focus:ring-[#cf3325]"
-                        }`}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-9 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        onClick={() => setShowConfirm((s) => !s)}
-                        tabIndex={-1}
-                        aria-label={
-                          showConfirm
-                            ? t("hideConfirmPassword")
-                            : t("showConfirmPassword")
-                        }
-                      >
-                        {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                      {errors.confirmPassword && (
-                        <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </>
-            ) : (
-              <p className="text-gray-500 text-sm mt-2">
-                {t("googleAccountNotice")}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={!isFormValidForSubmit() || loading}
-              className={`w-full text-white font-semibold py-3 rounded-xl shadow-md transition ${
-                !isFormValidForSubmit() || loading
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-[#cf3325] hover:bg-[#b42c21]"
-              }`}
-            >
-              {loading ? t("saving") : t("saveChanges")}
-            </button>
-          </form>
-        </div>
-
-        {/* Deactivate Account Section */}
-        <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 mt-1">
-              <AlertTriangle className="w-6 h-6 text-red-500" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-gray-800 mb-2 text-base">
-                Deactivate Account
-              </h3>
-              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                Permanently delete your account and all associated data. This
-                action cannot be undone. All your itineraries and reviews will
-                be permanently deleted.
-              </p>
-              <button
-                onClick={() => setShowDeactivateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
-              >
-                <Trash2 size={18} />
-                Deactivate Account
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Deactivation Confirmation Modal */}
-        {showDeactivateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
-                <h2 className="text-xl font-bold text-gray-800">
-                  Confirm Account Deactivation
-                </h2>
-              </div>
-
-              <div className="mb-6 space-y-3">
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  This action will permanently delete:
-                </p>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 ml-2">
-                  <li>Your account and profile</li>
-                  <li>All your itineraries</li>
-                  <li>All your reviews</li>
-                  <li>All associated data</li>
-                </ul>
-                <p className="text-sm font-semibold text-red-600 mt-4">
-                  This action cannot be undone!
-                </p>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type <span className="font-bold text-red-600">DELETE</span> to
-                  confirm:
+              {/* First Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("firstName")}
                 </label>
                 <input
-                  type="text"
-                  value={confirmationText}
-                  onChange={(e) => setConfirmationText(e.target.value)}
-                  placeholder="Type DELETE"
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  disabled={deactivating}
+                  name="firstName"
+                  value={user.firstName}
+                  maxLength={50}
+                  onChange={handleChange}
+                  placeholder="Enter your first name"
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
+                    errors.firstName
+                      ? "border-red-400 focus:ring-red-500"
+                      : "focus:ring-2 focus:ring-[#cf3325]"
+                  }`}
+                  disabled={loading}
                 />
+                {errors.firstName && (
+                  <p className="text-xs text-red-600 mt-1">
+                    {errors.firstName}
+                  </p>
+                )}
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeactivateModal(false);
-                    setConfirmationText("");
-                  }}
-                  disabled={deactivating}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeactivateAccount}
-                  disabled={confirmationText !== "DELETE" || deactivating}
-                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {deactivating ? "Deactivating..." : "Deactivate"}
-                </button>
+              {/* Last Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("lastName")}
+                </label>
+                <input
+                  name="lastName"
+                  value={user.lastName}
+                  maxLength={50}
+                  onChange={handleChange}
+                  placeholder="Enter your last name"
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
+                    errors.lastName
+                      ? "border-red-400 focus:ring-red-500"
+                      : "focus:ring-2 focus:ring-[#cf3325]"
+                  }`}
+                  disabled={loading}
+                />
+                {errors.lastName && (
+                  <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>
+                )}
               </div>
-            </motion.div>
+
+              {/* Email Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t("email")}
+                </label>
+                <input
+                  name="email"
+                  type="email"
+                  value={user.email}
+                  maxLength={254}
+                  onChange={handleChange}
+                  placeholder="your.email@example.com"
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none ${
+                    errors.email
+                      ? "border-red-400 focus:ring-red-500"
+                      : "focus:ring-2 focus:ring-[#cf3325]"
+                  }`}
+                  disabled={
+                    loading || user.authProvider === "google" || otpStep
+                  }
+                />
+                {errors.email && (
+                  <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+                )}
+
+                {/* OTP Section */}
+                {user.email !== originalEmail && !otpStep && (
+                  <>
+                    {otpSent ? (
+                      <p className="text-green-600 text-sm mt-1">
+                        {t("otpSentToNewEmail")}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        className="mt-2 mx-auto block px-4 py-2 bg-[#cf3325] hover:bg-[#b42c21] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={sendEmailOtp}
+                        disabled={sendingOtp}
+                      >
+                        {sendingOtp ? "Sending..." : t("Verify New Email")}
+                      </button>
+                    )}
+                    {otpMessage && !otpStep && (
+                      <p
+                        className={`text-sm mt-2 ${
+                          otpMessage.includes("successfully") ||
+                          otpMessage.includes("sent")
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {otpMessage}
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {otpStep && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600 mb-3">
+                      {t("enterOtpSentTo") || "Enter the OTP sent to"}:{" "}
+                      <span className="font-semibold">{user.email}</span>
+                    </p>
+                    <div
+                      className="flex justify-center gap-3 flex-wrap"
+                      onPaste={handlePaste}
+                    >
+                      {Array.from({ length: otpLength }).map((_, i) => (
+                        <input
+                          key={i}
+                          type="text"
+                          maxLength="1"
+                          className="w-12 h-12 border rounded-lg text-center text-lg focus:ring-2 focus:ring-[#cf3325]"
+                          value={otp[i] || ""}
+                          onChange={(e) => handleOtpChange(e.target.value, i)}
+                          onKeyDown={(e) => handleKeyDown(e, i)}
+                          ref={(el) => (otpRefs.current[i] = el)}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {t("expiresIn")}: {formatTime(otpTimeLeft)}
+                    </p>
+                    <button
+                      type="button"
+                      className="w-full bg-[#cf3325] text-white py-2 rounded mt-3 hover:bg-[#b42c21] transition"
+                      onClick={verifyEmailOtp}
+                    >
+                      {t("Verify OTP")}
+                    </button>
+
+                    {/* Resend OTP and Cancel Buttons */}
+                    <div className="flex justify-center gap-4 mt-3">
+                      <button
+                        type="button"
+                        onClick={handleResendEmailOtp}
+                        disabled={resendCooldown > 0}
+                        className={`text-sm font-medium ${
+                          resendCooldown > 0
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-[#cf3325] hover:underline"
+                        }`}
+                      >
+                        {resendCooldown > 0
+                          ? `Resend OTP in ${resendCooldown}s`
+                          : "Resend OTP"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpStep(false);
+                          setOtpSent(false);
+                          setOtp("");
+                          setOtpTimeLeft(0);
+                          setOtpMessage("");
+                          setResendCooldown(0);
+                        }}
+                        className="text-sm font-medium text-gray-600 hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {otpMessage && (
+                      <p
+                        className={`text-sm mt-2 ${
+                          otpMessage.includes("successfully") ||
+                          otpMessage.includes("sent")
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {otpMessage}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Password Section */}
+              {user.authProvider === "local" ? (
+                <>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      id="changePassword"
+                      type="checkbox"
+                      checked={changePassword}
+                      onChange={(e) => {
+                        setChangePassword(e.target.checked);
+                        setUser((prev) => ({
+                          ...prev,
+                          currentPassword: "",
+                          password: "",
+                          confirmPassword: "",
+                        }));
+                        setErrors({});
+                      }}
+                      disabled={loading}
+                    />
+                    <label
+                      htmlFor="changePassword"
+                      className="text-sm text-gray-700"
+                    >
+                      {t("changePassword")}
+                    </label>
+                  </div>
+                  {changePassword && (
+                    <>
+                      {/* Current Password */}
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Current Password
+                          {errors.currentPassword && (
+                            <span className="ml-2 inline-block text-xs font-semibold text-red-600">
+                              • {errors.currentPassword}
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          name="currentPassword"
+                          type={showCurrent ? "text" : "password"}
+                          value={user.currentPassword}
+                          onChange={(e) =>
+                            setUser((prev) => ({
+                              ...prev,
+                              currentPassword: e.target.value,
+                            }))
+                          }
+                          placeholder="Enter current password"
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
+                            errors.currentPassword
+                              ? "border-red-400 focus:ring-red-500"
+                              : "focus:ring-2 focus:ring-[#cf3325]"
+                          }`}
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-9 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowCurrent((s) => !s)}
+                          tabIndex={-1}
+                          aria-label={
+                            showCurrent
+                              ? t("hidePassword") || "Hide password"
+                              : t("showPassword") || "Show password"
+                          }
+                        >
+                          {showCurrent ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </button>
+                        {errors.currentPassword && (
+                          <p className="text-xs text-red-600 mt-1">
+                            {errors.currentPassword}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* New Password */}
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("newPassword")}
+                          {errors.password && (
+                            <span className="ml-2 inline-block text-xs font-semibold text-red-600">
+                              • {errors.password}
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          value={user.password}
+                          onChange={handleChange}
+                          placeholder="Enter new password"
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
+                            errors.password
+                              ? "border-red-400 focus:ring-red-500"
+                              : "focus:ring-2 focus:ring-[#cf3325]"
+                          }`}
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-9 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowPassword((s) => !s)}
+                          tabIndex={-1}
+                          aria-label={
+                            showPassword ? t("hidePassword") : t("showPassword")
+                          }
+                        >
+                          {showPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </button>
+                        {errors.password && (
+                          <p className="text-xs text-red-600 mt-1">
+                            {errors.password}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div className="relative">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t("confirmNewPassword")}
+                          {errors.confirmPassword && (
+                            <span className="ml-2 inline-block text-xs font-semibold text-red-600">
+                              • {errors.confirmPassword}
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          name="confirmPassword"
+                          type={showConfirm ? "text" : "password"}
+                          value={user.confirmPassword}
+                          onChange={handleChange}
+                          placeholder="Re-enter new password"
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none pr-10 ${
+                            errors.confirmPassword
+                              ? "border-red-400 focus:ring-red-500"
+                              : "focus:ring-2 focus:ring-[#cf3325]"
+                          }`}
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-9 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowConfirm((s) => !s)}
+                          tabIndex={-1}
+                          aria-label={
+                            showConfirm
+                              ? t("hideConfirmPassword")
+                              : t("showConfirmPassword")
+                          }
+                        >
+                          {showConfirm ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
+                        </button>
+                        {errors.confirmPassword && (
+                          <p className="text-xs text-red-600 mt-1">
+                            {errors.confirmPassword}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-500 text-sm mt-2">
+                  {t("googleAccountNotice")}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={!isFormValidForSubmit() || loading}
+                className={`w-full text-white font-semibold py-3 rounded-xl shadow-md transition ${
+                  !isFormValidForSubmit() || loading
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-[#cf3325] hover:bg-[#b42c21]"
+                }`}
+              >
+                {loading ? t("saving") : t("saveChanges")}
+              </button>
+            </form>
           </div>
-        )}
 
-        <div className="mt-auto">
-          <div className="border-t border-gray-100 pt-4" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
-            <p className="text-center text-xs text-gray-400">
-              © {new Date().getFullYear()} Intramuros Administration. Developed by UST College of Information and Computing Sciences.
-            </p>
+          {/* Deactivate Account Section */}
+          <div className="mt-6 w-full bg-white rounded-2xl p-6 shadow-md border-2 border-red-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 mt-1">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-800 mb-2 text-base">
+                  Deactivate Account
+                </h3>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                  Permanently delete your account and all associated data. This
+                  action cannot be undone. All your itineraries and reviews will
+                  be permanently deleted.
+                </p>
+                <button
+                  onClick={() => setShowDeactivateModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95"
+                >
+                  <Trash2 size={18} />
+                  Deactivate Account
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Deactivation Confirmation Modal */}
+          {showDeactivateModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-500" />
+                  <h2 className="text-xl font-bold text-gray-800">
+                    Confirm Account Deactivation
+                  </h2>
+                </div>
+
+                <div className="mb-6 space-y-3">
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    This action will permanently delete:
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 ml-2">
+                    <li>Your account and profile</li>
+                    <li>All your itineraries</li>
+                    <li>All your reviews</li>
+                    <li>All associated data</li>
+                  </ul>
+                  <p className="text-sm font-semibold text-red-600 mt-4">
+                    This action cannot be undone!
+                  </p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type <span className="font-bold text-red-600">DELETE</span>{" "}
+                    to confirm:
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmationText}
+                    onChange={(e) => setConfirmationText(e.target.value)}
+                    placeholder="Type DELETE"
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    disabled={deactivating}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeactivateModal(false);
+                      setConfirmationText("");
+                    }}
+                    disabled={deactivating}
+                    className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-all disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeactivateAccount}
+                    disabled={confirmationText !== "DELETE" || deactivating}
+                    className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deactivating ? "Deactivating..." : "Deactivate"}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          <div className="mt-auto">
+            <div
+              className="border-t border-gray-100 pt-4"
+              style={{
+                paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+              }}
+            >
+              <p className="text-center text-xs text-gray-400">
+                © {new Date().getFullYear()} Intramuros Administration.
+                Developed by UST College of Information and Computing Sciences.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
       </PullToRefresh>
       <NotificationModal
         isOpen={notification.isOpen}
@@ -919,3 +997,146 @@ export default function Account() {
     </motion.div>
   );
 }
+// Tagalog profanity support and normalization
+const TAGALOG_BAD_WORDS = [
+  "putangina",
+  "putang ina",
+  "putang-ina",
+  "puta",
+  "putragis",
+  "putaragis",
+  "pakshet",
+  "pakshit",
+  "pakyu",
+  "fakyu",
+  "kantot",
+  "kantutan",
+  "hindot",
+  "hindutan",
+  "titi",
+  "burat",
+  "puke",
+  "puki",
+  "pekpek",
+  "pepe",
+  "kiki",
+  "kupal",
+  "gago",
+  "gaga",
+  "tanga",
+  "bobo",
+  "ulol",
+  "tarantado",
+  "bwisit",
+  "leche",
+  "lintik",
+  "punyeta",
+  "pucha",
+  "animal",
+  "hayop",
+  "ogag",
+  "buraot",
+  "syet",
+  "amputa",
+  "animal ka",
+  "bilat",
+  "binibrocha",
+  "bogo",
+  "boto",
+  "brocha",
+  "bwesit",
+  "demonyo ka",
+  "engot",
+  "etits",
+  "gagi",
+  "habal",
+  "hayop ka",
+  "hayup",
+  "hinampak",
+  "hinayupak",
+  "hudas",
+  "iniyot",
+  "inutel",
+  "inutil",
+  "iyot",
+  "kagaguhan",
+  "kagang",
+  "kantotan",
+  "kantut",
+  "kaululan",
+  "kayat",
+  "kikinginamo",
+  "kingina",
+  "leching",
+  "lechugas",
+  "nakakaburat",
+  "nimal",
+  "olok",
+  "pakingshet",
+  "pesteng yawa",
+  "poke",
+  "poki",
+  "pokpok",
+  "poyet",
+  "pu'keng",
+  "puchanggala",
+  "puchangina",
+  "pukinangina",
+  "puking",
+  "ratbu",
+  "shunga",
+  "sira ulo",
+  "siraulo",
+  "suso",
+  "susu",
+  "tae",
+  "taena",
+  "tamod",
+  "tangina",
+  "taragis",
+  "tete",
+  "teti",
+  "timang",
+  "tinil",
+  "tite",
+  "tungaw",
+  "ulul",
+  "ungas",
+  "shit",
+  "fuck",
+  "bitch",
+  "asshole",
+  "dick",
+  "cunt",
+  "bastard",
+  "slut",
+  "whore",
+];
+const normalizeProfanity = (s) => {
+  if (!s) return "";
+  const map = {
+    0: "o",
+    1: "i",
+    3: "e",
+    4: "a",
+    5: "s",
+    7: "t",
+    "@": "a",
+    $: "s",
+    "!": "i",
+  };
+  const lowered = String(s).toLowerCase();
+  const leetFixed = lowered
+    .split("")
+    .map((c) => (map[c] ? map[c] : c))
+    .join("");
+  return leetFixed.replace(/[\s\-_.]+/g, "");
+};
+const isProfaneText = (s) => {
+  const normalized = normalizeProfanity(s);
+  for (const w of TAGALOG_BAD_WORDS) {
+    const wn = normalizeProfanity(w);
+    if (normalized.includes(wn)) return true;
+  }
+  return false;
+};

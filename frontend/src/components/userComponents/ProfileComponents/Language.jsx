@@ -100,7 +100,7 @@ export default function Language() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col min-h-full bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden overscroll-contain touch-pan-y"
     >
       <PullToRefresh
         onRefresh={async () => {

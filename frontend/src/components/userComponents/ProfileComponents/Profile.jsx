@@ -168,7 +168,7 @@ export default function ProfilePage() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
-      className="flex-1 min-h-0 bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
+      className="flex-1 min-h-0 bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0 overflow-hidden"
       style={{
         paddingTop: "max(env(safe-area-inset-top), 16px)",
         paddingBottom: "env(safe-area-inset-bottom)",

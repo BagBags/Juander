@@ -170,13 +170,13 @@ const SiteCard = ({ pin, onClose, distance }) => {
         opacity: 1,
         y: 0,
         scale: 1,
-        transition: { type: "spring", stiffness: 360, damping: 26, mass: 0.65 },
+        transition: { type: "spring", stiffness: 260, damping: 32, mass: 0.8 },
       }}
       exit={{
         opacity: 0,
         y: 14,
         scale: 0.996,
-        transition: { duration: 0.26, ease: "easeOut" },
+        transition: { duration: 0.38, ease: "easeOut" },
       }}
       className="absolute inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
       style={{

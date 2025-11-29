@@ -4,7 +4,6 @@ import MainLayout from "../MainLayout";
 import BackHeader from "../BackButton";
 import PullToRefresh from "../../shared/PullToRefresh";
 import axios from "axios";
-import CustomTourTooltip from "../../TourComponents/CustomTourTooltip";
 import ModernLoader from "../../shared/ModernLoader";
 
 export default function TouristItinerary() {
@@ -12,7 +11,10 @@ export default function TouristItinerary() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [prefetchedItineraries, setPrefetchedItineraries] = useState({ admin: [], user: [] });
+  const [prefetchedItineraries, setPrefetchedItineraries] = useState({
+    admin: [],
+    user: [],
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -20,9 +22,14 @@ export default function TouristItinerary() {
       if (!token) return;
 
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setCurrentUser(res.data);
       } catch (err) {
         console.error("Error fetching user:", err);
@@ -57,7 +64,8 @@ export default function TouristItinerary() {
     const runPreload = async () => {
       try {
         // Use a new key to ensure a single preload run applies the improved logic
-        const already = localStorage.getItem("tourist_itinerary_preloaded_v2") === "true";
+        const already =
+          localStorage.getItem("tourist_itinerary_preloaded_v2") === "true";
         if (already) {
           // Try to hydrate from cached itineraries for instant render
           try {
@@ -80,7 +88,8 @@ export default function TouristItinerary() {
 
         // Step 2: Fetch itineraries list
         const token = localStorage.getItem("token");
-        const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+        const apiBase =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
         let adminItineraries = [];
         let userItineraries = [];
 
@@ -107,10 +116,17 @@ export default function TouristItinerary() {
           const results = await Promise.all(
             list.map(async (it) => {
               try {
-                const progressRes = await axios.get(`${apiBase}/itinerary-progress/${it._id}`, { headers });
-                const visitedCount = (progressRes.data?.visitedSites || []).length;
-                const activeSitesCount = (it.sites || []).filter((s) => s.status === "active").length;
-                const isCompleted = activeSitesCount > 0 && visitedCount >= activeSitesCount;
+                const progressRes = await axios.get(
+                  `${apiBase}/itinerary-progress/${it._id}`,
+                  { headers }
+                );
+                const visitedCount = (progressRes.data?.visitedSites || [])
+                  .length;
+                const activeSitesCount = (it.sites || []).filter(
+                  (s) => s.status === "active"
+                ).length;
+                const isCompleted =
+                  activeSitesCount > 0 && visitedCount >= activeSitesCount;
                 return { ...it, isCompleted };
               } catch {
                 return { ...it, isCompleted: false };
@@ -147,11 +163,18 @@ export default function TouristItinerary() {
 
         // Step 5: Finalize and store
         if (!mounted) return;
-        setPrefetchedItineraries({ admin: adminWithStatus, user: userWithStatus });
+        setPrefetchedItineraries({
+          admin: adminWithStatus,
+          user: userWithStatus,
+        });
         try {
           localStorage.setItem(
             "tourist_itineraries_cache",
-            JSON.stringify({ admin: adminWithStatus, user: userWithStatus, ts: Date.now() })
+            JSON.stringify({
+              admin: adminWithStatus,
+              user: userWithStatus,
+              ts: Date.now(),
+            })
           );
         } catch {}
         updateProgress(100);
@@ -175,9 +198,9 @@ export default function TouristItinerary() {
 
   const handleRefresh = async () => {
     // Trigger refresh by updating key
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
     // Wait a bit to simulate refresh
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   };
 
   if (!componentsLoaded) {
@@ -185,72 +208,28 @@ export default function TouristItinerary() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f04e37] relative overflow-hidden" style={{ overscrollBehavior: 'none', touchAction: 'pan-y', height: '100dvh', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div
+      className="min-h-screen bg-[#f04e37] relative overflow-hidden"
+      style={{ overscrollBehavior: "none", touchAction: "pan-y" }}
+    >
       <BackHeader
         title={<span className="text-white">Available Itineraries</span>}
         className="text-white"
       />
-
-  
 
       {/* Main Content */}
       <MainLayout includeSideButtons={false}>
         <PullToRefresh onRefresh={handleRefresh}>
           <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
             <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
-              <InstructionModal />
-              <TouristItineraryMain key={refreshKey} initialItineraries={prefetchedItineraries} />
+              <TouristItineraryMain
+                key={refreshKey}
+                initialItineraries={prefetchedItineraries}
+              />
             </div>
           </div>
         </PullToRefresh>
       </MainLayout>
-    </div>
-  );
-}
-
-function InstructionModal() {
-  const [show, setShow] = useState(false);
-  
-  useEffect(() => {
-    const checkTutorialStatus = async () => {
-      try {
-        // Check if user has disabled Tour Map tutorial in settings
-        const { getTourMapTourStatus } = await import("../../../utils/tourApi");
-        const status = await getTourMapTourStatus();
-        
-        // Only show if tutorial is not completed (i.e., enabled in settings)
-        if (!status.hasCompletedTourMapTour) {
-          setShow(true);
-        }
-      } catch (err) {
-        // If API fails or user is not logged in, don't show modal by default
-        console.error("Error checking tutorial status:", err);
-      }
-    };
-    
-    checkTutorialStatus();
-  }, []);
-  
-  if (!show) return null;
-  const step = {
-    title: "Choose Itinerary",
-    content: "Choose from Suggested itineraries or your customized itineraries to begin.",
-    avatar: "/juan/Juan1.png",
-  };
-  return (
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/70" onClick={() => setShow(false)} />
-      <div style={{ zIndex: 100010 }}>
-        <CustomTourTooltip
-          continuous={false}
-          index={0}
-          size={1}
-          step={step}
-          isLastStep={true}
-          external
-          onClose={() => setShow(false)}
-        />
-      </div>
     </div>
   );
 }

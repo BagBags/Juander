@@ -1896,6 +1896,50 @@ export default function TouristItineraryMap() {
     }
   }, [selectedPin]);
 
+  const goToNextStop = (justVisitedSiteId = null) => {
+    try {
+      if (!optimizedPins || optimizedPins.length === 0) return;
+
+      const updatedVisited = new Set(visitedSites);
+      if (justVisitedSiteId) {
+        updatedVisited.add(justVisitedSiteId);
+        setVisitedSites(updatedVisited);
+      }
+
+      const nextPin = getNextSite(optimizedPins, updatedVisited);
+      if (!nextPin) {
+        setShowCompletionModal(true);
+        setSelectedPin(null);
+        setRoute(null);
+        setSteps([]);
+        return;
+      }
+
+      const nextIndex = optimizedPins.findIndex((p) => p._id === nextPin._id);
+      setCurrentPinIndex(nextIndex);
+      setActivePin(nextPin);
+      setSelectedPin(nextPin);
+      setManuallyDismissed(false);
+      if (userLocation) buildRoute(userLocation, nextPin);
+
+      saveProgress(
+        nextIndex,
+        updatedVisited,
+        skippedSites,
+        userLocation,
+        optimizedPins
+      );
+    } catch (err) {
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Navigation Error",
+        message:
+          err?.message || "Failed to advance to the next site. Please retry.",
+      });
+    }
+  };
+
   // Memoize onMove handler to prevent unnecessary re-renders
   const handleMapMove = useCallback((evt) => {
     setViewState(evt.viewState);

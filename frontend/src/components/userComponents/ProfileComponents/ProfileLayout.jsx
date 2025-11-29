@@ -21,10 +21,9 @@ export default function ProfileLayout() {
     <div
       className="bg-white flex flex-col text-sm relative"
       style={{
-        // Lock layout to viewport to prevent body scroll bounce
-        height: '100dvh',
+        height: '100svh',
         overflow: 'hidden',
-        overscrollBehavior: 'none',
+        overscrollBehaviorY: 'none',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)'
       }}

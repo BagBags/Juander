@@ -29,9 +29,14 @@ export default function Gender() {
           sessionStorage.getItem("token") || localStorage.getItem("token");
         if (!token) return;
 
-        const { data } = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (data?.gender) {
           // convert "Male" => "male", "Female" => "female", "Other" => "other"
@@ -55,7 +60,9 @@ export default function Gender() {
       }
 
       const res = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/gender`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/auth/gender`,
         { gender: selected.charAt(0).toUpperCase() + selected.slice(1) },
         {
           headers: {
@@ -80,45 +87,49 @@ export default function Gender() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.35 }}
-      className="flex flex-col min-h-full bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden overscroll-contain touch-pan-y"
     >
-      <PullToRefresh onRefresh={async () => { await new Promise((r) => setTimeout(r, 800)); }}>
-      <div className="w-full max-w-md mt-6 flex flex-col gap-6">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold">{t("genderQuestion")}</h2>
-        </div>
+      <PullToRefresh
+        onRefresh={async () => {
+          await new Promise((r) => setTimeout(r, 800));
+        }}
+      >
+        <div className="w-full max-w-md mt-6 flex flex-col gap-6">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold">{t("genderQuestion")}</h2>
+          </div>
 
-        <div className="flex flex-col gap-4">
-          {options.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setSelected(opt.key)}
-              className={`flex justify-between items-center border px-4 py-3 rounded-xl shadow-sm transition
+          <div className="flex flex-col gap-4">
+            {options.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setSelected(opt.key)}
+                className={`flex justify-between items-center border px-4 py-3 rounded-xl shadow-sm transition
                 ${
                   selected === opt.key
                     ? "border-[#cf3325] bg-red-50"
                     : "border-gray-300"
                 }
               `}
-            >
-              <span className="font-medium">{t(opt.key)}</span>
-              {opt.icon}
-            </button>
-          ))}
+              >
+                <span className="font-medium">{t(opt.key)}</span>
+                {opt.icon}
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="mt-6 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"
+            onClick={handleSave}
+            disabled={!selected}
+          >
+            {t("save")}
+          </button>
+
+          {message && (
+            <p className="text-center text-sm text-gray-600 mt-2">{message}</p>
+          )}
         </div>
-
-        <button
-          className="mt-6 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"
-          onClick={handleSave}
-          disabled={!selected}
-        >
-          {t("save")}
-        </button>
-
-        {message && (
-          <p className="text-center text-sm text-gray-600 mt-2">{message}</p>
-        )}
-      </div>
       </PullToRefresh>
     </motion.div>
   );

@@ -52,3 +52,28 @@
 .animate-slideDown {
   animation: slideDown 0.3s ease-out;
 }
+.modern-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb #f9fafb;
+}
+.modern-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 9999px;
+}
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 9999px;
+}
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+.mapboxgl-marker
+  .absolute.w-5.h-5.rounded-full.border-2.border-white.shadow-md.opacity-60 {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  opacity: 0 !important;
+  box-shadow: none !important;
+}

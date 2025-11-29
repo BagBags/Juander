@@ -306,20 +306,27 @@ export default function GuestItineraryMain() {
 
             <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
                   <Clock className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                     {detailsItinerary.duration
                       ? `${detailsItinerary.duration} ${
                           detailsItinerary.duration === 1 ? "hour" : "hours"
                         }`
                       : "Flexible"}
+                        detailsItinerary.duration > 0
+                          ? detailsItinerary.duration
+                          : computedHours;
+                      return value && value > 0
+                        ? `Duration: ${value} ${value === 1 ? "hour" : "hours"}`
+                    {(detailsItinerary.sites || []).length} site(s)
+                    })()}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
                   <MapPin className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {(detailsItinerary.sites || []).length} site(s)
+                  <span className="text-sm font-medium text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
+                    {`Sites: ${(detailsItinerary.sites || []).length} site(s)`}
                   </span>
                 </div>
               </div>
@@ -334,24 +341,24 @@ export default function GuestItineraryMain() {
                   </p>
                   {typeof detailsItinerary.recommendedStartMinutes ===
                     "number" && (
-                    <div className="mt-3 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-gray-50 border border-gray-200">
+                    <div className="mt-3 inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-md bg-gray-50 border border-gray-200">
                       <Clock className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm text-gray-700">
-                        Recommended Start:{" "}
+                      <span className="text-sm text-gray-700 whitespace-nowrap">
+                        Recommended Start: {" "}
                         {formatMinutesToClock(
                           detailsItinerary.recommendedStartMinutes
                         )}
                       </span>
                     </div>
                   )}
-                </div>
+                    : 8 * 60;
               )}
 
               {(() => {
                 const start =
                   typeof detailsItinerary.recommendedStartMinutes === "number"
                     ? detailsItinerary.recommendedStartMinutes
-                    : 8 * 60;
+                    : 7 * 60;
                 let cursor = roundToStep(start, 5);
                 const items = (detailsItinerary.sites || []).map((site) => {
                   const v =
@@ -361,36 +368,58 @@ export default function GuestItineraryMain() {
                   const item = { time: roundToStep(cursor, 5), site };
                   cursor = roundToStep(
                     cursor + (isNaN(v) || v <= 0 ? 0 : v),
-                    5
-                  );
-                  return item;
-                });
-                if (!items.length) return null;
-                return (
-                  <div className="mb-6">
                     <h4 className="text-sm font-semibold text-gray-500 mb-2">
                       Suggested Schedule
                     </h4>
-                    <div className="space-y-3 sm:space-y-4">
-                      {items.map(({ time, site }, i) => (
-                        <div
-                          key={site._id || i}
-                          className="flex items-start gap-4 sm:gap-5 py-1.5"
-                        >
-                          <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5">
-                            <Clock className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm sm:text-base font-semibold text-gray-900">
-                              {formatMinutesToClock(time)}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800">
-                              {site.siteName || site.title}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                return (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                      Schedule
+                    </h4>
+                    <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      <span>Start Time: {formatMinutesToClock(start)}</span>
                     </div>
+                    {(() => {
+                      const segments = [];
+                      let prevEnd = null;
+                      for (let i = 0; i < items.length; i++) {
+                        const site = items[i].site;
+                        const v =
+                          typeof site?.averageTimeSpent === "number"
+                            ? site.averageTimeSpent
+                            : Number(site?.averageTimeSpent);
+                        const s = i === 0 ? items[i].time : roundToStep(prevEnd + 10, 5);
+                        const e = roundToStep(s + (isNaN(v) || v <= 0 ? 0 : v), 5);
+                        segments.push({ start: s, end: e, site });
+                        prevEnd = e;
+                      }
+                      return (
+                        <div className="space-y-3 sm:space-y-4">
+                          {segments.map(({ start, end, site }, i) => (
+                          <div
+                              key={site._id || i}
+                              className="flex items-center gap-4 sm:gap-5 py-1.5"
+                            >
+                              <div className="w-[160px] sm:w-[220px] flex-shrink-0 flex items-center justify-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-2 py-1 sm:px-3 sm:py-1.5">
+                                <Clock className="w-4 h-4 text-gray-600" />
+                                <span className="text-sm sm:hidden font-semibold text-gray-900 whitespace-nowrap">
+                                  {`${formatMinutesToClock(start)} – ${formatMinutesToClock(end)}`}
+                                </span>
+                                <span className="hidden sm:inline text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">
+                                  {`${formatMinutesToClock(start)} to ${formatMinutesToClock(end)}`}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
+                                  {site.siteName || site.title}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
@@ -485,9 +514,9 @@ export default function GuestItineraryMain() {
             aria-labelledby="guest-site-details-title"
             aria-describedby="guest-site-details-content"
             tabIndex={-1}
-            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn max-h-[90vh] sm:max-h-[85vh]"
+            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto modern-scrollbar"
           >
-            <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#f04e37]" />
                 <h3
@@ -528,7 +557,7 @@ export default function GuestItineraryMain() {
 
             <div
               id="guest-site-details-content"
-              className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto custom-scrollbar"
+              className="px-6 py-5 sm:px-8 sm:py-6"
             >
               <div className="flex items-center gap-2 mb-3">
                 {detailsSelectedSite.category && (

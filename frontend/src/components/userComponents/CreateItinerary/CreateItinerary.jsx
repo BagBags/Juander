@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import axios from "axios";
 import MainLayout from "../MainLayout";
 import PullToRefresh from "../../shared/PullToRefresh";
@@ -27,6 +27,7 @@ import TourProvider from "../../TourComponents/TourProvider";
 import { useTour } from "../../TourComponents/TourContext";
 import { createItineraryTourSteps } from "../../TourComponents/tourSteps";
 import { getCreateItineraryTourStatus } from "../../../utils/tourApi";
+import { Filter } from "bad-words";
 
 function FortSantiagoModal({ isOpen, onClose, onDontShowAgain }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -207,6 +208,165 @@ export default function CreateItineraryPage() {
   });
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsItinerary, setDetailsItinerary] = useState(null);
+  const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
+  const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
+  const [showSiteDetailsAction, setShowSiteDetailsAction] = useState(true);
+  const [rHour, setRHour] = useState("7");
+  const [rMinute, setRMinute] = useState("00");
+  const [rPeriod, setRPeriod] = useState("AM");
+  const [nameError, setNameError] = useState("");
+  const TAGALOG_BAD_WORDS = useMemo(() => {
+    const base = [
+      "putangina",
+      "putang ina",
+      "putang-ina",
+      "puta",
+      "puta ka",
+      "putragis",
+      "putaragis",
+      "pakshet",
+      "pakshit",
+      "pakyu",
+      "fakyu",
+      "kantot",
+      "kantutan",
+      "hindot",
+      "hindutan",
+      "titi",
+      "burat",
+      "puke",
+      "puki",
+      "pekpek",
+      "pepe",
+      "kiki",
+      "kupal",
+      "gago",
+      "gaga",
+      "tanga",
+      "bobo",
+      "ulol",
+      "tarantado",
+      "bwisit",
+      "leche",
+      "lintik",
+      "punyeta",
+      "pucha",
+      "animal",
+      "hayop",
+      "ogag",
+      "buraot",
+      "syet",
+      "shit",
+      "bitch",
+      "fuck",
+      "asshole",
+    ];
+    const extra = [
+      "amputa",
+      "animal ka",
+      "bilat",
+      "binibrocha",
+      "bogo",
+      "boto",
+      "brocha",
+      "bwesit",
+      "demonyo ka",
+      "engot",
+      "etits",
+      "gagi",
+      "habal",
+      "hayop ka",
+      "hayup",
+      "hinampak",
+      "hinayupak",
+      "hudas",
+      "iniyot",
+      "inutel",
+      "inutil",
+      "iyot",
+      "kagaguhan",
+      "kagang",
+      "kantotan",
+      "kantut",
+      "kaululan",
+      "kayat",
+      "kikinginamo",
+      "kingina",
+      "leching",
+      "lechugas",
+      "nakakaburat",
+      "nimal",
+      "olok",
+      "pakingshet",
+      "pesteng yawa",
+      "poke",
+      "poki",
+      "pokpok",
+      "poyet",
+      "pu'keng",
+      "puchanggala",
+      "puchangina",
+      "pukinangina",
+      "puking",
+      "ratbu",
+      "shunga",
+      "sira ulo",
+      "siraulo",
+      "suso",
+      "susu",
+      "tae",
+      "taena",
+      "tamod",
+      "tangina",
+      "taragis",
+      "tete",
+      "teti",
+      "timang",
+      "tinil",
+      "tite",
+      "tungaw",
+      "ulul",
+      "ungas",
+    ];
+    const set = new Set([...base, ...extra].map((s) => s.toLowerCase()));
+    return Array.from(set);
+  }, []);
+  const badWords = useMemo(() => {
+    const f = new Filter();
+    try {
+      f.addWords(...TAGALOG_BAD_WORDS);
+    } catch {}
+    return f;
+  }, [TAGALOG_BAD_WORDS]);
+  const normalizeProfanity = (s) => {
+    if (!s) return "";
+    const map = {
+      0: "o",
+      1: "i",
+      3: "e",
+      4: "a",
+      5: "s",
+      7: "t",
+      "@": "a",
+      $: "s",
+      "!": "i",
+    };
+    const lowered = String(s).toLowerCase();
+    const leetFixed = lowered
+      .split("")
+      .map((c) => (map[c] ? map[c] : c))
+      .join("");
+    return leetFixed.replace(/[\s\-_.]+/g, "");
+  };
+  const isProfaneText = (s) => {
+    const normalized = normalizeProfanity(s);
+    if (badWords.isProfane(normalized)) return true;
+    for (const w of TAGALOG_BAD_WORDS) {
+      const wn = normalizeProfanity(w);
+      if (normalized.includes(wn)) return true;
+    }
+    return false;
+  };
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -379,6 +539,29 @@ export default function CreateItineraryPage() {
   };
   const roundToStep = (min, step = 5) => Math.round(min / step) * step;
 
+  const selectsToMinutes = (hour, minute, period) => {
+    if (!hour && hour !== 0) return null;
+    const h12 = Number(hour);
+    const m = Number(minute);
+    if (isNaN(h12) || isNaN(m)) return null;
+    let h24 = h12 % 12;
+    if (period === "PM") h24 += 12;
+    return h24 * 60 + m;
+  };
+  const minutesToSelects = (min) => {
+    if (min === undefined || min === null)
+      return { hour: "", minute: "", period: "AM" };
+    const h24 = Math.floor(min / 60);
+    const minute = min % 60;
+    const period = h24 >= 12 ? "PM" : "AM";
+    const hour = h24 % 12 || 12;
+    return {
+      hour: String(hour),
+      minute: String(minute).padStart(2, "0"),
+      period,
+    };
+  };
+
   const openDetails = (itinerary) => {
     setDetailsItinerary(itinerary);
     setShowDetailsModal(true);
@@ -386,6 +569,16 @@ export default function CreateItineraryPage() {
   const closeDetails = () => {
     setShowDetailsModal(false);
     setDetailsItinerary(null);
+  };
+
+  const openSiteDetails = (site, allowAction = true) => {
+    setDetailsSelectedSite(site);
+    setShowSiteDetailsAction(Boolean(allowAction));
+    setShowSiteDetailsModal(true);
+  };
+  const closeSiteDetails = () => {
+    setShowSiteDetailsModal(false);
+    setDetailsSelectedSite(null);
   };
 
   const toggleSelection = (siteId) => {
@@ -433,12 +626,32 @@ export default function CreateItineraryPage() {
       return;
     }
 
-    if (!itineraryName.trim() || selected.length === 0) {
+    if (!itineraryName.trim()) {
+      setNameError("Itinerary name is required");
       setNotification({
         isOpen: true,
         type: "warning",
-        title: "Incomplete details",
-        message: "Enter a name and select at least one site.",
+        title: "Itinerary name required",
+        message: "Please enter an itinerary name (max 25 characters).",
+      });
+      return;
+    }
+    if (isProfaneText(itineraryName)) {
+      setNameError("No bad words allowed");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Invalid itinerary name",
+        message: "No bad words allowed in itinerary name.",
+      });
+      return;
+    }
+    if (selected.length === 0) {
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "No sites selected",
+        message: "Select at least one site for your itinerary.",
       });
       return;
     }
@@ -448,6 +661,10 @@ export default function CreateItineraryPage() {
       imageUrl: imageUrl ? imageUrl.trim() : "", // Ensure empty string if no image
       sites: selected,
       isAdminCreated: false,
+      recommendedStartMinutes:
+        rHour !== "" && rMinute !== ""
+          ? selectsToMinutes(Number(rHour), Number(rMinute), rPeriod)
+          : undefined,
     };
 
     try {
@@ -572,6 +789,10 @@ export default function CreateItineraryPage() {
     setItineraryName(itinerary.name);
     setImageUrl(itinerary.imageUrl || "");
     setSelected(itinerary.sites.map((s) => s._id));
+    const s = minutesToSelects(itinerary.recommendedStartMinutes);
+    setRHour(s.hour || "7");
+    setRMinute(s.minute || "00");
+    setRPeriod(s.period || "AM");
     setActiveTab("create"); // Switch to Create tab
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -583,6 +804,9 @@ export default function CreateItineraryPage() {
     setItineraryName("");
     setSelected([]);
     setImageUrl("");
+    setRHour("7");
+    setRMinute("00");
+    setRPeriod("AM");
   };
 
   const toggleExpand = (idx) =>
@@ -602,11 +826,9 @@ export default function CreateItineraryPage() {
       <div
         className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
         style={{
-          height: '100dvh',
-          overflow: 'hidden',
-          overscrollBehavior: 'none',
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)'
+          height: "100dvh",
+          overflow: "hidden",
+          overscrollBehavior: "none",
         }}
       >
         {/* Fort Santiago Modal */}
@@ -657,9 +879,9 @@ export default function CreateItineraryPage() {
         <BackHeader title="Itinerary Manager" className="text-white" />
 
         {/* === TAB NAVIGATION === */}
-        <div className="px-4 pt-6 pb-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl p-1.5 border border-white/20">
+        <div className="px-4 pt-6 pb-4 md:pt-4 md:pb-3">
+          <div className="max-w-[1100px] mx-auto">
+            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl md:rounded-xl p-1.5 border border-white/20">
               {/* Sliding Background */}
               <div
                 className="absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] bg-white rounded-xl shadow-lg transition-transform duration-300 ease-out"
@@ -675,7 +897,7 @@ export default function CreateItineraryPage() {
               <div className="relative grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => setActiveTab("create")}
-                  className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 itinerary-tab-create-btn ${
+                  className={`py-3 px-4 rounded-xl md:py-2.5 md:px-3 md:rounded-lg font-bold text-base md:text-sm transition-colors duration-300 itinerary-tab-create-btn ${
                     activeTab === "create"
                       ? "text-[#f04e37]"
                       : "text-white hover:text-white/80"
@@ -685,7 +907,7 @@ export default function CreateItineraryPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("myItineraries")}
-                  className={`py-3 px-4 rounded-xl font-bold text-base transition-colors duration-300 my-itineraries-tab-btn ${
+                  className={`py-3 px-4 rounded-xl md:py-2.5 md:px-3 md:rounded-lg font-bold text-base md:text-sm transition-colors duration-300 my-itineraries-tab-btn ${
                     activeTab === "myItineraries"
                       ? "text-[#f04e37]"
                       : "text-white hover:text-white/80"
@@ -708,14 +930,14 @@ export default function CreateItineraryPage() {
             activationAreaPx={96}
           >
             <div
-              className="flex-1 w-full max-w-6xl mx-auto px-4 pb-8 overflow-y-auto tour-page-scroll"
+              className="flex-1 w-full max-w-[1100px] mx-auto px-4 pb-8 md:pb-6 overflow-y-auto tour-page-scroll"
               style={{ WebkitOverflowScrolling: "touch" }}
             >
               {/* CREATE ITINERARY TAB */}
               {activeTab === "create" && (
                 <div className="space-y-6 animate-fadeIn">
                   {/* Form Section */}
-                  <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20 available-sites-section">
+                  <div className="bg-white/95 backdrop-blur-md rounded-3xl md:rounded-2xl px-8 py-8 md:px-12 md:py-10 lg:px-16 lg:py-12 shadow-2xl border border-white/20 available-sites-section">
                     <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                       <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
                       {editingItineraryId
@@ -723,7 +945,7 @@ export default function CreateItineraryPage() {
                         : "Create New Itinerary"}
                     </h2>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-w-[640px] mx-auto">
                       {/* Itinerary Name */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -732,10 +954,24 @@ export default function CreateItineraryPage() {
                         <input
                           type="text"
                           value={itineraryName}
-                          onChange={(e) => setItineraryName(e.target.value)}
+                          maxLength={25}
+                          onChange={(e) => {
+                            const raw = e.target.value.slice(0, 25);
+                            setItineraryName(raw);
+                            if (raw.trim() && isProfaneText(raw)) {
+                              setNameError("No bad words allowed");
+                            } else if (nameError) {
+                              setNameError("");
+                            }
+                          }}
                           placeholder="e.g., Historical Tour, Weekend Adventure"
-                          className="w-full px-4 py-3 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                          className="w-full px-4 py-3 md:py-2.5 md:text-sm rounded-xl md:rounded-lg bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
                         />
+                        {nameError && (
+                          <p className="text-xs text-red-600 mt-1">
+                            {nameError}
+                          </p>
+                        )}
                       </div>
 
                       {/* Image Upload */}
@@ -759,7 +995,7 @@ export default function CreateItineraryPage() {
                             </button>
                           </div>
                         ) : (
-                          <label className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl hover:border-[#f04e37] hover:bg-gray-50 transition-all group">
+                          <label className="cursor-pointer flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl md:rounded-lg hover:border-[#f04e37] hover:bg-gray-50 transition-all group">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="w-10 h-10 text-gray-400 group-hover:text-[#f04e37] transition-colors"
@@ -788,7 +1024,7 @@ export default function CreateItineraryPage() {
                       </div>
 
                       {/* Selected Sites Counter */}
-                      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
+                      <div className="flex items-center justify-between p-4 md:p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl md:rounded-lg border border-orange-200">
                         <span className="text-sm font-semibold text-gray-700">
                           Sites Selected
                         </span>
@@ -797,11 +1033,60 @@ export default function CreateItineraryPage() {
                         </span>
                       </div>
 
+                      {/* Recommended Start */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Start Time
+                        </label>
+                        <div className="grid grid-cols-3 gap-2 md:max-w-[360px] md:mx-auto">
+                          <select
+                            value={rHour}
+                            onChange={(e) => setRHour(e.target.value)}
+                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                          >
+                            <option value="" disabled>
+                              Hour
+                            </option>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                              (h) => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              )
+                            )}
+                          </select>
+                          <select
+                            value={rMinute}
+                            onChange={(e) => setRMinute(e.target.value)}
+                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                          >
+                            <option value="" disabled>
+                              Minute
+                            </option>
+                            {Array.from({ length: 12 }, (_, i) =>
+                              String(i * 5).padStart(2, "0")
+                            ).map((m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={rPeriod}
+                            onChange={(e) => setRPeriod(e.target.value)}
+                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                          >
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                          </select>
+                        </div>
+                      </div>
+
                       {/* Action Buttons */}
                       <div className="flex gap-3 pt-2">
                         <button
                           onClick={handleSave}
-                          className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 px-6 rounded-xl hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 create-itinerary-save-btn"
+                          className="flex-1 bg-gradient-to-r from-[#f04e37] to-orange-600 text-white font-bold py-3.5 md:py-2.5 px-6 md:px-4 rounded-xl md:rounded-lg md:text-sm hover:shadow-xl hover:scale-[1.02] active:scale-95 transition-all duration-200 create-itinerary-save-btn"
                         >
                           {editingItineraryId
                             ? "Update Itinerary"
@@ -810,7 +1095,7 @@ export default function CreateItineraryPage() {
                         {editingItineraryId && (
                           <button
                             onClick={handleCancelUpdate}
-                            className="px-6 py-3.5 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all"
+                            className="px-6 md:px-4 py-3.5 md:py-2.5 bg-gray-200 text-gray-700 font-bold rounded-xl md:rounded-lg md:text-sm hover:bg-gray-300 transition-all"
                           >
                             Cancel
                           </button>
@@ -820,7 +1105,7 @@ export default function CreateItineraryPage() {
                   </div>
 
                   {/* Available Sites Section */}
-                  <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                  <div className="bg-white/95 backdrop-blur-md rounded-3xl md:rounded-2xl px-8 py-8 md:px-12 md:py-10 lg:px-16 lg:py-12 shadow-2xl border border-white/20">
                     <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                       <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
                       Available Sites
@@ -899,6 +1184,7 @@ export default function CreateItineraryPage() {
                           toggleDescription={toggleDescription}
                           toggleSelection={toggleSelection}
                           getFullImageUrl={getFullImageUrl}
+                          onOpenSiteDetails={openSiteDetails}
                         />
                       );
                     })()}
@@ -909,7 +1195,7 @@ export default function CreateItineraryPage() {
               {/* MY ITINERARIES TAB */}
               {activeTab === "myItineraries" && (
                 <div className="space-y-6 animate-fadeIn">
-                  <div className="bg-white/95 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20">
+                  <div className="bg-white/95 backdrop-blur-md rounded-3xl md:rounded-2xl px-8 py-8 md:px-12 md:py-10 lg:px-16 lg:py-12 shadow-2xl border border-white/20">
                     <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                       <span className="w-2 h-8 bg-gradient-to-b from-[#f04e37] to-orange-600 rounded-full"></span>
                       My Itineraries
@@ -947,7 +1233,7 @@ export default function CreateItineraryPage() {
                       </div>
                     ) : (
                       <div
-                        className="space-y-4"
+                        className="space-y-4 max-w-[640px] mx-auto"
                         style={{ touchAction: "pan-y pinch-zoom" }}
                       >
                         {userItineraries.map((itinerary, idx) => (
@@ -960,6 +1246,7 @@ export default function CreateItineraryPage() {
                             handleEdit={handleEdit}
                             getFullImageUrl={getFullImageUrl}
                             onOpenDetails={openDetails}
+                            onOpenSiteDetails={openSiteDetails}
                           />
                         ))}
                       </div>
@@ -989,8 +1276,8 @@ export default function CreateItineraryPage() {
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={closeDetails}
             />
-            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn max-h-[90vh] sm:max-h-[85vh]">
-              <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto modern-scrollbar">
+              <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center gap-3">
                   <Info className="w-6 h-6 text-[#f04e37]" />
                   <div>
@@ -1021,11 +1308,11 @@ export default function CreateItineraryPage() {
                 </div>
               )}
 
-              <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto">
+              <div className="px-6 py-5 sm:px-8 sm:py-6">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
                     <Clock className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                       {(() => {
                         const totalMinutes = (
                           detailsItinerary.sites || []
@@ -1044,15 +1331,19 @@ export default function CreateItineraryPage() {
                             ? detailsItinerary.duration
                             : computedHours;
                         return value && value > 0
-                          ? `${value} ${value === 1 ? "hour" : "hours"}`
-                          : "Flexible";
+                          ? `Duration: ${value} ${
+                              value === 1 ? "hour" : "hours"
+                            }`
+                          : "Duration: Flexible";
                       })()}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
                     <MapPin className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {(detailsItinerary.sites || []).length} site(s)
+                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
+                      {`Sites: ${
+                        (detailsItinerary.sites || []).length
+                      } site(s)`}
                     </span>
                   </div>
                 </div>
@@ -1084,7 +1375,7 @@ export default function CreateItineraryPage() {
                   const start =
                     typeof detailsItinerary.recommendedStartMinutes === "number"
                       ? detailsItinerary.recommendedStartMinutes
-                      : 8 * 60;
+                      : 7 * 60;
                   let cursor = roundToStep(start, 5);
                   const items = (detailsItinerary.sites || []).map((site) => {
                     const v =
@@ -1101,29 +1392,63 @@ export default function CreateItineraryPage() {
                   if (!items.length) return null;
                   return (
                     <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-500 mb-2">
-                        Suggested Schedule
+                      <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                        Schedule
                       </h4>
-                      <div className="space-y-3 sm:space-y-4">
-                        {items.map(({ time, site }, i) => (
-                          <div
-                            key={site._id || i}
-                            className="flex items-start gap-4 sm:gap-5 py-1.5"
-                          >
-                            <div className="flex items-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-3 py-1.5">
-                              <Clock className="w-4 h-4 text-gray-600" />
-                              <span className="text-sm sm:text-base font-semibold text-gray-900">
-                                {formatMinutesToClock(time)}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-800">
-                                {site.siteName || site.title}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                      <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
+                        <Clock className="w-4 h-4 text-gray-500" />
+                        <span>Start Time: {formatMinutesToClock(start)}</span>
                       </div>
+                      {(() => {
+                        const segments = [];
+                        let prevEnd = null;
+                        for (let i = 0; i < items.length; i++) {
+                          const site = items[i].site;
+                          const v =
+                            typeof site?.averageTimeSpent === "number"
+                              ? site.averageTimeSpent
+                              : Number(site?.averageTimeSpent);
+                          const s =
+                            i === 0
+                              ? items[i].time
+                              : roundToStep(prevEnd + 10, 5);
+                          const e = roundToStep(
+                            s + (isNaN(v) || v <= 0 ? 0 : v),
+                            5
+                          );
+                          segments.push({ start: s, end: e, site });
+                          prevEnd = e;
+                        }
+                        return (
+                          <div className="space-y-3 sm:space-y-4">
+                            {segments.map(({ start, end, site }, i) => (
+                              <div
+                                key={site._id || i}
+                                className="flex items-center gap-4 sm:gap-5 py-1.5"
+                              >
+                                <div className="w-[160px] sm:w-[220px] flex-shrink-0 flex items-center justify-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-2 py-1 sm:px-3 sm:py-1.5">
+                                  <Clock className="w-4 h-4 text-gray-600" />
+                                  <span className="text-sm sm:hidden font-semibold text-gray-900 whitespace-nowrap">
+                                    {`${formatMinutesToClock(
+                                      start
+                                    )} – ${formatMinutesToClock(end)}`}
+                                  </span>
+                                  <span className="hidden sm:inline text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">
+                                    {`${formatMinutesToClock(
+                                      start
+                                    )} to ${formatMinutesToClock(end)}`}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
+                                    {site.siteName || site.title}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
@@ -1141,7 +1466,8 @@ export default function CreateItineraryPage() {
                       return (
                         <div
                           key={site._id}
-                          className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white"
+                          className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white cursor-pointer hover:border-orange-300 hover:shadow-sm transition"
+                          onClick={() => openSiteDetails(site, false)}
                         >
                           <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                             {img ? (
@@ -1183,6 +1509,78 @@ export default function CreateItineraryPage() {
             </div>
           </div>
         )}
+
+        {showSiteDetailsModal && detailsSelectedSite && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={closeSiteDetails}
+            />
+            <div
+              className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn max-h-[90vh] sm:max-h-[85vh] overflow-y-auto modern-scrollbar"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+              }}
+            >
+              <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <Info className="w-6 h-6 text-[#f04e37]" />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {detailsSelectedSite.siteName ||
+                        detailsSelectedSite.title}
+                    </h3>
+                    <p className="text-xs text-gray-500">Site details</p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeSiteDetails}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {(() => {
+                const hero =
+                  detailsSelectedSite.mediaFiles?.find(
+                    (m) => m.type === "image"
+                  )?.url ||
+                  detailsSelectedSite.mediaUrl ||
+                  "";
+                const full = getFullImageUrl(hero);
+                return full ? (
+                  <div className="h-36 sm:h-56 md:h-64 w-full overflow-hidden px-6 sm:px-8 pt-3">
+                    <img
+                      src={full}
+                      alt={
+                        detailsSelectedSite.siteName ||
+                        detailsSelectedSite.title
+                      }
+                      className="w-full h-full object-cover rounded-xl"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null;
+              })()}
+              <SiteDetailsBody
+                site={detailsSelectedSite}
+                isSelected={selected.includes(detailsSelectedSite._id)}
+                onToggle={() => toggleSelection(detailsSelectedSite._id)}
+                showAction={showSiteDetailsAction}
+                isExpanded={Boolean(
+                  descriptionToggles[detailsSelectedSite._id]
+                )}
+                onToggleDescription={() =>
+                  toggleDescription(detailsSelectedSite._id)
+                }
+              />
+            </div>
+          </div>
+        )}
       </div>
     </TourProvider>
   );
@@ -1196,6 +1594,7 @@ function SmoothScrollSiteList({
   toggleDescription,
   toggleSelection,
   getFullImageUrl,
+  onOpenSiteDetails,
 }) {
   const scrollContainerRef = useRef(null);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -1229,7 +1628,7 @@ function SmoothScrollSiteList({
       }}
     >
       <div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-3 pt-4 md:pt-3"
         style={{ paddingBottom: "300px" }}
       >
         {sites.map((site, index) => (
@@ -1244,6 +1643,7 @@ function SmoothScrollSiteList({
             toggleDescription={toggleDescription}
             toggleSelection={toggleSelection}
             getFullImageUrl={getFullImageUrl}
+            onOpenSiteDetails={onOpenSiteDetails}
           />
         ))}
       </div>
@@ -1262,6 +1662,7 @@ function SiteCard({
   toggleDescription,
   toggleSelection,
   getFullImageUrl,
+  onOpenSiteDetails,
 }) {
   const cardRef = useRef(null);
   const descriptionRef = useRef(null);
@@ -1369,13 +1770,14 @@ function SiteCard({
   return (
     <div
       ref={cardRef}
-      className="bg-white rounded-2xl shadow-lg hover:shadow-xl p-4 flex flex-col h-full transition-all duration-300 ease-out border border-gray-100"
+      className="bg-white rounded-2xl md:rounded-xl shadow-lg hover:shadow-xl p-4 md:p-3 flex flex-col transition-all duration-300 ease-out border border-gray-100 cursor-pointer"
       style={{
         opacity: isMobile ? cardStyle.opacity : 1,
         transform: isMobile ? cardStyle.transform : "scale(1)",
         scrollSnapAlign: "start", // Snap to top of viewport
         touchAction: "pan-y pinch-zoom", // Only allow vertical panning
       }}
+      onClick={() => onOpenSiteDetails && onOpenSiteDetails(site, true)}
     >
       <div className="relative mb-3 overflow-hidden rounded-xl group">
         <img
@@ -1389,7 +1791,7 @@ function SiteCard({
               : "https://via.placeholder.com/150"
           }
           alt={site.siteName}
-          className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-40 md:h-32 object-cover transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             e.currentTarget.src = "https://via.placeholder.com/150";
           }}
@@ -1402,7 +1804,7 @@ function SiteCard({
       </div>
 
       <h3
-        className="font-bold text-gray-800 text-base mb-1"
+        className="font-bold text-gray-800 text-base md:text-sm mb-1"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
@@ -1484,23 +1886,23 @@ function SiteCard({
         </div>
         {site.siteDescription && site.siteDescription.length > 150 && (
           <button
-            onClick={() => {
-              // Reset description scroll position when collapsing
-              if (isExpanded && descriptionRef.current) {
-                descriptionRef.current.scrollTop = 0;
-              }
-              toggleDescription(site._id);
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenSiteDetails && onOpenSiteDetails(site, true);
             }}
             className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
           >
-            {isExpanded ? "See less" : "See more"}
+            See more
           </button>
         )}
       </div>
 
       <button
-        onClick={() => toggleSelection(site._id)}
-        className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 text-sm transition-all duration-200 create-itinerary-add-btn ${
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleSelection(site._id);
+        }}
+        className={`w-full py-3 md:py-2.5 rounded-xl md:rounded-lg font-bold flex items-center justify-center gap-2 text-sm transition-all duration-200 create-itinerary-add-btn ${
           isSelected
             ? "bg-green-500 text-white hover:bg-green-600"
             : "bg-gradient-to-r from-[#f04e37] to-orange-600 text-white hover:shadow-lg hover:scale-[1.02] active:scale-95"
@@ -1529,6 +1931,7 @@ function ItineraryCard({
   handleEdit,
   getFullImageUrl,
   onOpenDetails,
+  onOpenSiteDetails,
 }) {
   const [descExpanded, setDescExpanded] = useState({});
   const toggleSiteDescription = (idx) =>
@@ -1547,7 +1950,7 @@ function ItineraryCard({
 
   return (
     <div
-      className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
+      className="bg-white rounded-2xl md:rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden"
       style={{ touchAction: "pan-y pinch-zoom" }}
     >
       {/* Horizontal Layout */}
@@ -1565,11 +1968,11 @@ function ItineraryCard({
         )}
 
         {/* Content Section */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 md:p-5">
           {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h3 className="font-bold text-2xl text-gray-800 mb-2">
+              <h3 className="font-bold text-2xl md:text-xl text-gray-800 mb-2">
                 {itinerary.name}
               </h3>
               <div className="flex items-center gap-3">
@@ -1593,14 +1996,14 @@ function ItineraryCard({
             <div className="flex gap-2">
               <button
                 onClick={() => handleEdit(itinerary)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all my-itinerary-edit-btn"
+                className="flex-1 flex items-center justify-center gap-2 px-4 md:px-3 py-2 md:py-2 bg-blue-500 text-white font-semibold rounded-lg md:text-sm hover:bg-blue-600 transition-all my-itinerary-edit-btn"
               >
                 <FaEdit className="text-sm" />
                 <span>Edit</span>
               </button>
               <button
                 onClick={() => handleDelete(itinerary._id)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all my-itinerary-delete-btn"
+                className="flex-1 flex items-center justify-center gap-2 px-4 md:px-3 py-2 md:py-2 bg-red-500 text-white font-semibold rounded-lg md:text-sm hover:bg-red-600 transition-all my-itinerary-delete-btn"
               >
                 <FaTrash className="text-sm" />
                 <span>Delete</span>
@@ -1608,7 +2011,7 @@ function ItineraryCard({
             </div>
             <button
               onClick={() => onOpenDetails && onOpenDetails(itinerary)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 font-semibold rounded-lg hover:bg-gray-200 transition-all my-itinerary-view-sites-btn"
+              className="w-full flex items-center justify-center gap-2 px-4 md:px-3 py-2 md:py-2 bg-gray-100 text-gray-800 font-semibold rounded-lg md:text-sm hover:bg-gray-200 transition-all my-itinerary-view-sites-btn"
             >
               <Info className="w-4 h-4" />
               <span>Info</span>
@@ -1619,7 +2022,7 @@ function ItineraryCard({
 
       {/* Expanded Details & Sites */}
       {expanded && itinerary.sites?.length > 0 && (
-        <div className="border-t border-gray-200 bg-gray-50 p-6 animate-fadeIn space-y-5">
+        <div className="border-t border-gray-200 bg-gray-50 p-6 md:p-5 animate-fadeIn space-y-5">
           {(() => {
             const start =
               typeof itinerary.recommendedStartMinutes === "number"
@@ -1638,15 +2041,13 @@ function ItineraryCard({
             if (!items.length) return null;
             return (
               <div>
-                <div className="mb-2 inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-white border border-gray-200">
-                  <Clock className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm text-gray-700">
-                    Recommended Start: {formatMinutesToClock(start)}
-                  </span>
-                </div>
-                <h4 className="text-sm font-semibold text-gray-500 mb-2">
-                  Suggested Schedule
+                <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                  Schedule
                 </h4>
+                <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  <span>Start Time: {formatMinutesToClock(start)}</span>
+                </div>
                 <div className="space-y-3 sm:space-y-4">
                   {items.map(({ time, site }, i) => (
                     <div
@@ -1679,7 +2080,10 @@ function ItineraryCard({
               return (
                 <div
                   key={idx}
-                  className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-sm transition-all"
+                  className="flex items-start gap-3 bg-white p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-sm transition-all cursor-pointer"
+                  onClick={() =>
+                    onOpenSiteDetails && onOpenSiteDetails(site, false)
+                  }
                 >
                   <img
                     src={
@@ -1764,4 +2168,78 @@ function CreateItineraryTourAutostart() {
     })();
   }, [startTour, isTourRunning]);
   return null;
+}
+
+function SiteDetailsBody({
+  site,
+  isSelected,
+  onToggle,
+  showAction = true,
+  isExpanded = false,
+  onToggleDescription,
+}) {
+  const catName =
+    typeof site.category === "object" ? site.category?.name || "" : "";
+  const avg =
+    typeof site.averageTimeSpent === "number"
+      ? site.averageTimeSpent
+      : Number(site?.averageTimeSpent);
+  const minutes = isNaN(avg) || avg <= 0 ? null : avg;
+
+  return (
+    <div className="px-6 py-5 sm:px-8 sm:py-6">
+      <div className="flex items-center gap-2 mb-3">
+        {catName && (
+          <span className="inline-flex items-center gap-1.5 bg-orange-100 text-[#f04e37] px-3 py-1 rounded-full text-xs font-semibold">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20 6h-8l-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 9H6v-2h8v2zm4-4H6V9h12v2z" />
+            </svg>
+            {catName}
+          </span>
+        )}
+        {minutes !== null && (
+          <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 8v5h4v-2h-2V8h-2zm0-6a10 10 0 100 20 10 10 0 000-20z" />
+            </svg>
+            Avg visit: {minutes} min
+          </span>
+        )}
+      </div>
+
+      <div className="text-sm text-gray-700">
+        {site.siteDescription ? (
+          (() => {
+            const firstParagraph = site.siteDescription.split("\n\n")[0].trim();
+            return <p className="leading-relaxed">{firstParagraph}</p>;
+          })()
+        ) : (
+          <p className="text-gray-400 italic">No description available</p>
+        )}
+      </div>
+
+      {showAction && (
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={onToggle}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition ${
+              isSelected
+                ? "bg-green-500 hover:bg-green-600"
+                : "bg-gradient-to-r from-[#f04e37] to-orange-600 hover:shadow-md"
+            }`}
+          >
+            {isSelected ? (
+              <>
+                <FaCheck className="text-sm" /> Added to Itinerary
+              </>
+            ) : (
+              <>
+                <FaPlus className="text-sm" /> Add to Itinerary
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

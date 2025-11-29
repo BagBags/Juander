@@ -6,7 +6,29 @@ import { Bell, BellOff, Play } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
 import PullToRefresh from "../../shared/PullToRefresh";
 import axios from "axios";
-import { resetTour, completeTour, getTourStatus, getCreateItineraryTourStatus, resetCreateItineraryTour, completeCreateItineraryTour, getEmergencyTourStatus, resetEmergencyTour, completeEmergencyTour, getProfileTourStatus, resetProfileTour, completeProfileTour, getTourMapTourStatus, resetTourMapTour, completeTourMapTour, getPhotoboothTourStatus, resetPhotoboothTour, completePhotoboothTour, getTripArchiveTourStatus, resetTripArchiveTour, completeTripArchiveTour } from "../../../utils/tourApi";
+import {
+  resetTour,
+  completeTour,
+  getTourStatus,
+  getCreateItineraryTourStatus,
+  resetCreateItineraryTour,
+  completeCreateItineraryTour,
+  getEmergencyTourStatus,
+  resetEmergencyTour,
+  completeEmergencyTour,
+  getProfileTourStatus,
+  resetProfileTour,
+  completeProfileTour,
+  getTourMapTourStatus,
+  resetTourMapTour,
+  completeTourMapTour,
+  getPhotoboothTourStatus,
+  resetPhotoboothTour,
+  completePhotoboothTour,
+  getTripArchiveTourStatus,
+  resetTripArchiveTour,
+  completeTripArchiveTour,
+} from "../../../utils/tourApi";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -17,13 +39,22 @@ export default function Settings() {
   const [tourLoading, setTourLoading] = useState(false);
   const [homepageTutorialEnabled, setHomepageTutorialEnabled] = useState(false);
   const [mapTutorialEnabled, setMapTutorialEnabled] = useState(false);
-  const [createItineraryTutorialEnabled, setCreateItineraryTutorialEnabled] = useState(true);
-  const [notification, setNotification] = useState({ isOpen: false, type: "info", title: "", message: "" });
-  const [emergencyTutorialEnabled, setEmergencyTutorialEnabled] = useState(true);
+  const [createItineraryTutorialEnabled, setCreateItineraryTutorialEnabled] =
+    useState(true);
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
+  const [emergencyTutorialEnabled, setEmergencyTutorialEnabled] =
+    useState(true);
   const [profileTutorialEnabled, setProfileTutorialEnabled] = useState(true);
   const [tourMapTutorialEnabled, setTourMapTutorialEnabled] = useState(true);
-  const [photoboothTutorialEnabled, setPhotoboothTutorialEnabled] = useState(true);
-  const [tripArchiveTutorialEnabled, setTripArchiveTutorialEnabled] = useState(true);
+  const [photoboothTutorialEnabled, setPhotoboothTutorialEnabled] =
+    useState(true);
+  const [tripArchiveTutorialEnabled, setTripArchiveTutorialEnabled] =
+    useState(true);
   const [allTutorialsEnabled, setAllTutorialsEnabled] = useState(true);
 
   const token = localStorage.getItem("token");
@@ -54,7 +85,9 @@ export default function Settings() {
     const initCreateItineraryStatus = async () => {
       try {
         const ciStatus = await getCreateItineraryTourStatus();
-        setCreateItineraryTutorialEnabled(!ciStatus.hasCompletedCreateItineraryTour);
+        setCreateItineraryTutorialEnabled(
+          !ciStatus.hasCompletedCreateItineraryTour
+        );
       } catch {
         setCreateItineraryTutorialEnabled(true);
       }
@@ -117,7 +150,7 @@ export default function Settings() {
           getTripArchiveTourStatus(),
         ]);
         // Check if ALL tutorials are completed by checking each specific property
-        const allCompleted = 
+        const allCompleted =
           statuses[0]?.hasCompletedTour &&
           statuses[1]?.hasCompletedCreateItineraryTour &&
           statuses[2]?.hasCompletedEmergencyTour &&
@@ -259,7 +292,8 @@ export default function Settings() {
           isOpen: true,
           type: "info",
           title: "Map Tutorial Enabled",
-          message: "When you go to the Itinerary Map, the guide will start automatically. It will turn off after you finish or skip.",
+          message:
+            "When you go to the Itinerary Map, the guide will start automatically. It will turn off after you finish or skip.",
         });
       } else {
         localStorage.removeItem("mapTourForceStart");
@@ -285,7 +319,8 @@ export default function Settings() {
           isOpen: true,
           type: "info",
           title: "Create Itinerary Tutorial Enabled",
-          message: "When you visit Create Itinerary, the guide will auto-start.",
+          message:
+            "When you visit Create Itinerary, the guide will auto-start.",
         });
       } else {
         await completeCreateItineraryTour();
@@ -431,131 +466,150 @@ export default function Settings() {
     }
   };
 
-
   return (
     <motion.div
       initial={{ x: "100%", opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-full bg-white flex flex-col items-center text-sm relative px-4 md:px-0"
+      className="min-h-full bg-white flex flex-col items-center text-sm relative px-4 md:px-0 overscroll-contain touch-pan-y"
     >
-      <PullToRefresh onRefresh={async () => { await new Promise((r) => setTimeout(r, 1000)); }}>
-      <div className="w-full max-w-md flex flex-col min-h-full">
-        <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">
-            Notification Settings
-          </h2>
+      <PullToRefresh
+        onRefresh={async () => {
+          await new Promise((r) => setTimeout(r, 1000));
+        }}
+      >
+        <div className="w-full max-w-md flex flex-col min-h-full">
+          <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
+            <h2 className="text-xl font-bold text-gray-800 mb-6">
+              Notification Settings
+            </h2>
 
-          {successMessage && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-700">{successMessage}</p>
-            </div>
-          )}
-
-          {/* Fort Santiago Modal Setting */}
-          <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 mt-1">
-                {showFortModal ? (
-                  <Bell className="w-6 h-6 text-[#f04e37]" />
-                ) : (
-                  <BellOff className="w-6 h-6 text-gray-400" />
-                )}
+            {successMessage && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700">{successMessage}</p>
               </div>
+            )}
 
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">
-                  Fort Santiago Entrance Notice
-                </h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  Show a notification when adding sites inside Fort Santiago to
-                  your itinerary.
-                </p>
+            {/* Fort Santiago Modal Setting */}
+            <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  {showFortModal ? (
+                    <Bell className="w-6 h-6 text-[#f04e37]" />
+                  ) : (
+                    <BellOff className="w-6 h-6 text-gray-400" />
+                  )}
+                </div>
 
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={showFortModal}
-                      onChange={handleToggleFortModal}
-                      disabled={loading}
-                      className="sr-only peer"
-                    />
-                    <div
-                      className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors ${
-                        loading ? "opacity-50" : ""
-                      }`}
-                    ></div>
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
-                    {loading
-                      ? "Updating..."
-                      : showFortModal
-                      ? "Enabled"
-                      : "Disabled"}
-                  </span>
-                </label>
-                {/* Note under Fort Santiago toggle */}
-                <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    <span className="font-semibold text-gray-700">Note:</span> When enabled, you'll receive a reminder about entrance fees when selecting sites located inside Fort Santiago for your itinerary.
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Fort Santiago Entrance Notice
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                    Show a notification when adding sites inside Fort Santiago
+                    to your itinerary.
                   </p>
+
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={showFortModal}
+                        onChange={handleToggleFortModal}
+                        disabled={loading}
+                        className="sr-only peer"
+                      />
+                      <div
+                        className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors ${
+                          loading ? "opacity-50" : ""
+                        }`}
+                      ></div>
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                      {loading
+                        ? "Updating..."
+                        : showFortModal
+                        ? "Enabled"
+                        : "Disabled"}
+                    </span>
+                  </label>
+                  {/* Note under Fort Santiago toggle */}
+                  <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      <span className="font-semibold text-gray-700">Note:</span>{" "}
+                      When enabled, you'll receive a reminder about entrance
+                      fees when selecting sites located inside Fort Santiago for
+                      your itinerary.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
+            {/* Main Tutorial Toggle */}
+            <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 mt-1">
+                  <Play className="w-6 h-6 text-[#f04e37]" />
+                </div>
 
-          {/* Main Tutorial Toggle */}
-          <div className="mt-4 bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 mt-1">
-                <Play className="w-6 h-6 text-[#f04e37]" />
-              </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    Animated Guides
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                    Control all tutorials across the app with a single switch.
+                  </p>
 
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 mb-2">Animated Guides</h3>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">Control all tutorials across the app with a single switch.</p>
-
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={allTutorialsEnabled}
-                      onChange={toggleAllTutorials}
-                      className="sr-only peer"
-                    />
-                    <div className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}></div>
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{allTutorialsEnabled ? "Enabled" : "Disabled"}</span>
-                </label>
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={allTutorialsEnabled}
+                        onChange={toggleAllTutorials}
+                        className="sr-only peer"
+                      />
+                      <div
+                        className={`w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-[#f04e37] transition-colors`}
+                      ></div>
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                      {allTutorialsEnabled ? "Enabled" : "Disabled"}
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
 
-        <NotificationModal
-          isOpen={notification.isOpen}
-          onClose={() => setNotification({ ...notification, isOpen: false })}
-          type={notification.type}
-          title={notification.title}
-          message={notification.message}
-          autoClose
-          autoCloseDuration={3000}
-        />
-
-        </div>
-        <div className="mt-auto">
-          <div className="border-t border-gray-100 pt-4" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
-            <p className="text-center text-xs text-gray-400">
-              © {new Date().getFullYear()} Intramuros Administration. Developed by UST College of Information and Computing Sciences.
-            </p>
+            <NotificationModal
+              isOpen={notification.isOpen}
+              onClose={() =>
+                setNotification({ ...notification, isOpen: false })
+              }
+              type={notification.type}
+              title={notification.title}
+              message={notification.message}
+              autoClose
+              autoCloseDuration={3000}
+            />
+          </div>
+          <div className="mt-auto">
+            <div
+              className="border-t border-gray-100 pt-4"
+              style={{
+                paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
+              }}
+            >
+              <p className="text-center text-xs text-gray-400">
+                © {new Date().getFullYear()} Intramuros Administration.
+                Developed by UST College of Information and Computing Sciences.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-      
       </PullToRefresh>
     </motion.div>
   );

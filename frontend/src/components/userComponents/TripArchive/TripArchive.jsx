@@ -26,7 +26,7 @@ const SiteCard = ({ site, resolveUrl, children, className = "" }) => {
       className={`bg-white/95 backdrop-blur-md rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 group hover:scale-[1.02] w-full ${className}`}
       style={{ minWidth: 0, maxWidth: "100%", touchAction: "pan-y pinch-zoom" }}
     >
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-48 lg:h-40 overflow-hidden">
         <img
           src={
             site.siteId?.mediaFiles?.find((m) => m.type === "image")?.url
@@ -72,8 +72,13 @@ export default function TripArchivesPage() {
   const [loading, setLoading] = useState(true);
   const [reviewPhotos, setReviewPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
-  const [showAllArchives, setShowAllArchives] = useState(false);
-  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
+  const [showAllArchives, setShowAllArchives] = useState(
+    () => window.innerWidth >= 1024
+  );
+  const [showAllReviews, setShowAllReviews] = useState(
+    () => window.innerWidth >= 1024
+  );
   const [selectedItineraryFilter, setSelectedItineraryFilter] = useState("all");
   const [selectedReviewItineraryFilter, setSelectedReviewItineraryFilter] =
     useState("all");
@@ -93,6 +98,8 @@ export default function TripArchivesPage() {
     isOpen: false,
     reviewId: null,
   });
+  const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
+  const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -111,12 +118,11 @@ export default function TripArchivesPage() {
     const openReviewsTab = () => setActiveTab("reviews");
     const openPlacesTab = () => setActiveTab("places");
     const openWriteReview = () => {
-      const filtered = visitedSites
-        .filter(
-          (s) =>
-            selectedReviewItineraryFilter === "all" ||
-            s.itineraryId?._id === selectedReviewItineraryFilter
-        );
+      const filtered = visitedSites.filter(
+        (s) =>
+          selectedReviewItineraryFilter === "all" ||
+          s.itineraryId?._id === selectedReviewItineraryFilter
+      );
       const site = filtered[0] || visitedSites[0];
       if (site) handleOpenReviewModal(site);
     };
@@ -131,14 +137,35 @@ export default function TripArchivesPage() {
     window.addEventListener("tour:tripArchiveOpenReviewsTab", openReviewsTab);
     window.addEventListener("tour:tripArchiveOpenPlacesTab", openPlacesTab);
     window.addEventListener("tour:tripArchiveOpenWriteReview", openWriteReview);
-    window.addEventListener("tour:tripArchiveCloseReviewModal", closeReviewModal);
-    window.addEventListener("tour:tripArchiveOpenReviewModalAgain", openReviewModalAgain);
+    window.addEventListener(
+      "tour:tripArchiveCloseReviewModal",
+      closeReviewModal
+    );
+    window.addEventListener(
+      "tour:tripArchiveOpenReviewModalAgain",
+      openReviewModalAgain
+    );
     return () => {
-      window.removeEventListener("tour:tripArchiveOpenReviewsTab", openReviewsTab);
-      window.removeEventListener("tour:tripArchiveOpenPlacesTab", openPlacesTab);
-      window.removeEventListener("tour:tripArchiveOpenWriteReview", openWriteReview);
-      window.removeEventListener("tour:tripArchiveCloseReviewModal", closeReviewModal);
-      window.removeEventListener("tour:tripArchiveOpenReviewModalAgain", openReviewModalAgain);
+      window.removeEventListener(
+        "tour:tripArchiveOpenReviewsTab",
+        openReviewsTab
+      );
+      window.removeEventListener(
+        "tour:tripArchiveOpenPlacesTab",
+        openPlacesTab
+      );
+      window.removeEventListener(
+        "tour:tripArchiveOpenWriteReview",
+        openWriteReview
+      );
+      window.removeEventListener(
+        "tour:tripArchiveCloseReviewModal",
+        closeReviewModal
+      );
+      window.removeEventListener(
+        "tour:tripArchiveOpenReviewModalAgain",
+        openReviewModalAgain
+      );
     };
   }, [visitedSites, selectedReviewItineraryFilter, selectedSite]);
 
@@ -153,6 +180,27 @@ export default function TripArchivesPage() {
       ? url
       : `${BACKEND_URL}${url.startsWith("/") ? "" : "/"}${url}`;
   };
+
+  const openSiteDetails = (site) => {
+    setDetailsSelectedSite(site);
+    setShowSiteDetailsModal(true);
+  };
+  const closeSiteDetails = () => {
+    setShowSiteDetailsModal(false);
+    setDetailsSelectedSite(null);
+  };
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    if (mq.addEventListener) mq.addEventListener("change", update);
+    else mq.addListener(update);
+    update();
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", update);
+      else mq.removeListener(update);
+    };
+  }, []);
 
   // Fetch visited sites and reviews
   useEffect(() => {
@@ -276,6 +324,28 @@ export default function TripArchivesPage() {
       return;
     }
 
+    // Basic content validation: length and Tagalog profanity
+    const text = (reviewText || "").trim();
+    if (text.length < 3 || text.length > 500) {
+      setNotification({
+        isOpen: true,
+        title: "Invalid Review",
+        message: "Review must be between 3 and 500 characters.",
+        type: "warning",
+      });
+      return;
+    }
+    if (isProfaneTagalog(text)) {
+      setNotification({
+        isOpen: true,
+        title: "Inappropriate Content",
+        message:
+          "Your review contains inappropriate content. Please revise it.",
+        type: "warning",
+      });
+      return;
+    }
+
     // Check for inappropriate content using OpenAI Moderation API
     if (reviewText) {
       try {
@@ -332,9 +402,10 @@ export default function TripArchivesPage() {
           "damn",
           "hell",
         ];
-        const containsProfanity = basicProfanityList.some((word) =>
-          reviewText.toLowerCase().includes(word.toLowerCase())
-        );
+        const containsProfanity =
+          basicProfanityList.some((word) =>
+            reviewText.toLowerCase().includes(word.toLowerCase())
+          ) || isProfaneTagalog(reviewText);
 
         if (containsProfanity) {
           setNotification({
@@ -483,8 +554,21 @@ export default function TripArchivesPage() {
           }
         }
       `}</style>
-      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col text-sm relative" style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none', paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <TripArchiveTourAutostart running={isTourRunning} completed={hasCompletedTour} onStart={startTour} />
+      <div
+        className="bg-gradient-to-br from-gray-50 via-white to-gray-100 flex flex-col text-sm relative"
+        style={{
+          height: "100dvh",
+          overflow: "hidden",
+          overscrollBehavior: "none",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        <TripArchiveTourAutostart
+          running={isTourRunning}
+          completed={hasCompletedTour}
+          onStart={startTour}
+        />
         {/* Decorative Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
@@ -495,890 +579,910 @@ export default function TripArchivesPage() {
 
         <MainLayout includeSideButtons={false}>
           <PullToRefresh onRefresh={handleRefresh}>
-          <div className="w-full relative z-10" key={refreshKey} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-            {/* Page content */}
-            <div className="px-4 pt-6">
-              {/* Icon Tab Navigation */}
-              <div className="flex justify-center items-center gap-8 mb-8">
-                {/* Places Tab */}
-                <button
-                  onClick={() => setActiveTab("places")}
-                  className="group relative transition-all duration-300 trip-tab-places-btn"
-                >
-                  <div
-                    className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
-                      activeTab === "places"
-                        ? "bg-gradient-to-br from-[#f04e37] to-orange-600 shadow-lg"
-                        : "bg-gray-200 hover:bg-gray-300 opacity-60 hover:opacity-80"
-                    }`}
+            <div
+              className="w-full relative z-10"
+              key={refreshKey}
+              style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            >
+              {/* Page content */}
+              <div className="px-4 pt-6">
+                {/* Icon Tab Navigation */}
+                <div className="flex justify-center items-center gap-8 mb-8">
+                  {/* Places Tab */}
+                  <button
+                    onClick={() => setActiveTab("places")}
+                    className="group relative transition-all duration-300 trip-tab-places-btn"
                   >
-                    <MapPin
-                      className={`absolute inset-0 m-auto w-10 h-10 transition-all duration-300 ${
-                        activeTab === "places" ? "text-white" : "text-gray-600"
-                      }`}
-                      strokeWidth={2.5}
-                    />
-                  </div>
-                  <p
-                    className={`mt-2 text-sm font-semibold transition-all duration-300 ${
-                      activeTab === "places"
-                        ? "text-[#f04e37]"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    Places
-                  </p>
-                </button>
-
-                {/* Reviews Tab */}
-                <button
-                  onClick={() => setActiveTab("reviews")}
-                  className="group relative transition-all duration-300 trip-tab-reviews-btn"
-                >
-                  <div
-                    className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
-                      activeTab === "reviews"
-                        ? "bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg"
-                        : "bg-gray-200 hover:bg-gray-300 opacity-60 hover:opacity-80"
-                    }`}
-                  >
-                    <StarIcon
-                      className={`absolute inset-0 m-auto w-10 h-10 transition-all duration-300 ${
-                        activeTab === "reviews" ? "text-white" : "text-gray-600"
-                      }`}
-                      strokeWidth={2.5}
-                    />
-                  </div>
-                  <p
-                    className={`mt-2 text-sm font-semibold transition-all duration-300 ${
-                      activeTab === "reviews"
-                        ? "text-yellow-600"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    Reviews
-                  </p>
-                </button>
-              </div>
-
-              {/* Page Title */}
-              <div className="text-center mb-8">
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
-                  {activeTab === "places"
-                    ? "Places you visited"
-                    : "Your Reviews"}
-                </h2>
-                <p className="text-gray-600 text-sm">
-                  {activeTab === "places"
-                    ? "Your journey through Intramuros"
-                    : "Share your experiences with others"}
-                </p>
-              </div>
-
-              <>
-                {/* Places Tab Content */}
-                {activeTab === "places" && (
-                  <div
-                    className="px-7"
-                    style={{
-                      animation: "fadeIn 0.3s ease-out",
-                    }}
-                  >
-                    {/* Section Header with Filter */}
-                    <div className="mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                          <input
-                            type="text"
-                            value={placesSearchQuery}
-                            onChange={(e) =>
-                              setPlacesSearchQuery(e.target.value)
-                            }
-                            placeholder="Search places by name or description"
-                            className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
-                          />
-                        </div>
-                        <div className="flex-shrink-0">
-                          <ItineraryFilterButton
-                            value={selectedItineraryFilter}
-                            onChange={setSelectedItineraryFilter}
-                            options={Array.from(
-                              new Set(
-                                visitedSites.map((s) => s.itineraryId?._id)
-                              )
-                            )
-                              .map((id) => ({
-                                id,
-                                label:
-                                  visitedSites.find(
-                                    (s) => s.itineraryId?._id === id
-                                  )?.itineraryId?.name || "Unknown Itinerary",
-                              }))
-                              .filter((opt) => opt.id)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
                     <div
-                      className="grid grid-cols-1 gap-6 w-full trip-places-list"
-                      style={{ touchAction: "pan-y pinch-zoom" }}
+                      className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
+                        activeTab === "places"
+                          ? "bg-gradient-to-br from-[#f04e37] to-orange-600 shadow-lg"
+                          : "bg-gray-200 hover:bg-gray-300 opacity-60 hover:opacity-80"
+                      }`}
                     >
-                      {(() => {
-                        const filtered = visitedSites
-                          .filter(
-                            (s) =>
-                              selectedItineraryFilter === "all" ||
-                              s.itineraryId?._id === selectedItineraryFilter
-                          )
-                          .filter((s) => {
-                            const q = placesSearchQuery.trim().toLowerCase();
-                            if (!q) return true;
-                            const name = (
-                              s.siteId?.siteName || ""
-                            ).toLowerCase();
-                            const desc = (
-                              s.siteId?.siteDescription || ""
-                            ).toLowerCase();
-                            const itinName = (
-                              s.itineraryId?.name || ""
-                            ).toLowerCase();
-                            return (
-                              name.includes(q) ||
-                              desc.includes(q) ||
-                              itinName.includes(q)
-                            );
-                          });
-                        const list = showAllArchives
-                          ? filtered
-                          : filtered.slice(0, 4);
-                        if (!list.length) {
-                          // Placeholder card shown during tour when no data
-                          return [
-                            {
-                              _id: "placeholder",
-                              siteId: {
-                                siteName: "No visited places yet",
-                                mediaUrl: "",
-                                siteDescription:
-                                  "When you visit sites, they appear here.",
-                              },
-                              itineraryId: { name: "Your itinerary" },
-                            },
-                          ];
-                        }
-                        return list;
-                      })().map((site, index) => (
-                        site?._id === "placeholder" ? (
-                          <div
-                            key={`placeholder-${index}`}
-                            className="bg-white/90 rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm"
-                          >
-                            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-[#f04e37]/15 to-orange-500/10 flex items-center justify-center mb-3">
-                              <MapPin className="w-7 h-7 text-[#f04e37]" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-800">No visited places yet</h3>
-                            <p className="text-sm text-gray-500 mt-1">Places you visit will appear here.</p>
-                            <button
-                              type="button"
-                              onClick={() => navigate("/TourMap")}
-                              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f04e37] text-white font-semibold text-sm shadow-md hover:bg-[#d63b2a] transition"
-                            >
-                              Explore Map
-                            </button>
+                      <MapPin
+                        className={`absolute inset-0 m-auto w-10 h-10 transition-all duration-300 ${
+                          activeTab === "places"
+                            ? "text-white"
+                            : "text-gray-600"
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                    <p
+                      className={`mt-2 text-sm font-semibold transition-all duration-300 ${
+                        activeTab === "places"
+                          ? "text-[#f04e37]"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      Places
+                    </p>
+                  </button>
+
+                  {/* Reviews Tab */}
+                  <button
+                    onClick={() => setActiveTab("reviews")}
+                    className="group relative transition-all duration-300 trip-tab-reviews-btn"
+                  >
+                    <div
+                      className={`relative w-20 h-20 rounded-full shadow-md transition-all duration-300 ${
+                        activeTab === "reviews"
+                          ? "bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg"
+                          : "bg-gray-200 hover:bg-gray-300 opacity-60 hover:opacity-80"
+                      }`}
+                    >
+                      <StarIcon
+                        className={`absolute inset-0 m-auto w-10 h-10 transition-all duration-300 ${
+                          activeTab === "reviews"
+                            ? "text-white"
+                            : "text-gray-600"
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                    </div>
+                    <p
+                      className={`mt-2 text-sm font-semibold transition-all duration-300 ${
+                        activeTab === "reviews"
+                          ? "text-yellow-600"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      Reviews
+                    </p>
+                  </button>
+                </div>
+
+                {/* Page Title */}
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                    {activeTab === "places"
+                      ? "Places you visited"
+                      : "Your Reviews"}
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    {activeTab === "places"
+                      ? "Your journey through Intramuros"
+                      : "Share your experiences with others"}
+                  </p>
+                </div>
+
+                <>
+                  {/* Places Tab Content */}
+                  {activeTab === "places" && (
+                    <div
+                      className="px-7"
+                      style={{
+                        animation: "fadeIn 0.3s ease-out",
+                      }}
+                    >
+                      {/* Section Header with Filter */}
+                      <div className="mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex-1">
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                            <input
+                              type="text"
+                              value={placesSearchQuery}
+                              onChange={(e) =>
+                                setPlacesSearchQuery(e.target.value)
+                              }
+                              placeholder="Search places by name or description"
+                              className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                            />
                           </div>
-                        ) : (
-                          <SiteCard
-                            className={index === 0 ? "trip-place-card" : ""}
-                            key={
-                              site?._id ||
-                              `${site.siteId?._id || "site"}-${index}`
-                            }
-                            site={site}
-                            resolveUrl={resolveUrl}
-                          >
-                            <div
-                              className="mb-2"
-                              style={{ overflow: "hidden", width: "100%" }}
-                            >
-                              <div
-                                className="flex items-center gap-2 text-sm text-gray-600"
-                                style={{ minWidth: 0, width: "100%" }}
-                              >
-                                <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
-                                <span
-                                  className={
-                                    expandedItineraries[
-                                      `place-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "break-words"
-                                      : "truncate"
-                                  }
-                                  style={{
-                                    overflow: expandedItineraries[
-                                      `place-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "visible"
-                                      : "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: expandedItineraries[
-                                      `place-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "normal"
-                                      : "nowrap",
-                                    wordBreak: expandedItineraries[
-                                      `place-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "break-word"
-                                      : "normal",
-                                    minWidth: 0,
-                                    maxWidth: "100%",
-                                  }}
-                                >
-                                  {site.itineraryId?.name || "Unknown Itinerary"}
-                                </span>
-                              </div>
-                              {site.itineraryId?.name?.length > 30 && (
-                                <button
-                                  onClick={() =>
-                                    setExpandedItineraries((prev) => ({
-                                      ...prev,
-                                      [`place-${
-                                        site?._id || site.siteId?._id || index
-                                      }`]:
-                                        !prev[
-                                          `place-${
-                                            site?._id || site.siteId?._id || index
-                                          }`
-                                        ],
-                                    }))
-                                  }
-                                  className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
-                                >
-                                  {expandedItineraries[
-                                    `place-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "See less"
-                                    : "See more"}
-                                </button>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                              <Calendar className="w-3 h-3 text-gray-400" />
-                              <span>
-                                Visited: {" "}
-                                {new Date(site.visitedAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <div>
-                              {expandedDescriptions[
-                                `place-desc-${
-                                  site?._id || site.siteId?._id || index
-                                }`
-                              ] ? (
-                                <div
-                                  className="text-sm text-gray-600 space-y-2"
-                                  style={{
-                                    width: "100%",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {(
-                                    site.siteId?.siteDescription ||
-                                    "No description available"
-                                  )
-                                    .split("\n\n")
-                                    .map((paragraph, idx) => (
-                                      <p key={idx}>{paragraph.trim()}</p>
-                                    ))}
-                                </div>
-                              ) : (
-                                <p
-                                  className="text-sm text-gray-600"
-                                  style={{
-                                    overflow: "hidden",
-                                    width: "100%",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {(site.siteId?.siteDescription?.length || 0) >
-                                  200
-                                    ? `${site.siteId.siteDescription.slice(
-                                        0,
-                                        200
-                                      )}...`
-                                    : site.siteId?.siteDescription ||
-                                      "No description available"}
-                                </p>
-                              )}
-                              {(site.siteId?.siteDescription?.length || 0) >
-                                200 && (
-                                <button
-                                  onClick={() =>
-                                    setExpandedDescriptions((prev) => ({
-                                      ...prev,
-                                      [`place-desc-${
-                                        site?._id || site.siteId?._id || index
-                                      }`]:
-                                        !prev[
-                                          `place-desc-${
-                                            site?._id || site.siteId?._id || index
-                                          }`
-                                        ],
-                                    }))
-                                  }
-                                  className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
-                                >
-                                  {expandedDescriptions[
-                                    `place-desc-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "See less"
-                                    : "See more"}
-                                </button>
-                              )}
-                            </div>
-                          </SiteCard>
-                        )
-                      ))}
-                    </div>
-
-                    {/* Show More/Less Button */}
-                    {(() => {
-                      const count = visitedSites
-                        .filter(
-                          (s) =>
-                            selectedItineraryFilter === "all" ||
-                            s.itineraryId?._id === selectedItineraryFilter
-                        )
-                        .filter((s) => {
-                          const q = placesSearchQuery.trim().toLowerCase();
-                          if (!q) return true;
-                          const name = (s.siteId?.siteName || "").toLowerCase();
-                          const desc = (
-                            s.siteId?.siteDescription || ""
-                          ).toLowerCase();
-                          const itinName = (
-                            s.itineraryId?.name || ""
-                          ).toLowerCase();
-                          return (
-                            name.includes(q) ||
-                            desc.includes(q) ||
-                            itinName.includes(q)
-                          );
-                        }).length;
-                      return count > 4;
-                    })() && (
-                      <div className="flex justify-center mt-8">
-                        <button
-                          onClick={() => setShowAllArchives(!showAllArchives)}
-                          className="px-8 py-3 bg-[#f04e37] hover:bg-[#d63b2a] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                        >
-                          {showAllArchives ? (
-                            <>
-                              <span>Show Less</span>
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 15l7-7 7 7"
-                                />
-                              </svg>
-                            </>
-                          ) : (
-                            <>
-                              <span>
-                                {(() => {
-                                  const count = visitedSites
-                                    .filter(
-                                      (s) =>
-                                        selectedItineraryFilter === "all" ||
-                                        s.itineraryId?._id ===
-                                          selectedItineraryFilter
-                                    )
-                                    .filter((s) => {
-                                      const q = placesSearchQuery
-                                        .trim()
-                                        .toLowerCase();
-                                      if (!q) return true;
-                                      const name = (
-                                        s.siteId?.siteName || ""
-                                      ).toLowerCase();
-                                      const desc = (
-                                        s.siteId?.siteDescription || ""
-                                      ).toLowerCase();
-                                      const itinName = (
-                                        s.itineraryId?.name || ""
-                                      ).toLowerCase();
-                                      return (
-                                        name.includes(q) ||
-                                        desc.includes(q) ||
-                                        itinName.includes(q)
-                                      );
-                                    }).length;
-                                  const more = Math.max(0, count - 4);
-                                  return `Show More (${more} more)`;
-                                })()}
-                              </span>
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Reviews Tab Content */}
-                {activeTab === "reviews" && (
-                  <div
-                    className="px-7"
-                    style={{
-                      animation: "fadeIn 0.3s ease-out",
-                    }}
-                  >
-                    {/* Toolbar: search + icon-only itinerary filter */}
-                    <div className="mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                          <input
-                            type="text"
-                            value={reviewsSearchQuery}
-                            onChange={(e) =>
-                              setReviewsSearchQuery(e.target.value)
-                            }
-                            placeholder="Search reviews by site or text"
-                            className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
-                          />
-                        </div>
-                        <div className="flex-shrink-0">
-                          <ItineraryFilterButton
-                            value={selectedReviewItineraryFilter}
-                            onChange={setSelectedReviewItineraryFilter}
-                            options={Array.from(
-                              new Set(
-                                visitedSites.map((s) => s.itineraryId?._id)
+                          <div className="flex-shrink-0">
+                            <ItineraryFilterButton
+                              value={selectedItineraryFilter}
+                              onChange={setSelectedItineraryFilter}
+                              options={Array.from(
+                                new Set(
+                                  visitedSites.map((s) => s.itineraryId?._id)
+                                )
                               )
-                            )
-                              .map((id) => ({
-                                id,
-                                label:
-                                  visitedSites.find(
-                                    (s) => s.itineraryId?._id === id
-                                  )?.itineraryId?.name || "Unknown Itinerary",
-                              }))
-                              .filter((opt) => opt.id)}
-                          />
+                                .map((id) => ({
+                                  id,
+                                  label:
+                                    visitedSites.find(
+                                      (s) => s.itineraryId?._id === id
+                                    )?.itineraryId?.name || "Unknown Itinerary",
+                                }))
+                                .filter((opt) => opt.id)}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div
-                      className="grid grid-cols-1 gap-6 w-full"
-                      style={{ touchAction: "pan-y pinch-zoom" }}
-                    >
-                      {(() => {
-                        const filtered = visitedSites
-                          .filter(
-                            (s) =>
-                              selectedReviewItineraryFilter === "all" ||
-                              s.itineraryId?._id ===
-                                selectedReviewItineraryFilter
-                          )
-                          .filter((s) => {
-                            const q = reviewsSearchQuery.trim().toLowerCase();
-                            if (!q) return true;
-                            const name = (
-                              s.siteId?.siteName || ""
-                            ).toLowerCase();
-                            const reviewText = (
-                              reviews.find(
-                                (r) =>
-                                  r.siteId?._id === (s.siteId?._id || s.siteId)
-                              )?.reviewText || ""
-                            ).toLowerCase();
-                            return name.includes(q) || reviewText.includes(q);
-                          });
-                        const list = showAllReviews
-                          ? filtered
-                          : filtered.slice(0, 4);
-                        if (!list.length) {
-                          return [{ _id: "placeholder-review" }];
-                        }
-                        return list;
-                      })().map((site, index) => {
-                        const existingReview = reviews.find(
-                          (r) =>
-                            r.siteId?._id === site.siteId?._id &&
-                            r.itineraryId?._id === site.itineraryId?._id
-                        );
-
-                        if (site?._id === "placeholder-review") {
-                          return (
+                      <div
+                        className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 w-full trip-places-list"
+                        style={{ touchAction: "pan-y pinch-zoom" }}
+                      >
+                        {(() => {
+                          const filtered = visitedSites
+                            .filter(
+                              (s) =>
+                                selectedItineraryFilter === "all" ||
+                                s.itineraryId?._id === selectedItineraryFilter
+                            )
+                            .filter((s) => {
+                              const q = placesSearchQuery.trim().toLowerCase();
+                              if (!q) return true;
+                              const name = (
+                                s.siteId?.siteName || ""
+                              ).toLowerCase();
+                              const desc = (
+                                s.siteId?.siteDescription || ""
+                              ).toLowerCase();
+                              const itinName = (
+                                s.itineraryId?.name || ""
+                              ).toLowerCase();
+                              return (
+                                name.includes(q) ||
+                                desc.includes(q) ||
+                                itinName.includes(q)
+                              );
+                            });
+                          const list =
+                            showAllArchives || isDesktop
+                              ? filtered
+                              : filtered.slice(0, 4);
+                          if (!list.length) {
+                            // Placeholder card shown during tour when no data
+                            return [
+                              {
+                                _id: "placeholder",
+                                siteId: {
+                                  siteName: "No visited places yet",
+                                  mediaUrl: "",
+                                  siteDescription:
+                                    "When you visit sites, they appear here.",
+                                },
+                                itineraryId: { name: "Your itinerary" },
+                              },
+                            ];
+                          }
+                          return list;
+                        })().map((site, index) =>
+                          site?._id === "placeholder" ? (
                             <div
-                              key={`placeholder-review-${index}`}
+                              key={`placeholder-${index}`}
                               className="bg-white/90 rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm"
                             >
-                              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400/20 to-orange-500/15 flex items-center justify-center mb-3">
-                                <StarIcon className="w-7 h-7 text-yellow-500" />
+                              <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-[#f04e37]/15 to-orange-500/10 flex items-center justify-center mb-3">
+                                <MapPin className="w-7 h-7 text-[#f04e37]" />
                               </div>
-                              <h3 className="text-lg font-semibold text-gray-800">No reviews yet</h3>
-                              <p className="text-sm text-gray-500 mt-1">Share your experience with others.</p>
+                              <h3 className="text-lg font-semibold text-gray-800">
+                                No visited places yet
+                              </h3>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Places you visit will appear here.
+                              </p>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  const first = visitedSites[0];
-                                  if (first) handleOpenReviewModal(first);
-                                }}
+                                onClick={() => navigate("/TourMap")}
                                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f04e37] text-white font-semibold text-sm shadow-md hover:bg-[#d63b2a] transition"
                               >
-                                Write a Review
+                                Explore Map
                               </button>
                             </div>
-                          );
-                        }
-                        return (
-                          <SiteCard
-                            key={
-                              site?._id ||
-                              `${site.siteId?._id || "site"}-${index}`
-                            }
-                            site={site}
-                            resolveUrl={resolveUrl}
-                          >
-                            <div
-                              className="mb-2"
-                              style={{ overflow: "hidden", width: "100%" }}
+                          ) : (
+                            <SiteCard
+                              className={index === 0 ? "trip-place-card" : ""}
+                              key={
+                                site?._id ||
+                                `${site.siteId?._id || "site"}-${index}`
+                              }
+                              site={site}
+                              resolveUrl={resolveUrl}
                             >
                               <div
-                                className="flex items-center gap-2 text-sm text-gray-600"
-                                style={{ minWidth: 0, width: "100%" }}
+                                className="mb-2"
+                                style={{ overflow: "hidden", width: "100%" }}
                               >
-                                <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
-                                <span
-                                  className={
-                                    expandedItineraries[
-                                      `review-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "break-words"
-                                      : "truncate"
-                                  }
-                                  style={{
-                                    overflow: expandedItineraries[
-                                      `review-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "visible"
-                                      : "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: expandedItineraries[
-                                      `review-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "normal"
-                                      : "nowrap",
-                                    wordBreak: expandedItineraries[
-                                      `review-${
-                                        site?._id || site.siteId?._id || index
-                                      }`
-                                    ]
-                                      ? "break-word"
-                                      : "normal",
-                                    minWidth: 0,
-                                    maxWidth: "100%",
-                                  }}
+                                <div
+                                  className="flex items-center gap-2 text-sm text-gray-600"
+                                  style={{ minWidth: 0, width: "100%" }}
                                 >
-                                  {site.itineraryId?.name ||
-                                    "Unknown Itinerary"}
+                                  <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
+                                  <span
+                                    className={
+                                      expandedItineraries[
+                                        `place-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "break-words"
+                                        : "truncate"
+                                    }
+                                    style={{
+                                      overflow: expandedItineraries[
+                                        `place-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "visible"
+                                        : "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: expandedItineraries[
+                                        `place-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "normal"
+                                        : "nowrap",
+                                      wordBreak: expandedItineraries[
+                                        `place-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "break-word"
+                                        : "normal",
+                                      minWidth: 0,
+                                      maxWidth: "100%",
+                                    }}
+                                  >
+                                    {site.itineraryId?.name ||
+                                      "Unknown Itinerary"}
+                                  </span>
+                                </div>
+                                {site.itineraryId?.name?.length > 30 && (
+                                  <button
+                                    onClick={() =>
+                                      setExpandedItineraries((prev) => ({
+                                        ...prev,
+                                        [`place-${
+                                          site?._id || site.siteId?._id || index
+                                        }`]:
+                                          !prev[
+                                            `place-${
+                                              site?._id ||
+                                              site.siteId?._id ||
+                                              index
+                                            }`
+                                          ],
+                                      }))
+                                    }
+                                    className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
+                                  >
+                                    {expandedItineraries[
+                                      `place-${
+                                        site?._id || site.siteId?._id || index
+                                      }`
+                                    ]
+                                      ? "See less"
+                                      : "See more"}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                                <Calendar className="w-3 h-3 text-gray-400" />
+                                <span>
+                                  Visited:{" "}
+                                  {new Date(
+                                    site.visitedAt
+                                  ).toLocaleDateString()}
                                 </span>
                               </div>
-                              {site.itineraryId?.name?.length > 30 && (
-                                <button
-                                  onClick={() =>
-                                    setExpandedItineraries((prev) => ({
-                                      ...prev,
-                                      [`review-${
-                                        site?._id || site.siteId?._id || index
-                                      }`]:
-                                        !prev[
-                                          `review-${
-                                            site?._id ||
-                                            site.siteId?._id ||
-                                            index
-                                          }`
-                                        ],
-                                    }))
-                                  }
-                                  className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
-                                >
-                                  {expandedItineraries[
-                                    `review-${
-                                      site?._id || site.siteId?._id || index
-                                    }`
-                                  ]
-                                    ? "See less"
-                                    : "See more"}
-                                </button>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                              <Calendar className="w-3 h-3 text-gray-400" />
-                              <span>
-                                Visited:{" "}
-                                {new Date(site.visitedAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            {existingReview ? (
-                              <>
-                                <div className="flex items-center gap-1 mb-2">
-                                  {renderStars(existingReview.rating)}
-                                </div>
-                                <div className="mb-3">
+                              <div>
+                                {expandedDescriptions[
+                                  `place-desc-${
+                                    site?._id || site.siteId?._id || index
+                                  }`
+                                ] ? (
+                                  <div
+                                    className="text-sm text-gray-600 space-y-2"
+                                    style={{
+                                      width: "100%",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {(
+                                      site.siteId?.siteDescription ||
+                                      "No description available"
+                                    )
+                                      .split("\n\n")
+                                      .map((paragraph, idx) => (
+                                        <p key={idx}>{paragraph.trim()}</p>
+                                      ))}
+                                  </div>
+                                ) : (
                                   <p
-                                    className={`text-sm text-gray-600 ${
-                                      expandedDescriptions[
-                                        `review-desc-${index}`
-                                      ]
-                                        ? ""
-                                        : "line-clamp-3"
-                                    }`}
+                                    className="text-sm text-gray-600"
                                     style={{
                                       overflow: "hidden",
                                       width: "100%",
                                       wordBreak: "break-word",
                                     }}
                                   >
-                                    {existingReview.reviewText ||
-                                      "No review text"}
+                                    {(site.siteId?.siteDescription?.length ||
+                                      0) > 200
+                                      ? `${site.siteId.siteDescription.slice(
+                                          0,
+                                          200
+                                        )}...`
+                                      : site.siteId?.siteDescription ||
+                                        "No description available"}
                                   </p>
-                                  {existingReview.reviewText &&
-                                    existingReview.reviewText.length > 150 && (
-                                      <button
-                                        onClick={() =>
-                                          setExpandedDescriptions((prev) => ({
-                                            ...prev,
-                                            [`review-desc-${index}`]:
-                                              !prev[`review-desc-${index}`],
-                                          }))
-                                        }
-                                        className="text-xs text-[#f04e37] hover:text-orange-600 mt-1 font-medium"
-                                      >
-                                        {expandedDescriptions[
-                                          `review-desc-${index}`
-                                        ]
-                                          ? "See less"
-                                          : "See more"}
-                                      </button>
-                                    )}
-                                </div>
-                                {existingReview.photos &&
-                                  existingReview.photos.length > 0 && (
-                                    <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
-                                      {existingReview.photos.map(
-                                        (photo, idx) => (
-                                          <img
-                                            key={idx}
-                                            src={resolveUrl(photo)}
-                                            alt={`Review photo ${idx + 1}`}
-                                            className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm hover:scale-110 transition-transform"
-                                          />
-                                        )
-                                      )}
-                                    </div>
-                                  )}
-                                <div className="flex gap-2">
+                                )}
+                                {(site.siteId?.siteDescription?.length || 0) >
+                                  200 && (
                                   <button
-                                    onClick={() => handleOpenReviewModal(site)}
-                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-edit-review-btn"
+                                    onClick={() => openSiteDetails(site.siteId)}
+                                    className="text-xs text-[#f04e37] hover:text-orange-600 mt-2 font-medium"
                                   >
-                                    Edit Review
+                                    See more
                                   </button>
+                                )}
+                              </div>
+                            </SiteCard>
+                          )
+                        )}
+                      </div>
+
+                      {/* Show More/Less Button */}
+                      {!isDesktop &&
+                        (() => {
+                          const count = visitedSites
+                            .filter(
+                              (s) =>
+                                selectedItineraryFilter === "all" ||
+                                s.itineraryId?._id === selectedItineraryFilter
+                            )
+                            .filter((s) => {
+                              const q = placesSearchQuery.trim().toLowerCase();
+                              if (!q) return true;
+                              const name = (
+                                s.siteId?.siteName || ""
+                              ).toLowerCase();
+                              const desc = (
+                                s.siteId?.siteDescription || ""
+                              ).toLowerCase();
+                              const itinName = (
+                                s.itineraryId?.name || ""
+                              ).toLowerCase();
+                              return (
+                                name.includes(q) ||
+                                desc.includes(q) ||
+                                itinName.includes(q)
+                              );
+                            }).length;
+                          return count > 4;
+                        })() && (
+                          <div className="flex justify-center mt-8">
+                            <button
+                              onClick={() =>
+                                setShowAllArchives(!showAllArchives)
+                              }
+                              className="px-8 py-3 bg-[#f04e37] hover:bg-[#d63b2a] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                              {showAllArchives ? (
+                                <>
+                                  <span>Show Less</span>
+                                  <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  </svg>
+                                </>
+                              ) : (
+                                <>
+                                  <span>
+                                    {(() => {
+                                      const count = visitedSites
+                                        .filter(
+                                          (s) =>
+                                            selectedItineraryFilter === "all" ||
+                                            s.itineraryId?._id ===
+                                              selectedItineraryFilter
+                                        )
+                                        .filter((s) => {
+                                          const q = placesSearchQuery
+                                            .trim()
+                                            .toLowerCase();
+                                          if (!q) return true;
+                                          const name = (
+                                            s.siteId?.siteName || ""
+                                          ).toLowerCase();
+                                          const desc = (
+                                            s.siteId?.siteDescription || ""
+                                          ).toLowerCase();
+                                          const itinName = (
+                                            s.itineraryId?.name || ""
+                                          ).toLowerCase();
+                                          return (
+                                            name.includes(q) ||
+                                            desc.includes(q) ||
+                                            itinName.includes(q)
+                                          );
+                                        }).length;
+                                      const more = Math.max(0, count - 4);
+                                      return `Show More (${more} more)`;
+                                    })()}
+                                  </span>
+                                  <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  {/* Reviews Tab Content */}
+                  {activeTab === "reviews" && (
+                    <div
+                      className="px-7"
+                      style={{
+                        animation: "fadeIn 0.3s ease-out",
+                      }}
+                    >
+                      {/* Toolbar: search + icon-only itinerary filter */}
+                      <div className="mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex-1">
+                            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                            <input
+                              type="text"
+                              value={reviewsSearchQuery}
+                              onChange={(e) =>
+                                setReviewsSearchQuery(e.target.value)
+                              }
+                              placeholder="Search reviews by site or text"
+                              className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                            />
+                          </div>
+                          <div className="flex-shrink-0">
+                            <ItineraryFilterButton
+                              value={selectedReviewItineraryFilter}
+                              onChange={setSelectedReviewItineraryFilter}
+                              options={Array.from(
+                                new Set(
+                                  visitedSites.map((s) => s.itineraryId?._id)
+                                )
+                              )
+                                .map((id) => ({
+                                  id,
+                                  label:
+                                    visitedSites.find(
+                                      (s) => s.itineraryId?._id === id
+                                    )?.itineraryId?.name || "Unknown Itinerary",
+                                }))
+                                .filter((opt) => opt.id)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 w-full"
+                        style={{ touchAction: "pan-y pinch-zoom" }}
+                      >
+                        {(() => {
+                          const filtered = visitedSites
+                            .filter(
+                              (s) =>
+                                selectedReviewItineraryFilter === "all" ||
+                                s.itineraryId?._id ===
+                                  selectedReviewItineraryFilter
+                            )
+                            .filter((s) => {
+                              const q = reviewsSearchQuery.trim().toLowerCase();
+                              if (!q) return true;
+                              const name = (
+                                s.siteId?.siteName || ""
+                              ).toLowerCase();
+                              const reviewText = (
+                                reviews.find(
+                                  (r) =>
+                                    r.siteId?._id ===
+                                    (s.siteId?._id || s.siteId)
+                                )?.reviewText || ""
+                              ).toLowerCase();
+                              return name.includes(q) || reviewText.includes(q);
+                            });
+                          const list = showAllReviews
+                            ? filtered
+                            : filtered.slice(0, 4);
+                          if (!list.length) {
+                            return [{ _id: "placeholder-review" }];
+                          }
+                          return list;
+                        })().map((site, index) => {
+                          const existingReview = reviews.find(
+                            (r) =>
+                              r.siteId?._id === site.siteId?._id &&
+                              r.itineraryId?._id === site.itineraryId?._id
+                          );
+
+                          if (site?._id === "placeholder-review") {
+                            return (
+                              <div
+                                key={`placeholder-review-${index}`}
+                                className="bg-white/90 rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center shadow-sm"
+                              >
+                                <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400/20 to-orange-500/15 flex items-center justify-center mb-3">
+                                  <StarIcon className="w-7 h-7 text-yellow-500" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                  No reviews yet
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  Share your experience with others.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const first = visitedSites[0];
+                                    if (first) handleOpenReviewModal(first);
+                                  }}
+                                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#f04e37] text-white font-semibold text-sm shadow-md hover:bg-[#d63b2a] transition"
+                                >
+                                  Write a Review
+                                </button>
+                              </div>
+                            );
+                          }
+                          return (
+                            <SiteCard
+                              key={
+                                site?._id ||
+                                `${site.siteId?._id || "site"}-${index}`
+                              }
+                              site={site}
+                              resolveUrl={resolveUrl}
+                            >
+                              <div
+                                className="mb-2"
+                                style={{ overflow: "hidden", width: "100%" }}
+                              >
+                                <div
+                                  className="flex items-center gap-2 text-sm text-gray-600"
+                                  style={{ minWidth: 0, width: "100%" }}
+                                >
+                                  <BookOpen className="w-4 h-4 text-[#f04e37] flex-shrink-0" />
+                                  <span
+                                    className={
+                                      expandedItineraries[
+                                        `review-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "break-words"
+                                        : "truncate"
+                                    }
+                                    style={{
+                                      overflow: expandedItineraries[
+                                        `review-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "visible"
+                                        : "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: expandedItineraries[
+                                        `review-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "normal"
+                                        : "nowrap",
+                                      wordBreak: expandedItineraries[
+                                        `review-${
+                                          site?._id || site.siteId?._id || index
+                                        }`
+                                      ]
+                                        ? "break-word"
+                                        : "normal",
+                                      minWidth: 0,
+                                      maxWidth: "100%",
+                                    }}
+                                  >
+                                    {site.itineraryId?.name ||
+                                      "Unknown Itinerary"}
+                                  </span>
+                                </div>
+                                {site.itineraryId?.name?.length > 30 && (
                                   <button
                                     onClick={() =>
-                                      handleDeleteReview(existingReview._id)
+                                      setExpandedItineraries((prev) => ({
+                                        ...prev,
+                                        [`review-${
+                                          site?._id || site.siteId?._id || index
+                                        }`]:
+                                          !prev[
+                                            `review-${
+                                              site?._id ||
+                                              site.siteId?._id ||
+                                              index
+                                            }`
+                                          ],
+                                      }))
                                     }
-                                    className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-delete-review-btn"
+                                    className="text-xs text-[#f04e37] hover:text-orange-600 ml-6 mt-1 font-medium"
                                   >
-                                    Delete Review
+                                    {expandedItineraries[
+                                      `review-${
+                                        site?._id || site.siteId?._id || index
+                                      }`
+                                    ]
+                                      ? "See less"
+                                      : "See more"}
                                   </button>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => handleOpenReviewModal(site)}
-                                  className="w-full bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-write-review-btn"
-                                >
-                                  Write Review
-                                </button>
-                                <div className="mt-3 flex gap-2" aria-hidden>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                                <Calendar className="w-3 h-3 text-gray-400" />
+                                <span>
+                                  Visited:{" "}
+                                  {new Date(
+                                    site.visitedAt
+                                  ).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {existingReview ? (
+                                <>
+                                  <div className="flex items-center gap-1 mb-2">
+                                    {renderStars(existingReview.rating)}
+                                  </div>
+                                  <div className="mb-3">
+                                    <p
+                                      className={`text-sm text-gray-600 ${
+                                        expandedDescriptions[
+                                          `review-desc-${index}`
+                                        ]
+                                          ? ""
+                                          : "line-clamp-3"
+                                      }`}
+                                      style={{
+                                        overflow: "hidden",
+                                        width: "100%",
+                                        wordBreak: "break-word",
+                                      }}
+                                    >
+                                      {existingReview.reviewText ||
+                                        "No review text"}
+                                    </p>
+                                    {existingReview.reviewText &&
+                                      existingReview.reviewText.length >
+                                        150 && (
+                                        <button
+                                          onClick={() =>
+                                            setExpandedDescriptions((prev) => ({
+                                              ...prev,
+                                              [`review-desc-${index}`]:
+                                                !prev[`review-desc-${index}`],
+                                            }))
+                                          }
+                                          className="text-xs text-[#f04e37] hover:text-orange-600 mt-1 font-medium"
+                                        >
+                                          {expandedDescriptions[
+                                            `review-desc-${index}`
+                                          ]
+                                            ? "See less"
+                                            : "See more"}
+                                        </button>
+                                      )}
+                                  </div>
+                                  {existingReview.photos &&
+                                    existingReview.photos.length > 0 && (
+                                      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                                        {existingReview.photos.map(
+                                          (photo, idx) => (
+                                            <img
+                                              key={idx}
+                                              src={resolveUrl(photo)}
+                                              alt={`Review photo ${idx + 1}`}
+                                              className="w-20 h-20 object-cover rounded-xl border-2 border-gray-200 shadow-sm hover:scale-110 transition-transform"
+                                            />
+                                          )
+                                        )}
+                                      </div>
+                                    )}
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() =>
+                                        handleOpenReviewModal(site)
+                                      }
+                                      className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-edit-review-btn"
+                                    >
+                                      Edit Review
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteReview(existingReview._id)
+                                      }
+                                      className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-delete-review-btn"
+                                    >
+                                      Delete Review
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
                                   <button
-                                    type="button"
-                                    disabled
-                                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-500 text-xs font-semibold rounded-xl shadow-sm cursor-default trip-edit-review-btn"
+                                    onClick={() => handleOpenReviewModal(site)}
+                                    className="w-full bg-gradient-to-r from-[#f04e37] to-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all trip-write-review-btn"
                                   >
-                                    Edit Review
+                                    Write Review
                                   </button>
-                                  <button
-                                    type="button"
-                                    disabled
-                                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-500 text-xs font-semibold rounded-xl shadow-sm cursor-default trip-delete-review-btn"
-                                  >
-                                    Delete Review
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </SiteCard>
-                        );
-                      })}
-                    </div>
-
-                    {/* Show More/Less Button for Reviews */}
-                    {(() => {
-                      const count = visitedSites
-                        .filter(
-                          (s) =>
-                            selectedReviewItineraryFilter === "all" ||
-                            s.itineraryId?._id === selectedReviewItineraryFilter
-                        )
-                        .filter((s) => {
-                          const q = reviewsSearchQuery.trim().toLowerCase();
-                          if (!q) return true;
-                          const name = (s.siteId?.siteName || "").toLowerCase();
-                          const reviewText = (
-                            reviews.find(
-                              (r) =>
-                                r.siteId?._id === (s.siteId?._id || s.siteId)
-                            )?.reviewText || ""
-                          ).toLowerCase();
-                          return name.includes(q) || reviewText.includes(q);
-                        }).length;
-                      return count > 4;
-                    })() && (
-                      <div className="flex justify-center mt-8">
-                        <button
-                          onClick={() => setShowAllReviews(!showAllReviews)}
-                          className="px-8 py-3 bg-[#f04e37] hover:bg-[#d63b2a] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                        >
-                          {showAllReviews ? (
-                            <>
-                              <span>Show Less</span>
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 15l7-7 7 7"
-                                />
-                              </svg>
-                            </>
-                          ) : (
-                            <>
-                              <span>
-                                {(() => {
-                                  const count = visitedSites
-                                    .filter(
-                                      (s) =>
-                                        selectedReviewItineraryFilter ===
-                                          "all" ||
-                                        s.itineraryId?._id ===
-                                          selectedReviewItineraryFilter
-                                    )
-                                    .filter((s) => {
-                                      const q = reviewsSearchQuery
-                                        .trim()
-                                        .toLowerCase();
-                                      if (!q) return true;
-                                      const name = (
-                                        s.siteId?.siteName || ""
-                                      ).toLowerCase();
-                                      const reviewText = (
-                                        reviews.find(
-                                          (r) =>
-                                            r.siteId?._id ===
-                                            (s.siteId?._id || s.siteId)
-                                        )?.reviewText || ""
-                                      ).toLowerCase();
-                                      return (
-                                        name.includes(q) ||
-                                        reviewText.includes(q)
-                                      );
-                                    }).length;
-                                  const more = Math.max(0, count - 4);
-                                  return `Show More (${more} more)`;
-                                })()}
-                              </span>
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                            </>
-                          )}
-                        </button>
+                                  <div className="mt-3 flex gap-2" aria-hidden>
+                                    <button
+                                      type="button"
+                                      disabled
+                                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-500 text-xs font-semibold rounded-xl shadow-sm cursor-default trip-edit-review-btn"
+                                    >
+                                      Edit Review
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled
+                                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-500 text-xs font-semibold rounded-xl shadow-sm cursor-default trip-delete-review-btn"
+                                    >
+                                      Delete Review
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </SiteCard>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
-                )}
-              </>
+
+                      {/* Show More/Less Button for Reviews */}
+                      {!isDesktop &&
+                        (() => {
+                          const count = visitedSites
+                            .filter(
+                              (s) =>
+                                selectedReviewItineraryFilter === "all" ||
+                                s.itineraryId?._id ===
+                                  selectedReviewItineraryFilter
+                            )
+                            .filter((s) => {
+                              const q = reviewsSearchQuery.trim().toLowerCase();
+                              if (!q) return true;
+                              const name = (
+                                s.siteId?.siteName || ""
+                              ).toLowerCase();
+                              const reviewText = (
+                                reviews.find(
+                                  (r) =>
+                                    r.siteId?._id ===
+                                    (s.siteId?._id || s.siteId)
+                                )?.reviewText || ""
+                              ).toLowerCase();
+                              return name.includes(q) || reviewText.includes(q);
+                            }).length;
+                          return count > 4;
+                        })() && (
+                          <div className="flex justify-center mt-8">
+                            <button
+                              onClick={() => setShowAllReviews(!showAllReviews)}
+                              className="px-8 py-3 bg-[#f04e37] hover:bg-[#d63b2a] text-white rounded-xl font-semibold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                              {showAllReviews ? (
+                                <>
+                                  <span>Show Less</span>
+                                  <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  </svg>
+                                </>
+                              ) : (
+                                <>
+                                  <span>
+                                    {(() => {
+                                      const count = visitedSites
+                                        .filter(
+                                          (s) =>
+                                            selectedReviewItineraryFilter ===
+                                              "all" ||
+                                            s.itineraryId?._id ===
+                                              selectedReviewItineraryFilter
+                                        )
+                                        .filter((s) => {
+                                          const q = reviewsSearchQuery
+                                            .trim()
+                                            .toLowerCase();
+                                          if (!q) return true;
+                                          const name = (
+                                            s.siteId?.siteName || ""
+                                          ).toLowerCase();
+                                          const reviewText = (
+                                            reviews.find(
+                                              (r) =>
+                                                r.siteId?._id ===
+                                                (s.siteId?._id || s.siteId)
+                                            )?.reviewText || ""
+                                          ).toLowerCase();
+                                          return (
+                                            name.includes(q) ||
+                                            reviewText.includes(q)
+                                          );
+                                        }).length;
+                                      const more = Math.max(0, count - 4);
+                                      return `Show More (${more} more)`;
+                                    })()}
+                                  </span>
+                                  <svg
+                                    className="w-5 h-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                    </div>
+                  )}
+                </>
+              </div>
             </div>
-          </div>
-        {/* Footer inside white content container */}
-        <div className="px-6 pt-6 pb-16 text-center">
-          <p className="text-xs text-center text-gray-400">
-            © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
-            College of Information and Computing Sciences.
-          </p>
-          </div>
+            {/* Footer inside white content container */}
+            <div className="px-6 pt-6 pb-16 text-center">
+              <p className="text-xs text-center text-gray-400">
+                © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed
+                by UST College of Information and Computing Sciences.
+              </p>
+            </div>
           </PullToRefresh>
         </MainLayout>
 
@@ -1495,6 +1599,125 @@ export default function TripArchivesPage() {
           </div>
         )}
 
+        {/* Site Details Modal (Places) */}
+        {showSiteDetailsModal && detailsSelectedSite && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={closeSiteDetails}
+            />
+            <div
+              className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto modern-scrollbar"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                overscrollBehavior: "contain",
+              }}
+            >
+              <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-6 h-6 text-[#f04e37]" />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {detailsSelectedSite.siteName ||
+                        detailsSelectedSite.title}
+                    </h3>
+                    <p className="text-xs text-gray-500">Site details</p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeSiteDetails}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {(() => {
+                const hero =
+                  detailsSelectedSite.mediaFiles?.find(
+                    (m) => m.type === "image"
+                  )?.url ||
+                  detailsSelectedSite.mediaUrl ||
+                  "";
+                const full = resolveUrl(hero);
+                return full ? (
+                  <div className="h-36 sm:h-56 md:h-64 w-full overflow-hidden px-6 sm:px-8 pt-3">
+                    <img
+                      src={full}
+                      alt={
+                        detailsSelectedSite.siteName ||
+                        detailsSelectedSite.title
+                      }
+                      className="w-full h-full object-cover rounded-xl"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null;
+              })()}
+
+              <div className="px-6 py-5 sm:px-8 sm:py-6">
+                <div className="flex items-center gap-2 mb-3">
+                  {(() => {
+                    const catName =
+                      typeof detailsSelectedSite.category === "object"
+                        ? detailsSelectedSite.category?.name || ""
+                        : detailsSelectedSite.category || "";
+                    return catName ? (
+                      <span className="inline-flex items-center gap-1.5 bg-orange-100 text-[#f04e37] px-3 py-1 rounded-full text-xs font-semibold">
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M20 6h-8l-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 9H6v-2h8v2zm4-4H6V9h12v2z" />
+                        </svg>
+                        {catName}
+                      </span>
+                    ) : null;
+                  })()}
+                  {(() => {
+                    const avg =
+                      typeof detailsSelectedSite.averageTimeSpent === "number"
+                        ? detailsSelectedSite.averageTimeSpent
+                        : Number(detailsSelectedSite?.averageTimeSpent);
+                    const minutes = isNaN(avg) || avg <= 0 ? null : avg;
+                    return minutes !== null ? (
+                      <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 8v5h4v-2h-2V8h-2zm0-6a10 10 0 100 20 10 10 0 000-20z" />
+                        </svg>
+                        Avg visit: {minutes} min
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+
+                <div className="text-sm text-gray-700">
+                  {detailsSelectedSite.siteDescription ? (
+                    <div className="space-y-2">
+                      {detailsSelectedSite.siteDescription
+                        .split("\n\n")
+                        .map((p, i) => (
+                          <p key={i}>{p.trim()}</p>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 italic">
+                      No description available
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Notification Modal */}
         <NotificationModal
           isOpen={notification.isOpen}
@@ -1507,7 +1730,9 @@ export default function TripArchivesPage() {
         {/* Delete Confirmation Modal */}
         <NotificationModal
           isOpen={deleteConfirmation.isOpen}
-          onClose={() => setDeleteConfirmation({ isOpen: false, reviewId: null })}
+          onClose={() =>
+            setDeleteConfirmation({ isOpen: false, reviewId: null })
+          }
           title="Delete Review"
           message="Are you sure you want to delete this review? This action cannot be undone."
           type="warning"
@@ -1607,3 +1832,141 @@ function ItineraryFilterButton({ value, onChange, options }) {
     </div>
   );
 }
+// moved into component to avoid invalid hook call
+// Tagalog profanity support and normalization (reuse with English moderation)
+const TAGALOG_BAD_WORDS = React.useMemo(
+  () => [
+    "putangina",
+    "putang ina",
+    "putang-ina",
+    "puta",
+    "puta ka",
+    "putragis",
+    "putaragis",
+    "pakshet",
+    "pakshit",
+    "pakyu",
+    "fakyu",
+    "kantot",
+    "kantutan",
+    "hindot",
+    "hindutan",
+    "titi",
+    "burat",
+    "puke",
+    "puki",
+    "pekpek",
+    "pepe",
+    "kiki",
+    "kupal",
+    "gago",
+    "gaga",
+    "tanga",
+    "bobo",
+    "ulol",
+    "tarantado",
+    "bwisit",
+    "leche",
+    "lintik",
+    "punyeta",
+    "pucha",
+    "animal",
+    "hayop",
+    "ogag",
+    "buraot",
+    "syet",
+    "amputa",
+    "animal ka",
+    "bilat",
+    "binibrocha",
+    "bogo",
+    "boto",
+    "brocha",
+    "bwesit",
+    "demonyo ka",
+    "engot",
+    "etits",
+    "gagi",
+    "habal",
+    "hayop ka",
+    "hayup",
+    "hinampak",
+    "hinayupak",
+    "hudas",
+    "iniyot",
+    "inutel",
+    "inutil",
+    "iyot",
+    "kagaguhan",
+    "kagang",
+    "kantotan",
+    "kantut",
+    "kaululan",
+    "kayat",
+    "kikinginamo",
+    "kingina",
+    "leching",
+    "lechugas",
+    "nakakaburat",
+    "nimal",
+    "olok",
+    "pakingshet",
+    "pesteng yawa",
+    "poke",
+    "poki",
+    "pokpok",
+    "poyet",
+    "pu'keng",
+    "puchanggala",
+    "puchangina",
+    "pukinangina",
+    "puking",
+    "ratbu",
+    "shunga",
+    "sira ulo",
+    "siraulo",
+    "suso",
+    "susu",
+    "tae",
+    "taena",
+    "tamod",
+    "tangina",
+    "taragis",
+    "tete",
+    "teti",
+    "timang",
+    "tinil",
+    "tite",
+    "tungaw",
+    "ungas",
+  ],
+  []
+);
+const normalizeProfanity = (s) => {
+  if (!s) return "";
+  const map = {
+    0: "o",
+    1: "i",
+    3: "e",
+    4: "a",
+    5: "s",
+    7: "t",
+    "@": "a",
+    $: "s",
+    "!": "i",
+  };
+  const lowered = String(s).toLowerCase();
+  const leetFixed = lowered
+    .split("")
+    .map((c) => (map[c] ? map[c] : c))
+    .join("");
+  return leetFixed.replace(/[\s\-_.]+/g, "");
+};
+const isProfaneTagalog = (s) => {
+  const normalized = normalizeProfanity(s);
+  for (const w of TAGALOG_BAD_WORDS) {
+    const wn = normalizeProfanity(w);
+    if (normalized.includes(wn)) return true;
+  }
+  return false;
+};

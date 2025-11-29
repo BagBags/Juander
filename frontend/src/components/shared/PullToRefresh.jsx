@@ -109,8 +109,12 @@ export default function PullToRefresh({
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 overflow-y-auto"
-      style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+      className="relative flex-1 overflow-y-auto overflow-x-hidden"
+      style={{
+        WebkitOverflowScrolling: "touch",
+        touchAction: "pan-y",
+        overscrollBehaviorY: "contain",
+      }}
     >
       {/* Pull-to-refresh indicator */}
       <div

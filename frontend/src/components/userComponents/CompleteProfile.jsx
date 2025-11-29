@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { motion } from "framer-motion";
 import { User, Calendar, Users, Globe, Check } from "lucide-react";
 import { FaMars, FaVenus, FaGenderless } from "react-icons/fa";
 import { countries } from "countries-list";
@@ -29,7 +28,7 @@ export default function CompleteProfile() {
       return;
     }
     setCurrentUser(user);
-    
+
     // Pre-fill existing data
     setFormData({
       firstName: user.firstName || "",
@@ -41,29 +40,32 @@ export default function CompleteProfile() {
     });
   }, [navigate]);
 
-  // Helper: allow only valid name characters (letters, spaces, hyphens, apostrophes)
-  const validateNameInput = (val) => /^[\p{L}\s'-]*$/u.test(val);
+  // Helper: allow valid name characters (letters, numbers, spaces, hyphens, apostrophes)
+  const validateNameInput = (val) => /^[\p{L}0-9\s'-]*$/u.test(val);
 
   // Validation helpers
   const isValidName = (name) => {
     const trimmed = name.trim();
     const nameRegex = /^[\p{L}\s'-]+$/u;
     const repeatedCharRegex = /(.)\1{2,}/;
-    const hasTriple = (str)=>str.split(/\s+/).some(w=>repeatedCharRegex.test(w));
-    const invalidCharRegex = /[0-9!@#$%^&*()_+\=[\]{};:\"\\|,.<>/?~`]+/;
+    const hasTriple = (str) =>
+      str.split(/\s+/).some((w) => repeatedCharRegex.test(w));
+    const invalidCharRegex = /[!@#$%^&*()_+=[\]{};:"\\|,.<>/?~`]+/;
     return (
       trimmed &&
       nameRegex.test(trimmed) &&
-      trimmed.length>=2 && trimmed.length<=50 &&
+      trimmed.length >= 2 &&
+      trimmed.length <= 50 &&
       !hasTriple(trimmed) &&
-      !invalidCharRegex.test(trimmed)
+      !invalidCharRegex.test(trimmed) &&
+      !isProfaneText(trimmed)
     );
   };
 
   const handleNext = async () => {
     setError("");
     setLoading(true);
-    
+
     try {
       const token = localStorage.getItem("token");
 
@@ -78,23 +80,40 @@ export default function CompleteProfile() {
           setLoading(false);
           return;
         }
+        if (isProfaneText(firstName) || isProfaneText(lastName)) {
+          setError("No bad words allowed");
+          setLoading(false);
+          return;
+        }
         if (!isValidName(firstName) || !isValidName(lastName)) {
-          setError("Please enter a valid name (letters, spaces, hyphens, apostrophes; 2-50 characters)");
+          setError(
+            "Please enter a valid name (letters, numbers, spaces, hyphens, apostrophes; 2-50 characters)"
+          );
           setLoading(false);
           return;
         }
         // Save name immediately (include email as required by endpoint)
-        await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/account`, {
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          email: currentUser.email, // Required by endpoint
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.put(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/account`,
+          {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            email: currentUser.email, // Required by endpoint
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
       }
 
       if (step === 2) {
-        if (!formData.birthday.month || !formData.birthday.date || !formData.birthday.year) {
+        if (
+          !formData.birthday.month ||
+          !formData.birthday.date ||
+          !formData.birthday.year
+        ) {
           setError("Please select your complete birthday");
           setLoading(false);
           return;
@@ -103,18 +122,18 @@ export default function CompleteProfile() {
         // Convert full month name to short format (e.g., "January" -> "Jan")
         const monthShort = formData.birthday.month.substring(0, 3);
         const ageCalc = () => {
-          const yr=parseInt(formData.birthday.year,10);
-          const mnIdx=months.indexOf(formData.birthday.month);
-          const dt=parseInt(formData.birthday.date,10);
-          if(isNaN(yr)||mnIdx<0||isNaN(dt)) return null;
-          const today=new Date();
-          let age=today.getFullYear()-yr;
-          const m=today.getMonth()-mnIdx;
-          if(m<0||(m===0&&today.getDate()<dt)) age--;
+          const yr = parseInt(formData.birthday.year, 10);
+          const mnIdx = months.indexOf(formData.birthday.month);
+          const dt = parseInt(formData.birthday.date, 10);
+          if (isNaN(yr) || mnIdx < 0 || isNaN(dt)) return null;
+          const today = new Date();
+          let age = today.getFullYear() - yr;
+          const m = today.getMonth() - mnIdx;
+          if (m < 0 || (m === 0 && today.getDate() < dt)) age--;
           return age;
         };
-        const age=ageCalc();
-        if(age!==null && age<18 && !formData.parentalConsent){
+        const age = ageCalc();
+        if (age !== null && age < 18 && !formData.parentalConsent) {
           setError("Parental consent required for users 13-17.");
           setLoading(false);
           return;
@@ -126,19 +145,27 @@ export default function CompleteProfile() {
           parentalConsent: formData.parentalConsent,
         };
         console.log("Sending birthday payload:", birthdayPayload);
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/birthday`, birthdayPayload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/birthday`,
+          birthdayPayload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
       }
 
       if (step === 3) {
         const age = new Date().getFullYear() - formData.birthday.year;
         if (age < 13) {
-          setError("Sorry, you must be at least 13 years old to use Juander. You will be logged out.");
+          setError(
+            "Sorry, you must be at least 13 years old to use Juander. You will be logged out."
+          );
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           setLoading(false);
-          setTimeout(()=>navigate("/"),1500);
+          setTimeout(() => navigate("/"), 1500);
           return;
         }
         if (!formData.gender) {
@@ -147,9 +174,15 @@ export default function CompleteProfile() {
           return;
         }
         // Save gender immediately
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/gender`, { gender: formData.gender }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/gender`,
+          { gender: formData.gender },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
       }
 
       if (step === 4) {
@@ -159,19 +192,36 @@ export default function CompleteProfile() {
           return;
         }
         // Save country and complete profile
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/country`, { country: formData.country }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
+        await axios.post(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/country`,
+          { country: formData.country },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
         // Mark profile as completed
-        await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/complete-profile`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await axios.post(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/complete-profile`,
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         // Fetch updated user data
-        const userRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const userRes = await axios.get(
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         // Update local storage
         const updatedUser = {
@@ -193,15 +243,29 @@ export default function CompleteProfile() {
     } catch (err) {
       console.error("Error saving data:", err);
       console.error("Error details:", err.response?.data);
-      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || "Failed to save. Please try again.");
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.errors?.[0]?.msg ||
+          "Failed to save. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   // Calculate max days in selected month (handles leap years)
@@ -209,16 +273,21 @@ export default function CompleteProfile() {
     if (!month) return 31;
     const monthIndex = months.indexOf(month);
     if (monthIndex === -1) return 31;
-    
+
     // Use provided year or current year for leap year calculation
     const yearToUse = year || new Date().getFullYear();
     return new Date(yearToUse, monthIndex + 1, 0).getDate();
   };
 
-  const maxDays = getDaysInMonth(formData.birthday.month, formData.birthday.year);
+  const maxDays = getDaysInMonth(
+    formData.birthday.month,
+    formData.birthday.year
+  );
 
   // Disable logic helpers
-  const invalidNames = !(isValidName(formData.firstName) && isValidName(formData.lastName));
+  const invalidNames = !(
+    isValidName(formData.firstName) && isValidName(formData.lastName)
+  );
   // Detect if user is minor (<18)
   const ageNeedsConsent = () => {
     const { month, year, date } = formData.birthday;
@@ -234,9 +303,15 @@ export default function CompleteProfile() {
     return age < 18;
   };
   const minorNeedsConsent = ageNeedsConsent() && !formData.parentalConsent;
-  const disableNext = loading || (step === 1 && invalidNames) || (step === 2 && minorNeedsConsent);
+  const disableNext =
+    loading ||
+    (step === 1 && invalidNames) ||
+    (step === 2 && minorNeedsConsent);
   const days = Array.from({ length: maxDays }, (_, i) => i + 1);
-  const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+  const years = Array.from(
+    { length: 100 },
+    (_, i) => new Date().getFullYear() - i
+  );
 
   // Filtered country list
   const countryArray = Object.entries(countries)
@@ -262,9 +337,7 @@ export default function CompleteProfile() {
               />
             ))}
           </div>
-          <p className="text-center text-sm text-gray-600">
-            Step {step} of 4
-          </p>
+          <p className="text-center text-sm text-gray-600">Step {step} of 4</p>
         </div>
 
         {/* Header */}
@@ -272,9 +345,7 @@ export default function CompleteProfile() {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Complete Your Profile
           </h1>
-          <p className="text-gray-600">
-            Help us personalize your experience
-          </p>
+          <p className="text-gray-600">Help us personalize your experience</p>
         </div>
 
         {/* Error Message */}
@@ -310,6 +381,7 @@ export default function CompleteProfile() {
                   if (!validateNameInput(val)) return;
                   setFormData({ ...formData, firstName: val });
                 }}
+                maxLength={50}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 placeholder="Enter your first name"
               />
@@ -327,6 +399,7 @@ export default function CompleteProfile() {
                   if (!validateNameInput(val)) return;
                   setFormData({ ...formData, lastName: val });
                 }}
+                maxLength={50}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 placeholder="Enter your last name"
               />
@@ -357,19 +430,31 @@ export default function CompleteProfile() {
                   value={formData.birthday.month}
                   onChange={(e) => {
                     const newMonth = e.target.value;
-                    const newMaxDays = getDaysInMonth(newMonth, formData.birthday.year);
+                    const newMaxDays = getDaysInMonth(
+                      newMonth,
+                      formData.birthday.year
+                    );
                     // Reset date if current date is invalid for new month
-                    const newDate = formData.birthday.date > newMaxDays ? "" : formData.birthday.date;
+                    const newDate =
+                      formData.birthday.date > newMaxDays
+                        ? ""
+                        : formData.birthday.date;
                     setFormData({
                       ...formData,
-                      birthday: { ...formData.birthday, month: newMonth, date: newDate }
+                      birthday: {
+                        ...formData.birthday,
+                        month: newMonth,
+                        date: newDate,
+                      },
                     });
                   }}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
                   <option value="">Month</option>
-                  {months.map((month, idx) => (
-                    <option key={month} value={month}>{month}</option>
+                  {months.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -380,15 +465,19 @@ export default function CompleteProfile() {
                 </label>
                 <select
                   value={formData.birthday.date}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    birthday: { ...formData.birthday, date: e.target.value }
-                  })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      birthday: { ...formData.birthday, date: e.target.value },
+                    })
+                  }
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
                   <option value="">Day</option>
                   {days.map((day) => (
-                    <option key={day} value={day}>{day}</option>
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -401,19 +490,31 @@ export default function CompleteProfile() {
                   value={formData.birthday.year}
                   onChange={(e) => {
                     const newYear = e.target.value;
-                    const newMaxDays = getDaysInMonth(formData.birthday.month, newYear);
+                    const newMaxDays = getDaysInMonth(
+                      formData.birthday.month,
+                      newYear
+                    );
                     // Reset date if current date is invalid for new year (leap year check)
-                    const newDate = formData.birthday.date > newMaxDays ? "" : formData.birthday.date;
+                    const newDate =
+                      formData.birthday.date > newMaxDays
+                        ? ""
+                        : formData.birthday.date;
                     setFormData({
                       ...formData,
-                      birthday: { ...formData.birthday, year: newYear, date: newDate }
+                      birthday: {
+                        ...formData.birthday,
+                        year: newYear,
+                        date: newDate,
+                      },
                     });
                   }}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
                   <option value="">Year</option>
                   {years.map((year) => (
-                    <option key={year} value={year}>{year}</option>
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -424,10 +525,18 @@ export default function CompleteProfile() {
               <input
                 type="checkbox"
                 checked={formData.parentalConsent}
-                onChange={(e)=>setFormData({...formData, parentalConsent: e.target.checked})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    parentalConsent: e.target.checked,
+                  })
+                }
                 className="mt-1 w-4 h-4 text-[#f04e37] border-gray-300 rounded focus:ring-[#f04e37] focus:ring-2"
               />
-              <span>I have parental consent to use this application (required if you are 13-17&nbsp;years&nbsp;old).</span>
+              <span>
+                I have parental consent to use this application (required if you
+                are 13-17&nbsp;years&nbsp;old).
+              </span>
             </label>
           </motion.div>
         )}
@@ -448,13 +557,24 @@ export default function CompleteProfile() {
 
             <div className="space-y-3">
               {[
-                { label: "Male", icon: <FaMars className="text-blue-600 text-xl" /> },
-                { label: "Female", icon: <FaVenus className="text-pink-500 text-xl" /> },
-                { label: "Other", icon: <FaGenderless className="text-purple-500 text-xl" /> }
+                {
+                  label: "Male",
+                  icon: <FaMars className="text-blue-600 text-xl" />,
+                },
+                {
+                  label: "Female",
+                  icon: <FaVenus className="text-pink-500 text-xl" />,
+                },
+                {
+                  label: "Other",
+                  icon: <FaGenderless className="text-purple-500 text-xl" />,
+                },
               ].map((gender) => (
                 <button
                   key={gender.label}
-                  onClick={() => setFormData({ ...formData, gender: gender.label })}
+                  onClick={() =>
+                    setFormData({ ...formData, gender: gender.label })
+                  }
                   className={`w-full px-6 py-4 rounded-lg border-2 transition-all ${
                     formData.gender === gender.label
                       ? "border-[#f04e37] bg-red-50"
@@ -523,11 +643,13 @@ export default function CompleteProfile() {
               ))}
             </div>
 
-
             {/* Selected Country Display */}
             {formData.country && (
               <div className="text-center text-sm text-gray-600 mt-3">
-                Selected: <span className="font-medium text-[#f04e37]">{formData.country}</span>
+                Selected:{" "}
+                <span className="font-medium text-[#f04e37]">
+                  {formData.country}
+                </span>
               </div>
             )}
           </motion.div>
@@ -547,20 +669,183 @@ export default function CompleteProfile() {
             onClick={handleNext}
             disabled={disableNext}
             className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all
-              ${disableNext ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#f04e37] text-white hover:bg-[#b42c21]'}`}
+              ${
+                disableNext
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-[#f04e37] text-white hover:bg-[#b42c21]"
+              }`}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 Saving...
               </span>
-            ) : step === 4 ? "Complete Profile" : "Next"}
+            ) : step === 4 ? (
+              "Complete Profile"
+            ) : (
+              "Next"
+            )}
           </button>
         </div>
       </motion.div>
     </div>
   );
 }
+
+const TAGALOG_BAD_WORDS = [
+  "putangina",
+  "putang ina",
+  "putang-ina",
+  "puta",
+  "putragis",
+  "putaragis",
+  "pakshet",
+  "pakshit",
+  "pakyu",
+  "fakyu",
+  "kantot",
+  "kantutan",
+  "hindot",
+  "hindutan",
+  "titi",
+  "burat",
+  "puke",
+  "puki",
+  "pekpek",
+  "pepe",
+  "kiki",
+  "kupal",
+  "gago",
+  "gaga",
+  "tanga",
+  "bobo",
+  "ulol",
+  "tarantado",
+  "bwisit",
+  "leche",
+  "lintik",
+  "punyeta",
+  "pucha",
+  "animal",
+  "hayop",
+  "ogag",
+  "buraot",
+  "syet",
+  "amputa",
+  "animal ka",
+  "bilat",
+  "binibrocha",
+  "bogo",
+  "boto",
+  "brocha",
+  "bwesit",
+  "demonyo ka",
+  "engot",
+  "etits",
+  "gagi",
+  "habal",
+  "hayop ka",
+  "hayup",
+  "hinampak",
+  "hinayupak",
+  "hudas",
+  "iniyot",
+  "inutel",
+  "inutil",
+  "iyot",
+  "kagaguhan",
+  "kagang",
+  "kantotan",
+  "kantut",
+  "kaululan",
+  "kayat",
+  "kikinginamo",
+  "kingina",
+  "leching",
+  "lechugas",
+  "nakakaburat",
+  "nimal",
+  "olok",
+  "pakingshet",
+  "pesteng yawa",
+  "poke",
+  "poki",
+  "pokpok",
+  "poyet",
+  "pu'keng",
+  "puchanggala",
+  "puchangina",
+  "pukinangina",
+  "puking",
+  "ratbu",
+  "shunga",
+  "sira ulo",
+  "siraulo",
+  "suso",
+  "susu",
+  "tae",
+  "taena",
+  "tamod",
+  "tangina",
+  "taragis",
+  "tete",
+  "teti",
+  "timang",
+  "tinil",
+  "tite",
+  "tungaw",
+  "ulul",
+  "ungas",
+  "shit",
+  "fuck",
+  "bitch",
+  "asshole",
+  "dick",
+  "cunt",
+  "bastard",
+  "slut",
+  "whore",
+];
+const normalizeProfanity = (s) => {
+  if (!s) return "";
+  const map = {
+    0: "o",
+    1: "i",
+    3: "e",
+    4: "a",
+    5: "s",
+    7: "t",
+    "@": "a",
+    $: "s",
+    "!": "i",
+  };
+  const lowered = String(s).toLowerCase();
+  const leetFixed = lowered
+    .split("")
+    .map((c) => (map[c] ? map[c] : c))
+    .join("");
+  return leetFixed.replace(/[\s\-_.]+/g, "");
+};
+const isProfaneText = (s) => {
+  const normalized = normalizeProfanity(s);
+  for (const w of TAGALOG_BAD_WORDS) {
+    const wn = normalizeProfanity(w);
+    if (normalized.includes(wn)) return true;
+  }
+  return false;
+};

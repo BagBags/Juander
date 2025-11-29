@@ -43,7 +43,7 @@ export default function Birthday() {
     if (!monthShort) return 31;
     const monthIndex = months.indexOf(monthShort);
     if (monthIndex === -1) return 31;
-    
+
     // Use provided year or current year for leap year calculation
     const yearToUse = year || new Date().getFullYear();
     return new Date(yearToUse, monthIndex + 1, 0).getDate();
@@ -98,11 +98,16 @@ export default function Birthday() {
       }
 
       if (!month || !date || !year) {
+        const msgKey = t("fillOutAllFields");
+        const safeMsg =
+          msgKey && msgKey !== "fillOutAllFields"
+            ? msgKey
+            : "Please select Month, Day, and Year.";
         setNotification({
           isOpen: true,
           type: "warning",
-          title: t("completeAllFields"),
-          message: t("fillOutAllFields") || "Fill out all fields.",
+          title: t("completeAllFields") || "Please complete all fields.",
+          message: safeMsg,
           autoClose: true,
           autoCloseDuration: 2000,
         });
@@ -125,7 +130,7 @@ export default function Birthday() {
       }
 
       // Age check
-      const age = getAge(year, months.indexOf(month), parseInt(date,10));
+      const age = getAge(year, months.indexOf(month), parseInt(date, 10));
       if (age < 13) {
         setNotification({
           isOpen: true,
@@ -186,55 +191,80 @@ export default function Birthday() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col min-h-full bg-white overflow-hidden"
+      className="flex flex-col min-h-full bg-white overflow-hidden overscroll-contain touch-pan-y"
     >
-      <PullToRefresh onRefresh={async () => { setRefreshKey((prev) => prev + 1); await new Promise((r) => setTimeout(r, 1000)); }}>
-      <div className="w-full max-w-md mt-6 flex flex-col gap-6 min-h-full" key={refreshKey}>
-        <h2 className="text-lg font-semibold text-center">
-          {t("dobQuestion")}
-        </h2>
+      <PullToRefresh
+        onRefresh={async () => {
+          setRefreshKey((prev) => prev + 1);
+          await new Promise((r) => setTimeout(r, 1000));
+        }}
+      >
+        <div
+          className="w-full max-w-md mt-6 flex flex-col gap-6 min-h-full"
+          key={refreshKey}
+        >
+          <h2 className="text-lg font-semibold text-center">
+            {t("dobQuestion")}
+          </h2>
 
-        <div className="flex justify-center gap-2">
-          <select
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            className="border border-gray-300 rounded-md px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
-          >
-            <option value="">{t("month")}</option>
-            {months.map((m) => (
-              <option key={m} value={m}>
-                {m}
+          <div className="flex justify-center gap-2">
+            <select
+              value={month}
+              onChange={(e) => {
+                setMonth(e.target.value);
+                setDate("");
+              }}
+              className="border border-gray-300 rounded-md px-3 py-2 w-24 focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
+            >
+              <option value="" disabled hidden>
+                {t("month")}
               </option>
-            ))}
-          </select>
+              {months.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="number"
-            placeholder={t("date")}
-            min="1"
-            max={month ? getDaysInMonth(month, year) : 31}
-            value={date}
-            onChange={(e) => {
-              const value = e.target.value;
-              const maxDays = month ? getDaysInMonth(month, year) : 31;
-              // Only allow values within valid range
-              if (value === "" || (parseInt(value, 10) >= 1 && parseInt(value, 10) <= maxDays)) {
-                setDate(value);
-              }
-            }}
-            className="border border-gray-300 rounded-md px-3 py-2 w-20 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
-          />
+            <select
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 w-20 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
+            >
+              <option value="" disabled hidden>
+                {t("date")}
+              </option>
+              {Array.from(
+                { length: getDaysInMonth(month, year) },
+                (_, i) => i + 1
+              ).map((d) => (
+                <option key={d} value={String(d)}>
+                  {d}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="number"
-            placeholder={t("year")}
-            min="1900"
-            max={new Date().getFullYear()}
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="border border-gray-300 rounded-md px-3 py-2 w-28 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
-          />
-        </div>
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 w-28 text-center focus:outline-none focus:ring-2 focus:ring-[#cf3325]"
+            >
+              <option value="" disabled hidden>
+                {t("year")}
+              </option>
+              {(() => {
+                const current = new Date().getFullYear();
+                const maxYear = current - 13;
+                const years = [];
+                for (let y = maxYear; y >= 1900; y--) years.push(y);
+                return years.map((y) => (
+                  <option key={y} value={String(y)}>
+                    {y}
+                  </option>
+                ));
+              })()}
+            </select>
+          </div>
 
         {/* Parental consent checkbox */}
         <label className="flex items-start gap-2 text-sm">
@@ -247,17 +277,17 @@ export default function Birthday() {
           <span> I have parental consent to use this application (required if you are 13-17&nbsp;years&nbsp;old).</span>
         </label>
 
-        <button
-          className="mt-4 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"
-          onClick={handleSave}
-        >
-          {t("save")}
-        </button>
-      <p className="mt-auto mb-8 text-xs text-center text-gray-400">
-        © {new Date().getFullYear()} {t("intramurosAdmin")}. Developed by UST
-        College of Information and Computing Sciences.
-      </p>
-      </div>
+          <button
+            className="mt-4 bg-[#cf3325] hover:bg-[#b42c21] transition text-white py-3 rounded-xl font-semibold w-full"
+            onClick={handleSave}
+          >
+            {t("save")}
+          </button>
+          <p className="mt-auto mb-8 text-xs text-center text-gray-400">
+            \u00A9 {new Date().getFullYear()} {t("intramurosAdmin")}. Developed
+            by UST College of Information and Computing Sciences.
+          </p>
+        </div>
       </PullToRefresh>
       <NotificationModal
         isOpen={notification.isOpen}
