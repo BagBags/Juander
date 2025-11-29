@@ -976,11 +976,6 @@ export default function CreateItineraryPage() {
                             {nameError}
                           </p>
                         )}
-                        {nameError && (
-                          <p className="text-xs text-red-600 mt-1">
-                            {nameError}
-                          </p>
-                        )}
                       </div>
 
                       {/* Image Upload */}
