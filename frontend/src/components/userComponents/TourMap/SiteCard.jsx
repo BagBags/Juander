@@ -278,26 +278,22 @@ const SiteCard = ({ pin, onClose, distance }) => {
             <div className="h-[90vh] rounded-xl overflow-hidden">
               {scannedArUrl ? (
                 <div className="flex flex-col h-full">
-                  <div
-                    className="relative flex-1 w-full"
+                  <iframe
+                    id="arloopa-frame"
+                    src={scannedArUrl}
+                    title="AR Experience"
+                    className="flex-1 w-full border-0"
                     allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
-                  >
-                    <iframe
-                      id="arloopa-frame"
-                      src={scannedArUrl}
-                      title="AR Experience"
-                      className="absolute inset-0 w-full h-full border-0"
-                      allowFullScreen
-                      sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        border: "none",
-                        minHeight: "80vh",
-                      }}
-                    />
-                  </div>
+                    allowFullScreen
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      minHeight: "80vh",
+                    }}
+                  />
                   <button
                     onClick={() => {
                       setShowAR(false);
