@@ -163,26 +163,28 @@ export default function ProfilePage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      className="flex-1 min-h-0 bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0 overflow-hidden"
-      style={{
-        paddingTop: "max(env(safe-area-inset-top), 16px)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
-    >
-      {/* Decorative Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-white via-[#f04e37] to-orange-600 flex flex-col relative">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="flex-1 flex flex-col items-center text-sm relative overflow-hidden"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          height: "100dvh",
+          overflow: "hidden"
+        }}
+      >
+        {/* Decorative Background Elements */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
+        </div>
 
-      {/* Global TTS Button */}
-
-      <PullToRefresh onRefresh={handleRefresh}>
+        {/* Global TTS Button */}
+        <PullToRefresh onRefresh={handleRefresh}>
         <ProfileTourAutostart />
         <div className="w-full max-w-md relative z-10 flex flex-col min-h-0" key={refreshKey}>
           {/* Profile Card */}
@@ -372,7 +374,8 @@ export default function ProfilePage() {
             UST College of Information and Computing Sciences.
           </p>
         </div>
-      </PullToRefresh>
+        </PullToRefresh>
+      </motion.div>
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}
@@ -382,7 +385,7 @@ export default function ProfilePage() {
         autoClose={notification.autoClose}
         autoCloseDuration={notification.autoCloseDuration}
       />
-    </motion.div>
+    </div>
   );
 }
 

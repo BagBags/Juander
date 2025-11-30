@@ -100,17 +100,20 @@ export default function GuestProfilePage() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.15 }}
-      className="min-h-screen bg-gray-50 flex flex-col items-center text-sm relative px-4 md:px-0"
-      style={{
-        paddingTop: "max(env(safe-area-inset-top), 16px)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
-    >
+    <div className="min-h-screen bg-white via-[#f04e37] to-orange-600 flex flex-col relative">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        className="flex-1 flex flex-col items-center text-sm relative overflow-hidden"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          height: "100dvh",
+          overflow: "hidden"
+        }}
+      >
       {/* Decorative Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#f04e37]/5 rounded-full blur-3xl"></div>
@@ -265,7 +268,8 @@ export default function GuestProfilePage() {
         </p>
       </div>
       </PullToRefresh>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 }
 

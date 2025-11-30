@@ -18,11 +18,19 @@ router.post("/speak", async (req, res) => {
       return res.status(400).json({ error: "Text is required" });
     }
 
+        // Determine language and voice
+    let languageCode = "fil-PH";
+    let voiceName = "fil-PH-Wavenet-A";
+    if (req.body.lang === "english" || req.body.lang === "en" || req.body.lang === "en-US") {
+      languageCode = "en-US";
+      voiceName = "en-US-News-K"; // natural American voice
+    }
+
     const request = {
       input: { text },
       voice: {
-        languageCode: "fil-PH", // Filipino / Tagalog
-        name: "fil-PH-Wavenet-A",
+        languageCode,
+        name: voiceName,
       },
       audioConfig: {
         audioEncoding: "MP3",

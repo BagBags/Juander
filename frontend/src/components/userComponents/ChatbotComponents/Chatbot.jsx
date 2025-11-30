@@ -70,6 +70,7 @@ export default function Chatbot() {
   const [speakingMessageIndex, setSpeakingMessageIndex] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
+  const audioRef = useRef(null);
 
   // Save messages to localStorage whenever they change with timestamp
   useEffect(() => {
@@ -139,6 +140,16 @@ export default function Chatbot() {
 
   // Initialize Speech Recognition
   useEffect(() => {
+    return () => {
+      // stop any audio when chatbot unmounts
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
       const SpeechRecognition =
         window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -165,6 +176,7 @@ export default function Chatbot() {
   }, []);
 
   const detectLanguage = (text) => {
+    if (!text) return "english";
     const filipinoWords = [
       "po",
       "opo",
@@ -210,11 +222,10 @@ export default function Chatbot() {
       if (filipinoWords.includes(w)) filipinoCount++;
       else if (w.match(/^[a-z]+$/)) englishCount++;
     });
-    return startsWithFilipino
-      ? "filipino"
-      : filipinoCount >= englishCount
-      ? "filipino"
-      : "english";
+    if (startsWithFilipino) return "filipino";
+    // If at least 3 Filipino words or more Filipino than English words → Filipino
+    if (filipinoCount >= 3 || filipinoCount > englishCount) return "filipino";
+    return "english";
   };
 
   const buildKnowledgeText = (entries) =>
@@ -227,47 +238,62 @@ export default function Chatbot() {
       )
       .join("\n\n");
 
-  const speakMessage = (text, messageIndex) => {
+  const speakMessage = async (text, messageIndex) => {
     if (!text || text === "__loading__") return;
 
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
+    // Stop any existing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    // Detect language and set appropriate voice
-    const lang = detectLanguage(text);
-    utterance.lang = lang === "filipino" ? "fil-PH" : "en-US";
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => {
+    try {
+      const lang = detectLanguage(text);
       setSpeakingMessageIndex(messageIndex);
-    };
-
-    utterance.onend = () => {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, lang })
+      });
+      if (!res.ok) throw new Error('TTS request failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setSpeakingMessageIndex(null);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+      };
+      audio.onerror = () => {
+        setSpeakingMessageIndex(null);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+      };
+      audio.play();
+    } catch (err) {
+      console.error('TTS playback error:', err);
       setSpeakingMessageIndex(null);
-    };
-
-    utterance.onerror = () => {
-      setSpeakingMessageIndex(null);
-    };
-
-    window.speechSynthesis.speak(utterance);
+    }
   };
 
   const toggleTTS = () => {
     const newState = !ttsEnabled;
     setTtsEnabled(newState);
     if (!newState) {
-      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       setSpeakingMessageIndex(null);
     }
   };
 
   const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setSpeakingMessageIndex(null);
   };
 

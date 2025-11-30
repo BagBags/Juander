@@ -195,7 +195,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: `${pin.title}. ${description}` })
+        body: JSON.stringify({ text: `${pin.title}. ${description}`, lang: userLanguage === 'english' ? 'english' : 'filipino' })
       });
       if (!res.ok) throw new Error('TTS request failed');
       const audioBlob = await res.blob();

@@ -622,22 +622,11 @@ export default function TouristItineraryMap() {
     fetchMask();
   }, []);
 
-  // Check if user is within Intramuros boundaries
-  useEffect(() => {
-    if (!userLocation || !mask?.geometry) return;
-
-    const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
-
-    if (!withinBounds) {
-      console.warn("⚠️ User is outside Intramuros boundaries");
-      setIsOutsideBounds(true);
-      setShowLocationBlockModal(true);
-    } else {
-      setIsOutsideBounds(false);
-      setShowLocationBlockModal(false);
-    }
-  }, [userLocation, mask]);
-
+  // Geo-lock temporarily disabled
+useEffect(() => {
+  // Geolocation bounds check bypassed during maintenance window
+}, [userLocation, mask]);
+  
   /** Fetch itinerary sites */
   useEffect(() => {
     const fetchItinerary = async () => {
