@@ -75,8 +75,11 @@ export default function ManageEmergency() {
     
     // Validation
     const newErrors = {};
-    if (!agencyData.get('name') || !agencyData.get('name').trim()) {
+    const agencyNameVal = (agencyData.get('name') || '').trim();
+    if (!agencyNameVal) {
       newErrors.agency = "Agency name is required";
+    } else if (agencyNameVal.length < 5 || agencyNameVal.length > 70) {
+      newErrors.agency = "Agency name must be 5-70 characters";
     }
     
     // Check icon upload (only for new agencies, not when editing)
@@ -91,11 +94,17 @@ export default function ManageEmergency() {
     } else {
       const channels = JSON.parse(contactChannels);
       const firstChannel = channels[0];
-      if (!firstChannel.label || !firstChannel.label.trim()) {
+      const labelVal = (firstChannel.label || '').trim();
+      const numberVal = (firstChannel.number || '').trim();
+      if (!labelVal) {
         newErrors.contactChannelLabel = "Contact channel label is required";
+      } else if (labelVal.length < 5 || labelVal.length > 70) {
+        newErrors.contactChannelLabel = "Contact channel must be 5-70 characters";
       }
-      if (!firstChannel.number || !firstChannel.number.trim()) {
+      if (!numberVal) {
         newErrors.contactChannelNumber = "Contact number/link is required";
+      } else if (numberVal.length < 5 || numberVal.length > 70) {
+        newErrors.contactChannelNumber = "Contact number/link must be 5-70 characters";
       }
     }
     

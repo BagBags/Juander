@@ -27,6 +27,8 @@ const pinSchema = new mongoose.Schema(
     feeAmount: { type: Number, default: null },
     feeAmountDiscounted: { type: Number, default: null },
     averageTimeSpent: { type: Number, min: 1, default: null },
+    openingTime: { type: String, default: null },
+    closingTime: { type: String, default: null },
     category: { type: mongoose.Schema.Types.ObjectId, ref: "Category", default: null },
     status: { type: String, enum: ["active", "inactive"], default: "active" },
     inactiveReason: { 

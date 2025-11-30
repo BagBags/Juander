@@ -14,6 +14,13 @@ const itinerarySchema = new mongoose.Schema(
         ref: "Pin",
       },
     ],
+    breaks: [
+      {
+        position: { type: Number, required: true },
+        minutes: { type: Number, required: true },
+        label: { type: String, default: "Break" },
+      },
+    ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

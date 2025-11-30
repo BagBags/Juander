@@ -48,6 +48,7 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
       }
     }
 
+    const previousRole = targetUser.role;
     // ✅ Apply role change
     targetUser.role = role;
     const updatedUser = await targetUser.save();
@@ -58,10 +59,14 @@ router.put("/users/:id/role", verifyAdmin, async (req, res) => {
     }`.trim();
     await Log.create({
       adminName,
-      action: `Changed role of ${updatedUser.firstName} ${updatedUser.lastName} to ${role}`,
+      action: `Updated User Role: ${updatedUser.firstName} ${updatedUser.lastName}`,
       role: "admin",
       targetType: "user",
       targetId: updatedUser._id,
+      details: {
+        changes: { role: { from: previousRole, to: role } },
+        previousData: { role: previousRole },
+      },
     });
 
     res.json(updatedUser);
@@ -83,7 +88,9 @@ router.delete("/users/:id", verifyAdmin, async (req, res) => {
 
     // 🚫 Only super admin can delete users
     if (!isSuperAdmin(requester.email)) {
-      return res.status(403).json({ message: "Only Super Admin can delete users" });
+      return res
+        .status(403)
+        .json({ message: "Only Super Admin can delete users" });
     }
 
     // 🚫 Super admin cannot delete any super admin (including themselves)
@@ -96,28 +103,33 @@ router.delete("/users/:id", verifyAdmin, async (req, res) => {
       firstName: targetUser.firstName,
       lastName: targetUser.lastName,
       email: targetUser.email,
-      role: targetUser.role
+      role: targetUser.role,
     };
 
     // Delete the user
     await User.findByIdAndDelete(req.params.id);
 
     // Log the deletion
-    const adminName = `${requester.firstName} ${requester.lastName || ""}`.trim();
+    const adminName = `${requester.firstName} ${
+      requester.lastName || ""
+    }`.trim();
     await Log.create({
       adminName,
-      action: `Permanently deleted user: ${deletedUserInfo.firstName} ${deletedUserInfo.lastName} (${deletedUserInfo.email})`,
+      action: `Deleted User: ${deletedUserInfo.firstName} ${deletedUserInfo.lastName}`,
       role: "admin",
       targetType: "user",
       targetId: req.params.id,
       details: {
         deletedUser: deletedUserInfo,
         deletedAt: new Date(),
-        deletedBy: adminName
-      }
+        deletedBy: adminName,
+      },
     });
 
-    res.json({ message: "User deleted successfully", deletedUser: deletedUserInfo });
+    res.json({
+      message: "User deleted successfully",
+      deletedUser: deletedUserInfo,
+    });
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Server error" });
@@ -128,13 +140,13 @@ router.delete("/users/:id", verifyAdmin, async (req, res) => {
 router.post("/logs", verifyAdmin, async (req, res) => {
   try {
     const { action, targetType, targetId } = req.body;
-    
+
     if (!action) {
       return res.status(400).json({ message: "Action is required" });
     }
 
     const adminName = `${req.user.firstName} ${req.user.lastName || ""}`.trim();
-    
+
     const log = await Log.create({
       adminName,
       action,
@@ -155,11 +167,11 @@ const deleteOldLogs = async () => {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const result = await Log.deleteMany({
-      createdAt: { $lt: thirtyDaysAgo }
+      createdAt: { $lt: thirtyDaysAgo },
     });
-    
+
     if (result.deletedCount > 0) {
       console.log(`Deleted ${result.deletedCount} logs older than 30 days`);
     }
@@ -173,7 +185,7 @@ router.get("/logs", verifyAdmin, async (req, res) => {
   try {
     // Delete logs older than 30 days before fetching
     await deleteOldLogs();
-    
+
     const logs = await Log.find().sort({ createdAt: -1 });
     res.json(logs);
   } catch (error) {

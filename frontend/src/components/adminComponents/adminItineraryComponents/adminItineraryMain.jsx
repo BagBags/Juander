@@ -13,13 +13,16 @@ import {
   Info,
   MapPin,
   Tag,
+  GripVertical,
 } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ConfirmModal from "../../shared/ConfirmModal";
 import NotificationModal from "../../shared/NotificationModal";
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
   const [selectedSites, setSelectedSites] = useState([]);
+  const [breaks, setBreaks] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(""); // Duration in hours
@@ -32,8 +35,10 @@ export default function AdminItineraryMain() {
   const [activeTab, setActiveTab] = useState("active"); // "active" or "archived"
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsItinerary, setDetailsItinerary] = useState(null);
-  const [rHour, setRHour] = useState("");
-  const [rMinute, setRMinute] = useState("");
+  const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
+  const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
+  const [rHour, setRHour] = useState("7");
+  const [rMinute, setRMinute] = useState("00");
   const [rPeriod, setRPeriod] = useState("AM");
   const [autoDurationEnabled, setAutoDurationEnabled] = useState(true);
   const computedTotals = useMemo(() => {
@@ -44,15 +49,20 @@ export default function AdminItineraryMain() {
           : Number(s?.averageTimeSpent);
       return sum + (isNaN(v) || v <= 0 ? 0 : v);
     }, 0);
+    const breakMinutes = breaks.reduce(
+      (sum, b) => sum + (Number(b.minutes) > 0 ? Number(b.minutes) : 0),
+      0
+    );
     const spacingMinutes = Math.max(selectedSites.length - 1, 0) * 10;
-    const totalMinutes = baseMinutes + spacingMinutes;
+    const totalMinutes = baseMinutes + breakMinutes + spacingMinutes;
     const hours = Math.round((totalMinutes / 60) * 2) / 2;
     return { totalMinutes, hours };
-  }, [selectedSites]);
+  }, [selectedSites, breaks]);
   useEffect(() => {
     if (autoDurationEnabled) {
       if (computedTotals.hours > 0) {
-        setDuration(String(computedTotals.hours));
+        const clamped = Math.max(1, Math.min(12, computedTotals.hours));
+        setDuration(String(clamped));
         if (errors.duration) {
           setErrors({ ...errors, duration: "" });
         }
@@ -101,6 +111,20 @@ export default function AdminItineraryMain() {
     const mm = String(m).padStart(2, "0");
     return `${hh}:${mm} ${ampm}`;
   };
+  const formatClockRange = (startMin, endMin) => {
+    const sh = Math.floor(startMin / 60);
+    const sm = startMin % 60;
+    const eh = Math.floor(endMin / 60);
+    const em = endMin % 60;
+    const sp = sh >= 12 ? "PM" : "AM";
+    const ep = eh >= 12 ? "PM" : "AM";
+    const shh = sh % 12 || 12;
+    const ehh = eh % 12 || 12;
+    const smm = String(sm).padStart(2, "0");
+    const emm = String(em).padStart(2, "0");
+    if (sp === ep) return `${shh}:${smm}–${ehh}:${emm} ${ep}`;
+    return `${shh}:${smm} ${sp} – ${ehh}:${emm} ${ep}`;
+  };
 
   const resolveUrl = (url) => {
     if (!url || url.trim() === "") return null;
@@ -146,6 +170,101 @@ export default function AdminItineraryMain() {
     setShowDetailsModal(false);
     setDetailsItinerary(null);
   };
+
+  const openSiteDetails = (site) => {
+    setDetailsSelectedSite(site);
+    setShowSiteDetailsModal(true);
+  };
+
+  const closeSiteDetails = () => {
+    setShowSiteDetailsModal(false);
+    setDetailsSelectedSite(null);
+  };
+
+  const fmtTime = (s) => {
+    if (!s) return "—";
+    const m = String(s)
+      .trim()
+      .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+    if (m) {
+      let h = parseInt(m[1], 10);
+      const min = m[2];
+      const p = m[3] ? m[3].toUpperCase() : h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${h}:${min} ${p}`;
+    }
+    return String(s);
+  };
+
+  const parseToMinutes = (s) => {
+    if (!s) return null;
+    const m = String(s)
+      .trim()
+      .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+    if (!m) return null;
+    let h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    const p = m[3] ? m[3].toUpperCase() : h >= 12 ? "PM" : "AM";
+    let h24 = h % 12;
+    if (p === "PM") h24 += 12;
+    return h24 * 60 + min;
+  };
+
+  useEffect(() => {
+    const startBase = selectsToMinutes(Number(rHour), Number(rMinute), rPeriod);
+    if (startBase === null || selectedSites.length === 0) {
+      setErrors((prev) => ({ ...prev, sites: "" }));
+      return;
+    }
+    const seq = [];
+    const preBreaks = (breaks || []).filter((b) => Number(b.position) === 0);
+    for (const b of preBreaks) seq.push({ type: "break", data: b });
+    for (let idx = 0; idx < selectedSites.length; idx++) {
+      const site = selectedSites[idx];
+      seq.push({ type: "site", data: site });
+      const afterBreaks = (breaks || []).filter(
+        (b) => Number(b.position) === idx + 1
+      );
+      for (const b of afterBreaks) seq.push({ type: "break", data: b });
+    }
+    let prevEnd = null;
+    const slots = seq.map((it) => {
+      if (it.type === "break") {
+        const s = prevEnd === null ? startBase : prevEnd;
+        const e = roundToStep(s + (Number(it.data.minutes) || 0), 5);
+        prevEnd = e;
+        return { start: s, end: e };
+      } else {
+        const vRaw =
+          typeof it.data?.averageTimeSpent === "number"
+            ? it.data.averageTimeSpent
+            : Number(it.data?.averageTimeSpent);
+        const v = isNaN(vRaw) || vRaw <= 0 ? 0 : vRaw;
+        const s = prevEnd === null ? startBase : roundToStep(prevEnd + 10, 5);
+        const e = roundToStep(s + v, 5);
+        prevEnd = e;
+        return { start: s, end: e };
+      }
+    });
+    const conflictMessages = [];
+    for (let i = 0; i < seq.length; i++) {
+      if (seq[i].type !== "site") continue;
+      const site = seq[i].data;
+      const slot = slots[i];
+      const open = parseToMinutes(site.openingTime);
+      const range = formatClockRange(slot.start, slot.end);
+      if (open !== null && slot.start < open) {
+        conflictMessages.push(
+          `${
+            site.siteName || site.title
+          } — ${range} is outside opening hours (opens ${fmtTime(
+            site.openingTime
+          )}).`
+        );
+      }
+    }
+    setErrors((prev) => ({ ...prev, sites: conflictMessages.join("\n") }));
+  }, [selectedSites, breaks, rHour, rMinute, rPeriod]);
 
   // Helper function to get fresh config with token
   const getConfig = () => {
@@ -242,6 +361,49 @@ export default function AdminItineraryMain() {
     );
   };
 
+  const onDragEnd = (result) => {
+    const { source, destination } = result || {};
+    if (!destination) return;
+    const sequence = [];
+    const preBreaks = (breaks || []).filter((b) => Number(b.position) === 0);
+    for (const b of preBreaks) sequence.push({ type: "break", data: b });
+    for (let idx = 0; idx < selectedSites.length; idx++) {
+      sequence.push({ type: "site", data: selectedSites[idx] });
+      const afterBreaks = (breaks || []).filter(
+        (b) => Number(b.position) === idx + 1
+      );
+      for (const b of afterBreaks) sequence.push({ type: "break", data: b });
+    }
+    const [moved] = sequence.splice(source.index, 1);
+    sequence.splice(destination.index, 0, moved);
+    const newSites = sequence
+      .filter((it) => it.type === "site")
+      .map((it) => it.data);
+    setSelectedSites(newSites);
+    let sitesSeen = 0;
+    const newBreaks = [];
+    for (const it of sequence) {
+      if (it.type === "site") sitesSeen += 1;
+      else if (it.type === "break")
+        newBreaks.push({ ...it.data, position: sitesSeen });
+    }
+    setBreaks(newBreaks);
+  };
+
+  const addBreak = (minutes, label = "Break/Lunch") => {
+    const dur = Number(minutes) || 0;
+    if (dur <= 0) return;
+    setBreaks((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        position: selectedSites.length,
+        minutes: dur,
+        label,
+      },
+    ]);
+  };
+
   // Handle file input change
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -255,14 +417,17 @@ export default function AdminItineraryMain() {
   const handleSave = () => {
     // Validation
     const newErrors = {};
-    if (!name.trim()) {
-      newErrors.name = "Itinerary name is required";
+    const nameLen = name.trim().length;
+    if (nameLen < 5 || nameLen > 70) {
+      newErrors.name = "Itinerary name must be 5-70 characters";
     }
-    if (!description.trim()) {
-      newErrors.description = "Description is required";
+    const descLen = description.trim().length;
+    if (descLen < 5 || descLen > 400) {
+      newErrors.description = "Description must be 5-400 characters";
     }
-    if (!duration || duration <= 0) {
-      newErrors.duration = "Duration is required and must be greater than 0";
+    const durNum = Number(duration);
+    if (!duration || isNaN(durNum) || durNum < 1 || durNum > 12) {
+      newErrors.duration = "Duration must be 1-12 hours";
     }
     // Image is required for both new and edit
     if (!imageFile && !imagePreview) {
@@ -270,6 +435,67 @@ export default function AdminItineraryMain() {
     }
     if (selectedSites.length === 0) {
       newErrors.sites = "Please select at least one site";
+    }
+    if (rHour === "" || rMinute === "") {
+      newErrors.recommendedStartTime = "Recommended start time is required";
+    }
+
+    if (!newErrors.recommendedStartTime && selectedSites.length > 0) {
+      const startBase = selectsToMinutes(
+        Number(rHour),
+        Number(rMinute),
+        rPeriod
+      );
+      const seq = [];
+      const preBreaks = (breaks || []).filter((b) => Number(b.position) === 0);
+      for (const b of preBreaks) seq.push({ type: "break", data: b });
+      for (let idx = 0; idx < selectedSites.length; idx++) {
+        const site = selectedSites[idx];
+        seq.push({ type: "site", data: site });
+        const afterBreaks = (breaks || []).filter(
+          (b) => Number(b.position) === idx + 1
+        );
+        for (const b of afterBreaks) seq.push({ type: "break", data: b });
+      }
+      let prevEnd = null;
+      const slots = seq.map((it) => {
+        if (it.type === "break") {
+          const s = prevEnd === null ? startBase : prevEnd;
+          const e = roundToStep(s + (Number(it.data.minutes) || 0), 5);
+          prevEnd = e;
+          return { start: s, end: e };
+        } else {
+          const vRaw =
+            typeof it.data?.averageTimeSpent === "number"
+              ? it.data.averageTimeSpent
+              : Number(it.data?.averageTimeSpent);
+          const v = isNaN(vRaw) || vRaw <= 0 ? 0 : vRaw;
+          const s = prevEnd === null ? startBase : roundToStep(prevEnd + 10, 5);
+          const e = roundToStep(s + v, 5);
+          prevEnd = e;
+          return { start: s, end: e };
+        }
+      });
+      const conflictMessages = [];
+      for (let i = 0; i < seq.length; i++) {
+        if (seq[i].type !== "site") continue;
+        const site = seq[i].data;
+        const slot = slots[i];
+        const open = parseToMinutes(site.openingTime);
+        const range = formatClockRange(slot.start, slot.end);
+        if (open !== null && slot.start < open) {
+          conflictMessages.push(
+            `${
+              site.siteName || site.title
+            } — ${range} is outside opening hours (opens ${fmtTime(
+              site.openingTime
+            )}).`
+          );
+        }
+      }
+      if (conflictMessages.length > 0) {
+        newErrors.sites = conflictMessages.join("\n");
+      }
     }
 
     setErrors(newErrors);
@@ -338,6 +564,7 @@ export default function AdminItineraryMain() {
                 : undefined,
             sites: selectedSites.map((s) => s._id),
             isAdminCreated: true,
+            breaks,
           };
 
           if (editingId) {
@@ -366,8 +593,9 @@ export default function AdminItineraryMain() {
           setImagePreview("");
           setImageUrl("");
           setSelectedSites([]);
-          setRHour("");
-          setRMinute("");
+          setBreaks([]);
+          setRHour("7");
+          setRMinute("00");
           setRPeriod("AM");
           setEditingId(null);
           fetchItineraries();
@@ -377,6 +605,7 @@ export default function AdminItineraryMain() {
             duration: "",
             image: "",
             sites: "",
+            recommendedStartTime: "",
           }); // Clear errors
           setConfirmModal({
             isOpen: false,
@@ -581,6 +810,7 @@ export default function AdminItineraryMain() {
       duration: "",
       image: "",
       sites: "",
+      recommendedStartTime: "",
     });
 
     setName(itinerary.name);
@@ -613,6 +843,7 @@ export default function AdminItineraryMain() {
       itinerary.sites?.some((site) => site._id === pin._id)
     );
     setSelectedSites(selected);
+    setBreaks(Array.isArray(itinerary.breaks) ? itinerary.breaks : []);
     setEditingId(itinerary._id);
   };
 
@@ -800,18 +1031,56 @@ export default function AdminItineraryMain() {
                     ? detailsItinerary.recommendedStartMinutes
                     : 8 * 60;
                 let cursor = roundToStep(start, 5);
-                const items = (detailsItinerary.sites || []).map((site) => {
+                const items = [];
+                const preBreaks = (detailsItinerary.breaks || []).filter(
+                  (b) => Number(b.position) === 0
+                );
+                for (const b of preBreaks) {
+                  const dur = Number(b.minutes) || 0;
+                  if (dur > 0) {
+                    const s = cursor;
+                    const e = roundToStep(cursor + dur, 5);
+                    items.push({
+                      time: s,
+                      break: { label: b.label || "Break", minutes: dur },
+                      end: e,
+                    });
+                    cursor = e;
+                  }
+                }
+                for (
+                  let idx = 0;
+                  idx < (detailsItinerary.sites || []).length;
+                  idx++
+                ) {
+                  const site = detailsItinerary.sites[idx];
                   const v =
                     typeof site?.averageTimeSpent === "number"
                       ? site.averageTimeSpent
                       : Number(site?.averageTimeSpent);
                   const item = { time: roundToStep(cursor, 5), site };
+                  items.push(item);
                   cursor = roundToStep(
                     cursor + (isNaN(v) || v <= 0 ? 0 : v),
                     5
                   );
-                  return item;
-                });
+                  const afterBreaks = (detailsItinerary.breaks || []).filter(
+                    (b) => Number(b.position) === idx + 1
+                  );
+                  for (const b of afterBreaks) {
+                    const dur = Number(b.minutes) || 0;
+                    if (dur > 0) {
+                      const s = cursor;
+                      const e = roundToStep(cursor + dur, 5);
+                      items.push({
+                        time: s,
+                        break: { label: b.label || "Break", minutes: dur },
+                        end: e,
+                      });
+                      cursor = e;
+                    }
+                  }
+                }
                 if (!items.length) return null;
                 return (
                   <div className="mb-6">
@@ -822,6 +1091,17 @@ export default function AdminItineraryMain() {
                       const segments = [];
                       let prevEnd = null;
                       for (let i = 0; i < items.length; i++) {
+                        if (items[i].break) {
+                          const s = items[i].time;
+                          const e = items[i].end;
+                          segments.push({
+                            start: s,
+                            end: e,
+                            break: items[i].break,
+                          });
+                          prevEnd = e;
+                          continue;
+                        }
                         const site = items[i].site;
                         const v =
                           typeof site?.averageTimeSpent === "number"
@@ -840,28 +1120,35 @@ export default function AdminItineraryMain() {
                       }
                       return (
                         <div className="space-y-3 sm:space-y-4">
-                          {segments.map(({ start, end, site }, i) => (
+                          {segments.map((seg, i) => (
                             <div
-                              key={site._id || i}
+                              key={(seg.site && seg.site._id) || i}
                               className="flex items-center gap-4 sm:gap-5 py-1.5"
                             >
                               <div className="w-[160px] sm:w-[220px] flex-shrink-0 flex items-center justify-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-2 py-1 sm:px-3 sm:py-1.5">
                                 <Clock className="w-4 h-4 text-gray-600" />
                                 <span className="text-sm sm:hidden font-semibold text-gray-900 whitespace-nowrap">
                                   {`${formatMinutesToClock(
-                                    start
-                                  )} – ${formatMinutesToClock(end)}`}
+                                    seg.start
+                                  )} – ${formatMinutesToClock(seg.end)}`}
                                 </span>
                                 <span className="hidden sm:inline text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">
                                   {`${formatMinutesToClock(
-                                    start
-                                  )} to ${formatMinutesToClock(end)}`}
+                                    seg.start
+                                  )} to ${formatMinutesToClock(seg.end)}`}
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
-                                  {site.siteName || site.title}
-                                </p>
+                                {seg.break ? (
+                                  <p className="text-sm font-medium text-gray-800">
+                                    {(seg.break.label || "Break") +
+                                      ` (${seg.break.minutes} min)`}
+                                  </p>
+                                ) : (
+                                  <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
+                                    {seg.site.siteName || seg.site.title}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -885,7 +1172,8 @@ export default function AdminItineraryMain() {
                     return (
                       <div
                         key={site._id}
-                        className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white"
+                        className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white cursor-pointer hover:border-orange-300 hover:shadow-sm transition"
+                        onClick={() => openSiteDetails(site)}
                       >
                         <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           {img ? (
@@ -912,6 +1200,14 @@ export default function AdminItineraryMain() {
                               </span>
                             </div>
                           )}
+                          {(site.openingTime || site.closingTime) && (
+                            <div className="mt-1 inline-flex items-center gap-1 text-xs text-gray-600">
+                              <Clock className="w-3 h-3" />
+                              <span>{`Open ${fmtTime(
+                                site.openingTime
+                              )} • Close ${fmtTime(site.closingTime)}`}</span>
+                            </div>
+                          )}
                           {site.siteDescription && (
                             <p className="text-sm text-gray-700 mt-1 line-clamp-3">
                               {site.siteDescription}
@@ -928,9 +1224,9 @@ export default function AdminItineraryMain() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 p-6">
+      <div className="flex flex-col lg:flex-row gap-6 p-6 min-w-0">
         {/* Form Panel */}
-        <div className="w-full lg:flex-1 min-w-0 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
+        <div className="w-full lg:flex-1 lg:basis-1/2 min-w-0 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
           <h2 className="text-2xl font-bold text-gradient-red mb-4">
             {editingId ? "Edit Itinerary" : "Add Itinerary"}
           </h2>
@@ -1007,6 +1303,8 @@ export default function AdminItineraryMain() {
                   setErrors({ ...errors, name: "" });
                 }
               }}
+              minLength={5}
+              maxLength={70}
               className={`w-full border-2 rounded-lg p-3 text-sm focus:ring-2 outline-none transition ${
                 errors.name
                   ? "border-red-500 focus:border-red-500 focus:ring-red-200"
@@ -1031,6 +1329,8 @@ export default function AdminItineraryMain() {
               }
             }}
             placeholder="Description"
+            minLength={5}
+            maxLength={400}
             className={`w-full p-3 border-2 border-gray-300 rounded-lg focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none text-gray-700 text-sm resize-none ${
               errors.description
                 ? "border-red-500 focus:border-red-500 focus:ring-red-200"
@@ -1049,7 +1349,12 @@ export default function AdminItineraryMain() {
             <div className="grid grid-cols-3 gap-2">
               <select
                 value={rHour}
-                onChange={(e) => setRHour(e.target.value)}
+                onChange={(e) => {
+                  setRHour(e.target.value);
+                  if (errors.recommendedStartTime && e.target.value) {
+                    setErrors({ ...errors, recommendedStartTime: "" });
+                  }
+                }}
                 className={`w-full p-3 border-2 rounded-lg text-sm ${
                   errors.recommendedStartTime
                     ? "border-red-500"
@@ -1067,7 +1372,12 @@ export default function AdminItineraryMain() {
               </select>
               <select
                 value={rMinute}
-                onChange={(e) => setRMinute(e.target.value)}
+                onChange={(e) => {
+                  setRMinute(e.target.value);
+                  if (errors.recommendedStartTime && e.target.value) {
+                    setErrors({ ...errors, recommendedStartTime: "" });
+                  }
+                }}
                 className={`w-full p-3 border-2 rounded-lg text-sm ${
                   errors.recommendedStartTime
                     ? "border-red-500"
@@ -1110,7 +1420,8 @@ export default function AdminItineraryMain() {
             </label>
             <input
               type="number"
-              min="0"
+              min="1"
+              max="12"
               step="0.5"
               value={duration}
               onChange={(e) => {
@@ -1159,20 +1470,194 @@ export default function AdminItineraryMain() {
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Selected Sites
           </label>
-          {/* Selected Sites */}
-          <div className="p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-700 text-sm h-28 overflow-y-auto">
-            {selectedSites.length ? (
-              selectedSites.map((site) => (
-                <span key={site._id} className="block">
-                  • {site.siteName || site.title}
-                </span>
-              ))
+          <div className="w-full max-w-full p-3 border-2 border-gray-300 rounded-lg bg-white text-gray-700 text-sm max-h-48 overflow-y-auto overflow-x-hidden">
+            {selectedSites.length || breaks.length ? (
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Droppable droppableId="selectedMixedDroppable">
+                  {(provided) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="space-y-2 w-full min-w-0"
+                    >
+                      {(() => {
+                        const seq = [];
+                        const preBreaks = (breaks || []).filter(
+                          (b) => Number(b.position) === 0
+                        );
+                        for (const b of preBreaks)
+                          seq.push({
+                            type: "break",
+                            data: b,
+                            key: `break-${b.id || Math.random()}`,
+                          });
+                        for (let idx = 0; idx < selectedSites.length; idx++) {
+                          const site = selectedSites[idx];
+                          seq.push({
+                            type: "site",
+                            data: site,
+                            key: `site-${site._id}`,
+                            index: idx,
+                          });
+                          const afterBreaks = (breaks || []).filter(
+                            (b) => Number(b.position) === idx + 1
+                          );
+                          for (const b of afterBreaks)
+                            seq.push({
+                              type: "break",
+                              data: b,
+                              key: `break-${b.id || Math.random()}`,
+                            });
+                        }
+                        const start =
+                          rHour !== "" && rMinute !== ""
+                            ? selectsToMinutes(
+                                Number(rHour),
+                                Number(rMinute),
+                                rPeriod
+                              )
+                            : 8 * 60;
+                        let prevEnd = null;
+                        const slotTimes = seq.map((it) => {
+                          if (it.type === "break") {
+                            const s = prevEnd === null ? start : prevEnd;
+                            const e = roundToStep(
+                              s + (Number(it.data.minutes) || 0),
+                              5
+                            );
+                            prevEnd = e;
+                            return { start: s, end: e };
+                          } else {
+                            const vRaw =
+                              typeof it.data?.averageTimeSpent === "number"
+                                ? it.data.averageTimeSpent
+                                : Number(it.data?.averageTimeSpent);
+                            const v = isNaN(vRaw) || vRaw <= 0 ? 0 : vRaw;
+                            const s =
+                              prevEnd === null
+                                ? start
+                                : roundToStep(prevEnd + 10, 5);
+                            const e = roundToStep(s + v, 5);
+                            prevEnd = e;
+                            return { start: s, end: e };
+                          }
+                        });
+                        return seq.map((it, index) => (
+                          <Draggable
+                            key={it.key}
+                            draggableId={it.key}
+                            index={index}
+                          >
+                            {(drag, snapshot) => (
+                              <div
+                                ref={drag.innerRef}
+                                {...drag.draggableProps}
+                                {...drag.dragHandleProps}
+                                className={`w-full max-w-full flex items-center justify-between p-2 rounded-md border transition-transform duration-150 cursor-grab active:cursor-grabbing ${
+                                  it.type === "break"
+                                    ? "border-green-300 bg-green-50"
+                                    : "border-gray-200 bg-white"
+                                } ${
+                                  snapshot.isDragging
+                                    ? "shadow-md scale-[1.01]"
+                                    : ""
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <GripVertical
+                                      className={`w-4 h-4 ${
+                                        it.type === "break"
+                                          ? "text-green-400"
+                                          : "text-gray-400"
+                                      }`}
+                                    />
+                                    {it.type === "site" ? (
+                                      <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-gray-100 text-gray-700 rounded-full">
+                                        {(it.index ??
+                                          selectedSites.findIndex(
+                                            (s) => s._id === it.data._id
+                                          )) + 1}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-green-200 text-green-800 rounded-full">
+                                        B
+                                      </span>
+                                    )}
+                                    <span
+                                      className={`truncate ${
+                                        it.type === "break"
+                                          ? "font-medium text-green-800"
+                                          : ""
+                                      }`}
+                                    >
+                                      {it.type === "site"
+                                        ? it.data.siteName || it.data.title
+                                        : `${it.data.label || "Break"} (${
+                                            it.data.minutes
+                                          } min)`}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-white border border-gray-200 text-xs text-gray-700 w-[160px] sm:w-[180px]">
+                                    <Clock
+                                      className={`w-3 h-3 ${
+                                        it.type === "break"
+                                          ? "text-green-700"
+                                          : "text-gray-600"
+                                      }`}
+                                    />
+                                    <span>{`${formatMinutesToClock(
+                                      slotTimes[index].start
+                                    )} – ${formatMinutesToClock(
+                                      slotTimes[index].end
+                                    )}`}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() =>
+                                    it.type === "site"
+                                      ? toggleSite(it.data)
+                                      : setBreaks((prev) =>
+                                          prev.filter(
+                                            (b) =>
+                                              (b.id || b) !==
+                                              (it.data.id || it.data)
+                                          )
+                                        )
+                                  }
+                                  className={`p-1.5 rounded-md ${
+                                    it.type === "break"
+                                      ? "bg-green-100 hover:bg-green-200"
+                                      : "bg-gray-100 hover:bg-gray-200"
+                                  }`}
+                                  title="Remove"
+                                >
+                                  <X
+                                    className={`w-4 h-4 ${
+                                      it.type === "break"
+                                        ? "text-green-800"
+                                        : "text-gray-700"
+                                    }`}
+                                  />
+                                </button>
+                              </div>
+                            )}
+                          </Draggable>
+                        ));
+                      })()}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             ) : (
-              <span className="text-gray-400">No sites selected</span>
+              <span className="text-gray-400">No selections</span>
             )}
           </div>
           {errors.sites && (
-            <p className="text-red-500 text-xs mt-1">{errors.sites}</p>
+            <p className="text-red-500 text-xs mt-1 whitespace-pre-line">
+              {errors.sites}
+            </p>
           )}
 
           {/* Buttons */}
@@ -1197,8 +1682,8 @@ export default function AdminItineraryMain() {
                 setImagePreview("");
                 setImageUrl("");
                 setSelectedSites([]);
-                setRHour("");
-                setRMinute("");
+                setRHour("7");
+                setRMinute("00");
                 setRPeriod("AM");
                 setEditingId(null);
                 setErrors({
@@ -1218,7 +1703,7 @@ export default function AdminItineraryMain() {
         </div>
 
         {/* Itineraries & Sites Panel */}
-        <div className="w-full lg:flex-1 min-w-0 flex flex-col gap-6">
+        <div className="w-full lg:flex-1 lg:basis-1/2 min-w-0 flex flex-col gap-6">
           {/* Existing Itineraries Card */}
           <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
@@ -1443,13 +1928,15 @@ export default function AdminItineraryMain() {
 
             {/* Scrollable sites list */}
             <div className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-2">
+              <BreakCard onAddBreak={addBreak} addedCount={breaks.length} />
               {pins.map((pin) => {
                 const isSelected = selectedSites.some((s) => s._id === pin._id);
                 return (
                   <div
                     key={pin._id}
                     className="flex items-center gap-4 rounded-2xl p-4 border border-gray-200 
-          bg-white shadow-sm hover:shadow-md transition"
+          bg-white shadow-sm hover:shadow-md transition cursor-pointer hover:border-orange-300"
+                    onClick={() => openSiteDetails(pin)}
                   >
                     {/* Thumbnail */}
                     <img
@@ -1494,7 +1981,10 @@ export default function AdminItineraryMain() {
 
                     {/* Action button */}
                     <button
-                      onClick={() => toggleSite(pin)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSite(pin);
+                      }}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition 
             ${
               isSelected
@@ -1511,7 +2001,218 @@ export default function AdminItineraryMain() {
             </div>
           </div>
         </div>
+        {showSiteDetailsModal && detailsSelectedSite && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={closeSiteDetails}
+            />
+            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn max-h-[90vh] sm:max-h-[85vh] overflow-y-auto modern-scrollbar">
+              <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <Info className="w-6 h-6 text-[#f04e37]" />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {detailsSelectedSite.siteName ||
+                        detailsSelectedSite.title}
+                    </h3>
+                    <p className="text-xs text-gray-500">Site details</p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeSiteDetails}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {(() => {
+                const hero =
+                  detailsSelectedSite.mediaFiles?.find(
+                    (m) => m.type === "image"
+                  )?.url ||
+                  detailsSelectedSite.mediaUrl ||
+                  "";
+                const full = resolveUrl(hero);
+                return full ? (
+                  <div className="h-36 sm:h-56 md:h-64 w-full overflow-hidden px-6 sm:px-8 pt-3">
+                    <img
+                      src={full}
+                      alt={
+                        detailsSelectedSite.siteName ||
+                        detailsSelectedSite.title
+                      }
+                      className="w-full h-full object-cover rounded-xl"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+                ) : null;
+              })()}
+
+              <div className="px-6 py-5 sm:px-8 sm:py-6">
+                <div className="flex items-center gap-2 mb-3">
+                  {typeof detailsSelectedSite.category === "object" &&
+                    detailsSelectedSite.category?.name && (
+                      <span className="inline-flex items-center gap-1.5 bg-orange-100 text-[#f04e37] px-3 py-1 rounded-full text-xs font-semibold">
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M20 6h-8l-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2zm-6 9H6v-2h8v2zm4-4H6V9h12v2z" />
+                        </svg>
+                        {detailsSelectedSite.category.name}
+                      </span>
+                    )}
+                  {(() => {
+                    const v =
+                      typeof detailsSelectedSite.averageTimeSpent === "number"
+                        ? detailsSelectedSite.averageTimeSpent
+                        : Number(detailsSelectedSite?.averageTimeSpent);
+                    const minutes = isNaN(v) || v <= 0 ? null : v;
+                    if (minutes === null) return null;
+                    return (
+                      <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
+                        <svg
+                          className="w-4 h-4"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 8v5h4v-2h-2V8h-2zm0-6a10 10 0 100 20 10 10 0 000-20z" />
+                        </svg>
+                        Avg visit: {minutes} min
+                      </span>
+                    );
+                  })()}
+                  {(detailsSelectedSite.openingTime ||
+                    detailsSelectedSite.closingTime) && (
+                    <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M12 8v5h4v-2h-2V8h-2zm0-6a10 10 0 100 20 10 10 0 000-20z" />
+                      </svg>
+                      {`Open ${fmtTime(
+                        detailsSelectedSite.openingTime
+                      )} • Close ${fmtTime(detailsSelectedSite.closingTime)}`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-sm text-gray-700">
+                  {detailsSelectedSite.siteDescription ? (
+                    <p className="leading-relaxed">
+                      {detailsSelectedSite.siteDescription
+                        .split("\n\n")[0]
+                        .trim()}
+                    </p>
+                  ) : (
+                    <p className="text-gray-400 italic">
+                      No description available
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-5 flex gap-2">
+                  <button
+                    onClick={() => {
+                      toggleSite(detailsSelectedSite);
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition ${
+                      selectedSites.some(
+                        (s) => s._id === detailsSelectedSite._id
+                      )
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-gradient-to-r from-[#f04e37] to-orange-600 hover:shadow-md"
+                    }`}
+                  >
+                    {selectedSites.some(
+                      (s) => s._id === detailsSelectedSite._id
+                    ) ? (
+                      <>
+                        {" "}
+                        <Check className="w-4 h-4" /> Added to Itinerary{" "}
+                      </>
+                    ) : (
+                      <>
+                        {" "}
+                        <Plus className="w-4 h-4" /> Add to Itinerary{" "}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
+  );
+}
+
+function BreakCard({ onAddBreak, addedCount = 0 }) {
+  const [minutes, setMinutes] = useState(30);
+  const [label, setLabel] = useState("Break/Lunch");
+  return (
+    <div
+      className={`flex flex-col gap-3 rounded-2xl p-4 border shadow-sm ${
+        addedCount > 0
+          ? "border-green-300 bg-green-50"
+          : "border-gray-200 bg-white"
+      }`}
+    >
+      <div className="flex-1 min-w-0">
+        <h3 className="text-base font-semibold text-gray-800">
+          {label}
+          {addedCount > 0 && (
+            <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded-full bg-green-200 text-green-800 font-semibold">
+              {addedCount}
+            </span>
+          )}
+        </h3>
+        <p className="text-sm text-gray-500">
+          Add a time-only stop. Not shown on map.
+        </p>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <select
+            value={minutes}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+            className="w-full px-3 py-2 border-2 rounded-lg text-sm border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none"
+          >
+            {[15, 30, 45, 60].map((m) => (
+              <option key={m} value={m}>
+                {m} minutes
+              </option>
+            ))}
+          </select>
+          <select
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full px-3 py-2 border-2 rounded-lg text-sm border-gray-200 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none"
+          >
+            {["Break", "Lunch"].map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          onClick={() => onAddBreak && onAddBreak(minutes, label)}
+          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white shadow-sm transition w-full mt-2 ${
+            addedCount > 0
+              ? "bg-green-500 hover:bg-green-600"
+              : "bg-red-500 hover:bg-red-600"
+          }`}
+        >
+          <Plus size={16} /> Add {label}
+        </button>
+      </div>
+    </div>
   );
 }

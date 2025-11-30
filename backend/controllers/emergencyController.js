@@ -10,9 +10,25 @@ exports.createContact = async (req, res) => {
 
     const contact = await EmergencyContact.create({
       name: req.body.name,
-      contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
+      contactChannels: JSON.parse(req.body.contactChannels),
       position: req.body.position ?? count,
-      icon: req.file ? (require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/emergency/${req.file.filename}`)) : null,
+      icon: req.file
+        ? require("../utils/cdnUtil").toCdnUrl(
+            req.file.location || `/uploads/emergency/${req.file.filename}`
+          )
+        : null,
+    });
+
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Added emergency hotline: "${contact.name}"`,
+      role: "admin",
+      targetType: "other",
+      targetId: contact._id,
+      details: { contactChannels: contact.contactChannels },
     });
 
     res.status(201).json(contact);
@@ -27,15 +43,53 @@ exports.updateContact = async (req, res) => {
   try {
     const updatedData = {
       name: req.body.name,
-      contactChannels: JSON.parse(req.body.contactChannels), // ✅ parse string
+      contactChannels: JSON.parse(req.body.contactChannels),
     };
-    if (req.file) updatedData.icon = require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/emergency/${req.file.filename}`);
+    if (req.file)
+      updatedData.icon = require("../utils/cdnUtil").toCdnUrl(
+        req.file.location || `/uploads/emergency/${req.file.filename}`
+      );
+
+    const existing = await EmergencyContact.findById(req.params.id).lean();
+    if (!existing) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    const changes = {};
+    for (const key of Object.keys(updatedData)) {
+      const prev = existing[key];
+      const next = updatedData[key];
+      const prevNorm = prev === undefined ? null : prev;
+      const nextNorm = next === undefined ? null : next;
+      const isEqual = JSON.stringify(prevNorm) === JSON.stringify(nextNorm);
+      if (!isEqual) {
+        changes[key] = { from: prevNorm, to: nextNorm };
+      }
+    }
 
     const updated = await EmergencyContact.findByIdAndUpdate(
       req.params.id,
       updatedData,
       { new: true }
     );
+
+    const adminName = req.user
+      ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
+      : "Unknown Admin";
+    await Log.create({
+      adminName,
+      action: `Updated emergency hotline: "${updated.name}"`,
+      role: "admin",
+      targetType: "other",
+      targetId: updated._id,
+      details: {
+        changes,
+        previousData: Object.keys(changes).reduce((acc, k) => {
+          acc[k] = changes[k].from;
+          return acc;
+        }, {}),
+      },
+    });
 
     res.status(200).json(updated);
   } catch (error) {
@@ -101,10 +155,14 @@ exports.archiveContact = async (req, res) => {
       : "Unknown Admin";
     await Log.create({
       adminName,
-      action: `Archived emergency contact: "${contact.name}"`,
+      action: `Archived emergency hotline: "${contact.name}"`,
       role: "admin",
       targetType: "other",
       targetId: contact._id,
+      details: {
+        changes: { isArchived: { from: false, to: true } },
+        previousData: { name: contact.name, isArchived: false },
+      },
     });
 
     res.status(200).json(contact);
@@ -133,10 +191,14 @@ exports.restoreContact = async (req, res) => {
       : "Unknown Admin";
     await Log.create({
       adminName,
-      action: `Restored emergency contact: "${contact.name}"`,
+      action: `Restored emergency hotline: "${contact.name}"`,
       role: "admin",
       targetType: "other",
       targetId: contact._id,
+      details: {
+        changes: { isArchived: { from: true, to: false } },
+        previousData: { name: contact.name, isArchived: true },
+      },
     });
 
     res.status(200).json(contact);
@@ -150,7 +212,7 @@ exports.restoreContact = async (req, res) => {
 exports.deleteContact = async (req, res) => {
   try {
     const deleted = await EmergencyContact.findByIdAndDelete(req.params.id);
-    
+
     // Delete icon from S3 if it exists
     if (deleted && deleted.icon) {
       try {
@@ -168,10 +230,17 @@ exports.deleteContact = async (req, res) => {
     if (deleted) {
       await Log.create({
         adminName,
-        action: `Permanently deleted emergency contact: "${deleted.name}"`,
+        action: `Deleted emergency hotline: "${deleted.name}"`,
         role: "admin",
         targetType: "other",
         targetId: deleted._id,
+        details: {
+          previousData: {
+            name: deleted.name,
+            contactChannels: deleted.contactChannels,
+            icon: deleted.icon,
+          },
+        },
       });
     }
 
@@ -205,9 +274,12 @@ exports.reorderContacts = async (req, res) => {
       : "Unknown Admin";
     await Log.create({
       adminName,
-      action: `Reordered emergency contact agencies`,
+      action: "Updated",
       role: "admin",
       targetType: "other",
+      details: {
+        reorderedCount: Array.isArray(agencies) ? agencies.length : 0,
+      },
     });
 
     res.status(200).json(updatedContacts);

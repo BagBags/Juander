@@ -66,10 +66,11 @@ router.post("/", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Created chatbot entry with tags: ${newEntry.tags.join(", ")}`,
+      action: `Added Chatbot Entry: ${newEntry._id}`,
       role: "admin",
       targetType: "other",
       targetId: newEntry._id,
+      details: { tags: newEntry.tags, keywords: newEntry.keywords },
     });
 
     res.status(201).json(newEntry);
@@ -85,6 +86,8 @@ router.put("/:id", async (req, res) => {
     const entry = await BotEntry.findById(req.params.id);
     if (!entry) return res.status(404).json({ message: "Entry not found" });
 
+    const previous = await BotEntry.findById(req.params.id).lean();
+
     if (info_en) entry.info_en = info_en.trim();
     if (info_fil) entry.info_fil = info_fil.trim();
     if (keywords) entry.keywords = processKeywords(keywords);
@@ -92,12 +95,23 @@ router.put("/:id", async (req, res) => {
 
     await entry.save();
 
+    const changes = {};
+    const consider = ["info_en", "info_fil", "keywords", "tags"];
+    for (const k of consider) {
+      const from = previous ? previous[k] : undefined;
+      const to = entry[k];
+      const isEqual =
+        JSON.stringify(from ?? null) === JSON.stringify(to ?? null);
+      if (!isEqual) changes[k] = { from: from ?? null, to: to ?? null };
+    }
+
     await Log.create({
       adminName: getAdminName(req),
-      action: `Updated chatbot entry (ID: ${entry._id})`,
+      action: `Updated Chatbot Entry: ${entry._id}`,
       role: "admin",
       targetType: "other",
       targetId: entry._id,
+      details: { changes, previousData: previous },
     });
 
     res.json(entry);
@@ -124,10 +138,14 @@ router.put("/:id/archive", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Archived chatbot entry (ID: ${entry._id})`,
+      action: `Archived Chatbot Entry: ${entry._id}`,
       role: "admin",
       targetType: "other",
       targetId: entry._id,
+      details: {
+        changes: { isArchived: { from: false, to: true } },
+        previousData: { isArchived: false },
+      },
     });
 
     res.json(entry);
@@ -155,10 +173,14 @@ router.put("/:id/restore", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Restored chatbot entry (ID: ${entry._id})`,
+      action: `Restored Chatbot Entry: ${entry._id}`,
       role: "admin",
       targetType: "other",
       targetId: entry._id,
+      details: {
+        changes: { isArchived: { from: true, to: false } },
+        previousData: { isArchived: true },
+      },
     });
 
     res.json(entry);
@@ -183,12 +205,14 @@ router.delete("/:id", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Permanently deleted chatbot entry with keywords: ${entry.keywords.join(
-        ", "
-      )}`,
+      action: `Deleted Chatbot Entry: ${entry._id}`,
       role: "admin",
       targetType: "other",
       targetId: entry._id,
+      details: {
+        keywords: entry.keywords,
+        previousData: { deletedAt: new Date(), tags: entry.tags },
+      },
     });
 
     res.json({ message: "Entry deleted" });

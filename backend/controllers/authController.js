@@ -554,6 +554,7 @@ exports.uploadProfilePicture = async (req, res) => {
     // ✅ For S3 uploads, req.file.location contains the full S3 URL
     // The S3 key might have 'undefined' in it because req.user wasn't available during multer processing
     // We'll use the location directly since it's the full URL
+    const previousProfilePicture = user.profilePicture;
     if (req.file.location) {
       user.profilePicture = require("../utils/cdnUtil").toCdnUrl(req.file.location);
     } else {
@@ -571,10 +572,15 @@ exports.uploadProfilePicture = async (req, res) => {
     const userName = `${user.firstName} ${user.lastName || ""}`.trim();
     await Log.create({
       adminName: userName,
-      action: `Updated profile picture`,
+      action: "Updated",
       role: user.role || "tourist",
       targetType: "user",
       targetId: user._id,
+      details: {
+        changes: {
+          profilePicture: { from: previousProfilePicture || null, to: user.profilePicture },
+        },
+      },
     });
 
     res.json({
@@ -664,10 +670,11 @@ exports.saveAccount = async (req, res) => {
       
       await Log.create({
         adminName: newName,
-        action: logAction,
+        action: "Updated",
         role: user.role || "tourist",
         targetType: "user",
         targetId: user._id,
+        details: { message: logAction, changedFields },
       });
     }
 
@@ -713,10 +720,11 @@ exports.updateProfile = async (req, res) => {
     
     await Log.create({
       adminName: newName,
-      action: logAction,
+      action: "Updated",
       role: user.role || "tourist",
       targetType: "user",
       targetId: user._id,
+      details: { message: logAction },
     });
 
     res.json(user);
@@ -792,10 +800,11 @@ exports.saveBirthday = async (req, res) => {
     const userName = `${user.firstName} ${user.lastName || ""}`.trim();
     await Log.create({
       adminName: userName,
-      action: `Updated birthday`,
+      action: "Updated",
       role: user.role || "tourist",
       targetType: "user",
       targetId: user._id,
+      details: { changes: { birthday: { to: birthday } } },
     });
 
     res.json({ message: "Birthday updated successfully", user });
@@ -824,10 +833,11 @@ exports.saveGender = async (req, res) => {
     const userName = `${user.firstName} ${user.lastName || ""}`.trim();
     await Log.create({
       adminName: userName,
-      action: `Updated gender`,
+      action: "Updated",
       role: user.role || "tourist",
       targetType: "user",
       targetId: user._id,
+      details: { changes: { gender: { to: normalizedGender } } },
     });
 
     res.json(user);
@@ -858,10 +868,11 @@ exports.saveCountry = async (req, res) => {
     const userName = `${user.firstName} ${user.lastName || ""}`.trim();
     await Log.create({
       adminName: userName,
-      action: `Updated country`,
+      action: "Updated",
       role: user.role || "tourist",
       targetType: "user",
       targetId: user._id,
+      details: { changes: { country: { to: user.country } } },
     });
 
     res.json({
@@ -899,10 +910,11 @@ exports.saveLanguage = async (req, res) => {
     const userName = `${user.firstName} ${user.lastName || ""}`.trim();
     await Log.create({
       adminName: userName,
-      action: `Updated language preference`,
+      action: "Updated",
       role: user.role || "tourist",
       targetType: "user",
       targetId: user._id,
+      details: { changes: { language: { to: user.language } } },
     });
 
     res.json({
@@ -988,7 +1000,7 @@ exports.deactivateAccount = async (req, res) => {
     if (user.role === "admin") {
       await Log.create({
         adminName: `${user.firstName} ${user.lastName}`,
-        action: "Account Deactivated",
+        action: "Deleted",
         role: "admin",
         targetType: "user",
         targetId: userId,

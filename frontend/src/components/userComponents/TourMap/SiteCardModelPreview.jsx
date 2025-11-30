@@ -77,6 +77,7 @@ export default function SiteCardModelPreview({ url }) {
   const hasMovedRef = useRef(false);
   const sceneRef = useRef(null);
   const savedPoseRef = useRef(null);
+  const isAnimatingRef = useRef(false);
 
   useEffect(() => {
     savedRef.current = false;
@@ -130,6 +131,9 @@ export default function SiteCardModelPreview({ url }) {
   const animateToSaved = () => {
     const c = controlsRef.current;
     if (!c) return;
+    if (isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
+    c.enabled = false;
     let endPos;
     let endTarget;
     if (savedPoseRef?.current) {
@@ -141,10 +145,10 @@ export default function SiteCardModelPreview({ url }) {
       const size = box.getSize(new THREE.Vector3());
       const radius = Math.max(size.x, size.y, size.z) * 0.5;
       const fov = ((c.object.fov || 50) * Math.PI) / 180;
-      const distV = radius / Math.tan(fov / 2);
       const aspect = c.object.aspect || 1;
-      const distH = radius / (Math.tan(fov / 2) * aspect);
-      const dist = Math.max(distV, distH) * 1.1;
+      const distV = radius / Math.tan(fov / 2);
+      const distH = distV / aspect;
+      const dist = Math.max(distV, distH) * 1.35;
       const dir = c.object.position.clone().sub(c.target).normalize();
       endTarget = center;
       endPos = center.clone().add(dir.multiplyScalar(dist));
@@ -174,6 +178,8 @@ export default function SiteCardModelPreview({ url }) {
         requestAnimationFrame(step);
       } else {
         c.update?.();
+        isAnimatingRef.current = false;
+        c.enabled = true;
       }
     };
     requestAnimationFrame(step);
@@ -313,10 +319,10 @@ export default function SiteCardModelPreview({ url }) {
                     const size = box.getSize(new THREE.Vector3());
                     const radius = Math.max(size.x, size.y, size.z) * 0.5;
                     const fov = ((c.object.fov || 50) * Math.PI) / 180;
-                    const distV = radius / Math.tan(fov / 2);
                     const aspect = c.object.aspect || 1;
-                    const distH = radius / (Math.tan(fov / 2) * aspect);
-                    const dist = Math.max(distV, distH) * 1.1;
+                    const distV = radius / Math.tan(fov / 2);
+                    const distH = distV / aspect;
+                    const dist = Math.max(distV, distH) * 1.35;
                     const dir = c.object.position
                       .clone()
                       .sub(c.target)
@@ -324,6 +330,11 @@ export default function SiteCardModelPreview({ url }) {
                     const target = center;
                     const pos = center.clone().add(dir.multiplyScalar(dist));
                     savedPoseRef.current = { pos, target };
+                    c.enabled = false;
+                    setTimeout(() => {
+                      if (controlsRef.current)
+                        controlsRef.current.enabled = true;
+                    }, 800);
                   }}
                 />
               </Center>

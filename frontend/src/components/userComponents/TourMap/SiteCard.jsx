@@ -463,6 +463,29 @@ const SiteCard = ({ pin, onClose, distance }) => {
                       <Info className="w-3.5 h-3.5" />
                     </button>
                   )}
+
+                  {(pin.openingTime || pin.closingTime) && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm bg-gray-100 text-gray-700">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>
+                        {(() => {
+                          const fmt = (s) => {
+                            if (!s) return "—";
+                            const m = String(s).trim().match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+                            if (m) {
+                              let h = parseInt(m[1], 10);
+                              const min = m[2];
+                              const p = m[3] ? m[3].toUpperCase() : h >= 12 ? "PM" : "AM";
+                              h = h % 12 || 12;
+                              return `${h}:${min} ${p}`;
+                            }
+                            return String(s);
+                          };
+                          return `Open ${fmt(pin.openingTime)} • Close ${fmt(pin.closingTime)}`;
+                        })()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

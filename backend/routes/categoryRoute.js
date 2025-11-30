@@ -44,7 +44,7 @@ router.post("/", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Created category: ${newCategory.name}`,
+      action: `Added Category: ${newCategory.name}`,
       role: "admin",
       targetType: "other",
       targetId: newCategory._id,
@@ -72,23 +72,28 @@ router.put("/:id", async (req, res) => {
     }
 
     // Check if new name already exists
-    const existing = await Category.findOne({ 
+    const existing = await Category.findOne({
       name: name.trim(),
-      _id: { $ne: req.params.id }
+      _id: { $ne: req.params.id },
     });
     if (existing) {
       return res.status(400).json({ message: "Category name already exists" });
     }
 
+    const previousName = category.name;
     category.name = name.trim();
     await category.save();
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Updated category (ID: ${category._id})`,
+      action: `Updated Category: ${category.name}`,
       role: "admin",
       targetType: "other",
       targetId: category._id,
+      details: {
+        changes: { name: { from: previousName, to: category.name } },
+        previousData: { name: previousName },
+      },
     });
 
     res.json(category);
@@ -110,7 +115,7 @@ router.delete("/:id", async (req, res) => {
 
     await Log.create({
       adminName: getAdminName(req),
-      action: `Deleted category: ${category.name}`,
+      action: `Deleted Category: ${category.name}`,
       role: "admin",
       targetType: "other",
       targetId: category._id,

@@ -22,7 +22,9 @@ import {
   Clock,
   MapPin,
   Tag,
+  GripVertical,
 } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import TourProvider from "../../TourComponents/TourProvider";
 import { useTour } from "../../TourComponents/TourContext";
 import { createItineraryTourSteps } from "../../TourComponents/tourSteps";
@@ -181,6 +183,7 @@ function CategoryFilterButton({ value, onChange, categories }) {
 export default function CreateItineraryPage() {
   const { t } = useTranslation();
   const [selected, setSelected] = useState([]);
+  const [breaks, setBreaks] = useState([]);
   const [userItineraries, setUserItineraries] = useState([]);
   const [itineraryName, setItineraryName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -206,6 +209,7 @@ export default function CreateItineraryPage() {
     title: "",
     message: "",
   });
+  const [sitesErrorMsg, setSitesErrorMsg] = useState("");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsItinerary, setDetailsItinerary] = useState(null);
   const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
@@ -537,6 +541,20 @@ export default function CreateItineraryPage() {
     const mm = String(m).padStart(2, "0");
     return `${hh}:${mm} ${ampm}`;
   };
+  const formatClockRange = (startMin, endMin) => {
+    const sh = Math.floor(startMin / 60);
+    const sm = startMin % 60;
+    const eh = Math.floor(endMin / 60);
+    const em = endMin % 60;
+    const sp = sh >= 12 ? "PM" : "AM";
+    const ep = eh >= 12 ? "PM" : "AM";
+    const shh = sh % 12 || 12;
+    const ehh = eh % 12 || 12;
+    const smm = String(sm).padStart(2, "0");
+    const emm = String(em).padStart(2, "0");
+    if (sp === ep) return `${shh}:${smm}–${ehh}:${emm} ${ep}`;
+    return `${shh}:${smm} ${sp} – ${ehh}:${emm} ${ep}`;
+  };
   const roundToStep = (min, step = 5) => Math.round(min / step) * step;
 
   const selectsToMinutes = (hour, minute, period) => {
@@ -561,6 +579,79 @@ export default function CreateItineraryPage() {
       period,
     };
   };
+  const parseToMinutes = (s) => {
+    if (!s) return null;
+    const m = String(s)
+      .trim()
+      .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+    if (!m) return null;
+    let h = parseInt(m[1], 10);
+    const min = parseInt(m[2], 10);
+    const p = m[3] ? m[3].toUpperCase() : h >= 12 ? "PM" : "AM";
+    let h24 = h % 12;
+    if (p === "PM") h24 += 12;
+    return h24 * 60 + min;
+  };
+  const computeSiteConflicts = () => {
+    const selectedSitesOrdered = selected
+      .map((id) => sites.find((s) => s._id === id))
+      .filter(Boolean);
+    const items = [];
+    const preBreaks = (breaks || []).filter((b) => Number(b.position) === 0);
+    for (const b of preBreaks)
+      items.push({ type: "break", break: b, index: -1 });
+    for (let idx = 0; idx < selectedSitesOrdered.length; idx++) {
+      const site = selectedSitesOrdered[idx];
+      items.push({ type: "site", site, index: idx });
+      const afterBreaks = (breaks || []).filter(
+        (b) => Number(b.position) === idx + 1
+      );
+      for (const b of afterBreaks)
+        items.push({ type: "break", break: b, index: idx });
+    }
+    if (!items.length) return [];
+    const start =
+      rHour !== "" && rMinute !== ""
+        ? selectsToMinutes(Number(rHour), Number(rMinute), rPeriod)
+        : 7 * 60;
+    let prevEnd = null;
+    const times = items.map((it) => {
+      if (it.type === "break") {
+        const s0 = prevEnd === null ? start : prevEnd;
+        const e0 = roundToStep(s0 + (Number(it.break.minutes) || 0), 5);
+        prevEnd = e0;
+        return { start: s0, end: e0 };
+      } else {
+        const vRaw =
+          typeof it.site?.averageTimeSpent === "number"
+            ? it.site.averageTimeSpent
+            : Number(it.site?.averageTimeSpent);
+        const v = isNaN(vRaw) || vRaw <= 0 ? 0 : vRaw;
+        const s0 = prevEnd === null ? start : roundToStep(prevEnd + 10, 5);
+        const e0 = roundToStep(s0 + v, 5);
+        prevEnd = e0;
+        return { start: s0, end: e0 };
+      }
+    });
+    const messages = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.type !== "site") continue;
+      const openM = parseToMinutes(it.site?.openingTime);
+      const s0 = times[i].start;
+      const e0 = times[i].end;
+      if (openM !== null && s0 < openM) {
+        const name = it.site?.siteName || it.site?.title || "Site";
+        const range = formatClockRange(s0, e0);
+        messages.push(
+          `${name} — ${range} is outside opening hours (opens ${formatMinutesToClock(
+            openM
+          )}).`
+        );
+      }
+    }
+    return messages;
+  };
 
   const openDetails = (itinerary) => {
     setDetailsItinerary(itinerary);
@@ -579,6 +670,55 @@ export default function CreateItineraryPage() {
   const closeSiteDetails = () => {
     setShowSiteDetailsModal(false);
     setDetailsSelectedSite(null);
+  };
+
+  const addBreak = (minutes, label = "Break/Lunch") => {
+    const dur = Number(minutes) || 0;
+    if (dur <= 0) return;
+    setBreaks((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        position: selected.length,
+        minutes: dur,
+        label,
+      },
+    ]);
+  };
+
+  const onPreviewDragEnd = (result) => {
+    const { source, destination } = result || {};
+    if (!destination) return;
+
+    const mixed = [];
+    const preBreaks = (breaks || []).filter((b) => Number(b.position) === 0);
+    for (const b of preBreaks) mixed.push({ type: "break", data: b });
+    for (let idx = 0; idx < selected.length; idx++) {
+      const site = sites.find((s) => s._id === selected[idx]);
+      if (!site) continue;
+      mixed.push({ type: "site", data: site });
+      const afterBreaks = (breaks || []).filter(
+        (b) => Number(b.position) === idx + 1
+      );
+      for (const b of afterBreaks) mixed.push({ type: "break", data: b });
+    }
+
+    const reordered = Array.from(mixed);
+    const [movedItem] = reordered.splice(source.index, 1);
+    reordered.splice(destination.index, 0, movedItem);
+
+    const newSelected = reordered
+      .filter((it) => it.type === "site")
+      .map((it) => it.data._id);
+    setSelected(newSelected);
+
+    let seenSites = 0;
+    const newBreaks = [];
+    for (const it of reordered) {
+      if (it.type === "site") seenSites += 1;
+      else newBreaks.push({ ...it.data, position: seenSites });
+    }
+    setBreaks(newBreaks);
   };
 
   const toggleSelection = (siteId) => {
@@ -656,6 +796,18 @@ export default function CreateItineraryPage() {
       return;
     }
 
+    const conflictMessages = computeSiteConflicts();
+    if (conflictMessages.length) {
+      setSitesErrorMsg(conflictMessages.join("\n"));
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Time conflicts detected",
+        message: conflictMessages[0],
+      });
+      return;
+    }
+
     const payload = {
       name: itineraryName.trim(),
       imageUrl: imageUrl ? imageUrl.trim() : "",
@@ -665,6 +817,7 @@ export default function CreateItineraryPage() {
         rHour !== "" && rMinute !== ""
           ? selectsToMinutes(Number(rHour), Number(rMinute), rPeriod)
           : undefined,
+      breaks,
     };
 
     try {
@@ -789,6 +942,7 @@ export default function CreateItineraryPage() {
     setItineraryName(itinerary.name);
     setImageUrl(itinerary.imageUrl || "");
     setSelected(itinerary.sites.map((s) => s._id));
+    setBreaks(Array.isArray(itinerary.breaks) ? itinerary.breaks : []);
 
     const s = minutesToSelects(itinerary.recommendedStartMinutes);
     setRHour(s.hour || "7");
@@ -808,6 +962,7 @@ export default function CreateItineraryPage() {
     setRHour("7");
     setRMinute("00");
     setRPeriod("AM");
+    setBreaks([]);
     setRHour("7");
     setRMinute("00");
     setRPeriod("AM");
@@ -817,6 +972,11 @@ export default function CreateItineraryPage() {
     setExpandedIndex(expandedIndex === idx ? null : idx);
   const toggleDescription = (id) =>
     setDescriptionToggles((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  useEffect(() => {
+    const msgs = computeSiteConflicts();
+    setSitesErrorMsg(msgs.length ? msgs.join("\n") : "");
+  }, [selected, breaks, rHour, rMinute, rPeriod]);
 
   return (
     <TourProvider
@@ -1037,6 +1197,205 @@ export default function CreateItineraryPage() {
                         </span>
                       </div>
 
+                      {/* Selected Preview with Remove buttons */}
+                      {(() => {
+                        const selectedSitesOrdered = selected
+                          .map((id) => sites.find((s) => s._id === id))
+                          .filter(Boolean);
+                        const items = [];
+                        const preBreaks = (breaks || []).filter(
+                          (b) => Number(b.position) === 0
+                        );
+                        for (const b of preBreaks) {
+                          items.push({ type: "break", break: b, index: -1 });
+                        }
+                        for (
+                          let idx = 0;
+                          idx < selectedSitesOrdered.length;
+                          idx++
+                        ) {
+                          const site = selectedSitesOrdered[idx];
+                          items.push({ type: "site", site, index: idx });
+                          const afterBreaks = (breaks || []).filter(
+                            (b) => Number(b.position) === idx + 1
+                          );
+                          for (const b of afterBreaks) {
+                            items.push({ type: "break", break: b, index: idx });
+                          }
+                        }
+                        if (!items.length) return null;
+                        const removeSiteAt = (id) => {
+                          const siteIndex = selected.indexOf(id);
+                          const newSelected = selected.filter((x) => x !== id);
+                          setSelected(newSelected);
+                          setBreaks((prev) => {
+                            const adjusted = prev.map((b) => ({
+                              ...b,
+                              position:
+                                b.position > siteIndex + 1
+                                  ? b.position - 1
+                                  : b.position,
+                            }));
+                            return adjusted.filter(
+                              (b) =>
+                                b.position >= 1 &&
+                                b.position <= newSelected.length
+                            );
+                          });
+                        };
+                        const removeBreakById = (bid) => {
+                          setBreaks((prev) => prev.filter((b) => b.id !== bid));
+                        };
+                        const start =
+                          rHour !== "" && rMinute !== ""
+                            ? selectsToMinutes(
+                                Number(rHour),
+                                Number(rMinute),
+                                rPeriod
+                              )
+                            : 7 * 60;
+                        let prevEnd = null;
+                        const times = items.map((it) => {
+                          if (it.type === "break") {
+                            const s = prevEnd === null ? start : prevEnd;
+                            const e = roundToStep(
+                              s + (Number(it.break.minutes) || 0),
+                              5
+                            );
+                            prevEnd = e;
+                            return { start: s, end: e };
+                          } else {
+                            const vRaw =
+                              typeof it.site?.averageTimeSpent === "number"
+                                ? it.site.averageTimeSpent
+                                : Number(it.site?.averageTimeSpent);
+                            const v = isNaN(vRaw) || vRaw <= 0 ? 0 : vRaw;
+                            const s =
+                              prevEnd === null
+                                ? start
+                                : roundToStep(prevEnd + 10, 5);
+                            const e = roundToStep(s + v, 5);
+                            prevEnd = e;
+                            return { start: s, end: e };
+                          }
+                        });
+                        return (
+                          <>
+                            <DragDropContext onDragEnd={onPreviewDragEnd}>
+                              <Droppable droppableId="createSelectedDroppable">
+                                {(provided) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className="mt-3 space-y-2 overflow-x-hidden"
+                                  >
+                                    {items.map((it, i) => (
+                                      <Draggable
+                                        key={
+                                          (it.type === "site"
+                                            ? it.site._id
+                                            : it.break.id) || `${i}`
+                                        }
+                                        draggableId={`${it.type}-${
+                                          (it.type === "site"
+                                            ? it.site._id
+                                            : it.break.id) || i
+                                        }`}
+                                        index={i}
+                                      >
+                                        {(drag, snapshot) => (
+                                          <div
+                                            ref={drag.innerRef}
+                                            {...drag.draggableProps}
+                                            {...drag.dragHandleProps}
+                                            className={`flex items-center justify-between p-3 rounded-lg border transition-shadow duration-150 cursor-move w-full overflow-hidden box-border ${
+                                              it.type === "break"
+                                                ? "bg-green-50 border-green-300"
+                                                : "bg-white border-gray-200"
+                                            } ${
+                                              snapshot.isDragging
+                                                ? "shadow-md"
+                                                : ""
+                                            }`}
+                                          >
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-3 min-w-0">
+                                                <GripVertical
+                                                  className={`${
+                                                    it.type === "break"
+                                                      ? "text-green-400"
+                                                      : "text-gray-400"
+                                                  } w-4 h-4`}
+                                                />
+                                                {it.type === "site" ? (
+                                                  <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold bg-gray-100 text-gray-700 rounded-full">
+                                                    {it.index + 1}
+                                                  </span>
+                                                ) : (
+                                                  <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-bold bg-green-200 text-green-800 rounded-full">
+                                                    B
+                                                  </span>
+                                                )}
+                                                <span className="text-sm font-medium text-gray-800 truncate">
+                                                  {it.type === "site"
+                                                    ? it.site.siteName ||
+                                                      it.site.title
+                                                    : `${
+                                                        it.break.label ||
+                                                        "Break"
+                                                      } (${
+                                                        it.break.minutes
+                                                      } min)`}
+                                                </span>
+                                              </div>
+                                              <div className="mt-1 inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md bg-white border border-gray-200 text-xs text-gray-700 w-[140px] sm:w-[160px]">
+                                                <Clock className="w-3 h-3 text-gray-600" />
+                                                <span>{`${formatMinutesToClock(
+                                                  times[i].start
+                                                )} – ${formatMinutesToClock(
+                                                  times[i].end
+                                                )}`}</span>
+                                              </div>
+                                            </div>
+                                            <button
+                                              onClick={() =>
+                                                it.type === "site"
+                                                  ? removeSiteAt(it.site._id)
+                                                  : removeBreakById(it.break.id)
+                                              }
+                                              className={`p-2 rounded-md ${
+                                                it.type === "break"
+                                                  ? "bg-green-100 hover:bg-green-200"
+                                                  : "bg-gray-100 hover:bg-gray-200"
+                                              }`}
+                                              title="Remove"
+                                            >
+                                              <X
+                                                className={`${
+                                                  it.type === "break"
+                                                    ? "text-green-700"
+                                                    : "text-gray-700"
+                                                } w-4 h-4`}
+                                              />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+                            </DragDropContext>
+                            {sitesErrorMsg && (
+                              <p className="text-xs text-red-600 mt-2 whitespace-pre-line">
+                                {sitesErrorMsg}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
+
                       {/* Recommended Start */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1189,6 +1548,8 @@ export default function CreateItineraryPage() {
                           toggleSelection={toggleSelection}
                           getFullImageUrl={getFullImageUrl}
                           onOpenSiteDetails={openSiteDetails}
+                          onAddBreak={addBreak}
+                          addedBreakCount={breaks.length}
                         />
                       );
                     })()}
@@ -1381,18 +1742,56 @@ export default function CreateItineraryPage() {
                       ? detailsItinerary.recommendedStartMinutes
                       : 7 * 60;
                   let cursor = roundToStep(start, 5);
-                  const items = (detailsItinerary.sites || []).map((site) => {
+                  const items = [];
+                  const preBreaks = (detailsItinerary.breaks || []).filter(
+                    (b) => Number(b.position) === 0
+                  );
+                  for (const b of preBreaks) {
+                    const dur = Number(b.minutes) || 0;
+                    if (dur > 0) {
+                      const s = cursor;
+                      const e = roundToStep(cursor + dur, 5);
+                      items.push({
+                        time: s,
+                        break: { label: b.label || "Break", minutes: dur },
+                        end: e,
+                      });
+                      cursor = e;
+                    }
+                  }
+                  for (
+                    let idx = 0;
+                    idx < (detailsItinerary.sites || []).length;
+                    idx++
+                  ) {
+                    const site = detailsItinerary.sites[idx];
                     const v =
                       typeof site?.averageTimeSpent === "number"
                         ? site.averageTimeSpent
                         : Number(site?.averageTimeSpent);
                     const item = { time: roundToStep(cursor, 5), site };
+                    items.push(item);
                     cursor = roundToStep(
                       cursor + (isNaN(v) || v <= 0 ? 0 : v),
                       5
                     );
-                    return item;
-                  });
+                    const afterBreaks = (detailsItinerary.breaks || []).filter(
+                      (b) => Number(b.position) === idx + 1
+                    );
+                    for (const b of afterBreaks) {
+                      const dur = Number(b.minutes) || 0;
+                      if (dur > 0) {
+                        const s = cursor;
+                        const e = roundToStep(cursor + dur, 5);
+                        items.push({
+                          time: s,
+                          break: { label: b.label || "Break", minutes: dur },
+                          end: e,
+                        });
+                        cursor = e;
+                      }
+                    }
+                  }
                   if (!items.length) return null;
                   return (
                     <div className="mb-6">
@@ -1407,6 +1806,17 @@ export default function CreateItineraryPage() {
                         const segments = [];
                         let prevEnd = null;
                         for (let i = 0; i < items.length; i++) {
+                          if (items[i].break) {
+                            const s = items[i].time;
+                            const e = items[i].end;
+                            segments.push({
+                              start: s,
+                              end: e,
+                              break: items[i].break,
+                            });
+                            prevEnd = e;
+                            continue;
+                          }
                           const site = items[i].site;
                           const v =
                             typeof site?.averageTimeSpent === "number"
@@ -1425,28 +1835,35 @@ export default function CreateItineraryPage() {
                         }
                         return (
                           <div className="space-y-3 sm:space-y-4">
-                            {segments.map(({ start, end, site }, i) => (
+                            {segments.map((seg, i) => (
                               <div
-                                key={site._id || i}
+                                key={(seg.site && seg.site._id) || i}
                                 className="flex items-center gap-4 sm:gap-5 py-1.5"
                               >
                                 <div className="w-[160px] sm:w-[220px] flex-shrink-0 flex items-center justify-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-2 py-1 sm:px-3 sm:py-1.5">
                                   <Clock className="w-4 h-4 text-gray-600" />
                                   <span className="text-sm sm:hidden font-semibold text-gray-900 whitespace-nowrap">
                                     {`${formatMinutesToClock(
-                                      start
-                                    )} – ${formatMinutesToClock(end)}`}
+                                      seg.start
+                                    )} – ${formatMinutesToClock(seg.end)}`}
                                   </span>
                                   <span className="hidden sm:inline text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">
                                     {`${formatMinutesToClock(
-                                      start
-                                    )} to ${formatMinutesToClock(end)}`}
+                                      seg.start
+                                    )} to ${formatMinutesToClock(seg.end)}`}
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
-                                    {site.siteName || site.title}
-                                  </p>
+                                  {seg.break ? (
+                                    <p className="text-sm font-medium text-gray-800">
+                                      {(seg.break.label || "Break") +
+                                        ` (${seg.break.minutes} min)`}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
+                                      {seg.site.siteName || seg.site.title}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -1495,6 +1912,38 @@ export default function CreateItineraryPage() {
                                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
                                   <Tag className="w-3 h-3" />
                                   {site.category?.name || site.category}
+                                </span>
+                              </div>
+                            )}
+                            {(site.openingTime || site.closingTime) && (
+                              <div className="mt-1 inline-flex items-center gap-1 text-xs text-gray-600">
+                                <Clock className="w-3 h-3" />
+                                <span>
+                                  {(() => {
+                                    const fmt = (s) => {
+                                      if (!s) return "—";
+                                      const m = String(s)
+                                        .trim()
+                                        .match(
+                                          /^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i
+                                        );
+                                      if (m) {
+                                        let h = parseInt(m[1], 10);
+                                        const min = m[2];
+                                        const p = m[3]
+                                          ? m[3].toUpperCase()
+                                          : h >= 12
+                                          ? "PM"
+                                          : "AM";
+                                        h = h % 12 || 12;
+                                        return `${h}:${min} ${p}`;
+                                      }
+                                      return String(s);
+                                    };
+                                    return `Open ${fmt(
+                                      site.openingTime
+                                    )} • Close ${fmt(site.closingTime)}`;
+                                  })()}
                                 </span>
                               </div>
                             )}
@@ -1599,6 +2048,8 @@ function SmoothScrollSiteList({
   toggleSelection,
   getFullImageUrl,
   onOpenSiteDetails,
+  onAddBreak,
+  addedBreakCount,
 }) {
   const scrollContainerRef = useRef(null);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -1635,6 +2086,9 @@ function SmoothScrollSiteList({
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-3 pt-4 md:pt-3"
         style={{ paddingBottom: "300px" }}
       >
+        {onAddBreak && (
+          <BreakCard onAddBreak={onAddBreak} addedCount={addedBreakCount} />
+        )}
         {sites.map((site, index) => (
           <SiteCard
             key={site._id}
@@ -1926,6 +2380,76 @@ function SiteCard({
   );
 }
 
+function BreakCard({ onAddBreak, addedCount = 0 }) {
+  const [minutes, setMinutes] = useState(30);
+  const [label, setLabel] = useState("Break/Lunch");
+  return (
+    <div
+      className={`${
+        addedCount > 0
+          ? "bg-green-50 border-green-300"
+          : "bg-white border-gray-200"
+      } rounded-2xl md:rounded-xl shadow-lg p-4 md:p-3 flex flex-col border`}
+      style={{ scrollSnapAlign: "start" }}
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <svg
+          className="w-5 h-5 text-[#f04e37]"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M3 3h18v2H3zM4 7h16l-1 11H5L4 7zm3 13a2 2 0 104 0H7z" />
+        </svg>
+        <h3 className="font-bold text-gray-800 text-base md:text-sm">
+          {label}
+          {addedCount > 0 && (
+            <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded-full bg-green-200 text-green-800 font-semibold">
+              {addedCount}
+            </span>
+          )}
+        </h3>
+      </div>
+      <p className="text-sm text-gray-600 mb-3">
+        Add a time-only stop for meals or rest. Not shown on map.
+      </p>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <select
+          value={minutes}
+          onChange={(e) => setMinutes(Number(e.target.value))}
+          className="w-full px-3 py-2 border-2 rounded-lg text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+        >
+          {[15, 30, 45, 60].map((m) => (
+            <option key={m} value={m}>
+              {m} minutes
+            </option>
+          ))}
+        </select>
+        <select
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className="w-full px-3 py-2 border-2 rounded-lg text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+        >
+          {["Break", "Lunch"].map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        onClick={() => onAddBreak && onAddBreak(minutes, label)}
+        className={`${
+          addedCount > 0
+            ? "bg-green-500 hover:bg-green-600"
+            : "bg-gradient-to-r from-[#f04e37] to-orange-600"
+        } w-full py-3 md:py-2.5 rounded-xl md:rounded-lg font-bold flex items-center justify-center gap-2 text-sm text-white hover:shadow-lg hover:scale-[1.02] active:scale-95 transition`}
+      >
+        Add {label}
+      </button>
+    </div>
+  );
+}
+
 /* === ItineraryCard Component === */
 function ItineraryCard({
   itinerary,
@@ -2033,15 +2557,49 @@ function ItineraryCard({
                 ? itinerary.recommendedStartMinutes
                 : 8 * 60;
             let cursor = roundToStep(start, 5);
-            const items = (itinerary.sites || []).map((site) => {
+            const items = [];
+            const preBreaks = (itinerary.breaks || []).filter(
+              (b) => Number(b.position) === 0
+            );
+            for (const b of preBreaks) {
+              const dur = Number(b.minutes) || 0;
+              if (dur > 0) {
+                const s = cursor;
+                const e = roundToStep(cursor + dur, 5);
+                items.push({
+                  time: s,
+                  break: { label: b.label || "Break", minutes: dur },
+                  end: e,
+                });
+                cursor = e;
+              }
+            }
+            for (let idx = 0; idx < (itinerary.sites || []).length; idx++) {
+              const site = itinerary.sites[idx];
               const v =
                 typeof site?.averageTimeSpent === "number"
                   ? site.averageTimeSpent
                   : Number(site?.averageTimeSpent);
               const item = { time: roundToStep(cursor, 5), site };
+              items.push(item);
               cursor = roundToStep(cursor + (isNaN(v) || v <= 0 ? 0 : v), 5);
-              return item;
-            });
+              const afterBreaks = (itinerary.breaks || []).filter(
+                (b) => Number(b.position) === idx + 1
+              );
+              for (const b of afterBreaks) {
+                const dur = Number(b.minutes) || 0;
+                if (dur > 0) {
+                  const s = cursor;
+                  const e = roundToStep(cursor + dur, 5);
+                  items.push({
+                    time: s,
+                    break: { label: b.label || "Break", minutes: dur },
+                    end: e,
+                  });
+                  cursor = e;
+                }
+              }
+            }
             if (!items.length) return null;
             return (
               <div>
@@ -2053,21 +2611,28 @@ function ItineraryCard({
                   <span>Start Time: {formatMinutesToClock(start)}</span>
                 </div>
                 <div className="space-y-3 sm:space-y-4">
-                  {items.map(({ time, site }, i) => (
+                  {items.map((item, i) => (
                     <div
-                      key={site._id || i}
+                      key={(item.site && item.site._id) || i}
                       className="flex items-start gap-4 sm:gap-5 py-1.5"
                     >
                       <div className="flex items-center gap-2 rounded-lg bg-white border border-gray-200 px-3 py-1.5">
                         <Clock className="w-4 h-4 text-gray-600" />
                         <span className="text-sm sm:text-base font-semibold text-gray-900">
-                          {formatMinutesToClock(time)}
+                          {formatMinutesToClock(item.time)}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800">
-                          {site.siteName || site.title}
-                        </p>
+                        {item.break ? (
+                          <p className="text-sm font-medium text-gray-800">
+                            {(item.break.label || "Break") +
+                              ` (${item.break.minutes} min)`}
+                          </p>
+                        ) : (
+                          <p className="text-sm font-medium text-gray-800">
+                            {item.site.siteName || item.site.title}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -2189,6 +2754,20 @@ function SiteDetailsBody({
       ? site.averageTimeSpent
       : Number(site?.averageTimeSpent);
   const minutes = isNaN(avg) || avg <= 0 ? null : avg;
+  const fmtTime = (s) => {
+    if (!s) return "—";
+    const m = String(s)
+      .trim()
+      .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+    if (m) {
+      let h = parseInt(m[1], 10);
+      const min = m[2];
+      const p = m[3] ? m[3].toUpperCase() : h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+      return `${h}:${min} ${p}`;
+    }
+    return String(s);
+  };
 
   return (
     <div className="px-6 py-5 sm:px-8 sm:py-6">
@@ -2207,6 +2786,14 @@ function SiteDetailsBody({
               <path d="M12 8v5h4v-2h-2V8h-2zm0-6a10 10 0 100 20 10 10 0 000-20z" />
             </svg>
             Avg visit: {minutes} min
+          </span>
+        )}
+        {(site.openingTime || site.closingTime) && (
+          <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 8v5h4v-2h-2V8h-2zm0-6a10 10 0 100 20 10 10 0 000-20z" />
+            </svg>
+            Open {fmtTime(site.openingTime)} • Close {fmtTime(site.closingTime)}
           </span>
         )}
       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { User, Calendar, Users, Globe, Check } from "lucide-react";
@@ -20,6 +21,7 @@ export default function CompleteProfile() {
   const [countrySearch, setCountrySearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
@@ -74,21 +76,19 @@ export default function CompleteProfile() {
         // Name validation logic similar to signup
         const firstName = formData.firstName.trim();
         const lastName = formData.lastName.trim();
-
-        if (!firstName || !lastName) {
-          setError("Please enter your first and last name");
-          setLoading(false);
-          return;
-        }
-        if (isProfaneText(firstName) || isProfaneText(lastName)) {
-          setError("No bad words allowed");
-          setLoading(false);
-          return;
-        }
-        if (!isValidName(firstName) || !isValidName(lastName)) {
-          setError(
-            "Please enter a valid name (letters, numbers, spaces, hyphens, apostrophes; 2-50 characters)"
-          );
+        const nextErrors = {};
+        if (!firstName) nextErrors.firstName = "First name is required";
+        if (!lastName) nextErrors.lastName = "Last name is required";
+        if (!nextErrors.firstName && isProfaneText(firstName))
+          nextErrors.firstName = "No badwords allowed";
+        if (!nextErrors.lastName && isProfaneText(lastName))
+          nextErrors.lastName = "No badwords allowed";
+        if (!nextErrors.firstName && !isValidName(firstName))
+          nextErrors.firstName = "Invalid first name";
+        if (!nextErrors.lastName && !isValidName(lastName))
+          nextErrors.lastName = "Invalid last name";
+        setFieldErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) {
           setLoading(false);
           return;
         }
@@ -109,15 +109,13 @@ export default function CompleteProfile() {
       }
 
       if (step === 2) {
-        if (
-          !formData.birthday.month ||
-          !formData.birthday.date ||
-          !formData.birthday.year
-        ) {
-          setError("Please select your complete birthday");
-          setLoading(false);
-          return;
-        }
+        const nextErrors = {};
+        if (!formData.birthday.month)
+          nextErrors.birthdayMonth = "Month is required";
+        if (!formData.birthday.date)
+          nextErrors.birthdayDate = "Day is required";
+        if (!formData.birthday.year)
+          nextErrors.birthdayYear = "Year is required";
         // Save birthday immediately (convert date and year to integers)
         // Convert full month name to short format (e.g., "January" -> "Jan")
         const monthShort = formData.birthday.month.substring(0, 3);
@@ -134,7 +132,10 @@ export default function CompleteProfile() {
         };
         const age = ageCalc();
         if (age !== null && age < 18 && !formData.parentalConsent) {
-          setError("Parental consent required for users 13-17.");
+          nextErrors.parentalConsent = "Parental consent is required";
+        }
+        setFieldErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) {
           setLoading(false);
           return;
         }
@@ -169,7 +170,7 @@ export default function CompleteProfile() {
           return;
         }
         if (!formData.gender) {
-          setError("Please select your gender");
+          setFieldErrors({ gender: "Please select a gender" });
           setLoading(false);
           return;
         }
@@ -187,7 +188,7 @@ export default function CompleteProfile() {
 
       if (step === 4) {
         if (!formData.country) {
-          setError("Please select your country");
+          setFieldErrors({ country: "Country is required" });
           setLoading(false);
           return;
         }
@@ -239,6 +240,7 @@ export default function CompleteProfile() {
       // Move to next step
       if (step < 4) {
         setStep(step + 1);
+        setFieldErrors({});
       }
     } catch (err) {
       console.error("Error saving data:", err);
@@ -306,12 +308,15 @@ export default function CompleteProfile() {
   const disableNext =
     loading ||
     (step === 1 && invalidNames) ||
-    (step === 2 && minorNeedsConsent);
+    (step === 2 &&
+      (!formData.birthday.month ||
+        !formData.birthday.date ||
+        !formData.birthday.year ||
+        minorNeedsConsent)) ||
+    (step === 3 && !formData.gender) ||
+    (step === 4 && !formData.country);
   const days = Array.from({ length: maxDays }, (_, i) => i + 1);
-  const years = Array.from(
-    { length: 100 },
-    (_, i) => new Date().getFullYear() - i
-  );
+  const years = Array.from({ length: 2012 - 1902 + 1 }, (_, i) => 2012 - i);
 
   // Filtered country list
   const countryArray = Object.entries(countries)
@@ -380,11 +385,20 @@ export default function CompleteProfile() {
                   const val = e.target.value;
                   if (!validateNameInput(val)) return;
                   setFormData({ ...formData, firstName: val });
+                  const msg = isProfaneText(val.trim())
+                    ? "No badwords allowed"
+                    : undefined;
+                  setFieldErrors((prev) => ({ ...prev, firstName: msg }));
                 }}
                 maxLength={50}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 placeholder="Enter your first name"
               />
+              {fieldErrors.firstName && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.firstName}
+                </p>
+              )}
             </div>
 
             <div>
@@ -398,11 +412,20 @@ export default function CompleteProfile() {
                   const val = e.target.value;
                   if (!validateNameInput(val)) return;
                   setFormData({ ...formData, lastName: val });
+                  const msg = isProfaneText(val.trim())
+                    ? "No badwords allowed"
+                    : undefined;
+                  setFieldErrors((prev) => ({ ...prev, lastName: msg }));
                 }}
                 maxLength={50}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 placeholder="Enter your last name"
               />
+              {fieldErrors.lastName && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.lastName}
+                </p>
+              )}
             </div>
           </motion.div>
         )}
@@ -447,16 +470,28 @@ export default function CompleteProfile() {
                         date: newDate,
                       },
                     });
+                    if (fieldErrors.birthdayMonth)
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        birthdayMonth: undefined,
+                      }));
                   }}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
-                  <option value="">Month</option>
+                  <option value="" disabled>
+                    Month
+                  </option>
                   {months.map((month) => (
                     <option key={month} value={month}>
                       {month}
                     </option>
                   ))}
                 </select>
+                {fieldErrors.birthdayMonth && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {fieldErrors.birthdayMonth}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -473,13 +508,20 @@ export default function CompleteProfile() {
                   }
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
-                  <option value="">Day</option>
+                  <option value="" disabled>
+                    Day
+                  </option>
                   {days.map((day) => (
                     <option key={day} value={day}>
                       {day}
                     </option>
                   ))}
                 </select>
+                {fieldErrors.birthdayDate && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {fieldErrors.birthdayDate}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -507,16 +549,28 @@ export default function CompleteProfile() {
                         date: newDate,
                       },
                     });
+                    if (fieldErrors.birthdayYear)
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        birthdayYear: undefined,
+                      }));
                   }}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
                 >
-                  <option value="">Year</option>
+                  <option value="" disabled>
+                    Year
+                  </option>
                   {years.map((year) => (
                     <option key={year} value={year}>
                       {year}
                     </option>
                   ))}
                 </select>
+                {fieldErrors.birthdayYear && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {fieldErrors.birthdayYear}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -538,6 +592,11 @@ export default function CompleteProfile() {
                 are 13-17&nbsp;years&nbsp;old).
               </span>
             </label>
+            {fieldErrors.parentalConsent && (
+              <p className="text-red-500 text-xs mt-1">
+                {fieldErrors.parentalConsent}
+              </p>
+            )}
           </motion.div>
         )}
 
@@ -587,6 +646,11 @@ export default function CompleteProfile() {
                   </div>
                 </button>
               ))}
+              {fieldErrors.gender && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.gender}
+                </p>
+              )}
             </div>
           </motion.div>
         )}
@@ -642,6 +706,9 @@ export default function CompleteProfile() {
                 </button>
               ))}
             </div>
+            {fieldErrors.country && (
+              <p className="text-red-500 text-xs mt-1">{fieldErrors.country}</p>
+            )}
 
             {/* Selected Country Display */}
             {formData.country && (

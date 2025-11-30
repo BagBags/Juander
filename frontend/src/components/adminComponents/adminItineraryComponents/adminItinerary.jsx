@@ -26,7 +26,7 @@ export default function AdminItinerary() {
         </div>
 
         {/* Main Section */}
-        <main className="p-6 pl-20 pr-20">
+        <main className="p-6 ">
           <AdminItineraryMain />
         </main>
       </div>

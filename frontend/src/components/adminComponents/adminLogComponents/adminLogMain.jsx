@@ -14,7 +14,6 @@ export default function AdminLogMain() {
   const [selectedLog, setSelectedLog] = useState(null);
   const logsPerPage = 10;
 
-
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -23,10 +22,15 @@ export default function AdminLogMain() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/logs`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 200 }
-      });
+      const res = await axios.get(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/logs`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { limit: 200 },
+        }
+      );
       setLogs(res.data);
     } catch (err) {
       console.error("Error fetching logs:", err);
@@ -35,93 +39,69 @@ export default function AdminLogMain() {
     }
   };
 
-  const handleDownloadCSV = () => {
-    // Prepare CSV content
-    const headers = ['ID', 'Type', 'User/Admin', 'Role', 'Action', 'Timestamp'];
-    const csvRows = [];
-    
-    // Add header row
-    csvRows.push(headers.join(','));
-    
-    // Add data rows
-    filteredLogs.forEach((log, idx) => {
-      const row = [
-        `#${sortOrder === 'latest' ? filteredLogs.length - idx : idx + 1}`,
-        log.targetType,
-        `"${log.adminName}"`, // Wrap in quotes to handle commas
-        log.role === 'admin' ? 'Admin' : 'User',
-        `"${log.action}"`,
-        `"${formatDateTime(log.createdAt)}"`
-      ];
-      csvRows.push(row.join(','));
-    });
-    
-    // Create blob and download
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `activity-logs-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleDownloadPDF = () => {
     try {
       const doc = new jsPDF();
-      
+
       // Add title
       doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
-      doc.text('Intramuros Administration', 105, 15, { align: 'center' });
+      doc.setFont(undefined, "bold");
+      doc.text("Intramuros Administration", 105, 15, { align: "center" });
       doc.setFontSize(14);
       doc.setTextColor(240, 78, 55);
-      doc.text('Activity Logs Report', 105, 23, { align: 'center' });
-      
+      doc.text("Activity Logs Report", 105, 23, { align: "center" });
+
       // Add summary info
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      doc.setFont(undefined, 'normal');
+      doc.setFont(undefined, "normal");
       const summaryY = 32;
       doc.text(`Total Logs: ${filteredLogs.length}`, 14, summaryY);
       doc.text(`Filter Type: ${filterType}`, 70, summaryY);
-      doc.text(`Sort Order: ${sortOrder === 'latest' ? 'Latest First' : 'Oldest First'}`, 120, summaryY);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, summaryY + 6);
-      
+      doc.text(
+        `Sort Order: ${
+          sortOrder === "latest" ? "Latest First" : "Oldest First"
+        }`,
+        120,
+        summaryY
+      );
+      doc.text(
+        `Generated: ${new Date().toLocaleDateString()}`,
+        14,
+        summaryY + 6
+      );
+
       // Prepare table data
       const tableData = filteredLogs.map((log, idx) => [
-        `#${sortOrder === 'latest' ? filteredLogs.length - idx : idx + 1}`,
+        `#${sortOrder === "latest" ? filteredLogs.length - idx : idx + 1}`,
         log.targetType,
-        `${log.adminName}\n(${log.role === 'admin' ? 'Admin' : 'User'})`,
+        `${log.adminName}\n(${log.role === "admin" ? "Admin" : "User"})`,
         log.action,
-        formatDateTime(log.createdAt)
+        formatDateTime(log.createdAt),
       ]);
-      
+
       // Add table using autoTable
       autoTable(doc, {
         startY: summaryY + 12,
-        head: [['ID', 'Type', 'User/Admin', 'Action', 'Timestamp']],
+        head: [["ID", "Type", "User/Admin", "Action", "Timestamp"]],
         body: tableData,
-        theme: 'grid',
-        styles: { 
+        theme: "grid",
+        styles: {
           fontSize: 8,
           cellPadding: 2,
-          overflow: 'linebreak'
+          overflow: "linebreak",
         },
-        headStyles: { 
+        headStyles: {
           fillColor: [240, 78, 55],
           textColor: 255,
-          fontStyle: 'bold'
+          fontStyle: "bold",
         },
         columnStyles: {
           0: { cellWidth: 15 },
           1: { cellWidth: 25 },
           2: { cellWidth: 45 },
           3: { cellWidth: 40 },
-          4: { cellWidth: 40 }
+          4: { cellWidth: 40 },
         },
         didDrawPage: (data) => {
           // Footer
@@ -129,24 +109,28 @@ export default function AdminLogMain() {
           doc.setFontSize(8);
           doc.setTextColor(128);
           doc.text(
-            `© ${new Date().getFullYear()} Intramuros Administration - Page ${data.pageNumber} of ${pageCount}`,
+            `© ${new Date().getFullYear()} Intramuros Administration - Page ${
+              data.pageNumber
+            } of ${pageCount}`,
             105,
             doc.internal.pageSize.height - 10,
-            { align: 'center' }
+            { align: "center" }
           );
-        }
+        },
       });
-      
+
       // Save the PDF
-      doc.save(`activity-logs-${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`activity-logs-${new Date().toISOString().split("T")[0]}.pdf`);
     } catch (error) {
-      console.error('PDF generation error:', error);
-      alert('Failed to generate PDF. Please try refreshing the page.');
+      console.error("PDF generation error:", error);
+      alert("Failed to generate PDF. Please try refreshing the page.");
     }
   };
 
   const formatDateTime = (dateString) => {
+    if (!dateString) return "—";
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "—";
     return date.toLocaleString("en-US", {
       year: "numeric",
       month: "short",
@@ -157,12 +141,17 @@ export default function AdminLogMain() {
   };
 
   const getActionColor = (action) => {
-    if (action.toLowerCase().includes("delete")) {
+    const a = (action || "").toLowerCase();
+    if (a.includes("delete")) {
       return "text-red-600 font-medium";
-    } else if (action.toLowerCase().includes("update")) {
+    } else if (a.includes("update")) {
       return "text-yellow-600 font-medium";
-    } else if (action.toLowerCase().includes("create")) {
+    } else if (a.includes("add")) {
       return "text-green-600 font-medium";
+    } else if (a.includes("archive")) {
+      return "text-blue-600 font-medium";
+    } else if (a.includes("restore")) {
+      return "text-indigo-600 font-medium";
     }
     return "text-gray-700";
   };
@@ -179,17 +168,31 @@ export default function AdminLogMain() {
     return colors[type] || colors.other;
   };
 
+  const formatValue = (v) => {
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v === "string") return `"${v}"`;
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  };
+
   // Filter and sort logs based on search, type, and sort order
   const filteredLogs = logs
     .filter((log) => {
       const matchesSearch =
         log.adminName.toLowerCase().includes(search.toLowerCase()) ||
         log.action.toLowerCase().includes(search.toLowerCase()) ||
-        (log.details?.reviewText || "").toLowerCase().includes(search.toLowerCase()) ||
-        (log.details?.siteName || "").toLowerCase().includes(search.toLowerCase());
-      
+        (log.details?.reviewText || "")
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        (log.details?.siteName || "")
+          .toLowerCase()
+          .includes(search.toLowerCase());
+
       const matchesType = filterType === "all" || log.targetType === filterType;
-      
+
       return matchesSearch && matchesType;
     })
     .sort((a, b) => {
@@ -206,7 +209,6 @@ export default function AdminLogMain() {
 
   return (
     <div className="bg-white rounded-2xl shadow-md p-6">
-
       {/* Header */}
       <div className="flex items-center justify-between mb-4 print:hidden">
         <div>
@@ -223,7 +225,6 @@ export default function AdminLogMain() {
           Download PDF
         </button>
       </div>
-
 
       {/* Search and Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-4 mb-4 print:hidden">
@@ -291,12 +292,17 @@ export default function AdminLogMain() {
                 {currentLogs.map((log, idx) => (
                   <tr key={log._id} className="bg-white hover:bg-gray-50">
                     <td className="px-6 py-3">
-                      #{sortOrder === "latest" 
+                      #
+                      {sortOrder === "latest"
                         ? filteredLogs.length - (indexOfFirstLog + idx)
                         : indexOfFirstLog + idx + 1}
                     </td>
                     <td className="px-6 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTargetTypeBadge(log.targetType)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getTargetTypeBadge(
+                          log.targetType
+                        )}`}
+                      >
                         {log.targetType}
                       </span>
                     </td>
@@ -350,7 +356,6 @@ export default function AdminLogMain() {
         </>
       )}
 
-
       {/* Detail Modal */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -367,13 +372,20 @@ export default function AdminLogMain() {
             <div className="p-6 space-y-4">
               <div>
                 <span className="font-semibold">Type:</span>
-                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getTargetTypeBadge(selectedLog.targetType)}`}>
+                <span
+                  className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getTargetTypeBadge(
+                    selectedLog.targetType
+                  )}`}
+                >
                   {selectedLog.targetType}
                 </span>
               </div>
               <div>
-                <span className="font-semibold">User/Admin:</span> {selectedLog.adminName}
-                <span className="ml-2 text-sm text-gray-500">({selectedLog.role})</span>
+                <span className="font-semibold">User/Admin:</span>{" "}
+                {selectedLog.adminName}
+                <span className="ml-2 text-sm text-gray-500">
+                  ({selectedLog.role})
+                </span>
               </div>
               <div>
                 <span className="font-semibold">Action:</span>
@@ -382,7 +394,8 @@ export default function AdminLogMain() {
                 </span>
               </div>
               <div>
-                <span className="font-semibold">Timestamp:</span> {formatDateTime(selectedLog.createdAt)}
+                <span className="font-semibold">Timestamp:</span>{" "}
+                {formatDateTime(selectedLog.createdAt)}
               </div>
 
               {selectedLog.details && (
@@ -390,25 +403,31 @@ export default function AdminLogMain() {
                   <h4 className="font-semibold mb-3">Details:</h4>
                   {selectedLog.details.userName && (
                     <div className="mb-2">
-                      <span className="font-medium">User:</span> {selectedLog.details.userName}
+                      <span className="font-medium">User:</span>{" "}
+                      {selectedLog.details.userName}
                       {selectedLog.details.userEmail && (
-                        <span className="text-sm text-gray-500 ml-2">({selectedLog.details.userEmail})</span>
+                        <span className="text-sm text-gray-500 ml-2">
+                          ({selectedLog.details.userEmail})
+                        </span>
                       )}
                     </div>
                   )}
                   {selectedLog.details.siteName && (
                     <div className="mb-2">
-                      <span className="font-medium">Site:</span> {selectedLog.details.siteName}
+                      <span className="font-medium">Site:</span>{" "}
+                      {selectedLog.details.siteName}
                     </div>
                   )}
                   {selectedLog.details.itineraryName && (
                     <div className="mb-2">
-                      <span className="font-medium">Itinerary:</span> {selectedLog.details.itineraryName}
+                      <span className="font-medium">Itinerary:</span>{" "}
+                      {selectedLog.details.itineraryName}
                     </div>
                   )}
                   {selectedLog.details.rating && (
                     <div className="mb-2">
-                      <span className="font-medium">Rating:</span> {selectedLog.details.rating} ⭐
+                      <span className="font-medium">Rating:</span>{" "}
+                      {selectedLog.details.rating} ⭐
                     </div>
                   )}
                   {selectedLog.details.reviewText && (
@@ -419,32 +438,70 @@ export default function AdminLogMain() {
                       </div>
                     </div>
                   )}
-                  {selectedLog.details.photos && selectedLog.details.photos.length > 0 && (
-                    <div className="mb-2">
-                      <span className="font-medium">Photos:</span>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {selectedLog.details.photos.map((photo, idx) => (
-                          <img
-                            key={idx}
-                            src={photo}
-                            alt={`Review photo ${idx + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg"
-                          />
-                        ))}
+                  {selectedLog.details.changes &&
+                    Object.keys(selectedLog.details.changes).length > 0 && (
+                      <div className="mb-2">
+                        <span className="font-medium">Changed Fields:</span>
+                        <div className="mt-2 space-y-2 text-sm">
+                          {Object.entries(selectedLog.details.changes).map(
+                            ([key, change]) => (
+                              <div key={key} className="flex items-start gap-2">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                                  {key}
+                                </span>
+                                <span className="text-gray-700">
+                                  <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700">
+                                    {formatValue(change?.from)}
+                                  </span>
+                                  <span className="mx-1">→</span>
+                                  <span className="inline-block px-2 py-1 rounded bg-green-100 text-green-700">
+                                    {formatValue(change?.to)}
+                                  </span>
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {selectedLog.details.previousData && (
-                    <div className="mt-3 p-3 bg-red-50 rounded-lg">
-                      <span className="font-medium text-red-700">Deletion Info:</span>
-                      <div className="text-sm text-gray-700 mt-1">
-                        {selectedLog.details.previousData.deletedBy && (
-                          <div>Deleted by: {selectedLog.details.previousData.deletedBy}</div>
-                        )}
-                        <div>Deleted at: {formatDateTime(selectedLog.details.previousData.deletedAt)}</div>
+                    )}
+                  {selectedLog.details.photos &&
+                    selectedLog.details.photos.length > 0 && (
+                      <div className="mb-2">
+                        <span className="font-medium">Photos:</span>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {selectedLog.details.photos.map((photo, idx) => (
+                            <img
+                              key={idx}
+                              src={photo}
+                              alt={`Review photo ${idx + 1}`}
+                              className="w-20 h-20 object-cover rounded-lg"
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  {selectedLog.details.previousData &&
+                    selectedLog.details.previousData.deletedAt && (
+                      <div className="mt-3 p-3 bg-red-50 rounded-lg">
+                        <span className="font-medium text-red-700">
+                          Deletion Info:
+                        </span>
+                        <div className="text-sm text-gray-700 mt-1">
+                          {selectedLog.details.previousData.deletedBy && (
+                            <div>
+                              Deleted by:{" "}
+                              {selectedLog.details.previousData.deletedBy}
+                            </div>
+                          )}
+                          <div>
+                            Deleted at:{" "}
+                            {formatDateTime(
+                              selectedLog.details.previousData.deletedAt
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                 </div>
               )}
             </div>

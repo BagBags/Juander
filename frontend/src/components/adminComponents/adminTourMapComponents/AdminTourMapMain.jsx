@@ -442,10 +442,26 @@ export default function AdminTourMapMain() {
     
     if (!pin.siteName || !pin.siteName.trim()) {
       errors.siteName = "Site name is required";
+    } else {
+      const len = pin.siteName.trim().length;
+      if (len < 5 || len > 50) {
+        errors.siteName = "Site name must be 5-50 characters";
+      }
     }
     
-    if (!pin.siteDescription || !pin.siteDescription.trim()) {
+    const englishSections = (pin.siteDescription || "")
+      .split("\n\n")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    const tagalogSections = (pin.siteDescriptionTagalog || "")
+      .split("\n\n")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    const allSections = [...englishSections, ...tagalogSections];
+    if (allSections.length === 0) {
       errors.siteDescription = "Site description is required";
+    } else if (allSections.some((s) => s.length < 5 || s.length > 1000)) {
+      errors.siteDescription = "Each section must be 5-1000 characters";
     }
     
     // Handle both populated category (object) and category ID (string)

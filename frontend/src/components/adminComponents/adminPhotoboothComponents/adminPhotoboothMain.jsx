@@ -151,9 +151,17 @@ export default function ManagePhotobooth() {
     const newErrors = {};
     if (!form.name.trim()) {
       newErrors.name = "Filter name is required";
+    } else {
+      const len = form.name.trim().length;
+      if (len < 5 || len > 50) {
+        newErrors.name = "Filter name must be 5-50 characters";
+      }
     }
     if (!form.imageFile && !form.imageUrl) {
       newErrors.image = "Image is required";
+    }
+    if (form.imageUrl && form.imageUrl.length > 1000) {
+      newErrors.image = "Image URL must be 1000 characters max";
     }
     
     setErrors(newErrors);
@@ -345,6 +353,7 @@ export default function ManagePhotobooth() {
               setErrors({ ...errors, name: "" });
             }
           }}
+          maxLength={50}
           className={`border-2 rounded-lg p-3 text-sm focus:ring-2 outline-none transition ${
             errors.name ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-red-400 focus:ring-red-200"
           }`}
@@ -359,6 +368,7 @@ export default function ManagePhotobooth() {
           value={form.imageUrl}
           onChange={handleChange}
           placeholder="Or paste image URL"
+          maxLength={1000}
           className="w-full p-3 border-2 border-gray-300 rounded-lg
              focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none transition"
           disabled={!!form.imageFile}

@@ -15,7 +15,9 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
     const userId = req.user._id;
 
     if (!itineraryId || !siteId || !rating) {
-      return res.status(400).json({ error: "Itinerary ID, Site ID, and rating are required" });
+      return res
+        .status(400)
+        .json({ error: "Itinerary ID, Site ID, and rating are required" });
     }
 
     if (rating < 1 || rating > 5) {
@@ -23,7 +25,11 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
     }
 
     // Process uploaded photos - use S3 URLs if available
-    const photoPaths = req.files ? req.files.map(file => file.location || `/uploads/reviews/${file.filename}`) : [];
+    const photoPaths = req.files
+      ? req.files.map(
+          (file) => file.location || `/uploads/reviews/${file.filename}`
+        )
+      : [];
 
     // Always create new review (allow multiple reviews per user per site)
     const review = await Review.create({
@@ -65,7 +71,7 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
     try {
       await Log.create({
         adminName: `${populated.userId.firstName} ${populated.userId.lastName}`,
-        action: "Created review",
+        action: `Added Review: ${populated.siteId.siteName}`,
         role: "tourist",
         targetType: "review",
         targetId: review._id,
@@ -103,7 +109,10 @@ router.get("/", verifyToken, async (req, res) => {
 
     const reviews = await Review.find({ userId })
       .populate("itineraryId", "name")
-      .populate("siteId", "siteName siteDescription mediaUrl latitude longitude")
+      .populate(
+        "siteId",
+        "siteName siteDescription mediaUrl latitude longitude"
+      )
       .sort({ createdAt: -1 });
 
     res.status(200).json(reviews);
@@ -119,7 +128,10 @@ router.get("/", verifyToken, async (req, res) => {
 router.get("/admin/all", verifyToken, async (req, res) => {
   try {
     // Check if user is admin
-    if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
+    if (
+      req.user.role !== "admin" &&
+      req.user.email !== "aaronbagain@gmail.com"
+    ) {
       return res.status(403).json({ error: "Access denied. Admin only." });
     }
 
@@ -149,9 +161,10 @@ router.get("/site/:siteId", async (req, res) => {
       .sort({ createdAt: -1 });
 
     // Calculate average rating
-    const avgRating = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 0;
+    const avgRating =
+      reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : 0;
 
     res.status(200).json({
       reviews,
@@ -203,44 +216,49 @@ router.put("/:id", verifyToken, async (req, res) => {
     // Check content with OpenAI Moderation API if reviewText is provided
     if (reviewText) {
       try {
-        const axios = require('axios');
+        const axios = require("axios");
         const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-        
+
         if (!OPENAI_API_KEY) {
-          console.error('OPENAI_API_KEY not found in environment variables');
-          return res.status(500).json({ error: 'Content moderation service unavailable' });
+          console.error("OPENAI_API_KEY not found in environment variables");
+          return res
+            .status(500)
+            .json({ error: "Content moderation service unavailable" });
         }
 
         const moderationResponse = await axios.post(
-          'https://api.openai.com/v1/moderations',
+          "https://api.openai.com/v1/moderations",
           {
             model: "omni-moderation-latest",
-            input: reviewText
+            input: reviewText,
           },
           {
             headers: {
-              'Authorization': `Bearer ${OPENAI_API_KEY}`,
-              'Content-Type': 'application/json',
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json",
             },
           }
         );
 
         const results = moderationResponse.data.results[0];
-        
+
         if (results.flagged) {
           // Get the flagged categories
           const flaggedCategories = Object.entries(results.categories)
             .filter(([_, value]) => value)
             .map(([key, _]) => key);
-            
-          return res.status(400).json({ 
+
+          return res.status(400).json({
             error: "Your review contains inappropriate content",
             flagged: true,
-            categories: flaggedCategories
+            categories: flaggedCategories,
           });
         }
       } catch (error) {
-        console.error('OpenAI Moderation API Error:', error.response?.data || error.message);
+        console.error(
+          "OpenAI Moderation API Error:",
+          error.response?.data || error.message
+        );
         // Continue with the review update even if moderation fails
       }
     }
@@ -292,7 +310,7 @@ router.delete("/:id", verifyToken, async (req, res) => {
     try {
       await Log.create({
         adminName: `${review.userId.firstName} ${review.userId.lastName}`,
-        action: "Deleted own review",
+        action: `Deleted Review: ${review.siteId.siteName}`,
         role: "tourist",
         targetType: "review",
         targetId: review._id,
@@ -330,7 +348,10 @@ router.delete("/:id", verifyToken, async (req, res) => {
 router.delete("/admin/:id", verifyToken, async (req, res) => {
   try {
     // Check if user is admin
-    if (req.user.role !== "admin" && req.user.email !== "aaronbagain@gmail.com") {
+    if (
+      req.user.role !== "admin" &&
+      req.user.email !== "aaronbagain@gmail.com"
+    ) {
       return res.status(403).json({ error: "Access denied. Admin only." });
     }
 
@@ -349,7 +370,7 @@ router.delete("/admin/:id", verifyToken, async (req, res) => {
     try {
       await Log.create({
         adminName: `${req.user.firstName} ${req.user.lastName}`,
-        action: "Deleted review (Admin)",
+        action: `Deleted Review: ${review.siteId.siteName}`,
         role: "admin",
         targetType: "review",
         targetId: review._id,

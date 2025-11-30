@@ -177,6 +177,80 @@ export default function TouristItineraryMain({ initialItineraries }) {
   const [detailsItinerary, setDetailsItinerary] = useState(null);
   const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
   const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
+  const enrichedItineraryIdsRef = useRef(new Set());
+  const extractPinId = (obj) => {
+    const cands = [obj?._id, obj?.siteId?._id, obj?.siteId, obj?.pinId];
+    for (const v of cands) {
+      if (typeof v === "string" && /^[a-fA-F0-9]{24}$/.test(v)) return v;
+    }
+    return null;
+  };
+  const openSiteDetails = async (site) => {
+    try {
+      const id =
+        typeof site === "string" && /^[a-fA-F0-9]{24}$/.test(site)
+          ? site
+          : extractPinId(site);
+      if (id) {
+        const apiBase =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+        const res = await axios.get(`${apiBase}/pins/${id}`);
+        const full = res.data && res.data.pin ? res.data.pin : res.data || {};
+        const openingTime =
+          site.openingTime && String(site.openingTime).trim() !== ""
+            ? site.openingTime
+            : full.openingTime || null;
+        const closingTime =
+          site.closingTime && String(site.closingTime).trim() !== ""
+            ? site.closingTime
+            : full.closingTime || null;
+        const enriched = {
+          ...site,
+          openingTime,
+          closingTime,
+        };
+        setDetailsSelectedSite(enriched);
+      } else {
+        setDetailsSelectedSite(site);
+      }
+    } catch {
+      setDetailsSelectedSite(site);
+    }
+    setShowSiteDetailsModal(true);
+  };
+
+  useEffect(() => {
+    if (!showDetailsModal) return;
+    if (!detailsItinerary || !Array.isArray(detailsItinerary.sites)) return;
+    const itId = detailsItinerary?._id;
+    if (!itId || enrichedItineraryIdsRef.current.has(itId)) return;
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+    const enrich = async (s) => {
+      const id = extractPinId(s);
+      if (!id) return s;
+      try {
+        const res = await axios.get(`${apiBase}/pins/${id}`);
+        const full = res.data && res.data.pin ? res.data.pin : res.data || {};
+        const openingTime =
+          s.openingTime && String(s.openingTime).trim() !== ""
+            ? s.openingTime
+            : full.openingTime || null;
+        const closingTime =
+          s.closingTime && String(s.closingTime).trim() !== ""
+            ? s.closingTime
+            : full.closingTime || null;
+        return { ...s, openingTime, closingTime };
+      } catch {
+        return s;
+      }
+    };
+    (async () => {
+      const enriched = await Promise.all(detailsItinerary.sites.map(enrich));
+      enrichedItineraryIdsRef.current.add(itId);
+      setDetailsItinerary({ ...detailsItinerary, sites: enriched });
+    })();
+  }, [showDetailsModal, detailsItinerary]);
   const siteDetailsModalRef = useRef(null);
   const lastActiveSiteElementRef = useRef(null);
   const [inactiveSites, setInactiveSites] = useState([]);
@@ -949,8 +1023,7 @@ export default function TouristItineraryMain({ initialItineraries }) {
                         key={site._id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDetailsSelectedSite(site);
-                          setShowSiteDetailsModal(true);
+                          openSiteDetails(site);
                         }}
                         className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white hover:border-[#f04e37] hover:bg-orange-50/30"
                       >
@@ -1068,7 +1141,7 @@ export default function TouristItineraryMain({ initialItineraries }) {
               id="tourist-site-details-content"
               className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto custom-scrollbar"
             >
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 {detailsSelectedSite.category && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700">
                     <Tag className="w-3 h-3" />
@@ -1083,6 +1156,45 @@ export default function TouristItineraryMain({ initialItineraries }) {
                       Entrance fee may apply
                     </span>
                   )}
+                {(() => {
+                  const openStr = (
+                    detailsSelectedSite.openingTime || ""
+                  ).trim();
+                  const closeStr = (
+                    detailsSelectedSite.closingTime || ""
+                  ).trim();
+                  if (!openStr && !closeStr) return null;
+                  const fmt = (s) => {
+                    if (!s) return "—";
+                    const m = String(s)
+                      .trim()
+                      .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+                    if (m) {
+                      let h = parseInt(m[1], 10);
+                      const min = m[2];
+                      const p = m[3]
+                        ? m[3].toUpperCase()
+                        : h >= 12
+                        ? "PM"
+                        : "AM";
+                      h = h % 12 || 12;
+                      return `${h}:${min} ${p}`;
+                    }
+                    return String(s);
+                  };
+                  return (
+                    <span className="inline-flex flex-wrap sm:flex-nowrap items-center gap-x-1 gap-y-0.5 px-2 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700 max-w-[14rem] sm:max-w-none">
+                      <Clock className="w-3 h-3" />
+                      <span className="whitespace-nowrap">{`Open ${fmt(
+                        openStr
+                      )}`}</span>
+                      <span className="opacity-60">•</span>
+                      <span className="whitespace-nowrap">{`Close ${fmt(
+                        closeStr
+                      )}`}</span>
+                    </span>
+                  );
+                })()}
               </div>
 
               {(() => {

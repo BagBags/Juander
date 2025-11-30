@@ -14,6 +14,7 @@ const logSchema = new mongoose.Schema({
     rating: Number,
     reviewText: String,
     photos: [String],
+    changes: mongoose.Schema.Types.Mixed,
     previousData: mongoose.Schema.Types.Mixed,
   },
   createdAt: { type: Date, default: Date.now },

@@ -359,6 +359,8 @@ export default function GuestItineraryMap() {
           feeType: s.feeType || "none",
           feeAmount: s.feeAmount || null,
           feeAmountDiscounted: s.feeAmountDiscounted || null,
+          openingTime: s.openingTime || null,
+          closingTime: s.closingTime || null,
         }));
 
         setPins(normalized);

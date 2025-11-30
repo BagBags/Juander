@@ -121,6 +121,7 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formEr
               setFormErrors({ ...formErrors, agency: "" });
             }
           }}
+          maxLength={70}
           className={`w-full p-3 border-2 rounded-lg focus:ring-2 outline-none transition ${
             formErrors.agency ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
           }`}
@@ -147,39 +148,41 @@ export default function CreateEmergency({ onSave, onCancel, agencyToEdit, formEr
             )}
 
             <div className="w-full">
-              <input
-                type="text"
-                placeholder={`Contact Channel${idx > 0 ? " (Secondary)" : ""}`}
-                value={channel.label}
-                onChange={(e) => {
-                  handleChannelChange(idx, "label", e.target.value);
-                  if (formErrors.contactChannelLabel && e.target.value.trim()) {
-                    setFormErrors({ ...formErrors, contactChannelLabel: "" });
-                  }
-                }}
-                className={`w-full p-2 border-2 rounded-lg focus:ring-2 outline-none transition ${
-                  formErrors.contactChannelLabel && idx === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
-                }`}
-              />
+            <input
+              type="text"
+              placeholder={`Contact Channel${idx > 0 ? " (Secondary)" : ""}`}
+              value={channel.label}
+              onChange={(e) => {
+                handleChannelChange(idx, "label", e.target.value);
+                if (formErrors.contactChannelLabel && e.target.value.trim()) {
+                  setFormErrors({ ...formErrors, contactChannelLabel: "" });
+                }
+              }}
+              maxLength={70}
+              className={`w-full p-2 border-2 rounded-lg focus:ring-2 outline-none transition ${
+                formErrors.contactChannelLabel && idx === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+              }`}
+            />
               {formErrors.contactChannelLabel && idx === 0 && (
                 <p className="text-red-500 text-xs mt-1">{formErrors.contactChannelLabel}</p>
               )}
             </div>
             <div className="w-full">
-              <input
-                type="text"
-                placeholder="Contact Number/Link"
-                value={channel.number}
-                onChange={(e) => {
-                  handleChannelChange(idx, "number", e.target.value);
-                  if (formErrors.contactChannelNumber && e.target.value.trim()) {
-                    setFormErrors({ ...formErrors, contactChannelNumber: "" });
-                  }
-                }}
-                className={`w-full p-2 border-2 rounded-lg focus:ring-2 outline-none transition ${
-                  formErrors.contactChannelNumber && idx === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
-                }`}
-              />
+            <input
+              type="text"
+              placeholder="Contact Number/Link"
+              value={channel.number}
+              onChange={(e) => {
+                handleChannelChange(idx, "number", e.target.value);
+                if (formErrors.contactChannelNumber && e.target.value.trim()) {
+                  setFormErrors({ ...formErrors, contactChannelNumber: "" });
+                }
+              }}
+              maxLength={70}
+              className={`w-full p-2 border-2 rounded-lg focus:ring-2 outline-none transition ${
+                formErrors.contactChannelNumber && idx === 0 ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
+              }`}
+            />
               {formErrors.contactChannelNumber && idx === 0 && (
                 <p className="text-red-500 text-xs mt-1">{formErrors.contactChannelNumber}</p>
               )}

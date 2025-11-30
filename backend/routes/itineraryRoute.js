@@ -77,6 +77,7 @@ router.post("/", verifyToken, async (req, res) => {
       sites,
       isAdminCreated,
       recommendedStartMinutes,
+      breaks,
     } = req.body;
 
     console.log("Creating itinerary with data:", {
@@ -97,6 +98,7 @@ router.post("/", verifyToken, async (req, res) => {
       duration,
       recommendedStartMinutes,
       sites,
+      breaks: Array.isArray(breaks) ? breaks : [],
       createdBy: req.user._id,
       isAdminCreated: isAdminCreated || false,
     });
@@ -115,7 +117,7 @@ router.post("/", verifyToken, async (req, res) => {
     // Log action
     await Log.create({
       adminName: getUserName(req.user),
-      action: `Created itinerary: "${itinerary.name}"`,
+      action: `Added Itinerary: ${itinerary.name}`,
       role: isAdminCreated ? "admin" : "tourist",
       targetType: "itinerary",
       targetId: itinerary._id,
@@ -246,6 +248,7 @@ router.put("/:id", verifyToken, async (req, res) => {
       sites,
       duration,
       recommendedStartMinutes,
+      breaks,
     } = req.body;
     itinerary.name = name || itinerary.name;
     itinerary.description = description || itinerary.description;
@@ -258,19 +261,45 @@ router.put("/:id", verifyToken, async (req, res) => {
       itinerary.duration = Number(duration) || 0;
     }
     itinerary.sites = sites || itinerary.sites;
+    if (breaks !== undefined) {
+      itinerary.breaks = Array.isArray(breaks) ? breaks : [];
+    }
     if (recommendedStartMinutes !== undefined) {
       itinerary.recommendedStartMinutes = Number(recommendedStartMinutes);
     }
 
+    // Capture previous for change summary
+    const previous = await Itinerary.findById(req.params.id).lean();
+    const changes = {};
+    const nextState = {};
+    const considerKeys = [
+      "name",
+      "description",
+      "imageUrl",
+      "sites",
+      "duration",
+      "recommendedStartMinutes",
+    ];
+    for (const k of considerKeys) {
+      const from = previous ? previous[k] : undefined;
+      const to = itinerary[k];
+      const isEqual =
+        JSON.stringify(from ?? null) === JSON.stringify(to ?? null);
+      if (!isEqual) {
+        changes[k] = { from: from ?? null, to: to ?? null };
+        nextState[k] = to ?? null;
+      }
+    }
+
     await itinerary.save();
 
-    // Log action
     await Log.create({
       adminName: getUserName(req.user),
-      action: `Updated itinerary: "${itinerary.name}"`,
+      action: `Updated Itinerary: ${itinerary.name}`,
       role: itinerary.isAdminCreated ? "admin" : "tourist",
       targetType: "itinerary",
       targetId: itinerary._id,
+      details: { changes, previousData: previous },
     });
 
     res.json(
@@ -304,10 +333,14 @@ router.put("/:id/archive", verifyToken, async (req, res) => {
     // Log action
     await Log.create({
       adminName: getUserName(req.user),
-      action: `Archived itinerary: "${itinerary.name}"`,
+      action: `Archived Itinerary: ${itinerary.name}`,
       role: itinerary.isAdminCreated ? "admin" : "tourist",
       targetType: "itinerary",
       targetId: itinerary._id,
+      details: {
+        changes: { isArchived: { from: false, to: true } },
+        previousData: { isArchived: false },
+      },
     });
 
     res.json({ message: "Itinerary archived successfully", itinerary });
@@ -336,10 +369,14 @@ router.put("/:id/restore", verifyToken, async (req, res) => {
     // Log action
     await Log.create({
       adminName: getUserName(req.user),
-      action: `Restored itinerary: "${itinerary.name}"`,
+      action: `Restored Itinerary: ${itinerary.name}`,
       role: itinerary.isAdminCreated ? "admin" : "tourist",
       targetType: "itinerary",
       targetId: itinerary._id,
+      details: {
+        changes: { isArchived: { from: true, to: false } },
+        previousData: { isArchived: true },
+      },
     });
 
     res.json({ message: "Itinerary restored successfully", itinerary });
@@ -405,10 +442,20 @@ router.delete("/:id", verifyToken, async (req, res) => {
     // Log action
     await Log.create({
       adminName: getUserName(req.user),
-      action: `Permanently deleted itinerary: "${itinerary.name}" (cascade deleted ${deletedVisitedSitesCount.deletedCount} visited sites and ${deletedReviewsCount.deletedCount} reviews)`,
+      action: `Deleted Itinerary: ${itinerary.name}`,
       role: itinerary.isAdminCreated ? "admin" : "tourist",
       targetType: "itinerary",
       targetId: itinerary._id,
+      details: {
+        previousData: {
+          name: itinerary.name,
+          description: itinerary.description,
+          duration: itinerary.duration,
+          sitesCount: Array.isArray(itinerary.sites)
+            ? itinerary.sites.length
+            : 0,
+        },
+      },
     });
 
     res.json({

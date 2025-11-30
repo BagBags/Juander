@@ -6,18 +6,20 @@ const axios = require("axios");
 const { deleteFromS3 } = require("../middleware/upload");
 
 // --- Helper for logging actions ---
-const logAction = async (req, action, targetId = null) => {
+const logAction = async (req, action, targetId = null, details = undefined) => {
   try {
     const adminName = req.user
       ? `${req.user.firstName} ${req.user.lastName || ""}`.trim()
       : "Unknown Admin";
-    await Log.create({ 
-      adminName, 
+    const payload = {
+      adminName,
       action,
       role: "admin",
       targetType: "photobooth",
-      targetId: targetId,
-    });
+      targetId,
+    };
+    if (details !== undefined) payload.details = details;
+    await Log.create(payload);
   } catch (err) {
     console.error("❌ Failed to log action:", err);
   }
@@ -26,7 +28,9 @@ const logAction = async (req, action, targetId = null) => {
 // --- GET all filters (active only) ---
 const getFilters = async (req, res) => {
   try {
-    const filters = await PhotoboothFilter.find({ isArchived: false }).sort({ position: 1 });
+    const filters = await PhotoboothFilter.find({ isArchived: false }).sort({
+      position: 1,
+    });
     res.json(filters);
   } catch (err) {
     console.error("❌ Error fetching filters:", err);
@@ -37,11 +41,15 @@ const getFilters = async (req, res) => {
 // --- GET archived filters ---
 const getArchivedFilters = async (req, res) => {
   try {
-    const filters = await PhotoboothFilter.find({ isArchived: true }).sort({ updatedAt: -1 });
+    const filters = await PhotoboothFilter.find({ isArchived: true }).sort({
+      updatedAt: -1,
+    });
     res.json(filters);
   } catch (err) {
     console.error("❌ Error fetching archived filters:", err);
-    res.status(500).json({ message: "Error fetching archived filters", error: err });
+    res
+      .status(500)
+      .json({ message: "Error fetching archived filters", error: err });
   }
 };
 
@@ -64,28 +72,38 @@ const createFilter = async (req, res) => {
   try {
     console.log("📝 Creating filter...");
     console.log("Body:", JSON.stringify(req.body, null, 2));
-    console.log("File:", req.file ? JSON.stringify(req.file, null, 2) : "No file");
+    console.log(
+      "File:",
+      req.file ? JSON.stringify(req.file, null, 2) : "No file"
+    );
     console.log("Headers:", req.headers);
-    
+
     let imagePath = "";
 
     if (req.file) {
       // Use S3 URL if available, fallback to local path
-      imagePath = require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/photobooth/${req.file.filename}`);
+      imagePath = require("../utils/cdnUtil").toCdnUrl(
+        req.file.location || `/uploads/photobooth/${req.file.filename}`
+      );
       console.log("✅ Image path from file:", imagePath);
       console.log("📦 S3 URL:", req.file.location);
     } else if (req.body.image) {
       imagePath = req.body.image;
       console.log("✅ Image path from body:", imagePath);
     } else {
-      console.log("❌ No image provided - req.file:", !!req.file, "req.body.image:", !!req.body.image);
-      return res.status(400).json({ 
+      console.log(
+        "❌ No image provided - req.file:",
+        !!req.file,
+        "req.body.image:",
+        !!req.body.image
+      );
+      return res.status(400).json({
         message: "No image provided",
         debug: {
           hasFile: !!req.file,
           hasBodyImage: !!req.body.image,
-          body: req.body
-        }
+          body: req.body,
+        },
       });
     }
 
@@ -98,13 +116,19 @@ const createFilter = async (req, res) => {
     await newFilter.save();
     console.log("✅ Filter saved to database:", newFilter._id);
 
-    await logAction(req, `Created photobooth filter: "${newFilter.name}"`, newFilter._id);
+    await logAction(req, `Added Filter: ${newFilter.name}`, newFilter._id, {
+      name: newFilter.name,
+      category: newFilter.category,
+      image: newFilter.image,
+    });
 
     res.status(201).json(newFilter);
   } catch (err) {
     console.error("❌ Error creating filter:", err);
     console.error("Error details:", err.message);
-    res.status(500).json({ message: "Failed to create filter", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Failed to create filter", error: err.message });
   }
 };
 
@@ -115,23 +139,26 @@ const updateFilter = async (req, res) => {
 
     // Get the existing filter to check if we need to delete old image
     const existingFilter = await PhotoboothFilter.findById(id);
-    if (!existingFilter) return res.status(404).json({ message: "Filter not found" });
+    if (!existingFilter)
+      return res.status(404).json({ message: "Filter not found" });
 
     const updateData = { ...req.body };
-    
+
     // If new file is uploaded, delete the old one
     if (req.file) {
       // Use S3 URL if available, fallback to local path
-      updateData.image = require("../utils/cdnUtil").toCdnUrl(req.file.location || `/uploads/photobooth/${req.file.filename}`);
+      updateData.image = require("../utils/cdnUtil").toCdnUrl(
+        req.file.location || `/uploads/photobooth/${req.file.filename}`
+      );
       console.log("✅ Updated image path:", updateData.image);
       console.log("📦 S3 URL:", req.file.location);
-      
+
       // Delete old file from S3 if it exists and is different from new file
       if (existingFilter.image) {
         try {
           const oldImageUrl = existingFilter.image;
           const newImageUrl = updateData.image;
-          
+
           // Only delete if it's a different file
           if (oldImageUrl !== newImageUrl) {
             await deleteFromS3(oldImageUrl);
@@ -144,11 +171,30 @@ const updateFilter = async (req, res) => {
       }
     }
 
+    // Compute changes vs existing
+    const changes = {};
+    for (const key of Object.keys(updateData)) {
+      const prev = existingFilter[key];
+      const next = updateData[key];
+      const prevNorm = prev === undefined ? null : prev;
+      const nextNorm = next === undefined ? null : next;
+      const isEqual = JSON.stringify(prevNorm) === JSON.stringify(nextNorm);
+      if (!isEqual) {
+        changes[key] = { from: prevNorm, to: nextNorm };
+      }
+    }
+
     const updated = await PhotoboothFilter.findByIdAndUpdate(id, updateData, {
       new: true,
     });
 
-    await logAction(req, `Updated photobooth filter: "${updated.name}"`, updated._id);
+    await logAction(req, `Updated Filter: ${updated.name}`, updated._id, {
+      changes,
+      previousData: Object.keys(changes).reduce((acc, k) => {
+        acc[k] = changes[k].from;
+        return acc;
+      }, {}),
+    });
 
     res.json(updated);
   } catch (err) {
@@ -166,10 +212,13 @@ const archiveFilter = async (req, res) => {
       { isArchived: true },
       { new: true }
     );
-    
+
     if (!filter) return res.status(404).json({ message: "Filter not found" });
 
-    await logAction(req, `Archived photobooth filter: "${filter.name}"`, filter._id);
+    await logAction(req, `Archived Filter: ${filter.name}`, filter._id, {
+      changes: { isArchived: { from: false, to: true } },
+      previousData: { isArchived: false },
+    });
 
     res.json({ message: "Filter archived successfully", filter });
   } catch (err) {
@@ -187,10 +236,13 @@ const restoreFilter = async (req, res) => {
       { isArchived: false },
       { new: true }
     );
-    
+
     if (!filter) return res.status(404).json({ message: "Filter not found" });
 
-    await logAction(req, `Restored photobooth filter: "${filter.name}"`, filter._id);
+    await logAction(req, `Restored Filter: ${filter.name}`, filter._id, {
+      changes: { isArchived: { from: true, to: false } },
+      previousData: { isArchived: true },
+    });
 
     res.json({ message: "Filter restored successfully", filter });
   } catch (err) {
@@ -217,7 +269,13 @@ const deleteFilter = async (req, res) => {
       }
     }
 
-    await logAction(req, `Permanently deleted photobooth filter: "${deleted.name}"`, deleted._id);
+    await logAction(req, `Deleted Filter: ${deleted.name}`, deleted._id, {
+      previousData: {
+        name: deleted.name,
+        category: deleted.category,
+        image: deleted.image,
+      },
+    });
 
     res.json({ message: "Filter permanently deleted successfully" });
   } catch (err) {
@@ -236,7 +294,8 @@ const reorderFilters = async (req, res) => {
 
     await PhotoboothFilter.bulkWrite(bulkOps);
 
-    await logAction(req, "Reordered photobooth filters");
+    const reorderedCount = Array.isArray(filters) ? filters.length : 0;
+    await logAction(req, "Updated Filters Order", null, { reorderedCount });
 
     res.json({ message: "Filters reordered successfully" });
   } catch (err) {
@@ -249,21 +308,26 @@ const reorderFilters = async (req, res) => {
 const proxyImage = async (req, res) => {
   try {
     const { url } = req.query;
-    if (!url) return res.status(400).json({ message: "Missing url query param" });
+    if (!url)
+      return res.status(400).json({ message: "Missing url query param" });
 
-  const response = await axios.get(url, { responseType: "arraybuffer", timeout: 15000 });
-  const contentType = response.headers["content-type"] || "image/png";
+    const response = await axios.get(url, {
+      responseType: "arraybuffer",
+      timeout: 15000,
+    });
+    const contentType = response.headers["content-type"] || "image/png";
 
-  res.setHeader("Content-Type", contentType);
-  // Enable CORS for canvas drawing with crossOrigin="anonymous"
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Timing-Allow-Origin", "*");
-  // Allow browsers to treat this as shareable across origins
-  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-  res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-  if (response.headers.etag) res.setHeader("ETag", response.headers.etag);
-  if (response.headers["last-modified"]) res.setHeader("Last-Modified", response.headers["last-modified"]);
-  res.send(Buffer.from(response.data));
+    res.setHeader("Content-Type", contentType);
+    // Enable CORS for canvas drawing with crossOrigin="anonymous"
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Timing-Allow-Origin", "*");
+    // Allow browsers to treat this as shareable across origins
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    if (response.headers.etag) res.setHeader("ETag", response.headers.etag);
+    if (response.headers["last-modified"])
+      res.setHeader("Last-Modified", response.headers["last-modified"]);
+    res.send(Buffer.from(response.data));
   } catch (err) {
     console.error("❌ Proxy image failed:", err?.message || err);
     res.status(502).json({ message: "Proxy fetch failed" });

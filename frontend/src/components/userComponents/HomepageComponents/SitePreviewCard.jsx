@@ -13,18 +13,20 @@ export default function SitePreviewCard({
   isVisited,
 }) {
   const location = useLocation();
-  const isItineraryMap = location.pathname.startsWith("/TouristItineraryMap/") || location.pathname.startsWith("/GuestItineraryMap/");
+  const isItineraryMap =
+    location.pathname.startsWith("/TouristItineraryMap/") ||
+    location.pathname.startsWith("/GuestItineraryMap/");
   // Get first media file from mediaFiles array
   const firstMedia = selectedPin?.mediaFiles?.[0];
-  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL 
-    ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '')
+  const BACKEND_URL = import.meta.env.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, "")
     : "http://localhost:5000";
-  
-  const thumbnailUrl = firstMedia?.url?.startsWith('http') 
-    ? firstMedia.url 
-    : firstMedia?.url 
-      ? `${BACKEND_URL}${firstMedia.url}` 
-      : null;
+
+  const thumbnailUrl = firstMedia?.url?.startsWith("http")
+    ? firstMedia.url
+    : firstMedia?.url
+    ? `${BACKEND_URL}${firstMedia.url}`
+    : null;
 
   // No automatic TTS here; voice guidance only on itinerary maps via DirectionsPanel
   useEffect(() => {
@@ -34,9 +36,15 @@ export default function SitePreviewCard({
   return (
     <div
       className="absolute left-3 right-3 md:left-6 md:right-6 w-auto max-w-[720px] mx-auto z-40 animate-slide-down"
-      style={{ top: "calc(max(env(safe-area-inset-top), 16px) + 64px)", maxWidth: "min(720px, 96vw)" }}
+      style={{
+        top: "calc(max(env(safe-area-inset-top), 16px) + 64px)",
+        maxWidth: "min(720px, 96vw)",
+      }}
     >
-      <div className="bg-white/90 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: "clamp(180px, 32svh, 300px)" }}>
+      <div
+        className="bg-white/90 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200 overflow-hidden flex flex-col"
+        style={{ maxHeight: "clamp(180px, 32svh, 300px)" }}
+      >
         <div className="px-3 py-2 flex items-center justify-between border-b border-gray-200">
           <div className="flex items-center gap-2">
             {isNearby ? (
@@ -98,17 +106,51 @@ export default function SitePreviewCard({
               <p className="text-[10px] sm:text-[11px] text-gray-600 line-clamp-2 mt-1">
                 {selectedPin.description || selectedPin.siteDescription}
               </p>
+              {(selectedPin.openingTime || selectedPin.closingTime) && (
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-700 whitespace-nowrap">
+                  <Clock className="w-3.5 h-3.5 text-gray-600" />
+                  <span>
+                    {(() => {
+                      const fmt = (s) => {
+                        if (!s) return "—";
+                        const m = String(s)
+                          .trim()
+                          .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+                        if (m) {
+                          let h = parseInt(m[1], 10);
+                          const min = m[2];
+                          const p = m[3]
+                            ? m[3].toUpperCase()
+                            : h >= 12
+                            ? "PM"
+                            : "AM";
+                          h = h % 12 || 12;
+                          return `${h}:${min} ${p}`;
+                        }
+                        return String(s);
+                      };
+                      return `Open ${fmt(
+                        selectedPin.openingTime
+                      )} • Close ${fmt(selectedPin.closingTime)}`;
+                    })()}
+                  </span>
+                </div>
+              )}
               {distance !== null && (
                 <div className="mt-1 flex items-center gap-1.5 text-[10px] sm:text-[11px] text-gray-700 whitespace-nowrap">
                   <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="font-medium">{(distance / 1000).toFixed(2)} km away</span>
+                  <span className="font-medium">
+                    {(distance / 1000).toFixed(2)} km away
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
           <div className="mt-2 pt-2 border-t border-gray-200 text-center">
-            <p className="text-[11px] text-gray-500 font-medium">Tap to view full details</p>
+            <p className="text-[11px] text-gray-500 font-medium">
+              Tap to view full details
+            </p>
           </div>
         </div>
       </div>

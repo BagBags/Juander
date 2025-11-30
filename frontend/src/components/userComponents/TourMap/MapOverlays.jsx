@@ -89,14 +89,7 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
         )}
       </AnimatePresence>
 
-      {/* Next site button */}
-      {selectedPin && (
-        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-30 pointer-events-auto">
-          <button className="bg-blue-700 text-white px-5 py-2 rounded-md cursor-pointer shadow-lg">
-            Go to next site
-          </button>
-        </div>
-      )}
+      {/* Intentionally removed transient "Go to next site" button to avoid flash under modal */}
     </>
   );
 };

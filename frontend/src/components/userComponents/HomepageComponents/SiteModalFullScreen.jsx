@@ -1,5 +1,18 @@
 import React, { useState, Suspense, lazy, useEffect } from "react";
-import { X, Volume2, Star, Info, Tag, Glasses, Send, Edit2, Trash2, Play, Square } from "lucide-react";
+import {
+  X,
+  Volume2,
+  Star,
+  Info,
+  Tag,
+  Glasses,
+  Send,
+  Edit2,
+  Trash2,
+  Play,
+  Square,
+  Clock,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 import MediaCarousel from "../../shared/MediaCarousel";
@@ -29,14 +42,19 @@ export default function SiteModalFullScreen({
   const [scannedArUrl, setScannedArUrl] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const [userLanguage, setUserLanguage] = useState('english');
+  const [userLanguage, setUserLanguage] = useState("english");
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notification, setNotification] = useState({ isOpen: false, title: "", message: "", type: "info" });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
   const [userReviews, setUserReviews] = useState([]);
   const [editingReviewId, setEditingReviewId] = useState(null);
   const [reviewImages, setReviewImages] = useState([]);
@@ -59,47 +77,54 @@ export default function SiteModalFullScreen({
 
   // PWA detection helper
   const isPWA = () => {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true;
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true
+    );
   };
 
   // Cancel any ongoing TTS when modal opens
   useEffect(() => {
     if (selectedPin) {
-      const allow = typeof window !== 'undefined' && window.__ttsArrivalLockUntil && Date.now() < window.__ttsArrivalLockUntil;
+      const allow =
+        typeof window !== "undefined" &&
+        window.__ttsArrivalLockUntil &&
+        Date.now() < window.__ttsArrivalLockUntil;
       if (!allow) {
         ttsService.cancel();
       }
     }
-    
+
     // Fetch user language preference
     const fetchUserLanguage = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const isGuest = localStorage.getItem('guest') === 'true';
-        
+        const token = localStorage.getItem("token");
+        const isGuest = localStorage.getItem("guest") === "true";
+
         // Check for guest language first
         if (isGuest) {
-          const guestLang = localStorage.getItem('guestLanguage') || 'en';
-          setUserLanguage(guestLang === 'tl' ? 'tagalog' : 'english');
+          const guestLang = localStorage.getItem("guestLanguage") || "en";
+          setUserLanguage(guestLang === "tl" ? "tagalog" : "english");
           return;
         }
-        
+
         // For logged-in users, fetch from backend
         if (token) {
           const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/me`,
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/auth/me`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          const language = response.data.language || 'en';
+          const language = response.data.language || "en";
           // Convert 'en' or 'tl' to 'english' or 'tagalog'
-          setUserLanguage(language === 'tl' ? 'tagalog' : 'english');
+          setUserLanguage(language === "tl" ? "tagalog" : "english");
         } else {
-          setUserLanguage('english');
+          setUserLanguage("english");
         }
       } catch (error) {
-        console.error('Failed to fetch user language:', error);
-        setUserLanguage('english');
+        console.error("Failed to fetch user language:", error);
+        setUserLanguage("english");
       }
     };
     fetchUserLanguage();
@@ -131,24 +156,33 @@ export default function SiteModalFullScreen({
       setIsPlaying(false);
     } else {
       if (selectedPin) {
-        let description = '';
-        if (userLanguage === 'tagalog' && selectedPin.siteDescriptionTagalog) {
+        let description = "";
+        if (userLanguage === "tagalog" && selectedPin.siteDescriptionTagalog) {
           description = selectedPin.siteDescriptionTagalog;
-        } else if (userLanguage === 'english' && selectedPin.siteDescription) {
+        } else if (userLanguage === "english" && selectedPin.siteDescription) {
           description = selectedPin.siteDescription;
         } else {
-          description = selectedPin.description || selectedPin.siteDescription || selectedPin.siteDescriptionTagalog || "";
+          description =
+            selectedPin.description ||
+            selectedPin.siteDescription ||
+            selectedPin.siteDescriptionTagalog ||
+            "";
         }
-        
+
         if (description) {
           try {
             setIsPlaying(true);
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: description, lang: userLanguage === 'english' ? 'english' : 'filipino' })
-            });
-            if (!res.ok) throw new Error('TTS request failed');
+            const res = await fetch(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/tts/speak`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: description, lang: userLanguage === 'english' ? 'english' : 'filipino' }),
+              }
+            );
+            if (!res.ok) throw new Error("TTS request failed");
             const audioBlob = await res.blob();
             const url = URL.createObjectURL(audioBlob);
             const audio = new Audio(url);
@@ -160,7 +194,7 @@ export default function SiteModalFullScreen({
             };
             audio.play();
           } catch (err) {
-            console.error('Error playing TTS:', err);
+            console.error("Error playing TTS:", err);
             setIsPlaying(false);
           }
         }
@@ -176,11 +210,13 @@ export default function SiteModalFullScreen({
         const userId = JSON.parse(localStorage.getItem("user"))?._id;
         if (token && userId && selectedPin) {
           const response = await axios.get(
-            `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/site/${selectedPin._id}`,
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/reviews/site/${selectedPin._id}`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
           const reviewsData = response.data.reviews || response.data;
-          const myReviews = reviewsData.filter(r => r.userId._id === userId);
+          const myReviews = reviewsData.filter((r) => r.userId._id === userId);
           setUserReviews(myReviews);
         }
       } catch (error) {
@@ -193,33 +229,43 @@ export default function SiteModalFullScreen({
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
     if (files.length + reviewImages.length > 5) {
-      setNotification({ isOpen: true, title: "Upload Limit", message: "You can upload maximum 5 images", type: "warning" });
+      setNotification({
+        isOpen: true,
+        title: "Upload Limit",
+        message: "You can upload maximum 5 images",
+        type: "warning",
+      });
       return;
     }
 
     setReviewImages([...reviewImages, ...files]);
-    
+
     // Create preview URLs
-    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    const newPreviewUrls = files.map((file) => URL.createObjectURL(file));
     setImagePreviewUrls([...imagePreviewUrls, ...newPreviewUrls]);
   };
 
   const handleRemoveImage = (index) => {
     const newImages = reviewImages.filter((_, i) => i !== index);
     const newPreviews = imagePreviewUrls.filter((_, i) => i !== index);
-    
+
     // Revoke the URL to free memory
     URL.revokeObjectURL(imagePreviewUrls[index]);
-    
+
     setReviewImages(newImages);
     setImagePreviewUrls(newPreviews);
   };
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
-    
+
     if (rating === 0) {
-      setNotification({ isOpen: true, title: "Rating Required", message: "Please select a rating", type: "warning" });
+      setNotification({
+        isOpen: true,
+        title: "Rating Required",
+        message: "Please select a rating",
+        type: "warning",
+      });
       return;
     }
 
@@ -227,8 +273,10 @@ export default function SiteModalFullScreen({
     if (reviewText) {
       try {
         const token = localStorage.getItem("token");
-        const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || "http://localhost:5000";
-        
+        const BACKEND_URL =
+          import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+          "http://localhost:5000";
+
         const moderationResponse = await axios.post(
           `${BACKEND_URL}/api/openai/moderate`,
           { input: reviewText },
@@ -239,52 +287,86 @@ export default function SiteModalFullScreen({
             },
           }
         );
-        
+
         // OpenAI returns results in results[0]
         const result = moderationResponse.data.results?.[0];
         console.log("Moderation API Response:", moderationResponse.data);
         console.log("Moderation Result:", result);
-        
+
         if (result && result.flagged) {
           const categories = Object.entries(result.categories)
             .filter(([_, value]) => value)
             .map(([key]) => key);
-            
+
           let warningMessage = "⚠️ Your review contains inappropriate content";
           if (categories.length > 0) {
             warningMessage += ` (${categories.join(", ")})`;
           }
           warningMessage += ". Please revise your review.";
-          
-          setNotification({ isOpen: true, title: "Content Warning", message: warningMessage, type: "warning" });
+
+          setNotification({
+            isOpen: true,
+            title: "Content Warning",
+            message: warningMessage,
+            type: "warning",
+          });
           console.log("Flagged categories:", result.categories);
           return;
         }
       } catch (err) {
         console.error("Error checking content moderation:", err);
-        
+
         // Always apply basic profanity check as fallback when moderation API fails
-        const basicProfanityList = ["fuck", "shit", "ass", "bitch", "sex", "porn", "dick", "pussy", "cock", "damn", "hell"];
-        const containsProfanity = basicProfanityList.some(word => 
+        const basicProfanityList = [
+          "fuck",
+          "shit",
+          "ass",
+          "bitch",
+          "sex",
+          "porn",
+          "dick",
+          "pussy",
+          "cock",
+          "damn",
+          "hell",
+        ];
+        const containsProfanity = basicProfanityList.some((word) =>
           reviewText.toLowerCase().includes(word.toLowerCase())
         );
-        
+
         if (containsProfanity) {
-          setNotification({ isOpen: true, title: "Inappropriate Content", message: "Your review contains inappropriate content. Please revise it.", type: "warning" });
+          setNotification({
+            isOpen: true,
+            title: "Inappropriate Content",
+            message:
+              "Your review contains inappropriate content. Please revise it.",
+            type: "warning",
+          });
           return;
         }
-        
+
         // Check if it's a rate limit error
-        if (err.response && 
-            err.response.status === 500 && 
-            err.response.data && 
-            err.response.data.details === "Too Many Requests") {
-          
-          setNotification({ isOpen: true, title: "High Traffic", message: "We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.", type: "info" });
-          console.log("OpenAI rate limit reached, proceeding with submission after profanity check");
+        if (
+          err.response &&
+          err.response.status === 500 &&
+          err.response.data &&
+          err.response.data.details === "Too Many Requests"
+        ) {
+          setNotification({
+            isOpen: true,
+            title: "High Traffic",
+            message:
+              "We're experiencing high traffic. Your review will be submitted, but please ensure it follows community guidelines.",
+            type: "info",
+          });
+          console.log(
+            "OpenAI rate limit reached, proceeding with submission after profanity check"
+          );
         } else {
           // For other errors, warn user but allow submission after profanity check
-          console.warn("Moderation API unavailable, used fallback profanity filter");
+          console.warn(
+            "Moderation API unavailable, used fallback profanity filter"
+          );
         }
       }
     }
@@ -292,11 +374,13 @@ export default function SiteModalFullScreen({
     setIsSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      
+
       if (editingReviewId) {
         // For editing, send as JSON (no file upload on edit)
         await axios.put(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${editingReviewId}`,
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/reviews/${editingReviewId}`,
           {
             rating: rating,
             reviewText: reviewText.trim(),
@@ -305,7 +389,12 @@ export default function SiteModalFullScreen({
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        setNotification({ isOpen: true, title: "Success", message: "Review updated successfully!", type: "success" });
+        setNotification({
+          isOpen: true,
+          title: "Success",
+          message: "Review updated successfully!",
+          type: "success",
+        });
       } else {
         // For creating, send as FormData with photos
         const formData = new FormData();
@@ -313,14 +402,16 @@ export default function SiteModalFullScreen({
         formData.append("itineraryId", itineraryId);
         formData.append("rating", rating);
         formData.append("reviewText", reviewText.trim());
-        
+
         // Append photos if any
         reviewImages.forEach((image) => {
           formData.append("photos", image);
         });
 
         await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews`,
+          `${
+            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+          }/reviews`,
           formData,
           {
             headers: {
@@ -329,7 +420,12 @@ export default function SiteModalFullScreen({
             },
           }
         );
-        setNotification({ isOpen: true, title: "Success", message: "Review submitted successfully!", type: "success" });
+        setNotification({
+          isOpen: true,
+          title: "Success",
+          message: "Review submitted successfully!",
+          type: "success",
+        });
       }
 
       // Reset form
@@ -339,24 +435,31 @@ export default function SiteModalFullScreen({
       setImagePreviewUrls([]);
       setShowReviewForm(false);
       setEditingReviewId(null);
-      
+
       // Refresh user reviews
       const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/site/${selectedPin._id}`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/reviews/site/${selectedPin._id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const userId = JSON.parse(localStorage.getItem("user"))?._id;
       const reviewsData = response.data.reviews || response.data;
-      const myReviews = reviewsData.filter(r => r.userId._id === userId);
+      const myReviews = reviewsData.filter((r) => r.userId._id === userId);
       setUserReviews(myReviews);
-      
+
       // Refresh parent component's reviews
       if (onReviewSubmitted) {
         onReviewSubmitted();
       }
     } catch (err) {
       console.error("Error submitting review:", err);
-      setNotification({ isOpen: true, title: "Error", message: err.response?.data?.error || "Failed to submit review", type: "error" });
+      setNotification({
+        isOpen: true,
+        title: "Error",
+        message: err.response?.data?.error || "Failed to submit review",
+        type: "error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -379,30 +482,46 @@ export default function SiteModalFullScreen({
     try {
       const token = localStorage.getItem("token");
       await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/reviews/${reviewId}`,
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/reviews/${reviewId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setNotification({ isOpen: true, title: "Success", message: "Review deleted successfully!", type: "success" });
-      
+      setNotification({
+        isOpen: true,
+        title: "Success",
+        message: "Review deleted successfully!",
+        type: "success",
+      });
+
       // Refresh user reviews
-      setUserReviews(userReviews.filter(r => r._id !== reviewId));
+      setUserReviews(userReviews.filter((r) => r._id !== reviewId));
     } catch (err) {
       console.error("Error deleting review:", err);
-      setNotification({ isOpen: true, title: "Error", message: "Failed to delete review", type: "error" });
+      setNotification({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to delete review",
+        type: "error",
+      });
     }
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
-      style={{ height: '100dvh', overflow: 'hidden', overscrollBehavior: 'none' }}
+      style={{
+        height: "100dvh",
+        overflow: "hidden",
+        overscrollBehavior: "none",
+      }}
     >
       {/* Modern Header with Close Button */}
-      <div 
+      <div
         className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-gray-200 px-5 flex items-center justify-between shadow-sm z-50"
         style={{
-          paddingTop: 'max(env(safe-area-inset-top, 16px), 16px)',
-          paddingBottom: '16px'
+          paddingTop: "max(env(safe-area-inset-top, 16px), 16px)",
+          paddingBottom: "16px",
         }}
       >
         <div>
@@ -431,10 +550,10 @@ export default function SiteModalFullScreen({
       </div>
 
       {/* Content */}
-      <div 
+      <div
         className="flex-1 overflow-y-auto px-5 py-6 max-w-3xl mx-auto w-full"
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 16px), 80px)'
+          paddingBottom: "max(env(safe-area-inset-bottom, 16px), 80px)",
         }}
       >
         {/* AR Mode fullscreen inside modal */}
@@ -455,10 +574,10 @@ export default function SiteModalFullScreen({
                     sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
                     referrerPolicy="no-referrer-when-downgrade"
                     style={{
-                      width: '100%',
-                      height: '100%',
-                      border: 'none',
-                      minHeight: '80vh'
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      minHeight: "80vh",
                     }}
                   />
                 </div>
@@ -474,8 +593,14 @@ export default function SiteModalFullScreen({
                 </button>
                 <button
                   onClick={() => {
-                    if (window.confirm('Open AR experience in new browser tab?')) {
-                      window.open(scannedArUrl, '_blank', 'noopener,noreferrer');
+                    if (
+                      window.confirm("Open AR experience in new browser tab?")
+                    ) {
+                      window.open(
+                        scannedArUrl,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
                       setShowAR(false);
                       setScannedArUrl(null);
                     }
@@ -493,14 +618,14 @@ export default function SiteModalFullScreen({
                   if (isiOS26Plus() && isPWA()) {
                     const confirmOpen = window.confirm(
                       "iOS 26+ AR Compatibility Notice\n\n" +
-                      "Your device is running iOS 26 or higher in PWA mode. " +
-                      "AR experiences may not work properly within the app due to browser restrictions.\n\n" +
-                      "Would you like to open the AR experience in a new browser tab instead? " +
-                      "This will provide the best AR experience with full sensor access."
+                        "Your device is running iOS 26 or higher in PWA mode. " +
+                        "AR experiences may not work properly within the app due to browser restrictions.\n\n" +
+                        "Would you like to open the AR experience in a new browser tab instead? " +
+                        "This will provide the best AR experience with full sensor access."
                     );
-                    
+
                     if (confirmOpen) {
-                      window.open(url, '_blank', 'noopener,noreferrer');
+                      window.open(url, "_blank", "noopener,noreferrer");
                       setShowAR(false);
                       setScannedArUrl(null);
                     } else {
@@ -531,18 +656,35 @@ export default function SiteModalFullScreen({
                       {/* Animated 3D Cube Loader */}
                       <div className="relative w-16 h-16">
                         <div className="absolute inset-0 border-4 border-[#f04e37] border-t-transparent rounded-lg animate-spin"></div>
-                        <div className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+                        <div
+                          className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin"
+                          style={{
+                            animationDirection: "reverse",
+                            animationDuration: "1s",
+                          }}
+                        ></div>
                       </div>
                       {/* Loading Text */}
                       <div className="text-center">
-                        <p className="text-base font-semibold text-gray-700 mb-1">Loading 3D Model</p>
+                        <p className="text-base font-semibold text-gray-700 mb-1">
+                          Loading 3D Model
+                        </p>
                         <p className="text-sm text-gray-500">Please wait...</p>
                       </div>
                       {/* Progress Dots */}
                       <div className="flex gap-2">
-                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        <div
+                          className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
                       </div>
                     </div>
                   }
@@ -559,7 +701,7 @@ export default function SiteModalFullScreen({
                   {selectedPin.title || selectedPin.siteName}
                 </h3>
               </div>
-              
+
               {/* Badges Container */}
               <div className="flex flex-wrap gap-2">
                 {/* Category Badge */}
@@ -567,58 +709,110 @@ export default function SiteModalFullScreen({
                   <div
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
                     style={{
-                      backgroundColor: '#fef2f0',
-                      color: '#f04e37'
+                      backgroundColor: "#fef2f0",
+                      color: "#f04e37",
                     }}
                   >
                     <Tag className="w-3.5 h-3.5" />
-                    <span>{selectedPin.category.name || selectedPin.category}</span>
+                    <span>
+                      {selectedPin.category.name || selectedPin.category}
+                    </span>
                   </div>
                 )}
-                
+
                 {/* Entrance Fee Badge */}
                 {selectedPin.feeType && selectedPin.feeType !== "none" && (
-                <button
-                  onClick={() => setShowFeeModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
-                  style={{
-                    backgroundColor: selectedPin.feeType === "fort_santiago" ? "#FEF3C7" : "#DBEAFE",
-                    color: selectedPin.feeType === "fort_santiago" ? "#92400E" : "#1E40AF"
-                  }}
-                >
-                  <span className="font-bold">₱</span>
-                  <span>{selectedPin.feeType === "fort_santiago" ? "Fort Santiago Fee" : "Entrance Fee"}</span>
-                  <Info className="w-3.5 h-3.5" />
-                </button>
+                  <button
+                    onClick={() => setShowFeeModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
+                    style={{
+                      backgroundColor:
+                        selectedPin.feeType === "fort_santiago"
+                          ? "#FEF3C7"
+                          : "#DBEAFE",
+                      color:
+                        selectedPin.feeType === "fort_santiago"
+                          ? "#92400E"
+                          : "#1E40AF",
+                    }}
+                  >
+                    <span className="font-bold">₱</span>
+                    <span>
+                      {selectedPin.feeType === "fort_santiago"
+                        ? "Fort Santiago Fee"
+                        : "Entrance Fee"}
+                    </span>
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Opening/Closing Badge */}
+                {(selectedPin.openingTime || selectedPin.closingTime) && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm bg-gray-100 text-gray-700">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>
+                      {(() => {
+                        const fmt = (s) => {
+                          if (!s) return "—";
+                          const m = String(s)
+                            .trim()
+                            .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+                          if (m) {
+                            let h = parseInt(m[1], 10);
+                            const min = m[2];
+                            const p = m[3]
+                              ? m[3].toUpperCase()
+                              : h >= 12
+                              ? "PM"
+                              : "AM";
+                            h = h % 12 || 12;
+                            return `${h}:${min} ${p}`;
+                          }
+                          return String(s);
+                        };
+                        return `Open ${fmt(
+                          selectedPin.openingTime
+                        )} • Close ${fmt(selectedPin.closingTime)}`;
+                      })()}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
-            
+
             {/* Fee Hint Modal */}
             {showFeeModal && (
-              <div 
+              <div
                 className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
                 onClick={() => setShowFeeModal(false)}
               >
-                <div 
+                <div
                   className="bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div 
+                  <div
                     className="p-4 flex items-center gap-3"
-                    style={{ backgroundColor: selectedPin.feeType === "fort_santiago" ? "#f04e37" : "#2563EB" }}
+                    style={{
+                      backgroundColor:
+                        selectedPin.feeType === "fort_santiago"
+                          ? "#f04e37"
+                          : "#2563EB",
+                    }}
                   >
                     <span className="text-white text-2xl font-bold">₱</span>
                     <h3 className="text-lg font-bold text-white">
-                      {selectedPin.feeType === "fort_santiago" ? "Fort Santiago Entrance" : "Entrance Fee Required"}
+                      {selectedPin.feeType === "fort_santiago"
+                        ? "Fort Santiago Entrance"
+                        : "Entrance Fee Required"}
                     </h3>
                   </div>
-                  
+
                   <div className="p-5">
                     {selectedPin.feeType === "fort_santiago" ? (
                       <>
                         <p className="text-gray-700 text-sm mb-3">
-                          This site is located within Fort Santiago and requires an entrance fee.
+                          This site is located within Fort Santiago and requires
+                          an entrance fee.
                         </p>
                         {selectedPin.feeAmount ? (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
@@ -626,29 +820,37 @@ export default function SiteModalFullScreen({
                               <p className="text-sm font-semibold text-gray-800">
                                 Fort Santiago Entrance Fee:
                               </p>
-                              <span className="text-[#f04e37] font-bold text-lg">₱{selectedPin.feeAmount}</span>
+                              <span className="text-[#f04e37] font-bold text-lg">
+                                ₱{selectedPin.feeAmount}
+                              </span>
                             </div>
                             {selectedPin.feeAmountDiscounted && (
                               <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
                                 <p className="text-xs font-medium text-gray-700">
                                   Student/PWD/Senior Citizen:
                                 </p>
-                                <span className="text-green-600 font-bold text-base">₱{selectedPin.feeAmountDiscounted}</span>
+                                <span className="text-green-600 font-bold text-base">
+                                  ₱{selectedPin.feeAmountDiscounted}
+                                </span>
                               </div>
                             )}
                             <div className="bg-white/60 p-2 rounded-md mt-2">
                               <p className="text-xs text-gray-700 font-medium">
-                                Payment will be upon entrance at the gate. This will give you access to all sites within Fort Santiago.
+                                Payment will be upon entrance at the gate. This
+                                will give you access to all sites within Fort
+                                Santiago.
                               </p>
                             </div>
                           </div>
                         ) : (
                           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 mb-3">
                             <p className="text-sm text-gray-700 mb-2">
-                              Please check the current entrance fee at the Fort Santiago entrance.
+                              Please check the current entrance fee at the Fort
+                              Santiago entrance.
                             </p>
                             <p className="text-xs text-gray-600">
-                              Payment at the gate will give you access to all sites within Fort Santiago.
+                              Payment at the gate will give you access to all
+                              sites within Fort Santiago.
                             </p>
                           </div>
                         )}
@@ -656,7 +858,11 @@ export default function SiteModalFullScreen({
                     ) : (
                       <>
                         <p className="text-gray-700 text-sm mb-3">
-                          An entrance fee is required to visit <span className="font-semibold">{selectedPin.title || selectedPin.siteName}</span>.
+                          An entrance fee is required to visit{" "}
+                          <span className="font-semibold">
+                            {selectedPin.title || selectedPin.siteName}
+                          </span>
+                          .
                         </p>
                         {selectedPin.feeAmount ? (
                           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
@@ -664,14 +870,18 @@ export default function SiteModalFullScreen({
                               <p className="text-sm font-semibold text-gray-800">
                                 Entrance Fee:
                               </p>
-                              <span className="text-blue-700 font-bold text-lg">₱{selectedPin.feeAmount}</span>
+                              <span className="text-blue-700 font-bold text-lg">
+                                ₱{selectedPin.feeAmount}
+                              </span>
                             </div>
                             {selectedPin.feeAmountDiscounted && (
                               <div className="flex items-center justify-between bg-white/50 p-2 rounded-md mb-2">
                                 <p className="text-xs font-medium text-gray-700">
                                   Student/PWD/Senior Citizen:
                                 </p>
-                                <span className="text-green-600 font-bold text-base">₱{selectedPin.feeAmountDiscounted}</span>
+                                <span className="text-green-600 font-bold text-base">
+                                  ₱{selectedPin.feeAmountDiscounted}
+                                </span>
                               </div>
                             )}
                             <p className="text-xs text-gray-600 mt-1">
@@ -681,19 +891,23 @@ export default function SiteModalFullScreen({
                         ) : (
                           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-3">
                             <p className="text-sm text-gray-700">
-                              Please check on-site for current entrance fee rates.
+                              Please check on-site for current entrance fee
+                              rates.
                             </p>
                           </div>
                         )}
                       </>
                     )}
-                    
+
                     <button
                       onClick={() => setShowFeeModal(false)}
                       className="w-full py-2.5 rounded-lg font-semibold text-sm transition-colors"
                       style={{
-                        backgroundColor: selectedPin.feeType === "fort_santiago" ? "#f04e37" : "#2563EB",
-                        color: "white"
+                        backgroundColor:
+                          selectedPin.feeType === "fort_santiago"
+                            ? "#f04e37"
+                            : "#2563EB",
+                        color: "white",
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.opacity = "0.9";
@@ -719,38 +933,41 @@ export default function SiteModalFullScreen({
             )}
 
             {/* Fallback to old mediaUrl if mediaFiles not available */}
-            {(!selectedPin.mediaFiles || selectedPin.mediaFiles.length === 0) && selectedPin.mediaUrl && (
-              <div className="mb-10">
-                {selectedPin.mediaType === "video" ? (
-                  <video
-                    src={selectedPin.mediaUrl}
-                    className="w-full h-64 md:h-80 object-cover rounded-xl shadow-lg"
-                    muted
-                    controls
-                    crossOrigin="anonymous"
-                  >
-                    <track kind="captions" />
-                  </video>
-                ) : (
-                  <img
-                    src={selectedPin.mediaUrl}
-                    alt={selectedPin.title || selectedPin.siteName}
-                    className="w-full h-64 md:h-80 object-cover rounded-xl shadow-lg"
-                  />
-                )}
-              </div>
-            )}
+            {(!selectedPin.mediaFiles || selectedPin.mediaFiles.length === 0) &&
+              selectedPin.mediaUrl && (
+                <div className="mb-10">
+                  {selectedPin.mediaType === "video" ? (
+                    <video
+                      src={selectedPin.mediaUrl}
+                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-lg"
+                      muted
+                      controls
+                      crossOrigin="anonymous"
+                    >
+                      <track kind="captions" />
+                    </video>
+                  ) : (
+                    <img
+                      src={selectedPin.mediaUrl}
+                      alt={selectedPin.title || selectedPin.siteName}
+                      className="w-full h-64 md:h-80 object-cover rounded-xl shadow-lg"
+                    />
+                  )}
+                </div>
+              )}
 
             {/* Play/Stop Description Button - Modern Design */}
             <button
               onClick={handleToggleDescription}
               className="mb-6 w-full text-white px-5 py-3.5 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg active:scale-98"
               style={{
-                background: isPlaying 
-                  ? 'linear-gradient(to right, #dc2626, #ef4444)' 
-                  : 'linear-gradient(to right, #f04e37, #ff6b54)'
+                background: isPlaying
+                  ? "linear-gradient(to right, #dc2626, #ef4444)"
+                  : "linear-gradient(to right, #f04e37, #ff6b54)",
               }}
-              aria-label={isPlaying ? "Stop reading description" : "Listen to description"}
+              aria-label={
+                isPlaying ? "Stop reading description" : "Listen to description"
+              }
             >
               {isPlaying ? (
                 <>
@@ -770,55 +987,103 @@ export default function SiteModalFullScreen({
               <div className="prose prose-sm max-w-none">
                 <div className="text-base leading-relaxed text-gray-700 space-y-4">
                   {(() => {
-                    let description = '';
-                    if (userLanguage === 'tagalog' && selectedPin.siteDescriptionTagalog) {
+                    let description = "";
+                    if (
+                      userLanguage === "tagalog" &&
+                      selectedPin.siteDescriptionTagalog
+                    ) {
                       description = selectedPin.siteDescriptionTagalog;
-                    } else if (userLanguage === 'english' && selectedPin.siteDescription) {
+                    } else if (
+                      userLanguage === "english" &&
+                      selectedPin.siteDescription
+                    ) {
                       description = selectedPin.siteDescription;
                     } else {
-                      description = selectedPin.description || selectedPin.siteDescription || selectedPin.siteDescriptionTagalog || 'No description available';
+                      description =
+                        selectedPin.description ||
+                        selectedPin.siteDescription ||
+                        selectedPin.siteDescriptionTagalog ||
+                        "No description available";
                     }
-                    
-                    return description.split('\n\n').map((paragraph, index) => {
+
+                    return description.split("\n\n").map((paragraph, index) => {
                       if (index === 0 || showFullDescription) {
-                        return <p key={index} className="text-gray-800">{paragraph.trim()}</p>;
+                        return (
+                          <p key={index} className="text-gray-800">
+                            {paragraph.trim()}
+                          </p>
+                        );
                       }
                       return null;
                     });
                   })()}
                 </div>
-                
+
                 {/* Read More/Less Button */}
                 {(() => {
-                  let description = '';
-                  if (userLanguage === 'tagalog' && selectedPin.siteDescriptionTagalog) {
+                  let description = "";
+                  if (
+                    userLanguage === "tagalog" &&
+                    selectedPin.siteDescriptionTagalog
+                  ) {
                     description = selectedPin.siteDescriptionTagalog;
-                  } else if (userLanguage === 'english' && selectedPin.siteDescription) {
+                  } else if (
+                    userLanguage === "english" &&
+                    selectedPin.siteDescription
+                  ) {
                     description = selectedPin.siteDescription;
                   } else {
-                    description = selectedPin.description || selectedPin.siteDescription || selectedPin.siteDescriptionTagalog || '';
+                    description =
+                      selectedPin.description ||
+                      selectedPin.siteDescription ||
+                      selectedPin.siteDescriptionTagalog ||
+                      "";
                   }
-                  return description.split('\n\n').length > 1;
+                  return description.split("\n\n").length > 1;
                 })() && (
                   <button
                     onClick={() => setShowFullDescription(!showFullDescription)}
                     className="mt-4 font-semibold text-sm flex items-center gap-1 transition-colors"
-                    style={{ color: '#f04e37' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#d9442f'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#f04e37'}
+                    style={{ color: "#f04e37" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = "#d9442f")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.color = "#f04e37")
+                    }
                   >
                     {showFullDescription ? (
                       <>
                         <span>Show Less</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 15l7-7 7 7"
+                          />
                         </svg>
                       </>
                     ) : (
                       <>
                         <span>Read More</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
                         </svg>
                       </>
                     )}
@@ -835,9 +1100,17 @@ export default function SiteModalFullScreen({
                   // No automatic TTS here; only "Listen to Description" should speak
                 }}
                 className="w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(to right, #f04e37, #d9442f)' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d9442f, #c23d2a)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f04e37, #d9442f)'}
+                style={{
+                  background: "linear-gradient(to right, #f04e37, #d9442f)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "linear-gradient(to right, #d9442f, #c23d2a)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background =
+                    "linear-gradient(to right, #f04e37, #d9442f)")
+                }
                 aria-label="Scan QR Code for AR"
               >
                 <Glasses className="w-5 h-5" />
@@ -859,187 +1132,212 @@ export default function SiteModalFullScreen({
                     </h4>
                   </div>
 
-                <div className="p-4">
-                  {/* User's existing reviews */}
-                  {userReviews.length > 0 && (
-                    <div className="mb-4 space-y-3">
-                      {userReviews.map((review) => (
-                        <div key={review._id} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex gap-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
+                  <div className="p-4">
+                    {/* User's existing reviews */}
+                    {userReviews.length > 0 && (
+                      <div className="mb-4 space-y-3">
+                        {userReviews.map((review) => (
+                          <div
+                            key={review._id}
+                            className="bg-blue-50 p-3 rounded-lg border border-blue-200"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= review.rating
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "fill-gray-200 text-gray-300"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              {!isGuestMode && (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEditReview(review)}
+                                    className="text-blue-600 hover:text-blue-700 p-1"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteReview(review._id)
+                                    }
+                                    className="text-red-600 hover:text-red-700 p-1"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            {review.reviewText && (
+                              <p className="text-sm text-gray-700">
+                                {review.reviewText}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Write/Edit Review Button */}
+                    {!isGuestMode &&
+                      !showReviewForm &&
+                      userReviews.length === 0 && (
+                        <button
+                          onClick={() => setShowReviewForm(true)}
+                          className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
+                        >
+                          <Star className="w-4 h-4" />
+                          Write a Review
+                        </button>
+                      )}
+
+                    {/* Review Form */}
+                    {!isGuestMode && showReviewForm && (
+                      <form onSubmit={handleSubmitReview} className="space-y-3">
+                        {/* Rating */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Rating *
+                          </label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setRating(star)}
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                className="transition-transform hover:scale-110 active:scale-95"
+                              >
                                 <Star
-                                  key={star}
-                                  className={`w-4 h-4 ${
-                                    star <= review.rating
+                                  className={`w-8 h-8 ${
+                                    star <= (hoverRating || rating)
                                       ? "fill-yellow-400 text-yellow-400"
                                       : "fill-gray-200 text-gray-300"
                                   }`}
                                 />
-                              ))}
-                            </div>
-                            {!isGuestMode && (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleEditReview(review)}
-                                  className="text-blue-600 hover:text-blue-700 p-1"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteReview(review._id)}
-                                  className="text-red-600 hover:text-red-700 p-1"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          {review.reviewText && (
-                            <p className="text-sm text-gray-700">{review.reviewText}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Write/Edit Review Button */}
-                  {!isGuestMode && !showReviewForm && userReviews.length === 0 && (
-                    <button
-                      onClick={() => setShowReviewForm(true)}
-                      className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
-                    >
-                      <Star className="w-4 h-4" />
-                      Write a Review
-                    </button>
-                  )}
-
-                  {/* Review Form */}
-                  {!isGuestMode && showReviewForm && (
-                    <form onSubmit={handleSubmitReview} className="space-y-3">
-                      {/* Rating */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Rating *
-                        </label>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              onClick={() => setRating(star)}
-                              onMouseEnter={() => setHoverRating(star)}
-                              onMouseLeave={() => setHoverRating(0)}
-                              className="transition-transform hover:scale-110 active:scale-95"
-                            >
-                              <Star
-                                className={`w-8 h-8 ${
-                                  star <= (hoverRating || rating)
-                                    ? "fill-yellow-400 text-yellow-400"
-                                    : "fill-gray-200 text-gray-300"
-                                }`}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Review Text */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Your Review (Optional)
-                        </label>
-                        <textarea
-                          value={reviewText}
-                          onChange={(e) => setReviewText(e.target.value)}
-                          placeholder="Share your experience..."
-                          rows={4}
-                          className="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
-                          maxLength={500}
-                        />
-                        <p className="text-xs text-gray-500 mt-1 text-right">
-                          {reviewText.length}/500
-                        </p>
-                      </div>
-
-                      {/* Image Upload */}
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Photos (Optional, max 5)
-                        </label>
-                        
-                        {/* Image Previews */}
-                        {imagePreviewUrls.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2 mb-2">
-                            {imagePreviewUrls.map((url, index) => (
-                              <div key={index} className="relative">
-                                <img
-                                  src={url}
-                                  alt={`Preview ${index + 1}`}
-                                  className="w-full h-20 object-cover rounded-lg border-2 border-gray-200"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveImage(index)}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
+                              </button>
                             ))}
                           </div>
-                        )}
+                        </div>
 
-                        {/* Upload Button */}
-                        {reviewImages.length < 5 && (
-                          <label className="cursor-pointer flex items-center justify-center w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                              </svg>
-                              <span>Add Photos ({reviewImages.length}/5)</span>
-                            </div>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={handleImageSelect}
-                              className="hidden"
-                            />
+                        {/* Review Text */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Your Review (Optional)
                           </label>
-                        )}
-                      </div>
+                          <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            placeholder="Share your experience..."
+                            rows={4}
+                            className="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
+                            maxLength={500}
+                          />
+                          <p className="text-xs text-gray-500 mt-1 text-right">
+                            {reviewText.length}/500
+                          </p>
+                        </div>
 
-                      {/* Buttons */}
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowReviewForm(false);
-                            setRating(0);
-                            setReviewText("");
-                            setReviewImages([]);
-                            setImagePreviewUrls([]);
-                            setEditingReviewId(null);
-                          }}
-                          className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={isSubmitting || rating === 0}
-                          className="flex-1 py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
-                        >
-                          <Send className="w-4 h-4" />
-                          {isSubmitting ? "Submitting..." : editingReviewId ? "Update Review" : "Submit Review"}
-                        </button>
-                      </div>
-                    </form>
-                  )}
+                        {/* Image Upload */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Photos (Optional, max 5)
+                          </label>
+
+                          {/* Image Previews */}
+                          {imagePreviewUrls.length > 0 && (
+                            <div className="grid grid-cols-3 gap-2 mb-2">
+                              {imagePreviewUrls.map((url, index) => (
+                                <div key={index} className="relative">
+                                  <img
+                                    src={url}
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-full h-20 object-cover rounded-lg border-2 border-gray-200"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveImage(index)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Upload Button */}
+                          {reviewImages.length < 5 && (
+                            <label className="cursor-pointer flex items-center justify-center w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 4v16m8-8H4"
+                                  />
+                                </svg>
+                                <span>
+                                  Add Photos ({reviewImages.length}/5)
+                                </span>
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleImageSelect}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowReviewForm(false);
+                              setRating(0);
+                              setReviewText("");
+                              setReviewImages([]);
+                              setImagePreviewUrls([]);
+                              setEditingReviewId(null);
+                            }}
+                            className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isSubmitting || rating === 0}
+                            className="flex-1 py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+                          >
+                            <Send className="w-4 h-4" />
+                            {isSubmitting
+                              ? "Submitting..."
+                              : editingReviewId
+                              ? "Update Review"
+                              : "Submit Review"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
             )}
 
             {/* User Reviews Section - Modern Compact Design */}
@@ -1054,123 +1352,203 @@ export default function SiteModalFullScreen({
                       </div>
                       <span>Reviews</span>
                     </h4>
-                    {!reviewsLoading && Array.isArray(siteReviews) && siteReviews.length > 0 && (
-                      <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
-                        {siteReviews.length}
-                      </span>
-                    )}
+                    {!reviewsLoading &&
+                      Array.isArray(siteReviews) &&
+                      siteReviews.length > 0 && (
+                        <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+                          {siteReviews.length}
+                        </span>
+                      )}
                   </div>
                 </div>
-                
+
                 {/* Reviews Content */}
                 <div className="p-4">
                   {reviewsLoading ? (
                     <div className="flex items-center justify-center py-6">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2" style={{ borderColor: '#f04e37' }}></div>
-                      <p className="text-sm text-gray-500 ml-3">Loading reviews...</p>
+                      <div
+                        className="animate-spin rounded-full h-6 w-6 border-b-2"
+                        style={{ borderColor: "#f04e37" }}
+                      ></div>
+                      <p className="text-sm text-gray-500 ml-3">
+                        Loading reviews...
+                      </p>
                     </div>
-                  ) : !Array.isArray(siteReviews) || siteReviews.length === 0 ? (
+                  ) : !Array.isArray(siteReviews) ||
+                    siteReviews.length === 0 ? (
                     <div className="text-center py-6">
                       <div className="bg-gray-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
                         <Star className="w-6 h-6 text-gray-400" />
                       </div>
-                      <p className="text-sm font-medium text-gray-700">No reviews yet</p>
-                      <p className="text-xs text-gray-500 mt-1">Be the first to review!</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        No reviews yet
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Be the first to review!
+                      </p>
                     </div>
                   ) : (
                     <>
                       <div className="space-y-3">
-                        {siteReviews.slice(0, showAllReviews ? siteReviews.length : 2).map((review, idx) => (
-                          <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200">
-                            {/* Reviewer Info - Compact */}
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
-                                  style={{ background: 'linear-gradient(135deg, #f04e37 0%, #ff6b54 100%)' }}
-                                >
-                                  {(review.userId?.firstName?.[0] || review.userId?.lastName?.[0] || "A").toUpperCase()}
-                                </div>
-                                <div className="flex-1">
-                                  <span className="font-semibold text-xs text-gray-900 block leading-tight">
-                                    {review.userId?.firstName && review.userId?.lastName
-                                      ? `${review.userId.firstName} ${review.userId.lastName}`
-                                      : review.userId?.firstName || review.userId?.lastName || "Anonymous"}
-                                  </span>
-                                  <div className="flex gap-0.5 mt-0.5">
-                                    {Array.from({ length: 5 }, (_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`w-3 h-3 ${
-                                          i < review.rating ? "fill-yellow-400 text-yellow-400" : "fill-gray-300 text-gray-300"
-                                        }`}
-                                      />
-                                    ))}
+                        {siteReviews
+                          .slice(0, showAllReviews ? siteReviews.length : 2)
+                          .map((review, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-gray-50 p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200"
+                            >
+                              {/* Reviewer Info - Compact */}
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                                    style={{
+                                      background:
+                                        "linear-gradient(135deg, #f04e37 0%, #ff6b54 100%)",
+                                    }}
+                                  >
+                                    {(
+                                      review.userId?.firstName?.[0] ||
+                                      review.userId?.lastName?.[0] ||
+                                      "A"
+                                    ).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1">
+                                    <span className="font-semibold text-xs text-gray-900 block leading-tight">
+                                      {review.userId?.firstName &&
+                                      review.userId?.lastName
+                                        ? `${review.userId.firstName} ${review.userId.lastName}`
+                                        : review.userId?.firstName ||
+                                          review.userId?.lastName ||
+                                          "Anonymous"}
+                                    </span>
+                                    <div className="flex gap-0.5 mt-0.5">
+                                      {Array.from({ length: 5 }, (_, i) => (
+                                        <Star
+                                          key={i}
+                                          className={`w-3 h-3 ${
+                                            i < review.rating
+                                              ? "fill-yellow-400 text-yellow-400"
+                                              : "fill-gray-300 text-gray-300"
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
+                                {review.createdAt && (
+                                  <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                                    {new Date(
+                                      review.createdAt
+                                    ).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "numeric",
+                                    })}
+                                  </span>
+                                )}
                               </div>
-                              {review.createdAt && (
-                                <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
-                                  {new Date(review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </span>
+
+                              {/* Review Text - Compact */}
+                              {review.reviewText && (
+                                <p className="text-xs text-gray-700 leading-relaxed mb-2">
+                                  {review.reviewText}
+                                </p>
+                              )}
+
+                              {/* Review Photos - Compact */}
+                              {review.photos && review.photos.length > 0 && (
+                                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                                  {review.photos.map((photo, photoIdx) => (
+                                    <img
+                                      key={photoIdx}
+                                      src={
+                                        photo.startsWith("http")
+                                          ? photo
+                                          : `${
+                                              import.meta.env.VITE_API_BASE_URL?.replace(
+                                                "/api",
+                                                ""
+                                              ) || "http://localhost:5000"
+                                            }${photo}`
+                                      }
+                                      alt={`Review ${photoIdx + 1}`}
+                                      className="w-16 h-16 object-cover rounded-md border border-gray-300 hover:border-[#f04e37] transition-colors cursor-pointer flex-shrink-0"
+                                      onClick={() =>
+                                        window.open(
+                                          photo.startsWith("http")
+                                            ? photo
+                                            : `${
+                                                import.meta.env.VITE_API_BASE_URL?.replace(
+                                                  "/api",
+                                                  ""
+                                                ) || "http://localhost:5000"
+                                              }${photo}`,
+                                          "_blank"
+                                        )
+                                      }
+                                    />
+                                  ))}
+                                </div>
                               )}
                             </div>
-                            
-                            {/* Review Text - Compact */}
-                            {review.reviewText && (
-                              <p className="text-xs text-gray-700 leading-relaxed mb-2">{review.reviewText}</p>
-                            )}
-                            
-                            {/* Review Photos - Compact */}
-                            {review.photos && review.photos.length > 0 && (
-                              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                                {review.photos.map((photo, photoIdx) => (
-                                  <img
-                                    key={photoIdx}
-                                    src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000'}${photo}`}
-                                    alt={`Review ${photoIdx + 1}`}
-                                    className="w-16 h-16 object-cover rounded-md border border-gray-300 hover:border-[#f04e37] transition-colors cursor-pointer flex-shrink-0"
-                                    onClick={() => window.open(photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000'}${photo}`, '_blank')}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          ))}
                       </div>
-                      
+
                       {/* View More/Less Button */}
                       {siteReviews.length > 2 && (
                         <button
                           onClick={() => setShowAllReviews(!showAllReviews)}
                           className="mt-3 w-full py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-1.5"
-                          style={{ 
-                            backgroundColor: showAllReviews ? '#f5f5f5' : '#f04e37',
-                            color: showAllReviews ? '#f04e37' : 'white'
+                          style={{
+                            backgroundColor: showAllReviews
+                              ? "#f5f5f5"
+                              : "#f04e37",
+                            color: showAllReviews ? "#f04e37" : "white",
                           }}
                           onMouseEnter={(e) => {
                             if (!showAllReviews) {
-                              e.currentTarget.style.backgroundColor = '#d9442f';
+                              e.currentTarget.style.backgroundColor = "#d9442f";
                             } else {
-                              e.currentTarget.style.backgroundColor = '#ebebeb';
+                              e.currentTarget.style.backgroundColor = "#ebebeb";
                             }
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = showAllReviews ? '#f5f5f5' : '#f04e37';
+                            e.currentTarget.style.backgroundColor =
+                              showAllReviews ? "#f5f5f5" : "#f04e37";
                           }}
                         >
                           {showAllReviews ? (
                             <>
                               <span>Show Less</span>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 15l7-7 7 7"
+                                />
                               </svg>
                             </>
                           ) : (
                             <>
                               <span>View All {siteReviews.length} Reviews</span>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
                               </svg>
                             </>
                           )}

@@ -253,6 +253,7 @@ const AdminPinCard = ({
                   setValidationErrors((prev) => ({ ...prev, siteName: "" }));
                 }
               }}
+              maxLength={50}
               className={`w-full border rounded-xl p-4 text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
                 validationErrors.siteName ? "border-red-500" : "border-gray-300"
               }`}
@@ -455,6 +456,7 @@ const AdminPinCard = ({
                             }
                             className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                             rows="4"
+                            maxLength={1000}
                             placeholder={`Enter English section ${index + 1}`}
                           />
                         </div>
@@ -513,6 +515,7 @@ const AdminPinCard = ({
                             }
                             className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                             rows="4"
+                            maxLength={1000}
                             placeholder={`Enter Tagalog section ${index + 1}`}
                           />
                         </div>
@@ -981,6 +984,48 @@ const AdminPinCard = ({
             <p className="text-xs text-gray-500 mt-1">
               Optional. Positive minutes only.
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Opening/Closing Time (Optional)
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Opening Time (HH:mm)
+                </label>
+                <input
+                  type="time"
+                  value={pin.openingTime || ""}
+                  onChange={(e) => {
+                    updatePinField(
+                      selectedPinIndex,
+                      "openingTime",
+                      e.target.value
+                    );
+                  }}
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Closing Time (HH:mm)
+                </label>
+                <input
+                  type="time"
+                  value={pin.closingTime || ""}
+                  onChange={(e) => {
+                    updatePinField(
+                      selectedPinIndex,
+                      "closingTime",
+                      e.target.value
+                    );
+                  }}
+                  className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Site Status */}

@@ -243,27 +243,29 @@ export default function AdminChatbot() {
   const handleTagSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
+    const name = tagName.trim();
     const newErrors = {};
-    if (!tagName.trim()) {
+    if (name.length < 1) {
       newErrors.tagName = "Tag name is required";
+    } else if (name.length > 70) {
+      newErrors.tagName = "Tag name must be 1-70 characters";
     }
-    
-    setErrors({...errors, ...newErrors});
+
+    setErrors({ ...errors, ...newErrors });
     if (Object.keys(newErrors).length > 0) return;
 
     try {
       if (editTagId) {
         await axios.put(
           `${TAG_API_BASE}/${editTagId}`,
-          { name: tagName.trim() },
+          { name },
           { headers: getAuthHeader() }
         );
         setEditTagId(null);
       } else {
         await axios.post(
           TAG_API_BASE,
-          { name: tagName.trim() },
+          { name },
           { headers: getAuthHeader() }
         );
       }
@@ -697,6 +699,7 @@ export default function AdminChatbot() {
                   }
                 }}
                 placeholder="Tag name"
+                maxLength={70}
                 className={`flex-1 border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
                   errors.tagName ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
                 }`}
