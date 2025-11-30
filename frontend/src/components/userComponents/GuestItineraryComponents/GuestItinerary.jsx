@@ -45,7 +45,7 @@ export default function GuestItinerary() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
+      className="min-h-screen bg-orange-600 via-[#f04e37] flex flex-col relative"
       style={{
         overscrollBehavior: "none",
         touchAction: "pan-y",

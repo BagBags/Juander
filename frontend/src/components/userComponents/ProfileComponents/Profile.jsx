@@ -163,19 +163,14 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white via-[#f04e37] to-orange-600 flex flex-col relative">
+    <div className="min-h-screen bg-white  flex flex-col relative">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.15 }}
         className="flex-1 flex flex-col items-center text-sm relative overflow-hidden"
-        style={{
-          paddingTop: "env(safe-area-inset-top)",
-          paddingBottom: "env(safe-area-inset-bottom)",
-          height: "100dvh",
-          overflow: "hidden"
-        }}
+       
       >
         {/* Decorative Background Elements */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
