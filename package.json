@@ -28,6 +28,7 @@
   "scripts": {
     "test": "mocha \"tests/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts",
     "test:tour-map": "mocha \"tests/admin/tourmap*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=modern-report,inlineAssets=true,overwrite=true,charts=true,chartDir=reports/charts",
+    "test:mapbox-rate-limit": "mocha \"tests/admin/mapbox.rate-limit.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=mapbox-rate-limit-report,reportTitle=Juander-MapBox_Rate_Limit_Handling,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
     "test:guest-web": "mocha \"tests/guest-web/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=guest-web-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
     "test:guest-mobile": "mocha \"tests/guest-mobile/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=guest-mobile-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
     "test:guest": "mocha \"tests/guest-web/**/*.test.js\" \"tests/guest-mobile/**/*.test.js\" --reporter mochawesome --reporter-options reportDir=reports,reportFilename=guest-report,inlineAssets=true,overwrite=true,json=true,charts=true --timeout 300000",
