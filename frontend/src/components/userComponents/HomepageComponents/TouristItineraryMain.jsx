@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Info,
   MapPin,
-  DollarSign,
   Clock,
   FileText,
   Map,
@@ -94,7 +93,7 @@ function CustomFeeModal({ isOpen, onClose, sites }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 overflow-hidden">
         <div className="bg-blue-600 p-4 flex items-center gap-3">
-          <DollarSign className="text-white w-7 h-7" />
+          <span className="text-white text-2xl font-bold">₱</span>
           <h2 className="text-lg font-semibold text-white">
             Entrance Fee Notice
           </h2>
@@ -165,7 +164,7 @@ function CustomFeeModal({ isOpen, onClose, sites }) {
   );
 }
 
-export default function TouristItineraryMain({ initialItineraries }) {
+export default function TouristItineraryMain({ initialItineraries, onModalStateChange }) {
   const [itineraries, setItineraries] = useState(
     initialItineraries || { admin: [], user: [] }
   );
@@ -174,6 +173,14 @@ export default function TouristItineraryMain({ initialItineraries }) {
   const [showCustomFeeModal] = useState(false);
   const [selectedItinerary, setSelectedItinerary] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // Inform parent component whenever the main itinerary modal opens/closes
+  useEffect(() => {
+    if (typeof onModalStateChange === "function") {
+      onModalStateChange(showDetailsModal);
+    }
+  }, [showDetailsModal, onModalStateChange]);
+
   const [detailsItinerary, setDetailsItinerary] = useState(null);
   const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
   const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
@@ -826,12 +833,12 @@ export default function TouristItineraryMain({ initialItineraries }) {
       )}
 
       {showDetailsModal && detailsItinerary && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[40] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={closeDetails}
           />
-          <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto modern-scrollbar">
+          <div className="relative z-10000 bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 mt-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto overflow-x-hidden modern-scrollbar">
             <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <Info className="w-6 h-6 text-[#f04e37]" />
@@ -1025,7 +1032,7 @@ export default function TouristItineraryMain({ initialItineraries }) {
                           e.stopPropagation();
                           openSiteDetails(site);
                         }}
-                        className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white hover:border-[#f04e37] hover:bg-orange-50/30"
+                        className="flex w-full text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white hover:border-[#f04e37] hover:bg-orange-50/30"
                       >
                         <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           {img ? (
@@ -1055,9 +1062,8 @@ export default function TouristItineraryMain({ initialItineraries }) {
                             </div>
                           )}
                           {site.siteDescription && (
-                            <p className="text-sm text-gray-700 mt-1 line-clamp-3">
-                              {site.siteDescription}
-                            </p>
+                            <p className="text-sm text-gray-700 mt-1 break-words whitespace-normal line-clamp-3">{String(site.siteDescription).replace(/\r?\n+/g, " ").trim()}
+                                                          </p>
                           )}
                           {site.feeType && site.feeType !== "none" && (
                             <p className="text-xs text-[#f04e37] font-medium mt-1">
@@ -1096,7 +1102,7 @@ export default function TouristItineraryMain({ initialItineraries }) {
             aria-labelledby="tourist-site-details-title"
             aria-describedby="tourist-site-details-content"
             tabIndex={-1}
-            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl overflow-hidden animate-fadeIn max-h-[90vh] sm:max-h-[85vh]"
+            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn max-h-[90vh] sm:max-h-[85vh] overflow-y-auto modern-scrollbar" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
           >
             <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center gap-2">
@@ -1139,7 +1145,7 @@ export default function TouristItineraryMain({ initialItineraries }) {
 
             <div
               id="tourist-site-details-content"
-              className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto custom-scrollbar"
+              className="px-6 py-5 sm:px-8 sm:py-6 modern-scrollbar"
             >
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 {detailsSelectedSite.category && (
@@ -1152,7 +1158,7 @@ export default function TouristItineraryMain({ initialItineraries }) {
                 {detailsSelectedSite.feeType &&
                   detailsSelectedSite.feeType !== "none" && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-700">
-                      <DollarSign className="w-3 h-3" />
+                      <span className="font-bold">₱</span>
                       Entrance fee may apply
                     </span>
                   )}

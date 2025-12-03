@@ -43,7 +43,8 @@ if (hasAwsCreds) {
         const userId =
           req.user?._id ||
           `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-        filename = `${userId}${ext}`;
+        // Append timestamp to ensure a unique object key on every upload – avoids CDN caching the old image
+        filename = `${userId}-${Date.now()}${ext}`;
       } else if (req.baseUrl.includes("pins")) {
         if (file.fieldname === "facade") {
           folder = "uploads/facades";

@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Review = require("../models/reviewModel");
+const { toCdnUrl } = require("../utils/cdnUtil");
+const { deleteFromS3 } = require("../middleware/upload");
 const VisitedSite = require("../models/visitedSiteModel");
 const Log = require("../models/logModel");
 const { verifyToken } = require("../middleware/authMiddleware");
@@ -27,19 +29,34 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
     // Process uploaded photos - use S3 URLs if available
     const photoPaths = req.files
       ? req.files.map(
-          (file) => file.location || `/uploads/reviews/${file.filename}`
+          (file) => toCdnUrl(file.location) || `/uploads/reviews/${file.filename}`
         )
       : [];
 
-    // Always create new review (allow multiple reviews per user per site)
-    const review = await Review.create({
-      userId,
-      itineraryId,
-      siteId,
-      rating,
-      reviewText: reviewText || "",
-      photos: photoPaths,
-    });
+    // Ensure only ONE review per user for a given site **within the same itinerary**
+    let review = await Review.findOne({ userId, itineraryId, siteId });
+    let isUpdate = false;
+
+    if (review) {
+      // Update existing review
+      isUpdate = true;
+      review.rating = rating;
+      review.reviewText = reviewText || "";
+      if (photoPaths.length) {
+        review.photos = photoPaths;
+      }
+      await review.save();
+    } else {
+      // Create new review
+      review = await Review.create({
+        userId,
+        itineraryId,
+        siteId,
+        rating,
+        reviewText: reviewText || "",
+        photos: photoPaths,
+      });
+    }
 
     // Automatically mark site as visited when review is created or updated
     try {
@@ -71,7 +88,7 @@ router.post("/", verifyToken, upload.array("photos", 5), async (req, res) => {
     try {
       await Log.create({
         adminName: `${populated.userId.firstName} ${populated.userId.lastName}`,
-        action: `Added Review: ${populated.siteId.siteName}`,
+        action: `${isUpdate ? "Updated" : "Added"} Review: ${populated.siteId.siteName}`,
         role: "tourist",
         targetType: "review",
         targetId: review._id,
@@ -203,11 +220,15 @@ router.get("/:id", verifyToken, async (req, res) => {
 // @route   PUT /api/reviews/:id
 // @desc    Update a review
 // @access  Private
-router.put("/:id", verifyToken, async (req, res) => {
+router.put("/:id", verifyToken, upload.array("photos", 5), async (req, res) => {
   try {
     const userId = req.user._id;
     const { id } = req.params;
     const { rating, reviewText } = req.body;
+    const retained = req.body.existingPhotos ? JSON.parse(req.body.existingPhotos) : [];
+    const photoPaths = req.files
+      ? req.files.map((file) => toCdnUrl(file.location) || `/uploads/reviews/${file.filename}`)
+      : [];
 
     if (rating && (rating < 1 || rating > 5)) {
       return res.status(400).json({ error: "Rating must be between 1 and 5" });
@@ -265,12 +286,24 @@ router.put("/:id", verifyToken, async (req, res) => {
 
     const review = await Review.findOne({ _id: id, userId });
 
+    const originalPhotos = review ? review.photos || [] : [];
+
     if (!review) {
       return res.status(404).json({ error: "Review not found" });
     }
 
     if (rating !== undefined) review.rating = rating;
     if (reviewText !== undefined) review.reviewText = reviewText;
+    // compute final photos list
+    const finalPhotos = [...retained, ...photoPaths];
+
+    // Determine photos removed by user and delete from S3
+    const removed = originalPhotos.filter((p) => !retained.includes(p));
+    for (const p of removed) {
+      deleteFromS3(p).catch(() => {});
+    }
+
+    review.photos = finalPhotos;
 
     await review.save();
 

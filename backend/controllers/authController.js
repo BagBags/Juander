@@ -563,6 +563,16 @@ exports.uploadProfilePicture = async (req, res) => {
     }
     
     await user.save();
+
+    // Delete previous picture from storage if it exists and isn’t the same as the new one
+    if (previousProfilePicture && previousProfilePicture !== user.profilePicture) {
+      try {
+        const { deleteFromS3 } = require("../middleware/upload");
+        await deleteFromS3(previousProfilePicture);
+      } catch (delErr) {
+        console.error("Failed to delete previous profile picture:", delErr.message || delErr);
+      }
+    }
     
     console.log('✅ Profile picture saved:', user.profilePicture);
     console.log('📁 req.file.location:', req.file.location);

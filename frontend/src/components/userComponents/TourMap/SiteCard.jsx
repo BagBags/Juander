@@ -6,7 +6,6 @@ import {
   X,
   MapPin,
   Clock,
-  DollarSign,
   Glasses,
   ChevronDown,
   ChevronUp,

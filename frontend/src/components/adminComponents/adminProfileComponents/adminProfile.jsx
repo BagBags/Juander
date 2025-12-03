@@ -91,13 +91,16 @@ export default function AdminProfile() {
         }
       );
 
-      // ✅ Append timestamp to force browser to fetch new image
-      const newProfilePic = `${res.data.profilePicture}?t=${Date.now()}`;
+      // Save raw S3 / CDN URL (components can add cache-buster when rendering)
+      const newProfilePic = res.data.profilePicture;
 
       const updatedAdmin = {
         ...currentAdmin,
         profilePicture: newProfilePic,
       };
+
+      // Clear preview so the component shows the newly uploaded image
+      setPreviewImage(null);
 
       setCurrentAdmin(updatedAdmin);
       localStorage.setItem("admin", JSON.stringify(updatedAdmin));
@@ -160,13 +163,13 @@ export default function AdminProfile() {
                     ? currentAdmin?.profilePicture
                     : currentAdmin?.profilePicture
                     ? currentAdmin.profilePicture.startsWith("http")
-                      ? currentAdmin.profilePicture
+                      ? `${currentAdmin.profilePicture}?t=${Date.now()}`
                       : `${
                           import.meta.env.VITE_API_BASE_URL?.replace(
                             "/api",
                             ""
                           ) || "http://localhost:5000"
-                        }${currentAdmin.profilePicture}`
+                        }${currentAdmin.profilePicture}?t=${Date.now()}`
                     : "https://ui-avatars.com/api/?name=" +
                       encodeURIComponent(
                         `${currentAdmin?.firstName || "Admin"} ${

@@ -59,9 +59,20 @@ export default function SiteModalFullScreen({
   const [editingReviewId, setEditingReviewId] = useState(null);
   const [reviewImages, setReviewImages] = useState([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
+  const [existingPhotos, setExistingPhotos] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
   const audioRef = React.useRef(null);
+
+  // Helper: safely retrieve logged-in user ID from localStorage
+  const getLocalUserId = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("user") || "null");
+      return stored?._id || stored?.id || stored?.userId || null;
+    } catch {
+      return null;
+    }
+  };
 
   // iOS 26+ detection helper
   const isiOS26Plus = () => {
@@ -207,7 +218,7 @@ export default function SiteModalFullScreen({
     const fetchUserReviews = async () => {
       try {
         const token = localStorage.getItem("token");
-        const userId = JSON.parse(localStorage.getItem("user"))?._id;
+        const userId = getLocalUserId();
         if (token && userId && selectedPin) {
           const response = await axios.get(
             `${
@@ -216,7 +227,23 @@ export default function SiteModalFullScreen({
             { headers: { Authorization: `Bearer ${token}` } }
           );
           const reviewsData = response.data.reviews || response.data;
-          const myReviews = reviewsData.filter((r) => r.userId._id === userId);
+          const myReviews = reviewsData.filter((r) => {
+            // 1️⃣ Match user
+            let userMatch = false;
+            if (r.userId) {
+              if (typeof r.userId === "string") userMatch = r.userId === userId;
+              else userMatch = r.userId._id === userId;
+            }
+            if (!userMatch) return false;
+
+            // 2️⃣ Match itinerary
+            if (!itineraryId) return false;
+            if (r.itineraryId) {
+              if (typeof r.itineraryId === "string") return r.itineraryId === itineraryId;
+              return r.itineraryId._id === itineraryId;
+            }
+            return false;
+          });
           setUserReviews(myReviews);
         }
       } catch (error) {
@@ -228,7 +255,8 @@ export default function SiteModalFullScreen({
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
-    if (files.length + reviewImages.length > 5) {
+    const totalExisting = existingPhotos.length;
+    if (files.length + reviewImages.length + totalExisting > 5) {
       setNotification({
         isOpen: true,
         title: "Upload Limit",
@@ -254,6 +282,10 @@ export default function SiteModalFullScreen({
 
     setReviewImages(newImages);
     setImagePreviewUrls(newPreviews);
+  };
+
+  const handleRemoveExistingPhoto = (index) => {
+    setExistingPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitReview = async (e) => {
@@ -376,17 +408,24 @@ export default function SiteModalFullScreen({
       const token = localStorage.getItem("token");
 
       if (editingReviewId) {
-        // For editing, send as JSON (no file upload on edit)
+        // For editing, send as FormData to allow new photos
+        const formData = new FormData();
+        formData.append("rating", rating);
+        formData.append("reviewText", reviewText.trim());
+        formData.append("existingPhotos", JSON.stringify(existingPhotos));
+        // append new images if any
+        reviewImages.forEach((img) => formData.append("photos", img));
+
         await axios.put(
           `${
             import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
           }/reviews/${editingReviewId}`,
+          formData,
           {
-            rating: rating,
-            reviewText: reviewText.trim(),
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
           }
         );
         setNotification({
@@ -433,6 +472,7 @@ export default function SiteModalFullScreen({
       setReviewText("");
       setReviewImages([]);
       setImagePreviewUrls([]);
+      setExistingPhotos([]);
       setShowReviewForm(false);
       setEditingReviewId(null);
 
@@ -443,9 +483,25 @@ export default function SiteModalFullScreen({
         }/reviews/site/${selectedPin._id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      const userId = JSON.parse(localStorage.getItem("user"))?._id;
+      const userId = getLocalUserId();
       const reviewsData = response.data.reviews || response.data;
-      const myReviews = reviewsData.filter((r) => r.userId._id === userId);
+      const myReviews = reviewsData.filter((r) => {
+        // 1️⃣ Match user
+        let userMatch = false;
+        if (r.userId) {
+          if (typeof r.userId === "string") userMatch = r.userId === userId;
+          else userMatch = r.userId._id === userId;
+        }
+        if (!userMatch) return false;
+
+        // 2️⃣ Match itinerary
+        if (!itineraryId) return false;
+        if (r.itineraryId) {
+          if (typeof r.itineraryId === "string") return r.itineraryId === itineraryId;
+          return r.itineraryId._id === itineraryId;
+        }
+        return false;
+      });
       setUserReviews(myReviews);
 
       // Refresh parent component's reviews
@@ -471,6 +527,7 @@ export default function SiteModalFullScreen({
     setEditingReviewId(review._id);
     // Note: Existing images from review.photos would need to be handled separately
     // For now, editing will allow adding new images only
+    setExistingPhotos(review.photos || []);
     setReviewImages([]);
     setImagePreviewUrls([]);
     setShowReviewForm(true);
@@ -1156,13 +1213,7 @@ export default function SiteModalFullScreen({
                               </div>
                               {!isGuestMode && (
                                 <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleEditReview(review)}
-                                    className="text-blue-600 hover:text-blue-700 p-1"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
+                                                                    <button
                                     onClick={() =>
                                       handleDeleteReview(review._id)
                                     }
@@ -1178,15 +1229,28 @@ export default function SiteModalFullScreen({
                                 {review.reviewText}
                               </p>
                             )}
+
+                            {review.photos && review.photos.length > 0 && (
+                              <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
+                                {review.photos.map((photo, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={photo.startsWith("http") ? photo : `${(import.meta.env.VITE_API_BASE_URL?.replace('/api','') || 'http://localhost:5000')}${photo}`}
+                                    alt={`Photo ${idx + 1}`}
+                                    className="w-16 h-16 object-cover rounded-md border border-gray-300 flex-shrink-0 cursor-pointer hover:border-[#f04e37]"
+                                    onClick={() => window.open(photo.startsWith('http') ? photo : `${(import.meta.env.VITE_API_BASE_URL?.replace('/api','') || 'http://localhost:5000')}${photo}`, '_blank')}
+                                  />
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     )}
 
                     {/* Write/Edit Review Button */}
-                    {!isGuestMode &&
-                      !showReviewForm &&
-                      userReviews.length === 0 && (
+                    {!isGuestMode && !showReviewForm && (
+                      userReviews.length === 0 ? (
                         <button
                           onClick={() => setShowReviewForm(true)}
                           className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
@@ -1194,7 +1258,16 @@ export default function SiteModalFullScreen({
                           <Star className="w-4 h-4" />
                           Write a Review
                         </button>
-                      )}
+                      ) : (
+                        <button
+                          onClick={() => handleEditReview(userReviews[0])}
+                          className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          Edit your Review
+                        </button>
+                      )
+                    )}
 
                     {/* Review Form */}
                     {!isGuestMode && showReviewForm && (
@@ -1250,11 +1323,33 @@ export default function SiteModalFullScreen({
                             Photos (Optional, max 5)
                           </label>
 
-                          {/* Image Previews */}
+                          {/* Existing Photos (from saved review) */}
+                          {existingPhotos.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {existingPhotos.map((photo, index) => (
+                                <div key={`existing-${index}`} className="relative w-20 h-20">
+                                  <img
+                                    src={photo}
+                                    alt={`Existing photo ${index + 1}`}
+                                    className="w-full h-full object-cover rounded-lg border-2 border-gray-200"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveExistingPhoto(index)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* New Image Previews */}
                           {imagePreviewUrls.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               {imagePreviewUrls.map((url, index) => (
-                                <div key={index} className="relative">
+                                <div key={`new-${index}`} className="relative">
                                   <img
                                     src={url}
                                     alt={`Preview ${index + 1}`}
@@ -1273,7 +1368,7 @@ export default function SiteModalFullScreen({
                           )}
 
                           {/* Upload Button */}
-                          {reviewImages.length < 5 && (
+                          {existingPhotos.length + reviewImages.length < 5 && (
                             <label className="cursor-pointer flex items-center justify-center w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
                               <div className="flex items-center gap-2 text-sm text-gray-600">
                                 <svg
@@ -1290,7 +1385,7 @@ export default function SiteModalFullScreen({
                                   />
                                 </svg>
                                 <span>
-                                  Add Photos ({reviewImages.length}/5)
+                                  Add Photos ({existingPhotos.length + reviewImages.length}/5)
                                 </span>
                               </div>
                               <input
@@ -1314,6 +1409,7 @@ export default function SiteModalFullScreen({
                               setReviewText("");
                               setReviewImages([]);
                               setImagePreviewUrls([]);
+                              setExistingPhotos([]);
                               setEditingReviewId(null);
                             }}
                             className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"

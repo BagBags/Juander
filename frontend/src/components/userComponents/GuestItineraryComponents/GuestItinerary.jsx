@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import GuestItineraryMain from "./GuestItineraryMain";
 import BackHeader from "../BackButton";
@@ -7,6 +7,7 @@ import PullToRefresh from "../../shared/PullToRefresh";
 
 export default function GuestItinerary() {
   const navigate = useNavigate();
+  const [modalOpen, setModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleRefresh = async () => {
@@ -55,16 +56,18 @@ export default function GuestItinerary() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      <BackHeader
-        title={<span className="text-white">Available Itineraries</span>}
-        className="text-white"
-      />
+      {!modalOpen && (
+        <BackHeader
+          title={<span className="text-white">Available Itineraries</span>}
+          className="text-white"
+        />
+      )}
 
       {/* Main Content */}
       <PullToRefresh onRefresh={handleRefresh}>
         <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
           <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
-            <GuestItineraryMain key={refreshKey} />
+            <GuestItineraryMain key={refreshKey} onModalStateChange={setModalOpen} />
           </div>
         </div>
       </PullToRefresh>

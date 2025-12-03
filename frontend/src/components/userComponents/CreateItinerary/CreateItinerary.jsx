@@ -374,6 +374,16 @@ export default function CreateItineraryPage() {
 
   const token = localStorage.getItem("token");
   const config = { headers: { Authorization: `Bearer ${token}` } };
+  const BACKEND_URL =
+    import.meta.env.VITE_API_BASE_URL?.replace("/api", "") ||
+    "http://localhost:5000";
+
+  // Validation helper functions
+  const containsHTML = (str = "") => /<[^>]*>/g.test(str);
+  const containsEmoji = (str = "") =>
+    /[\p{Extended_Pictographic}\u{1F300}-\u{1F6FF}\u{1F600}-\u{1F64F}]/u.test(str);
+  const isValidNamePattern = (str = "") =>
+    /^[A-Za-z0-9\s&,.'\-]+$/.test(str);
 
   useEffect(() => {
     // No TTS here; voice guidance is exclusive to itinerary maps
@@ -766,32 +776,166 @@ export default function CreateItineraryPage() {
       return;
     }
 
-    if (!itineraryName.trim()) {
+    const trimmedName = (itineraryName || "").trim();
+
+    // --- Itinerary Name validations ---
+    if (!trimmedName) {
       setNameError("Itinerary name is required");
       setNotification({
         isOpen: true,
         type: "warning",
         title: "Itinerary name required",
-        message: "Please enter an itinerary name (max 25 characters).",
+        message: "Please enter an itinerary name.",
       });
       return;
     }
-    if (isProfaneText(itineraryName)) {
+
+    if (trimmedName.length < 3 || trimmedName.length > 100) {
+      setNameError("Invalid length");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Invalid Length",
+        message: "Itinerary name must be between 3 and 100 characters.",
+      });
+      return;
+    }
+
+    if (itineraryName !== trimmedName) {
+      setNameError("No leading/trailing spaces");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Invalid Format",
+        message: "Itinerary name cannot start or end with spaces.",
+      });
+      return;
+    }
+
+    if (!isValidNamePattern(trimmedName)) {
+      setNameError("Invalid characters");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Invalid Characters",
+        message:
+          "Use only letters, numbers, spaces, and basic punctuation (- & , . ').",
+      });
+      return;
+    }
+
+    if (containsEmoji(trimmedName) || containsHTML(trimmedName)) {
+      setNameError("Invalid characters");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Invalid Characters",
+        message: "Itinerary name cannot contain emojis or HTML.",
+      });
+      return;
+    }
+
+    // Local profanity filter
+    if (isProfaneText(trimmedName)) {
       setNameError("No bad words allowed");
       setNotification({
         isOpen: true,
         type: "warning",
-        title: "Invalid itinerary name",
+        title: "Inappropriate Content",
         message: "No bad words allowed in itinerary name.",
       });
       return;
     }
+
+    // OpenAI Moderation API
+    try {
+      const moderationResponse = await axios.post(
+        `${BACKEND_URL}/api/openai/moderate`,
+        { input: trimmedName },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const result = moderationResponse.data.results?.[0];
+      if (result && result.flagged) {
+        const categories = Object.entries(result.categories)
+          .filter(([_, v]) => v)
+          .map(([k]) => k);
+        let warningMessage =
+          "Your itinerary name contains inappropriate content.";
+        if (categories.length) {
+          warningMessage += ` (${categories.join(", ")})`;
+        }
+        setNameError("Inappropriate content");
+        setNotification({
+          isOpen: true,
+          type: "warning",
+          title: "Content Warning",
+          message: warningMessage,
+        });
+        return;
+      }
+    } catch (err) {
+      console.error("Moderation API error:", err);
+      // proceed, fallback filters already applied
+    }
+
+    // Uniqueness check (case-insensitive)
+    const nameExists = userItineraries.some(
+      (it) =>
+        it.name &&
+        it.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+        it._id !== editingItineraryId
+    );
+    if (nameExists) {
+      setNameError("Name already exists");
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Duplicate Name",
+        message:
+          "Another itinerary with this name already exists. Please choose a different name.",
+      });
+      return;
+    }
+
+    // Start time validation
+    if (rHour === "" || rMinute === "") {
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Start Time Required",
+        message: "Please select a start time for your itinerary.",
+      });
+      return;
+    }
+
+    // Selected sites validation
     if (selected.length === 0) {
       setNotification({
         isOpen: true,
         type: "warning",
         title: "No sites selected",
         message: "Select at least one site for your itinerary.",
+      });
+      return;
+    }
+
+    // Ensure all selected sites are active
+    const hasInactiveSite = selected.some((id) => {
+      const s = sites.find((site) => site._id === id);
+      return !s || s.status !== "active" || s.isArchived;
+    });
+    if (hasInactiveSite) {
+      setNotification({
+        isOpen: true,
+        type: "warning",
+        title: "Inactive Site Selected",
+        message:
+          "One or more selected sites are inactive. Please remove them from your itinerary.",
       });
       return;
     }
@@ -809,7 +953,7 @@ export default function CreateItineraryPage() {
     }
 
     const payload = {
-      name: itineraryName.trim(),
+      name: trimmedName,
       imageUrl: imageUrl ? imageUrl.trim() : "",
       sites: selected,
       isAdminCreated: false,

@@ -9,6 +9,7 @@ import ModernLoader from "../../shared/ModernLoader";
 export default function TouristItinerary() {
   const [currentUser, setCurrentUser] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [prefetchedItineraries, setPrefetchedItineraries] = useState({
@@ -219,17 +220,19 @@ export default function TouristItinerary() {
         touchAction: "pan-y",
       }}
     >
-      <BackHeader
-        title={<span className="text-white">Available Itineraries</span>}
-        className="text-white"
-      />
+      {!modalOpen && (
+        <BackHeader
+          title={<span className="text-white">Available Itineraries</span>}
+          className="text-white"
+        />
+      )}
 
       {/* Main Content */}
       <MainLayout includeSideButtons={false}>
         <PullToRefresh onRefresh={handleRefresh}>
           <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
             <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
-              <TouristItineraryMain
+              <TouristItineraryMain onModalStateChange={setModalOpen}
                 key={refreshKey}
                 initialItineraries={prefetchedItineraries}
               />
