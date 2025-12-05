@@ -933,6 +933,21 @@ function ItineraryCard({ itinerary, navigate, onOpenDetails }) {
         ) : (
           <p className="text-gray-500 text-sm">No sites available</p>
         )}
+
+        {/* Start Tour button */}
+        <div className="mt-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/GuestItineraryMap/${itinerary._id}`, {
+                state: { itinerary },
+              });
+            }}
+            className="w-full py-2 text-sm font-semibold text-[#f04e37] border border-[#f04e37] rounded-lg hover:bg-[#f04e37]/10 focus:outline-none focus:ring-2 focus:ring-[#f04e37]/50"
+          >
+            Start Tour
+          </button>
+        </div>
       </div>
     </div>
   );

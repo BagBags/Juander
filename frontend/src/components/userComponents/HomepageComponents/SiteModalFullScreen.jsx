@@ -19,6 +19,7 @@ import MediaCarousel from "../../shared/MediaCarousel";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import NotificationModal from "../../shared/NotificationModal";
+import ConfirmModal from "../../shared/ConfirmModal";
 import QRScanner from "../QRScannerSimple";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
@@ -49,6 +50,15 @@ export default function SiteModalFullScreen({
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+    confirmText: "",
+    onConfirm: null,
+    loading: false,
+  });
   const [notification, setNotification] = useState({
     isOpen: false,
     title: "",
@@ -403,18 +413,28 @@ export default function SiteModalFullScreen({
       }
     }
 
-    setIsSubmitting(true);
-    try {
-      const token = localStorage.getItem("token");
+    // Show confirmation modal to avoid duplicate submissions
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: editingReviewId ? "Update Review?" : "Submit Review?",
+      message: editingReviewId
+        ? "Are you sure you want to update your review?"
+        : "Are you sure you want to submit your review?",
+      confirmText: editingReviewId ? "Update Review" : "Submit Review",
+      loading: false,
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
+        setIsSubmitting(true);
+        try {
+          const token = localStorage.getItem("token");
 
-      if (editingReviewId) {
-        // For editing, send as FormData to allow new photos
-        const formData = new FormData();
-        formData.append("rating", rating);
-        formData.append("reviewText", reviewText.trim());
-        formData.append("existingPhotos", JSON.stringify(existingPhotos));
-        // append new images if any
-        reviewImages.forEach((img) => formData.append("photos", img));
+          if (editingReviewId) {
+            const formData = new FormData();
+            formData.append("rating", rating);
+            formData.append("reviewText", reviewText.trim());
+            formData.append("existingPhotos", JSON.stringify(existingPhotos));
+            reviewImages.forEach((img) => formData.append("photos", img));
 
         await axios.put(
           `${
@@ -518,19 +538,25 @@ export default function SiteModalFullScreen({
       });
     } finally {
       setIsSubmitting(false);
+      setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
     }
-  };
+  }
+}); // Added missing closing brace here
+// Prevent immediate submission until user confirms
+return;
+};
 
-  const handleEditReview = (review) => {
-    setRating(review.rating);
-    setReviewText(review.reviewText || "");
-    setEditingReviewId(review._id);
-    // Note: Existing images from review.photos would need to be handled separately
-    // For now, editing will allow adding new images only
-    setExistingPhotos(review.photos || []);
-    setReviewImages([]);
-    setImagePreviewUrls([]);
-    setShowReviewForm(true);
+const handleEditReview = (review) => {
+  setRating(review.rating);
+  setReviewText(review.reviewText || "");
+  setEditingReviewId(review._id);
+  // Note: Existing images from review.photos would need to be handled separately
+  // For now, editing will allow adding new images only
+  setExistingPhotos(review.photos || []);
+  setReviewImages([]);
+  setImagePreviewUrls([]);
+  setShowReviewForm(true);
+
   };
 
   const handleDeleteReview = async (reviewId) => {
@@ -1659,6 +1685,19 @@ export default function SiteModalFullScreen({
         )}
       </div>
 
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() =>
+          setConfirmModal({ ...confirmModal, isOpen: false, loading: false })
+        }
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
       {/* Notification Modal */}
       <NotificationModal
         isOpen={notification.isOpen}

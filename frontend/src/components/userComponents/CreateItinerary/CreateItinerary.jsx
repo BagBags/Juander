@@ -209,6 +209,16 @@ export default function CreateItineraryPage() {
     title: "",
     message: "",
   });
+  // Confirmation modal state for saving itinerary
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+    confirmText: "",
+    onConfirm: null,
+    loading: false,
+  });
   const [sitesErrorMsg, setSitesErrorMsg] = useState("");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsItinerary, setDetailsItinerary] = useState(null);
@@ -952,6 +962,7 @@ export default function CreateItineraryPage() {
       return;
     }
 
+    // Build payload for submission
     const payload = {
       name: trimmedName,
       imageUrl: imageUrl ? imageUrl.trim() : "",
@@ -964,64 +975,94 @@ export default function CreateItineraryPage() {
       breaks,
     };
 
-    try {
-      if (editingItineraryId) {
-        await axios.put(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/itineraries/${editingItineraryId}`,
-          payload,
-          config
-        );
-        // Clear all itinerary cache to force refresh in Start Tour
-        localStorage.removeItem("user_itineraries");
-        localStorage.removeItem("tourist_itineraries_cache");
-        localStorage.removeItem("tourist_itinerary_preloaded_v2");
-        setNotification({
-          isOpen: true,
-          type: "success",
-          title: "Itinerary updated",
-          message: "Your itinerary was updated successfully.",
-        });
-      } else {
-        const res = await axios.post(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/itineraries`,
-          payload,
-          config
-        );
-        // Clear all itinerary cache to force refresh in Start Tour
-        localStorage.removeItem("user_itineraries");
-        localStorage.removeItem("tourist_itineraries_cache");
-        localStorage.removeItem("tourist_itinerary_preloaded_v2");
-        setUserItineraries((prev) => [res.data, ...prev]);
-        setNotification({
-          isOpen: true,
-          type: "success",
-          title: "Itinerary created",
-          message: "Your itinerary was created successfully.",
-        });
-      }
-      resetForm();
-      fetchItineraries();
-    } catch (err) {
-      console.error("Save error:", err);
-      // Check if it's a network error
-      if (!navigator.onLine || err.message === "Network Error") {
-        setOfflineMessage(
-          "Lost connection while saving. Please try again when online."
-        );
-        setShowOfflineModal(true);
-      } else {
-        setNotification({
-          isOpen: true,
-          type: "error",
-          title: "Failed to save itinerary",
-          message: "Please try again.",
-        });
-      }
-    }
+    // Show confirmation modal before actually saving
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: editingItineraryId ? "Update Itinerary?" : "Add New Itinerary?",
+      message: editingItineraryId
+        ? `Are you sure you want to update the itinerary "${trimmedName}"?`
+        : `Are you sure you want to add the itinerary "${trimmedName}"?`,
+      confirmText: editingItineraryId ? "Update" : "Save Itinerary",
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, loading: true }));
+        try {
+          if (editingItineraryId) {
+            await axios.put(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries/${editingItineraryId}`,
+              payload,
+              config
+            );
+
+            // Clear caches to force refresh
+            localStorage.removeItem("user_itineraries");
+            localStorage.removeItem("tourist_itineraries_cache");
+            localStorage.removeItem("tourist_itinerary_preloaded_v2");
+
+            setNotification({
+              isOpen: true,
+              type: "success",
+              title: "Itinerary updated",
+              message: "Your itinerary was updated successfully.",
+            });
+          } else {
+            const res = await axios.post(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/itineraries`,
+              payload,
+              config
+            );
+
+            // Clear caches to force refresh
+            localStorage.removeItem("user_itineraries");
+            localStorage.removeItem("tourist_itineraries_cache");
+            localStorage.removeItem("tourist_itinerary_preloaded_v2");
+
+            setUserItineraries((prev) => [res.data, ...prev]);
+
+            setNotification({
+              isOpen: true,
+              type: "success",
+              title: "Itinerary created",
+              message: "Your itinerary was created successfully.",
+            });
+          }
+
+          resetForm();
+          fetchItineraries();
+
+          setConfirmModal({
+            isOpen: false,
+            type: "warning",
+            title: "",
+            message: "",
+            confirmText: "",
+            onConfirm: null,
+            loading: false,
+          });
+        } catch (err) {
+          console.error("Save error:", err);
+          setConfirmModal((prev) => ({ ...prev, loading: false }));
+
+          if (!navigator.onLine || err.message === "Network Error") {
+            setOfflineMessage(
+              "Lost connection while saving. Please try again when online."
+            );
+            setShowOfflineModal(true);
+          } else {
+            setNotification({
+              isOpen: true,
+              type: "error",
+              title: "Failed to save itinerary",
+              message: "Please try again.",
+            });
+          }
+        }
+      },
+    });
   };
 
   const handleDelete = (id) => {
@@ -1132,8 +1173,10 @@ export default function CreateItineraryPage() {
     >
       <CreateItineraryTourAutostart />
       <div
-        className="bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
+        className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
         style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
           height: "100dvh",
           overflow: "hidden",
           overscrollBehavior: "none",
@@ -1147,6 +1190,28 @@ export default function CreateItineraryPage() {
             onDontShowAgain={handleDontShowAgain}
           />
         )}
+
+        {/* Save Itinerary Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          onClose={() =>
+            setConfirmModal({
+              isOpen: false,
+              type: "warning",
+              title: "",
+              message: "",
+              confirmText: "",
+              onConfirm: null,
+              loading: false,
+            })
+          }
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          confirmText={confirmModal.confirmText}
+          type={confirmModal.type}
+          loading={confirmModal.loading}
+        />
 
         {/* Delete Image Confirmation Modal */}
         <ConfirmModal

@@ -40,10 +40,16 @@ export default function AdminHomeMain() {
       const sitesRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/pins`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      // Fetch logs
+      const logsRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/logs?limit=10`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       
       const users = usersRes.data;
       const reviews = reviewsRes.data;
       const sites = sitesRes.data;
+      const logs = logsRes.data;
       
       // Calculate stats
       const avgRating = reviews.length > 0
@@ -59,16 +65,26 @@ export default function AdminHomeMain() {
         totalItineraries: 0, // Can be fetched if needed
       });
       
-      // Get recent reviews for activity
-      const recent = reviews.slice(0, 5).map(r => ({
+      // Build recent activities combining reviews and logs
+      const recentReviews = reviews.slice(0, 5).map(r => ({
         type: "review",
         user: `${r.userId?.firstName || "Unknown"} ${r.userId?.lastName || "User"}`,
         site: r.siteId?.siteName || "Unknown Site",
         rating: r.rating,
         date: new Date(r.createdAt),
       }));
+
+      const recentLogs = logs.slice(0, 5).map(l => ({
+        type: "log",
+        message: `${l.adminName} ${l.action.toLowerCase()} ${l.targetType}${l.details?.siteName ? ` \"${l.details.siteName}\"` : l.details?.itineraryName ? ` \"${l.details.itineraryName}\"` : ""}`,
+        date: new Date(l.createdAt),
+      }));
+
+      const combined = [...recentReviews, ...recentLogs]
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 5);
       
-      setRecentActivity(recent);
+      setRecentActivity(combined);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
     } finally {
@@ -221,32 +237,47 @@ export default function AdminHomeMain() {
           </div>
         ) : (
           <div className="space-y-4">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div className="bg-[#f04e37] p-2 rounded-lg flex-shrink-0">
-                  <Star className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 font-medium">
-                    <span className="font-bold">{activity.user}</span> reviewed{" "}
-                    <span className="font-semibold text-[#f04e37]">{activity.site}</span>
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-3 h-3 ${
-                            i < activity.rating ? "fill-yellow-400 text-yellow-400" : "fill-gray-300 text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm text-gray-500">{formatDate(activity.date)}</span>
+            {recentActivity.map((activity, index) => {
+              const IconComponent = activity.type === "review" ? Star : Activity;
+              return (
+                <div
+                  key={index}
+                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="bg-[#f04e37] p-2 rounded-lg flex-shrink-0">
+                    <IconComponent className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {activity.type === "review" ? (
+                      <>
+                        <p className="text-gray-900 font-medium">
+                          <span className="font-bold">{activity.user}</span> reviewed{" "}
+                          <span className="font-semibold text-[#f04e37]">{activity.site}</span>
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex gap-0.5">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < activity.rating ? "fill-yellow-400 text-yellow-400" : "fill-gray-300 text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-500">{formatDate(activity.date)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-900 font-medium">{activity.message}</p>
+                        <span className="text-sm text-gray-500">{formatDate(activity.date)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

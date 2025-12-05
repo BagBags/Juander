@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+import { Filter } from "bad-words";
 import {
   Edit,
   Trash2,
@@ -18,6 +19,152 @@ import {
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import ConfirmModal from "../../shared/ConfirmModal";
 import NotificationModal from "../../shared/NotificationModal";
+
+// ---------- Profanity Filter Utilities ----------
+const TAGALOG_BAD_WORDS = (() => {
+  const base = [
+    "putangina",
+    "putang ina",
+    "putang-ina",
+    "puta",
+    "puta ka",
+    "putragis",
+    "putaragis",
+    "pakshet",
+    "pakshit",
+    "pakyu",
+    "fakyu",
+    "kantot",
+    "kantutan",
+    "hindot",
+    "hindutan",
+    "titi",
+    "burat",
+    "puke",
+    "puki",
+    "pekpek",
+    "pepe",
+    "kiki",
+    "kupal",
+    "gago",
+    "gaga",
+    "tanga",
+    "bobo",
+    "ulol",
+    "tarantado",
+    "bwisit",
+    "leche",
+    "lintik",
+    "punyeta",
+    "pucha",
+    "animal",
+    "hayop",
+    "ogag",
+    "buraot",
+    "syet",
+    "shit",
+    "bitch",
+    "fuck",
+    "asshole",
+  ];
+  const extra = [
+    "amputa",
+    "animal ka",
+    "bilat",
+    "binibrocha",
+    "bogo",
+    "boto",
+    "brocha",
+    "bwesit",
+    "demonyo ka",
+    "engot",
+    "etits",
+    "gagi",
+    "habal",
+    "hayop ka",
+    "hayup",
+    "hinampak",
+    "hinayupak",
+    "hudas",
+    "iniyot",
+    "inutel",
+    "inutil",
+    "iyot",
+    "kagaguhan",
+    "kagang",
+    "kantotan",
+    "kantut",
+    "kaululan",
+    "kayat",
+    "kikinginamo",
+    "kingina",
+    "leching",
+    "lechugas",
+    "nakakaburat",
+    "nimal",
+    "olok",
+    "pakingshet",
+    "pesteng yawa",
+    "poke",
+    "poki",
+    "pokpok",
+    "poyet",
+    "pu'keng",
+    "puchanggala",
+    "puchangina",
+    "pukinangina",
+    "puking",
+    "ratbu",
+    "shunga",
+    "sira ulo",
+    "siraulo",
+    "suso",
+    "susu",
+    "tae",
+    "taena",
+    "tamod",
+    "tangina",
+    "taragis",
+    "tete",
+    "teti",
+    "timang",
+    "tinil",
+    "tite",
+    "tungaw",
+    "ulul",
+    "ungas",
+  ];
+  return Array.from(new Set([...base, ...extra].map((s) => s.toLowerCase())));
+})();
+
+const profanityFilter = (() => {
+  const f = new Filter();
+  try {
+    f.addWords(...TAGALOG_BAD_WORDS);
+  } catch {}
+  return f;
+})();
+
+const normalizeProfanity = (s = "") => {
+  const map = { 0: "o", 1: "i", 3: "e", 4: "a", 5: "s", 7: "t", "@": "a", $: "s", "!": "i" };
+  const lowered = String(s).toLowerCase();
+  const leetFixed = lowered
+    .split("")
+    .map((c) => (map[c] ? map[c] : c))
+    .join("");
+  return leetFixed.replace(/[\s\-_.]+/g, "");
+};
+
+const isProfaneText = (s = "") => {
+  const normalized = normalizeProfanity(s);
+  if (profanityFilter.isProfane(normalized)) return true;
+  for (const w of TAGALOG_BAD_WORDS) {
+    const wn = normalizeProfanity(w);
+    if (normalized.includes(wn)) return true;
+  }
+  return false;
+};
+// ------------------------------------------------
 
 export default function AdminItineraryMain() {
   const [pins, setPins] = useState([]);
@@ -417,13 +564,18 @@ export default function AdminItineraryMain() {
   const handleSave = () => {
     // Validation
     const newErrors = {};
-    const nameLen = name.trim().length;
+    const trimmedName = name.trim();
+    const nameLen = trimmedName.length;
     if (nameLen < 5 || nameLen > 70) {
       newErrors.name = "Itinerary name must be 5-70 characters";
+    } else if (trimmedName && isProfaneText(trimmedName)) {
+      newErrors.name = "No bad words allowed";
     }
     const descLen = description.trim().length;
     if (descLen < 5 || descLen > 400) {
       newErrors.description = "Description must be 5-400 characters";
+    } else if (descLen && isProfaneText(trimmedDescription)) {
+      newErrors.description = "No bad words allowed";
     }
     const durNum = Number(duration);
     if (!duration || isNaN(durNum) || durNum < 1 || durNum > 12) {
@@ -1298,8 +1450,11 @@ export default function AdminItineraryMain() {
               placeholder="Itinerary Name"
               value={name}
               onChange={(e) => {
-                setName(e.target.value);
-                if (errors.name && e.target.value.trim()) {
+                const raw = e.target.value;
+                setName(raw);
+                if (raw.trim() && isProfaneText(raw)) {
+                  setErrors({ ...errors, name: "No bad words allowed" });
+                } else if (errors.name) {
                   setErrors({ ...errors, name: "" });
                 }
               }}
@@ -1323,8 +1478,11 @@ export default function AdminItineraryMain() {
           <textarea
             value={description}
             onChange={(e) => {
-              setDescription(e.target.value);
-              if (errors.description && e.target.value.trim()) {
+              const rawDesc = e.target.value;
+              setDescription(rawDesc);
+              if (rawDesc.trim() && isProfaneText(rawDesc)) {
+                setErrors({ ...errors, description: "No bad words allowed" });
+              } else if (errors.description) {
                 setErrors({ ...errors, description: "" });
               }
             }}

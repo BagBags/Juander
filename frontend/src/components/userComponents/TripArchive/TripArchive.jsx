@@ -16,6 +16,7 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
+import ConfirmModal from "../../shared/ConfirmModal";
 import PullToRefresh from "../../shared/PullToRefresh";
 import { useTour } from "../../TourComponents/TourContext";
 
@@ -90,6 +91,17 @@ export default function TripArchivesPage() {
     title: "",
     message: "",
     type: "info",
+  });
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    type: "success",
+    title: "",
+    message: "",
+    confirmText: "Submit Review",
+    onConfirm: null,
+    loading: false,
   });
   const [expandedItineraries, setExpandedItineraries] = useState({}); // Track which itinerary names are expanded
   const [expandedDescriptions, setExpandedDescriptions] = useState({}); // Track which descriptions are expanded
@@ -346,6 +358,8 @@ export default function TripArchivesPage() {
       return;
     }
 
+
+
     // Check for inappropriate content using OpenAI Moderation API
     if (reviewText) {
       try {
@@ -444,6 +458,26 @@ export default function TripArchivesPage() {
       }
     }
 
+    // Show confirmation modal to avoid duplicate submissions before sending the request
+    const existingReview = reviews.find(
+      (r) =>
+        r.siteId?._id === (selectedSite.siteId?._id ?? selectedSite.siteId) &&
+        r.itineraryId?._id === (selectedSite.itineraryId?._id ?? selectedSite.itineraryId)
+    );
+    setConfirmModal({
+      isOpen: true,
+      type: "success",
+      title: existingReview ? "Update Review?" : "Submit Review?",
+      message: existingReview
+        ? "Are you sure you want to update your review?"
+        : "Are you sure you want to submit your review?",
+      confirmText: existingReview ? "Update Review" : "Submit Review",
+      onConfirm: submitReview,
+      loading: false,
+    });
+    // Prevent immediate submission until the user confirms in the modal
+    return;
+
     try {
       // Create FormData for file upload
       const formData = new FormData();
@@ -508,7 +542,84 @@ export default function TripArchivesPage() {
     }
   };
 
-  const handleDeleteReview = (reviewId) => {
+  const submitReview = async () => {
+    setConfirmModal((prev) => ({ ...prev, loading: true }));
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append(
+        "itineraryId",
+        selectedSite.itineraryId?._id || selectedSite.itineraryId
+      );
+      formData.append(
+        "siteId",
+        selectedSite.siteId?._id || selectedSite.siteId
+      );
+      formData.append("rating", rating);
+      formData.append("reviewText", reviewText);
+
+      // Append photos
+      reviewPhotos.forEach((photo) => {
+        formData.append("photos", photo);
+      });
+
+      const response = await axios.post(
+        `${BACKEND_URL}/api/reviews`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      // Update reviews list
+      const updatedReviews = reviews.filter(
+        (r) =>
+          !(
+            r.siteId?._id === selectedSite.siteId?._id &&
+            r.itineraryId?._id === selectedSite.itineraryId?._id
+          )
+      );
+      setReviews([response.data.review, ...updatedReviews]);
+
+      setShowReviewModal(false);
+      setSelectedSite(null);
+      setRating(0);
+      setReviewText("");
+      setReviewPhotos([]);
+      setPhotoPreviewUrls([]);
+
+      // Close confirm modal
+      setConfirmModal({
+        isOpen: false,
+        type: "warning",
+        title: "",
+        message: "",
+        onConfirm: null,
+        loading: false,
+      });
+
+      setNotification({
+        isOpen: true,
+        title: "Success",
+        message: response.data.message,
+        type: "success",
+      });
+    } catch (err) {
+      console.error("Error submitting review:", err);
+      setConfirmModal((prev) => ({ ...prev, loading: false }));
+      setNotification({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to submit review",
+        type: "error",
+      });
+    }
+  };
+
+const handleDeleteReview = (reviewId) => {
     // Show confirmation modal
     setDeleteConfirmation({
       isOpen: true,
@@ -1717,6 +1828,27 @@ export default function TripArchivesPage() {
             </div>
           </div>
         )}
+
+        {/* Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          onClose={() =>
+            setConfirmModal({
+              isOpen: false,
+              type: "warning",
+              title: "",
+              message: "",
+              onConfirm: null,
+              loading: false,
+            })
+          }
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          type={confirmModal.type}
+          confirmText={confirmModal.confirmText}
+          loading={confirmModal.loading}
+        />
 
         {/* Notification Modal */}
         <NotificationModal
