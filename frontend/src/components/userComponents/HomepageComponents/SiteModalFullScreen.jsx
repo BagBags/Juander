@@ -641,7 +641,7 @@ const handleEditReview = (review) => {
       >
         {/* AR Mode fullscreen inside modal */}
         {showAR ? (
-          <div className="h-[90vh] rounded-xl overflow-hidden">
+          <div className="rounded-xl flex flex-col min-h-[80vh]">
             {scannedArUrl ? (
               <div className="flex flex-col h-full">
                 <div
@@ -649,6 +649,7 @@ const handleEditReview = (review) => {
                   allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
                 >
                   <iframe
+                    scrolling="no"
                     id="arloopa-frame"
                     src={scannedArUrl}
                     title="AR Experience"

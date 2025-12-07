@@ -274,10 +274,11 @@ const SiteCard = ({ pin, onClose, distance }) => {
         <div className="px-5 py-6 pb-20 max-w-3xl mx-auto">
           {/* AR Mode fullscreen inside modal */}
           {showAR ? (
-            <div className="h-[90vh] rounded-xl overflow-hidden">
+            <div className="rounded-xl flex flex-col min-h-[80vh]">
               {scannedArUrl ? (
                 <div className="flex flex-col h-full">
                   <iframe
+                    scrolling="no"
                     id="arloopa-frame"
                     src={scannedArUrl}
                     title="AR Experience"
