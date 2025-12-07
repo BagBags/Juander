@@ -671,7 +671,7 @@ const handleDeleteReview = (reviewId) => {
           height: "100dvh",
           overflow: "hidden",
           overscrollBehavior: "none",
-          paddingTop: "env(safe-area-inset-top)",
+          // paddingTop handled by BackHeader
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >

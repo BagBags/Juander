@@ -163,7 +163,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white  flex flex-col relative">
+    <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -571,7 +571,8 @@ export default function AdminItineraryMain() {
     } else if (trimmedName && isProfaneText(trimmedName)) {
       newErrors.name = "No bad words allowed";
     }
-    const descLen = description.trim().length;
+    const trimmedDescription = description.trim();
+    const descLen = trimmedDescription.length;
     if (descLen < 5 || descLen > 400) {
       newErrors.description = "Description must be 5-400 characters";
     } else if (descLen && isProfaneText(trimmedDescription)) {
@@ -824,6 +825,12 @@ export default function AdminItineraryMain() {
             {},
             getConfig()
           );
+          // Optimistically update local state for immediate UI feedback
+          setItineraries((prev) => prev.filter((it) => it._id !== id));
+          setArchivedItineraries((prev) => {
+            const archivedItem = itineraries.find((it) => it._id === id);
+            return archivedItem ? [...prev, { ...archivedItem, isArchived: true }] : prev;
+          });
           fetchItineraries();
           fetchArchivedItineraries();
           setConfirmModal({
@@ -923,6 +930,8 @@ export default function AdminItineraryMain() {
             }/itineraries/${id}`,
             getConfig()
           );
+          // Optimistically remove from local state
+          setArchivedItineraries((prev) => prev.filter((it) => it._id !== id));
           fetchArchivedItineraries();
           setConfirmModal({
             isOpen: false,

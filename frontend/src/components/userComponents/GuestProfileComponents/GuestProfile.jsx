@@ -100,7 +100,7 @@ export default function GuestProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative">
+    <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -108,9 +108,7 @@ export default function GuestProfilePage() {
         transition={{ duration: 0.15 }}
         className="flex-1 flex flex-col items-center text-sm relative overflow-hidden"
         style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-          height: "100dvh",
-          overflow: "hidden"
+          paddingBottom: "env(safe-area-inset-bottom)"
         }}
       >
       {/* Decorative Background Elements */}

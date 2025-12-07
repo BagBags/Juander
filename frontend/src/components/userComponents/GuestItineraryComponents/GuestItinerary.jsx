@@ -52,7 +52,7 @@ export default function GuestItinerary() {
         touchAction: "pan-y",
         height: "100dvh",
         overflow: "hidden",
-        paddingTop: "env(safe-area-inset-top)",
+        // paddingTop handled by BackHeader
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
@@ -65,7 +65,7 @@ export default function GuestItinerary() {
 
       {/* Main Content */}
       <PullToRefresh onRefresh={handleRefresh}>
-        <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0">
+        <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0" style={{overscrollBehaviorY:'contain'}}>
           <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
             <GuestItineraryMain key={refreshKey} onModalStateChange={setModalOpen} />
           </div>

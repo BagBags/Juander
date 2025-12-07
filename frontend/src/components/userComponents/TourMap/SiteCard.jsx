@@ -810,14 +810,14 @@ const SiteCard = ({ pin, onClose, distance }) => {
                 </div>
               </div>
 
-              {/* AR Mode Button - Modern Design (Mobile Only) */}
+              {/* AR Mode Button - Mobile & Tablet */}
               {pin.arEnabled && (
                 <button
                   onClick={() => {
                     setShowAR(true);
                     ttsService.speak("Opening AR Scanner");
                   }}
-                  className="md:hidden w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
+                  className="xl:hidden w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
                   style={{
                     background: "linear-gradient(to right, #f04e37, #d9442f)",
                   }}

@@ -21,7 +21,7 @@ export default function ProfileLayout() {
     <div
       className="min-h-screen bg-white flex flex-col relative"
       style={{
-        paddingTop: "env(safe-area-inset-top)",
+        // paddingTop handled by BackHeader
         paddingBottom: "env(safe-area-inset-bottom)",
         height: "100dvh",
         overflow: "hidden",
@@ -33,7 +33,7 @@ export default function ProfileLayout() {
       {/* Centered page content; child handles its own scroll */}
       <div
         className="flex-1 flex justify-center px-4 md:px-0 overflow-y-auto"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)", WebkitOverflowScrolling: "touch" }}
+        style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
       >
         <div className="w-full max-w-md mt-4 flex flex-col h-full">
           <Outlet />

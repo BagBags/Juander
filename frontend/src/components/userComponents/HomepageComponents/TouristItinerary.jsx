@@ -212,7 +212,7 @@ export default function TouristItinerary() {
     <div
       className="min-h-screen bg-orange-600 via-[#f04e37] flex flex-col relative"
       style={{
-        paddingTop: "env(safe-area-inset-top)",
+        // paddingTop handled by BackHeader
         paddingBottom: "env(safe-area-inset-bottom)",
         height: "100dvh",
         overflow: "hidden",

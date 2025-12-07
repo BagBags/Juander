@@ -60,7 +60,7 @@ export default function EmergencyPage() {
     <div
       className="min-h-screen bg-gradient-to-br from-red-500 via-[#f04e37] to-orange-600 flex flex-col relative"
       style={{
-        paddingTop: "env(safe-area-inset-top)",
+        // paddingTop handled by BackHeader
         paddingBottom: "env(safe-area-inset-bottom)",
         height: "100dvh",
         overflow: "hidden",
