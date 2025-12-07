@@ -2598,7 +2598,7 @@ function BreakCard({ onAddBreak, addedCount = 0 }) {
         addedCount > 0
           ? "bg-green-50 border-green-300"
           : "bg-white border-gray-200"
-      } rounded-2xl md:rounded-xl shadow-lg p-4 md:p-3 flex flex-col border`}
+      } rounded-2xl md:rounded-xl shadow-lg p-4 md:p-3 flex flex-col border col-span-full md:col-span-2 lg:col-span-3`}
       style={{ scrollSnapAlign: "start" }}
     >
       <div className="flex items-center gap-3 mb-2">

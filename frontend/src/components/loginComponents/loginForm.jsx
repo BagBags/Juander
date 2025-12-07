@@ -30,6 +30,7 @@ export default function LoginForm({ toggleForm }) {
   // OTP countdown timer (10 minutes = 600 seconds)
   const [timeLeft, setTimeLeft] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
+  const [sendingOtp, setSendingOtp] = useState(false); // Loading state for Send OTP
 
 
   // 👇 Load saved language on component mount
@@ -173,6 +174,7 @@ export default function LoginForm({ toggleForm }) {
   };
 
   const handleForgotRequest = async () => {
+    if (sendingOtp) return; // Prevent double click
     setError("");
     setSuccess("");
     if (!email) {
@@ -181,15 +183,19 @@ export default function LoginForm({ toggleForm }) {
     }
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-otp`, {
-        email,
-      });
+      setSendingOtp(true);
+      await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/auth/send-otp`,
+        { email }
+      );
       setSuccess("OTP sent to your email.");
       setStep(2);
       setTimeLeft(600);
       setResendCooldown(60); // 60 second cooldown for resend
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP.");
+    } finally {
+      setSendingOtp(false);
     }
   };
 
@@ -390,9 +396,10 @@ export default function LoginForm({ toggleForm }) {
               />
               <button
                 type="submit"
-                className="w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 mt-3"
+                disabled={sendingOtp}
+                className={`w-full bg-[#f04e37] text-white px-4 py-3 rounded-lg shadow-md hover:bg-[#d9442f] transition-all active:scale-95 mt-3 ${sendingOtp ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                Send OTP
+                {sendingOtp ? "Sending..." : "Send OTP"}
               </button>
             </form>
           )}

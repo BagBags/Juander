@@ -447,10 +447,41 @@ export default function GuestItineraryMain({ onModalStateChange }) {
                   typeof detailsItinerary.recommendedStartMinutes === "number"
                     ? detailsItinerary.recommendedStartMinutes
                     : 7 * 60;
+                const sequence = [];
+                const breaksArr = Array.isArray(detailsItinerary.breaks)
+                  ? detailsItinerary.breaks
+                  : [];
+                // Insert breaks before first site
+                breaksArr
+                  .filter((b) => Number(b.position) === 0)
+                  .forEach((b) => sequence.push({ type: 'break', data: b }));
+                (detailsItinerary.sites || []).forEach((site, idx) => {
+                  sequence.push({ type: 'site', data: site });
+                  breaksArr
+                    .filter((b) => Number(b.position) === idx + 1)
+                    .forEach((b) => sequence.push({ type: 'break', data: b }));
+                });
+
                 let cursor = roundToStep(start, 5);
-                const items = (detailsItinerary.sites || []).map((site) => {
+                const items = sequence.map((it) => {
+                  if (it.type === 'break') {
+                    const pseudoSite = {
+                      _id: `break-${it.data.id || Math.random()}`,
+                      siteName: it.data.label || 'Break/Lunch',
+                      title: it.data.label || 'Break/Lunch',
+                      averageTimeSpent: it.data.minutes || 0,
+                      isBreak: true,
+                    };
+                    const item = { time: roundToStep(cursor, 5), site: pseudoSite };
+                    cursor = roundToStep(
+                      cursor + (Number(it.data.minutes) || 0),
+                      5
+                    );
+                    return item;
+                  }
+                  const site = it.data;
                   const v =
-                    typeof site?.averageTimeSpent === "number"
+                    typeof site?.averageTimeSpent === 'number'
                       ? site.averageTimeSpent
                       : Number(site?.averageTimeSpent);
                   const item = { time: roundToStep(cursor, 5), site };
@@ -474,25 +505,17 @@ export default function GuestItineraryMain({ onModalStateChange }) {
                       </div>
                     )}
                     {(() => {
-                      const segments = [];
-                      let prevEnd = null;
-                      for (let i = 0; i < items.length; i++) {
-                        const site = items[i].site;
-                        const v =
-                          typeof site?.averageTimeSpent === "number"
-                            ? site.averageTimeSpent
-                            : Number(site?.averageTimeSpent);
-                        const s =
-                          i === 0
-                            ? items[i].time
-                            : roundToStep(prevEnd + 10, 5);
-                        const e = roundToStep(
-                          s + (isNaN(v) || v <= 0 ? 0 : v),
-                          5
-                        );
-                        segments.push({ start: s, end: e, site });
-                        prevEnd = e;
-                      }
+                      const segments = items.map((it) => {
+                        const site = it.site;
+                        const minutes =
+                          site.isBreak
+                            ? site.averageTimeSpent || 0
+                            : (typeof site?.averageTimeSpent === 'number'
+                                ? site.averageTimeSpent
+                                : Number(site?.averageTimeSpent)) || 0;
+                        const end = roundToStep(it.time + minutes, 5);
+                        return { start: it.time, end, site };
+                      });
                       return (
                         <div className="space-y-3 sm:space-y-4">
                           {segments.map(({ start, end, site }, i) => (

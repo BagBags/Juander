@@ -313,47 +313,52 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
   const roundToStep = (min, step = 5) => Math.round(min / step) * step;
 
   useEffect(() => {
-    // If preloaded itineraries were provided, use them and skip fetching
+    let mounted = true;
+
+    // Always show cached / preloaded data immediately for fast render
     if (
       initialItineraries &&
       (initialItineraries.admin?.length || initialItineraries.user?.length)
     ) {
       setItineraries(initialItineraries);
-      return;
     }
+
+    const saveCache = (data) => {
+      try {
+        localStorage.setItem(
+          "tourist_itineraries_cache",
+          JSON.stringify({ ...data, ts: Date.now() })
+        );
+      } catch {}
+    };
 
     const fetchItineraries = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const res = await axios.get(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/itineraries`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const apiBase =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+        const res = await axios.get(`${apiBase}/itineraries`, {
+          params: { _ts: Date.now() },
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         const adminItineraries = res.data.filter((i) => i.isAdminCreated);
         const userItineraries = res.data.filter((i) => !i.isAdminCreated);
 
+        // Helper: compute completion status per itinerary
         const computeStatuses = async (list) => {
-          const token = localStorage.getItem("token");
           const headers = { Authorization: `Bearer ${token}` };
-          const baseUrl =
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-
           const results = await Promise.all(
             list.map(async (it) => {
               try {
                 const progressRes = await axios.get(
-                  `${baseUrl}/itinerary-progress/${it._id}`,
+                  `${apiBase}/itinerary-progress/${it._id}`,
                   { headers }
                 );
-                const visitedCount = (progressRes.data?.visitedSites || [])
-                  .length;
+                const visitedCount = (progressRes.data?.visitedSites || []).length;
                 const activeSitesCount = (it.sites || []).filter(
                   (s) => s.status === "active"
                 ).length;
@@ -371,13 +376,33 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
         const adminWithStatus = await computeStatuses(adminItineraries);
         const userWithStatus = await computeStatuses(userItineraries);
 
-        setItineraries({ admin: adminWithStatus, user: userWithStatus });
+        if (mounted) {
+          const updated = { admin: adminWithStatus, user: userWithStatus };
+          setItineraries(updated);
+          saveCache(updated);
+        }
       } catch (err) {
         console.error("Failed to fetch itineraries:", err);
       }
     };
 
+    // Initial background revalidation
     fetchItineraries();
+
+    // Poll every 30 seconds to keep data fresh (low overhead)
+    const intervalId = setInterval(fetchItineraries, 30000);
+
+    // Refetch when the user returns to this tab
+    const handleVisibilityChange = () => {
+      if (!document.hidden) fetchItineraries();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [initialItineraries]);
 
   useEffect(() => {
@@ -934,17 +959,42 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
                   typeof detailsItinerary.recommendedStartMinutes === "number"
                     ? detailsItinerary.recommendedStartMinutes
                     : 7 * 60;
+                const sequence = [];
+                const breaksArr = Array.isArray(detailsItinerary.breaks)
+                  ? detailsItinerary.breaks
+                  : [];
+                // Breaks before first site
+                breaksArr
+                  .filter((b) => Number(b.position) === 0)
+                  .forEach((b) => sequence.push({ type: 'break', data: b }));
+                (detailsItinerary.sites || []).forEach((site, idx) => {
+                  sequence.push({ type: 'site', data: site });
+                  breaksArr
+                    .filter((b) => Number(b.position) === idx + 1)
+                    .forEach((b) => sequence.push({ type: 'break', data: b }));
+                });
+
                 let cursor = roundToStep(start, 5);
-                const items = (detailsItinerary.sites || []).map((site) => {
+                const items = sequence.map((it) => {
+                  if (it.type === 'break') {
+                    const pseudoSite = {
+                      _id: `break-${it.data.id || Math.random()}`,
+                      siteName: it.data.label || 'Break/Lunch',
+                      title: it.data.label || 'Break/Lunch',
+                      averageTimeSpent: it.data.minutes || 0,
+                      isBreak: true,
+                    };
+                    const item = { time: roundToStep(cursor, 5), site: pseudoSite };
+                    cursor = roundToStep(cursor + (Number(it.data.minutes) || 0), 5);
+                    return item;
+                  }
+                  const site = it.data;
                   const v =
-                    typeof site?.averageTimeSpent === "number"
+                    typeof site?.averageTimeSpent === 'number'
                       ? site.averageTimeSpent
                       : Number(site?.averageTimeSpent);
                   const item = { time: roundToStep(cursor, 5), site };
-                  cursor = roundToStep(
-                    cursor + (isNaN(v) || v <= 0 ? 0 : v),
-                    5
-                  );
+                  cursor = roundToStep(cursor + (isNaN(v) || v <= 0 ? 0 : v), 5);
                   return item;
                 });
                 if (!items.length) return null;

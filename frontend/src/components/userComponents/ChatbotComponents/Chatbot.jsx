@@ -800,7 +800,7 @@ IMPORTANT RULES:
       setIsBotTyping(false);
     }
   };
-
+  // "What are the entrance fees?",
   // Quick question suggestions
   const quickQuestions = [
     "What are the must-see places in Intramuros?",
@@ -808,7 +808,6 @@ IMPORTANT RULES:
     "What's the history of Intramuros?",
     "Where can I eat in Intramuros?",
     "How do I get to Manila Cathedral?",
-    "What are the entrance fees?",
   ];
 
   const handleQuickQuestion = (question) => {

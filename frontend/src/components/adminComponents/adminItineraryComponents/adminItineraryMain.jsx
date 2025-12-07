@@ -184,6 +184,7 @@ export default function AdminItineraryMain() {
   const [detailsItinerary, setDetailsItinerary] = useState(null);
   const [showSiteDetailsModal, setShowSiteDetailsModal] = useState(false);
   const [detailsSelectedSite, setDetailsSelectedSite] = useState(null);
+  const [siteDetailsAllowAdd, setSiteDetailsAllowAdd] = useState(true);
   const [rHour, setRHour] = useState("7");
   const [rMinute, setRMinute] = useState("00");
   const [rPeriod, setRPeriod] = useState("AM");
@@ -318,7 +319,8 @@ export default function AdminItineraryMain() {
     setDetailsItinerary(null);
   };
 
-  const openSiteDetails = (site) => {
+  const openSiteDetails = (site, allowAdd = true) => {
+    setSiteDetailsAllowAdd(allowAdd);
     setDetailsSelectedSite(site);
     setShowSiteDetailsModal(true);
   };
@@ -1334,7 +1336,7 @@ export default function AdminItineraryMain() {
                       <div
                         key={site._id}
                         className="flex text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white cursor-pointer hover:border-orange-300 hover:shadow-sm transition"
-                        onClick={() => openSiteDetails(site)}
+                        onClick={() => openSiteDetails(site, false)}
                       >
                         <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           {img ? (
@@ -1385,9 +1387,9 @@ export default function AdminItineraryMain() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 p-6 min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-start gap-6 p-6 min-w-0">
         {/* Form Panel */}
-        <div className="w-full lg:flex-1 lg:basis-1/2 min-w-0 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
+        <div className="w-full lg:basis-1/2 min-w-0 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-4">
           <h2 className="text-2xl font-bold text-gradient-red mb-4">
             {editingId ? "Edit Itinerary" : "Add Itinerary"}
           </h2>
@@ -2285,7 +2287,7 @@ export default function AdminItineraryMain() {
                   )}
                 </div>
 
-                <div className="mt-5 flex gap-2">
+                <div className="mt-5 flex gap-2" hidden={!siteDetailsAllowAdd}>
                   <button
                     onClick={() => {
                       toggleSite(detailsSelectedSite);
