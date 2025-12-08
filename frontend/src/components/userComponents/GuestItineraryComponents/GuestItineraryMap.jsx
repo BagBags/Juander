@@ -1720,10 +1720,6 @@ export default function GuestItineraryMap() {
             <button
               className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
               onClick={() => {
-                    if (isOutsideBounds) {
-                      setShowLocationBlockModal(true);
-                      return;
-                    }
                 if (location.key !== "default") {
                   navigate(-1);
                 } else {
@@ -2002,10 +1998,10 @@ export default function GuestItineraryMap() {
               <button
                 type="button"
                 onClick={() => {
-                    if (isOutsideBounds) {
-                      setShowLocationBlockModal(true);
-                      return;
-                    }
+                  if (isOutsideBounds) {
+                    setShowLocationBlockModal(true);
+                    return;
+                  }
                   setIsBackdropActive(true);
                   setShowGpsModal(true);
                 }}
