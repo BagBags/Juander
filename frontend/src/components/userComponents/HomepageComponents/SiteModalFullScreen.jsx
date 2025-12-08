@@ -21,6 +21,8 @@ import { useParams } from "react-router-dom";
 import NotificationModal from "../../shared/NotificationModal";
 import ConfirmModal from "../../shared/ConfirmModal";
 import QRScanner from "../QRScannerSimple";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGroupArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
@@ -73,6 +75,29 @@ export default function SiteModalFullScreen({
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
   const audioRef = React.useRef(null);
+
+  const requestSensorPermissions = async () => {
+    try {
+      const reqs = [];
+      if (typeof window !== "undefined") {
+        const DME = window.DeviceMotionEvent;
+        const DOE = window.DeviceOrientationEvent;
+        if (DME && typeof DME.requestPermission === "function") {
+          reqs.push(DME.requestPermission());
+        }
+        if (DOE && typeof DOE.requestPermission === "function") {
+          reqs.push(DOE.requestPermission());
+        }
+      }
+      if (!reqs.length) return true;
+      const results = await Promise.allSettled(reqs);
+      return results.every(
+        (r) => r.status === "fulfilled" && r.value === "granted"
+      );
+    } catch {
+      return false;
+    }
+  };
 
   // Helper: safely retrieve logged-in user ID from localStorage
   const getLocalUserId = () => {
@@ -656,6 +681,20 @@ export default function SiteModalFullScreen({
                   className="relative flex-1 w-full"
                   allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
                 >
+                  <button
+                    type="button"
+                    aria-label="Enable Motion & Orientation"
+                    title="Enable Motion & Orientation"
+                    onClick={async () => {
+                      await requestSensorPermissions();
+                    }}
+                    className="absolute top-3 right-3 z-10 rounded-full p-2 bg-white/25 hover:bg-white/35 backdrop-blur-md border border-white/30 shadow-sm text-gray-800"
+                  >
+                    <FontAwesomeIcon
+                      icon={faGroupArrowsRotate}
+                      className="w-5 h-5"
+                    />
+                  </button>
                   <iframe
                     scrolling="no"
                     id="arloopa-frame"

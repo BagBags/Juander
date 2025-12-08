@@ -23,6 +23,8 @@ import QRScanner from "../QRScannerSimple";
 import axios from "axios";
 import MediaCarousel from "../../shared/MediaCarousel";
 import PullToRefresh from "../../shared/PullToRefresh";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGroupArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
@@ -38,6 +40,29 @@ const SiteCard = ({ pin, onClose, distance }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
   const audioRef = React.useRef(null);
+
+  const requestSensorPermissions = async () => {
+    try {
+      const reqs = [];
+      if (typeof window !== "undefined") {
+        const DME = window.DeviceMotionEvent;
+        const DOE = window.DeviceOrientationEvent;
+        if (DME && typeof DME.requestPermission === "function") {
+          reqs.push(DME.requestPermission());
+        }
+        if (DOE && typeof DOE.requestPermission === "function") {
+          reqs.push(DOE.requestPermission());
+        }
+      }
+      if (!reqs.length) return true;
+      const results = await Promise.allSettled(reqs);
+      return results.every(
+        (r) => r.status === "fulfilled" && r.value === "granted"
+      );
+    } catch {
+      return false;
+    }
+  };
 
   // iOS 26+ detection helper
   const isiOS26Plus = () => {
@@ -191,12 +216,20 @@ const SiteCard = ({ pin, onClose, distance }) => {
     if (!description) return;
     try {
       setIsPlaying(true);
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: `${pin.title}. ${description}`, lang: userLanguage === 'english' ? 'english' : 'filipino' })
-      });
-      if (!res.ok) throw new Error('TTS request failed');
+      const res = await fetch(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/tts/speak`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: `${pin.title}. ${description}`,
+            lang: userLanguage === "english" ? "english" : "filipino",
+          }),
+        }
+      );
+      if (!res.ok) throw new Error("TTS request failed");
       const audioBlob = await res.blob();
       const url = URL.createObjectURL(audioBlob);
       const audio = new Audio(url);
@@ -208,7 +241,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
       };
       audio.play();
     } catch (err) {
-      console.error('Error playing TTS:', err);
+      console.error("Error playing TTS:", err);
       setIsPlaying(false);
     }
   };
@@ -277,23 +310,39 @@ const SiteCard = ({ pin, onClose, distance }) => {
             <div className="rounded-xl flex flex-col min-h-[80vh]">
               {scannedArUrl ? (
                 <div className="flex flex-col h-full">
-                  <iframe
-                    scrolling="no"
-                    id="arloopa-frame"
-                    src={scannedArUrl}
-                    title="AR Experience"
-                    className="flex-1 w-full border-0"
-                    allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
-                    allowFullScreen
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      border: "none",
-                      minHeight: "80vh",
-                    }}
-                  />
+                  <div className="relative flex-1 w-full">
+                    <button
+                      type="button"
+                      aria-label="Enable Motion & Orientation"
+                      title="Enable Motion & Orientation"
+                      onClick={async () => {
+                        await requestSensorPermissions();
+                      }}
+                      className="absolute top-3 right-3 z-10 rounded-full p-2 bg-white/25 hover:bg-white/35 backdrop-blur-md border border-white/30 shadow-sm text-gray-800"
+                    >
+                      <FontAwesomeIcon
+                        icon={faGroupArrowsRotate}
+                        className="w-5 h-5"
+                      />
+                    </button>
+                    <iframe
+                      scrolling="no"
+                      id="arloopa-frame"
+                      src={scannedArUrl}
+                      title="AR Experience"
+                      className="absolute inset-0 w-full h-full border-0"
+                      allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
+                      allowFullScreen
+                      sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        border: "none",
+                        minHeight: "80vh",
+                      }}
+                    />
+                  </div>
                   <button
                     onClick={() => {
                       setShowAR(false);
@@ -467,17 +516,25 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         {(() => {
                           const fmt = (s) => {
                             if (!s) return "—";
-                            const m = String(s).trim().match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
+                            const m = String(s)
+                              .trim()
+                              .match(/^([0-2]?\d):(\d{2})(?:\s*([AP]M))?$/i);
                             if (m) {
                               let h = parseInt(m[1], 10);
                               const min = m[2];
-                              const p = m[3] ? m[3].toUpperCase() : h >= 12 ? "PM" : "AM";
+                              const p = m[3]
+                                ? m[3].toUpperCase()
+                                : h >= 12
+                                ? "PM"
+                                : "AM";
                               h = h % 12 || 12;
                               return `${h}:${min} ${p}`;
                             }
                             return String(s);
                           };
-                          return `Open ${fmt(pin.openingTime)} • Close ${fmt(pin.closingTime)}`;
+                          return `Open ${fmt(pin.openingTime)} • Close ${fmt(
+                            pin.closingTime
+                          )}`;
                         })()}
                       </span>
                     </div>
