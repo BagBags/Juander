@@ -157,18 +157,21 @@ export default function Chatbot() {
     const vv = window.visualViewport;
     const updateKb = () => {
       if (!vv) return;
-      const gap = Math.max(0, (window.innerHeight - vv.height - (vv.offsetTop || 0)));
+      const gap = Math.max(
+        0,
+        window.innerHeight - vv.height - (vv.offsetTop || 0)
+      );
       setKbPadding(gap);
     };
     if (vv) {
-      vv.addEventListener('resize', updateKb);
-      vv.addEventListener('scroll', updateKb);
+      vv.addEventListener("resize", updateKb);
+      vv.addEventListener("scroll", updateKb);
       updateKb();
     }
     return () => {
       if (vv) {
-        vv.removeEventListener('resize', updateKb);
-        vv.removeEventListener('scroll', updateKb);
+        vv.removeEventListener("resize", updateKb);
+        vv.removeEventListener("scroll", updateKb);
       }
     };
   }, []);
@@ -181,8 +184,8 @@ export default function Chatbot() {
       }
     };
     measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, []);
 
   useEffect(() => {
@@ -286,12 +289,17 @@ export default function Chatbot() {
     try {
       const lang = detectLanguage(text);
       setSpeakingMessageIndex(messageIndex);
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/tts/speak`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, lang })
-      });
-      if (!res.ok) throw new Error('TTS request failed');
+      const res = await fetch(
+        `${
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+        }/tts/speak`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, lang }),
+        }
+      );
+      if (!res.ok) throw new Error("TTS request failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
@@ -308,7 +316,7 @@ export default function Chatbot() {
       };
       audio.play();
     } catch (err) {
-      console.error('TTS playback error:', err);
+      console.error("TTS playback error:", err);
       setSpeakingMessageIndex(null);
     }
   };
@@ -936,7 +944,17 @@ IMPORTANT RULES:
                 {/* Speaker button inside assistant bubble */}
                 {msg.role === "assistant" && msg.content !== "__loading__" && (
                   <button
-                    onClick={() => speakMessage(msg.content, i)}
+                    onClick={() => {
+                      if (speakingMessageIndex === i && audioRef.current) {
+                        if (audioRef.current.paused) {
+                          audioRef.current.play().catch(() => {});
+                        } else {
+                          audioRef.current.pause();
+                        }
+                      } else {
+                        speakMessage(msg.content, i);
+                      }
+                    }}
                     className={`absolute top-2 right-2 p-1 rounded-full transition-all ${
                       speakingMessageIndex === i
                         ? "bg-[#f04e37]/10 text-[#f04e37]"
@@ -1001,7 +1019,7 @@ IMPORTANT RULES:
         ref={composerRef}
         className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md mx-4"
         style={{
-          position: 'fixed',
+          position: "fixed",
           left: 0,
           right: 0,
           bottom: `calc(env(safe-area-inset-bottom) + ${kbPadding}px)`,
@@ -1032,7 +1050,10 @@ IMPORTANT RULES:
             }
           }}
           onFocus={() => {
-            inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            inputRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+            });
           }}
           disabled={isBotTyping || isListening}
           className="flex-grow bg-transparent outline-none px-2 py-1 text-base"
