@@ -24,13 +24,13 @@ export default function FloatingChatbot() {
 
   // ✅ now updates live
   const handleDrag = (_, data) => {
-    // Only mark as dragged if moved more than 5px from start
+    // Only mark as dragged if moved more than 30px from start
     const dragDistance = Math.sqrt(
       Math.pow(data.x - dragStartPos.current.x, 2) +
         Math.pow(data.y - dragStartPos.current.y, 2)
     );
-
-    if (dragDistance > 5) {
+    
+    if (dragDistance > 30) {
       wasDragged.current = true;
     }
 
@@ -39,7 +39,7 @@ export default function FloatingChatbot() {
 
   const handleStop = (_, data) => {
     // Always snap to left side (partially off-screen)
-    const snappedX = -30;
+    const snappedX = PEEK_OFFSET_X;
     const newPos = { x: snappedX, y: data.y };
 
     setPosition(newPos);
@@ -145,9 +145,9 @@ export default function FloatingChatbot() {
                   Math.pow(touchEndPos.x - touchStartPos.current.x, 2) +
                     Math.pow(touchEndPos.y - touchStartPos.current.y, 2)
                 );
-
-                // If moved less than 10px and duration less than 300ms, it's a tap
-                if (distance < 10 && touchDuration < 300) {
+                
+                // If moved less than 30px and duration less than 300ms, it's a tap
+                if (distance < 30 && touchDuration < 300) {
                   e.preventDefault();
                   e.stopPropagation();
                   handleToggle();

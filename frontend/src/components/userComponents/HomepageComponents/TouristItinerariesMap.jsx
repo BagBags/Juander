@@ -622,9 +622,20 @@ export default function TouristItineraryMap() {
     fetchMask();
   }, []);
 
-  // Geo-lock temporarily disabled
+  // Check if user is within Intramuros boundaries
 useEffect(() => {
-  // Geolocation bounds check bypassed during maintenance window
+  if (!userLocation || !mask?.geometry) return;
+
+  const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
+
+  if (!withinBounds) {
+    console.warn("⚠️ User is outside Intramuros boundaries");
+    setIsOutsideBounds(true);
+    setShowLocationBlockModal(true);
+  } else {
+    setIsOutsideBounds(false);
+    setShowLocationBlockModal(false);
+  }
 }, [userLocation, mask]);
   
   /** Fetch itinerary sites */

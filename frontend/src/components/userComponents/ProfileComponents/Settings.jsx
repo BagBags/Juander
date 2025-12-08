@@ -293,6 +293,9 @@ export default function Settings() {
           completePhotoboothTour(),
           completeTripArchiveTour(),
         ]);
+        try {
+          localStorage.removeItem("tourMapReplayTutorial");
+        } catch {}
         setHomepageTutorialEnabled(false);
         setMapTutorialEnabled(false);
         setCreateItineraryTutorialEnabled(false);
@@ -494,6 +497,9 @@ export default function Settings() {
           localStorage.removeItem("tourMapReplayTutorial");
         } catch {}
         await completeTourMapTour();
+        try {
+          localStorage.removeItem("tourMapReplayTutorial");
+        } catch {}
         setNotification({
           isOpen: true,
           type: "info",
