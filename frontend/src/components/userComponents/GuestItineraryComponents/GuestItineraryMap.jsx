@@ -1720,6 +1720,10 @@ export default function GuestItineraryMap() {
             <button
               className="text-2xl font-bold cursor-pointer transition-all active:scale-90 flex items-center justify-center w-10 h-10 rounded-lg hover:bg-black/10"
               onClick={() => {
+                    if (isOutsideBounds) {
+                      setShowLocationBlockModal(true);
+                      return;
+                    }
                 if (location.key !== "default") {
                   navigate(-1);
                 } else {
@@ -1998,6 +2002,10 @@ export default function GuestItineraryMap() {
               <button
                 type="button"
                 onClick={() => {
+                    if (isOutsideBounds) {
+                      setShowLocationBlockModal(true);
+                      return;
+                    }
                   setIsBackdropActive(true);
                   setShowGpsModal(true);
                 }}
@@ -2025,6 +2033,10 @@ export default function GuestItineraryMap() {
                 <button
                   className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
                   onClick={() => {
+                    if (isOutsideBounds) {
+                      setShowLocationBlockModal(true);
+                      return;
+                    }
                     setTourMode("optimized");
                     setShowModeModal(false);
                     const optimized = optimizeRoute(
@@ -2064,6 +2076,10 @@ export default function GuestItineraryMap() {
                 <button
                   className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
                   onClick={() => {
+                    if (isOutsideBounds) {
+                      setShowLocationBlockModal(true);
+                      return;
+                    }
                     setTourMode("original");
                     setShowModeModal(false);
                     const original = [...pins];

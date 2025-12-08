@@ -35,7 +35,7 @@ export default function TourProvider({
   const { i18n } = useTranslation();
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const [hasCompletedTour, setHasCompletedTour] = useState(true); // Default to true to prevent flash
+  const [hasCompletedTour, setHasCompletedTour] = useState(null); // Default to true to prevent flash
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [spotlightRect, setSpotlightRect] = useState(null);
   const startLockRef = useRef(false);
@@ -557,12 +557,18 @@ export default function TourProvider({
           const status = await getGuestProfileTourStatus();
           setHasCompletedTour(status.hasCompletedGuestProfileTour);
         } else if (tourType === "tourMap") {
-          const status = await getTourMapTourStatus();
-          const forceReplay =
-            localStorage.getItem("tourMapReplayTutorial") === "true";
-          setHasCompletedTour(
-            forceReplay ? false : status.hasCompletedTourMapTour
-          );
+          if (userRole === "guest") {
+            const disabled = localStorage.getItem("guestTutorialsDisabled") === "true";
+            const completed = localStorage.getItem("guestTourMapTourCompleted") === "true";
+            setHasCompletedTour(disabled || completed);
+          } else {
+            const status = await getTourMapTourStatus();
+            const forceReplay =
+              localStorage.getItem("tourMapReplayTutorial") === "true";
+            setHasCompletedTour(
+              forceReplay ? false : status.hasCompletedTourMapTour
+            );
+          }
         } else if (tourType === "photobooth") {
           const status = await getPhotoboothTourStatus();
           setHasCompletedTour(status.hasCompletedPhotoboothTour);
@@ -693,8 +699,7 @@ export default function TourProvider({
         }
       } catch (e) {}
 
-      if (
-        status === STATUS.FINISHED &&
+      if ((status === STATUS.FINISHED || status === STATUS.SKIPPED) &&
         userRole === "tourist" &&
         localStorage.getItem("token")
       ) {
@@ -987,6 +992,7 @@ export default function TourProvider({
                     }}
                   >
                     <CustomTourTooltip
+                      external
                       continuous
                       index={stepIndex}
                       step={localizeStep(steps[stepIndex])}
@@ -994,7 +1000,8 @@ export default function TourProvider({
                       size={steps.length}
                       onBack={() => {
                         if (stepIndex <= 0) return;
-                        const prev = stepIndex - 1;
+                        const prevVisible = findNextVisibleIndex(stepIndex, -1);
+                        const prev = typeof prevVisible === "number" ? prevVisible : stepIndex - 1;
                         const prevTarget = steps[prev]?.target;
                         setStepIndex(prev);
                         if (
@@ -1234,7 +1241,6 @@ export default function TourProvider({
                           } catch {}
                         }
                       }}
-                      external
                     />
                   </div>
                 );
@@ -1330,6 +1336,7 @@ export default function TourProvider({
                 }}
               >
                 <CustomTourTooltip
+                  external
                   continuous
                   index={stepIndex}
                   step={steps[stepIndex]}
@@ -1337,7 +1344,8 @@ export default function TourProvider({
                   size={steps.length}
                   onBack={() => {
                     if (stepIndex <= 0) return;
-                    const prev = stepIndex - 1;
+                    const prevVisible = findNextVisibleIndex(stepIndex, -1);
+                    const prev = typeof prevVisible === "number" ? prevVisible : stepIndex - 1;
                     const prevTarget = steps[prev]?.target;
                     setStepIndex(prev);
                     if (prevTarget === ".trip-tab-reviews-btn") {
@@ -1388,7 +1396,6 @@ export default function TourProvider({
                       } catch {}
                     }
                   }}
-                  external
                 />
               </div>
             </>

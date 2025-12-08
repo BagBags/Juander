@@ -281,6 +281,9 @@ export default function Settings() {
           message: "All guides across the app will auto-start when relevant.",
         });
       } else {
+        try {
+          localStorage.removeItem("tourMapReplayTutorial");
+        } catch {}
         await Promise.all([
           completeTour(),
           completeCreateItineraryTour(),
@@ -487,6 +490,9 @@ export default function Settings() {
           message: "The guide will auto-start on Tour Map.",
         });
       } else {
+        try {
+          localStorage.removeItem("tourMapReplayTutorial");
+        } catch {}
         await completeTourMapTour();
         setNotification({
           isOpen: true,

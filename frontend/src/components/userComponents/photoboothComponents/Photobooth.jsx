@@ -400,7 +400,7 @@ export default function Photobooth() {
           try { v.load && v.load(); } catch {}
         }
       } catch {}
-      scheduleCameraStop(0);
+      scheduleCameraStop(500);
     };
   }, [cameraKey, facingMode]);
 

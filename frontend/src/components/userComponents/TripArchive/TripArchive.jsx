@@ -1880,15 +1880,23 @@ const handleDeleteReview = (reviewId) => {
 
 function TripArchiveTourAutostart({ running, completed, onStart }) {
   const didStartRef = React.useRef(false);
+
   useEffect(() => {
+    // Prevent multiple triggers
     if (didStartRef.current) return;
-    if (!completed && !running) {
+
+    // Wait until the TourProvider finishes fetching the status
+    if (completed === null) return;
+
+    // Auto-start only when the tutorial is not yet completed
+    if (completed === false && !running) {
       didStartRef.current = true;
       setTimeout(() => {
         onStart?.();
       }, 600);
     }
   }, [completed, running, onStart]);
+
   return null;
 }
 // Accessible, icon-only dropdown for filtering by itinerary

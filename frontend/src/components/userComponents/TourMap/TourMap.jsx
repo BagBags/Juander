@@ -290,11 +290,14 @@ function TourMapTourAutostart() {
   const didAutoStartRef = React.useRef(false);
   useEffect(() => {
     if (didAutoStartRef.current) return;
-    const replay = localStorage.getItem("tourMapReplayTutorial") === "true";
-    if ((!hasCompletedTour || replay) && !isTourRunning) {
+    if (hasCompletedTour === null) return; // wait for status fetch
+    const replayFlag = localStorage.getItem("tourMapReplayTutorial") === "true";
+    if ((hasCompletedTour === false || replayFlag) && !isTourRunning) {
       didAutoStartRef.current = true;
+      if (replayFlag) {
+        try { localStorage.removeItem("tourMapReplayTutorial"); } catch {}
+      }
       setTimeout(() => {
-        try { localStorage.setItem("tourMapReplayTutorial", "true"); } catch {}
         startTour();
       }, 600);
     }

@@ -395,10 +395,10 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         setScannedArUrl(null);
                       }
                     }}
-                    className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }} className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
                   >
                     <Glasses className="w-4 h-4" />
-                    View in Browser
+                    Open in Browser
                   </button>
                 </div>
               ) : (

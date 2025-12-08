@@ -2429,6 +2429,10 @@ useEffect(() => {
                 <button
                   className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
                   onClick={async () => {
+                    if (isOutsideBounds) {
+                      setShowLocationBlockModal(true);
+                      return;
+                    }
                     setTourMode("optimized");
                     setShowModeModal(false);
                     const optimized = optimizeRoute(
@@ -2465,6 +2469,10 @@ useEffect(() => {
                 <button
                   className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
                   onClick={async () => {
+                    if (isOutsideBounds) {
+                      setShowLocationBlockModal(true);
+                      return;
+                    }
                     setTourMode("original");
                     setShowModeModal(false);
                     const original = [...pins];

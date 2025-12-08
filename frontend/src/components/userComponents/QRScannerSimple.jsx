@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, X, AlertCircle } from 'lucide-react';
+import { cancelCameraStop, scheduleCameraStop } from '../../utils/cameraLifecycle';
 
 const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   const webcamRef = useRef(null);
@@ -22,6 +23,9 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   }, []);
 
   useEffect(() => {
+    // Cancel any pending global camera stop when the scanner is mounted
+    cancelCameraStop();
+
     return () => {
       stopScanning();
       try {
@@ -37,6 +41,8 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
           try { v.load(); } catch (e) { void e; }
         }
       } catch (e) { void e; }
+      // Gracefully stop camera a moment after unmount
+      scheduleCameraStop(1000);
     };
   }, []);
 

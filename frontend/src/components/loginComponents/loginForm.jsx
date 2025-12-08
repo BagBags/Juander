@@ -353,6 +353,14 @@ export default function LoginForm({ toggleForm }) {
               // Use localStorage for guest users to persist across tabs/windows
               localStorage.setItem("guest", "true");
               localStorage.setItem("guestLanguage", "en"); // Set English as default for guests
+// Ensure guest tutorials are enabled like first-time user
+localStorage.removeItem("guestTutorialsDisabled");
+localStorage.setItem("guestReplayTutorial", "true");
+// Ensure TourMap tutorial will run
+localStorage.removeItem("guestTourMapTourCompleted");
+localStorage.setItem("tourMapReplayTutorial", "true");
+// Ensure Guest Profile tutorial will run
+localStorage.setItem("guestProfileTourForceStart", "true");
               localStorage.removeItem("token");
               localStorage.removeItem("user");
               // Clear sessionStorage

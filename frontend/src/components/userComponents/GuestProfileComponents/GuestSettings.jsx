@@ -218,6 +218,8 @@ export default function GuestSettings() {
         localStorage.setItem("guestReplayTutorial", "true");
         localStorage.setItem("mapTourForceStart", "true");
         localStorage.setItem("guestProfileTourForceStart", "true");
+        localStorage.removeItem("guestTourMapTourCompleted");
+        localStorage.setItem("tourMapReplayTutorial", "true");
         localStorage.setItem("guestPhotoboothTourForceStart", "true");
         localStorage.setItem("guestEmergencyTourForceStart", "true");
         localStorage.removeItem("guestTutorialsDisabled");
@@ -236,6 +238,8 @@ export default function GuestSettings() {
         localStorage.removeItem("guestPhotoboothTourForceStart");
         localStorage.removeItem("guestEmergencyTourForceStart");
         localStorage.setItem("guestTutorialsDisabled", "true");
+        localStorage.setItem("guestTourMapTourCompleted", "true");
+        localStorage.removeItem("tourMapReplayTutorial");
         setHomepageTutorialEnabled(false);
         setMapTutorialEnabled(false);
         setNotification({

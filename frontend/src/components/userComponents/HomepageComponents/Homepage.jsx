@@ -267,14 +267,20 @@ export default function Homepage() {
 function HomepageTourAutostart() {
   const { startTour, isTourRunning, hasCompletedTour } = useTour();
   const didAutoStartRef = React.useRef(false);
+
   useEffect(() => {
     if (didAutoStartRef.current) return;
-    if (!hasCompletedTour && !isTourRunning) {
+
+    // Wait until the TourProvider finishes fetching the status
+    if (hasCompletedTour === null) return;
+
+    if (hasCompletedTour === false && !isTourRunning) {
       didAutoStartRef.current = true;
       setTimeout(() => {
         startTour();
       }, 600);
     }
   }, [hasCompletedTour, startTour, isTourRunning]);
+
   return null;
 }

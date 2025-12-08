@@ -716,9 +716,11 @@ function CameraLifecycleOnRouteLeave() {
     // Update active route flag
     setPhotoboothRouteActive(isPhotobooth);
 
-    // If we just left Photobooth, stop camera immediately
+    // If we just left Photobooth, stop camera after a short delay. This gives
+    // components like QRScanner a chance to mount, acquire the camera and
+    // cancel the stop before it triggers.
     if (!isPhotobooth) {
-      scheduleCameraStop(0);
+      scheduleCameraStop(500);
     } else {
       // If we're on Photobooth, ensure any pending stop is canceled
       cancelCameraStop();
