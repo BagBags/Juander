@@ -43,6 +43,7 @@ export default function SiteModalFullScreen({
   const { itineraryId } = useParams();
   const [showAR, setShowAR] = useState(false);
   const [scannedArUrl, setScannedArUrl] = useState(null);
+  const [askedSensors, setAskedSensors] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [userLanguage, setUserLanguage] = useState("english");
@@ -175,6 +176,25 @@ export default function SiteModalFullScreen({
     };
     fetchUserLanguage();
   }, []);
+
+  useEffect(() => {
+    const run = async () => {
+      if (showAR && scannedArUrl && !askedSensors) {
+        const granted = await requestSensorPermissions();
+        if (!granted) {
+          setNotification({
+            isOpen: true,
+            title: "Permission Required",
+            message:
+              "Please allow Motion & Orientation access to use AR. If no prompt appears, open the AR in the browser for full sensor access.",
+            type: "warning",
+          });
+        }
+        setAskedSensors(true);
+      }
+    };
+    run();
+  }, [showAR, scannedArUrl, askedSensors]);
 
   // Cleanup: stop TTS when component unmounts (modal closes)
   useEffect(() => {
@@ -725,6 +745,7 @@ export default function SiteModalFullScreen({
                   onClick={() => {
                     setShowAR(false);
                     setScannedArUrl(null);
+                    setAskedSensors(false);
                   }}
                   className="mt-2 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
                 >
@@ -743,6 +764,7 @@ export default function SiteModalFullScreen({
                       );
                       setShowAR(false);
                       setScannedArUrl(null);
+                      setAskedSensors(false);
                     }
                   }}
                   className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
@@ -753,17 +775,7 @@ export default function SiteModalFullScreen({
               </div>
             ) : (
               <QRScanner
-                onScanSuccess={async (url) => {
-                  const granted = await requestSensorPermissions();
-                  if (!granted) {
-                    setNotification({
-                      isOpen: true,
-                      title: "Permission Required",
-                      message:
-                        "If motion/orientation permission did not appear, you may need to open the AR in the browser for full sensor access.",
-                      type: "warning",
-                    });
-                  }
+                onScanSuccess={(url) => {
                   // Check if iOS 26+ in PWA mode - show prompt to open in new tab
                   if (isiOS26Plus() && isPWA()) {
                     const confirmOpen = window.confirm(
@@ -791,6 +803,7 @@ export default function SiteModalFullScreen({
                 onClose={() => {
                   setShowAR(false);
                   setScannedArUrl(null);
+                  setAskedSensors(false);
                 }}
               />
             )}
