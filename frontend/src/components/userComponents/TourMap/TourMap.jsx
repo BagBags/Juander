@@ -290,9 +290,11 @@ function TourMapTourAutostart() {
   const didAutoStartRef = React.useRef(false);
   useEffect(() => {
     if (didAutoStartRef.current) return;
-    if (!hasCompletedTour && !isTourRunning) {
+    const replay = localStorage.getItem("tourMapReplayTutorial") === "true";
+    if ((!hasCompletedTour || replay) && !isTourRunning) {
       didAutoStartRef.current = true;
       setTimeout(() => {
+        try { localStorage.setItem("tourMapReplayTutorial", "true"); } catch {}
         startTour();
       }, 600);
     }

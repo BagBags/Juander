@@ -169,6 +169,9 @@ button[aria-label*="Close"][data-test-id] {
   }
 }
 /* Prevent page scroll while tour is active */
-.tour-active {
+html.tour-active,
+body.tour-active {
   overflow: hidden !important;
+  padding-right: var(--scrollbar-comp, 0px) !important;
+  overscroll-behavior: none !important;
 }

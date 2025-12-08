@@ -8,9 +8,15 @@
   "background_color": "#ffffff",
   "icons": [
     {
-      "src": "/juan/JuanderPWAIcon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
+      "src": "/LogoPNG2.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/LogoPNG1.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
   ]

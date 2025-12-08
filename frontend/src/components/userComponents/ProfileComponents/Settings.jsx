@@ -2,7 +2,15 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Bell, BellOff, Play } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  Play,
+  Download,
+  Smartphone,
+  Share,
+  Monitor,
+} from "lucide-react";
 import NotificationModal from "../../shared/NotificationModal";
 import PullToRefresh from "../../shared/PullToRefresh";
 import axios from "axios";
@@ -33,6 +41,10 @@ import {
 export default function Settings() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [installAvailable, setInstallAvailable] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const [isWebDesktop, setIsWebDesktop] = useState(false);
   const [showFortModal, setShowFortModal] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -62,6 +74,19 @@ export default function Settings() {
 
   // Load current setting from database
   useEffect(() => {
+    try {
+      const isStandalone =
+        window.matchMedia &&
+        window.matchMedia("(display-mode: standalone)").matches;
+      const isIosStandalone =
+        typeof navigator !== "undefined" && navigator.standalone === true;
+      setInstalled(!!(isStandalone || isIosStandalone));
+      const ua = navigator.userAgent || "";
+      const isAndroid = /Android/i.test(ua);
+      const isIOS = /iPhone|iPad|iPod/i.test(ua);
+      setIsWebDesktop(!isAndroid && !isIOS);
+    } catch {}
+
     const fetchUserPreference = async () => {
       try {
         const res = await axios.get(
@@ -165,6 +190,67 @@ export default function Settings() {
     };
     computeAll();
   }, []);
+
+  useEffect(() => {
+    const existing = window.__deferredPWAInstallPrompt;
+    if (existing) {
+      setInstallPrompt(existing);
+      setInstallAvailable(true);
+    }
+    const onBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      setInstallAvailable(true);
+    };
+    const onAppInstalled = () => {
+      setInstalled(true);
+      setInstallAvailable(false);
+      setInstallPrompt(null);
+      setNotification({
+        isOpen: true,
+        type: "success",
+        title: "App Installed",
+        message: "Juander has been installed on your device.",
+      });
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", onAppInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
+    };
+  }, []);
+
+  const triggerAndroidInstall = async () => {
+    try {
+      if (!installPrompt) return;
+      const ev = installPrompt;
+      await ev.prompt();
+      const choice = await ev.userChoice;
+      if (choice && choice.outcome === "accepted") {
+        setNotification({
+          isOpen: true,
+          type: "success",
+          title: "Install Started",
+          message: "Follow your browser prompts to finish installation.",
+        });
+      } else {
+        setNotification({
+          isOpen: true,
+          type: "info",
+          title: "Install Dismissed",
+          message: "You can install later from this screen.",
+        });
+      }
+    } catch {
+      setNotification({
+        isOpen: true,
+        type: "error",
+        title: "Install Failed",
+        message: "Unable to start installation on this browser.",
+      });
+    }
+  };
 
   const toggleAllTutorials = async () => {
     const next = !allTutorialsEnabled;
@@ -472,14 +558,14 @@ export default function Settings() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="min-h-full bg-white flex flex-col items-center text-sm relative px-4 md:px-0 overscroll-contain touch-pan-y"
+      className="h-screen overflow-hidden bg-white flex flex-col items-center text-sm relative px-4 md:px-0 overscroll-contain touch-pan-y"
     >
       <PullToRefresh
         onRefresh={async () => {
           await new Promise((r) => setTimeout(r, 1000));
         }}
       >
-        <div className="w-full max-w-md flex flex-col min-h-full">
+        <div className="w-full max-w-md flex flex-col flex-1 min-h-0">
           <div className="mt-4 w-full bg-white rounded-2xl p-6 shadow-md">
             <h2 className="text-xl font-bold text-gray-800 mb-6">
               Notification Settings
@@ -580,6 +666,68 @@ export default function Settings() {
                       {allTutorialsEnabled ? "Enabled" : "Disabled"}
                     </span>
                   </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4">
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1">
+                    <Smartphone className="w-6 h-6 text-[#f04e37]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800 mb-2">
+                      Install App (Android/Web)
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                      Install the app to your home screen for a full-screen
+                      experience.
+                    </p>
+                    <button
+                      onClick={triggerAndroidInstall}
+                      disabled={!installAvailable || installed}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        background:
+                          "linear-gradient(to right, #f04e37, #ff6b54)",
+                      }}
+                    >
+                      <Download className="w-5 h-5" />
+                      {installed
+                        ? "Already Installed"
+                        : installAvailable
+                        ? "Install App"
+                        : "Install Not Available"}
+                    </button>
+                    <p className="mt-2 text-xs text-gray-500">
+                      If install is not available, open the browser menu and
+                      choose Install App (Chrome/Edge).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 mt-1">
+                    <Share className="w-6 h-6 text-[#f04e37]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-800 mb-2">
+                      How to Install on iOS
+                    </h3>
+                    <ol className="list-decimal list-inside text-sm text-gray-700 space-y-1">
+                      <li>Open this app in Safari.</li>
+                      <li>Tap the Share icon.</li>
+                      <li>Select Add to Home Screen.</li>
+                      <li>Tap Add to finish.</li>
+                    </ol>
+                    <p className="mt-3 text-xs text-gray-500">
+                      iOS does not support a direct install prompt. Use Add to
+                      Home Screen to install.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

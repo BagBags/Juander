@@ -17,6 +17,7 @@
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    scrollbar-gutter: stable;
     /* Prevent viewport overscroll bounce */
     overscroll-behavior-y: none;
     /* PWA: Ensure proper rendering on all devices */
@@ -24,6 +25,13 @@
     -webkit-tap-highlight-color: transparent;
     /* GPU acceleration for smooth scrolling */
     -webkit-overflow-scrolling: touch;
+  }
+
+  html.tour-active,
+  body.tour-active {
+    overflow-y: hidden;
+    overscroll-behavior: none;
+    padding-right: var(--scrollbar-comp, 0px);
   }
 
   body {

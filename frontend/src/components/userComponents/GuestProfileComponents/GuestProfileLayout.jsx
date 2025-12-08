@@ -28,7 +28,7 @@ export default function ProfileLayout() {
 
       {/* Centered page content */}
       <div
-        className="flex-1 flex justify-center px-4 md:px-0 overflow-y-auto"
+        className="flex-1 flex justify-center px-4 md:px-0 overflow-hidden"
         style={{  WebkitOverflowScrolling: "touch", overscrollBehaviorY: "contain" }}
       >
         <div className="w-full max-w-md mt-4 flex flex-col h-full">

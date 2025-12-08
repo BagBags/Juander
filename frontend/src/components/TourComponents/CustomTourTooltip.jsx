@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function CustomTourTooltip({
-  continuous,
   index,
   step,
   backProps,
@@ -18,10 +18,28 @@ export default function CustomTourTooltip({
   onSkip,
   external,
 }) {
+  const { i18n } = useTranslation();
   const containerRef = useRef(null);
   const primaryRef = useRef(null);
   const prevPosRef = useRef(null);
-  const [slideStyle, setSlideStyle] = useState({ transform: 'translate(0,0)', transition: 'none' });
+  const [slideStyle, setSlideStyle] = useState({
+    transform: "translate(0,0)",
+    transition: "none",
+  });
+
+  const langRaw = (
+    localStorage.getItem("i18nextLng") ||
+    i18n.language ||
+    "en"
+  ).toLowerCase();
+  const isTl =
+    langRaw.startsWith("tl") ||
+    langRaw.startsWith("fil") ||
+    langRaw.startsWith("tagalog");
+  const LBL_BACK = isTl ? "Bumalik" : "Back";
+  const LBL_SKIP = isTl ? "Laktawan" : "Skip";
+  const LBL_NEXT = isTl ? "Susunod" : "Next";
+  const LBL_FINISH = isTl ? "Simulan" : "Get Started";
 
   // Randomize persona avatar from public/juan/Juan1-4 unless step provides one
   const personaImages = useMemo(
@@ -54,10 +72,6 @@ export default function CustomTourTooltip({
     }
   }, [index]);
 
-  const animateAnd = (handler) => (e) => {
-    handler?.(e);
-  };
-
   const handleKeyDown = (e) => {
     // Basic keyboard controls inside the modal tooltip
     if (e.key === "Escape") {
@@ -72,33 +86,11 @@ export default function CustomTourTooltip({
   };
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const newRect = el.getBoundingClientRect();
-    const prev = prevPosRef.current;
-    if (prev) {
-      const dx = prev.left - newRect.left;
-      const dy = prev.top - newRect.top;
-      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
-        setSlideStyle({ transform: `translate(${dx}px, ${dy}px)`, transition: 'none' });
-        requestAnimationFrame(() => {
-          setSlideStyle({ transform: 'translate(0,0)', transition: 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1)' });
-        });
-      } else {
-        setSlideStyle({ transform: 'translate(0,0)', transition: 'none' });
-      }
-      prevPosRef.current = null;
-    } else {
-      setSlideStyle({ transform: 'translate(0,0)', transition: 'none' });
-    }
+    setSlideStyle({ transform: "translate(0,0)", transition: "none" });
+    prevPosRef.current = null;
   }, [index]);
 
   const performAndSlide = (handler) => (e) => {
-    try {
-      if (containerRef.current) {
-        prevPosRef.current = containerRef.current.getBoundingClientRect();
-      }
-    } catch {}
     handler?.(e);
   };
 
@@ -108,17 +100,20 @@ export default function CustomTourTooltip({
   return (
     <div
       {...(external ? {} : tooltipProps)}
-      className={"relative bg-white rounded-2xl shadow-2xl border border-gray-200/60 opacity-100"}
+      className={
+        "relative bg-white rounded-2xl shadow-2xl border border-gray-200/60 opacity-100"
+      }
       style={{
         padding: 0,
         ...(external ? {} : tooltipProps.style),
-        maxHeight: 'calc(100vh - 160px)',
-        width: 'auto',
-        maxWidth: 'min(450px, calc(100vw - 24px))',
-        boxSizing: 'border-box',
-        overflow: 'visible',
+        maxHeight: "calc(100vh - 160px)",
+        width: "auto",
+        maxWidth: "min(450px, calc(100vw - 24px))",
+        boxSizing: "border-box",
+        overflow: "visible",
+        minWidth: 0,
         zIndex: 10020,
-        willChange: 'auto',
+        willChange: "auto",
       }}
       ref={containerRef}
       role="dialog"
@@ -137,108 +132,116 @@ export default function CustomTourTooltip({
               alt=""
               aria-hidden="true"
               className="h-20 sm:h-24 w-auto"
-              style={{ filter: 'drop-shadow(0 8px 22px rgba(0,0,0,0.35))' }}
+              style={{ filter: "drop-shadow(0 8px 22px rgba(0,0,0,0.35))" }}
             />
           </div>
         )}
 
-      <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-center border-b border-gray-100 bg-white/95">
-        <h3 id={titleId} className="text-gray-900 font-semibold text-base sm:text-lg tracking-wide truncate">
-          {step.title}
-        </h3>
-      </div>
-
-      <div className="h-1 bg-gray-100">
-        <div 
-          className="h-full bg-gradient-to-r from-[#f04e37] to-[#e03d2d] transition-all duration-300 ease-out"
-          style={{ width: `${((index + 1) / size) * 100}%` }}
-        ></div>
-      </div>
-
-      <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'hidden' }}>
-        {/* Content */}
-        <div className="px-4 sm:px-6 py-4 sm:py-5">
-        {/* Optional media support */}
-        {step.media && (
-          <div className="mb-3">
-            {typeof step.media === "string" ? (
-              <img src={step.media} alt="Tour step media" className="w-full rounded-lg border border-gray-200/60 max-h-48 object-cover" />
-            ) : (
-              step.media
-            )}
-          </div>
-        )}
-        <p id={contentId} className="text-gray-700 text-sm leading-relaxed">
-          {step.content}
-        </p>
-      </div>
-
-      </div>
-
-      <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white flex flex-col sm:flex-row items-center gap-3">
-        {(!isLastStep) && (
-          <div className="flex items-center gap-1.5 sm:gap-2 order-1 sm:order-1">
-            {Array.from({ length: size }).map((_, i) => (
-              <span
-                key={i}
-                className={`inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full transition-colors duration-200 ${
-                  i === index
-                    ? 'bg-[#f04e37]'
-                    : i < index
-                      ? 'bg-[#f04e37]/40'
-                      : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Bottom row on mobile: buttons */}
-        <div className={`flex items-center ${index > 0 || !isLastStep ? 'justify-between sm:ml-auto' : 'justify-center'} w-full sm:w-auto gap-2 order-2 sm:order-2`}>
-          {/* Back button */}
-          {index > 0 && (
-            <button
-              {...backProps}
-              type="button"
-              onClick={(e) => { if (index <= 0) return; (external ? performAndSlide(onBack) : performAndSlide(backProps?.onClick))(e); }}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
-              aria-label="Go to previous step"
-            >
-              <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-          )}
-          
-          {/* Skip button */}
-          {!isLastStep && (
-            <button
-              {...skipProps}
-              type="button"
-              onClick={external ? performAndSlide(onSkip) : performAndSlide(skipProps?.onClick)}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
-              aria-label="Skip the tour"
-            >
-              Skip
-            </button>
-          )}
-          
-          {/* Primary button */}
-          <button
-            {...(isLastStep ? closeProps : primaryProps)}
-            type="button"
-            onClick={(e) => { (external ? (isLastStep ? performAndSlide(onClose) : performAndSlide(onNext)) : (isLastStep ? performAndSlide(closeProps?.onClick) : performAndSlide(primaryProps?.onClick)))?.(e); }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className={`flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ${index > 0 || !isLastStep ? 'ml-auto' : ''}`}
-            aria-label={isLastStep ? "Finish tour" : "Go to next step"}
-            ref={primaryRef}
+        <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 flex items-center justify-center border-b border-gray-100 bg-white/95">
+          <h3
+            id={titleId}
+            className="text-gray-900 font-semibold text-base sm:text-lg tracking-wide truncate"
           >
-            <span>{isLastStep ? "Get Started" : "Next"}</span>
-            {!isLastStep && <ChevronRight size={14} className="sm:w-4 sm:h-4" />}
-          </button>
+            {step.title}
+          </h3>
         </div>
-      </div>
+
+        <div className="h-1 bg-gray-100">
+          <div
+            className="h-full bg-gradient-to-r from-[#f04e37] to-[#e03d2d] transition-all duration-300 ease-out"
+            style={{ width: `${((index + 1) / size) * 100}%` }}
+          ></div>
+        </div>
+
+        <div style={{ maxHeight: "calc(100vh - 280px)", overflowY: "hidden" }}>
+          {/* Content */}
+          <div className="px-4 sm:px-6 py-4 sm:py-5">
+            {/* Optional media support */}
+            {step.media && (
+              <div className="mb-3">
+                {typeof step.media === "string" ? (
+                  <img
+                    src={step.media}
+                    alt="Tour step media"
+                    className="w-full rounded-lg border border-gray-200/60 max-h-48 object-cover"
+                  />
+                ) : (
+                  step.media
+                )}
+              </div>
+            )}
+            <p id={contentId} className="text-gray-700 text-sm leading-relaxed">
+              {step.content}
+            </p>
+          </div>
+        </div>
+
+        <div className="px-4 sm:px-6 py-3 sm:py-4 bg-white">
+          <div className="grid grid-cols-3 items-center w-full gap-4">
+            <div className="justify-self-start px-2">
+              {index > 0 && (
+                <button
+                  {...backProps}
+                  type="button"
+                  onClick={(e) => {
+                    if (index <= 0) return;
+                    (external
+                      ? performAndSlide(onBack)
+                      : performAndSlide(backProps?.onClick))(e);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
+                  aria-label="Go to previous step"
+                >
+                  <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{LBL_BACK}</span>
+                </button>
+              )}
+            </div>
+            <div className="justify-self-center px-2">
+              {!isLastStep && (
+                <button
+                  {...skipProps}
+                  type="button"
+                  onClick={
+                    external
+                      ? performAndSlide(onSkip)
+                      : performAndSlide(skipProps?.onClick)
+                  }
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="px-2 sm:px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200"
+                  aria-label="Skip the tour"
+                >
+                  {LBL_SKIP}
+                </button>
+              )}
+            </div>
+            <div className="justify-self-end px-2">
+              <button
+                {...(isLastStep ? closeProps : primaryProps)}
+                type="button"
+                onClick={(e) => {
+                  (external
+                    ? isLastStep
+                      ? performAndSlide(onClose)
+                      : performAndSlide(onNext)
+                    : isLastStep
+                    ? performAndSlide(closeProps?.onClick)
+                    : performAndSlide(primaryProps?.onClick))?.(e);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`flex items-center gap-1 sm:gap-1.5 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 whitespace-nowrap`}
+                aria-label={isLastStep ? "Finish tour" : "Go to next step"}
+                ref={primaryRef}
+              >
+                <span>{isLastStep ? LBL_FINISH : LBL_NEXT}</span>
+                {!isLastStep && (
+                  <ChevronRight size={14} className="sm:w-4 sm:h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

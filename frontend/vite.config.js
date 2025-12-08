@@ -52,13 +52,13 @@ export default defineConfig({
         theme_color: "#f04e37",
         icons: [
           {
-            src: "/juan/JuanderPWAIcon.svg",
+            src: "/LogoPNG2.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/juan/JuanderPWAIcon.svg",
+            src: "/LogoPNG1.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
@@ -79,14 +79,14 @@ export default defineConfig({
           // ========================================
           // CRITICAL: NEVER CACHE (Dynamic/Sensitive Data)
           // ========================================
-          
+
           // Authentication & User-specific endpoints - NetworkOnly
           {
             urlPattern:
               /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/(admin|auth|users|userItineraries|visited-sites|itinerary-progress|logs)\/.*/i,
             handler: "NetworkOnly",
           },
-          
+
           // User review mutations - NetworkOnly
           {
             urlPattern:
@@ -106,7 +106,7 @@ export default defineConfig({
             handler: "NetworkOnly",
             method: "DELETE",
           },
-          
+
           // Emergency contacts - StaleWhileRevalidate (SAFETY-CRITICAL - MUST WORK OFFLINE!)
           {
             urlPattern:
@@ -128,10 +128,11 @@ export default defineConfig({
           // ========================================
           // TOUR-CRITICAL: OFFLINE-READY PUBLIC DATA
           // ========================================
-          
+
           // All pins (GET) - StaleWhileRevalidate (FAST + OFFLINE-READY)
           {
-            urlPattern: /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/pins(\/.*)?$/i,
+            urlPattern:
+              /^https:\/\/d3des4qdhz53rp\.cloudfront\.net\/api\/pins(\/.*)?$/i,
             handler: "StaleWhileRevalidate",
             method: "GET",
             options: {
@@ -145,7 +146,7 @@ export default defineConfig({
               },
             },
           },
-          
+
           // All public itineraries (GET) - StaleWhileRevalidate (OFFLINE-READY)
           {
             urlPattern:
@@ -163,7 +164,7 @@ export default defineConfig({
               },
             },
           },
-          
+
           // All public reviews (GET) - StaleWhileRevalidate
           {
             urlPattern:
@@ -185,12 +186,12 @@ export default defineConfig({
           // ========================================
           // S3 CLOUDFRONT ASSETS - TOUR-CRITICAL
           // ========================================
-          
+
           // Pin facades, AR models & Emergency icons - CacheFirst (OFFLINE-READY)
           {
             urlPattern:
               /^https:\/\/(d39zx5gyblzxjs\.cloudfront\.net|d3des4qdhz53rp\.cloudfront\.net|juander-frontend\.s3\.ap-southeast-2\.amazonaws\.com)\/uploads\/(facades|arModels|emergency)\/.*/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "tour-static-assets",
               expiration: {
@@ -202,7 +203,7 @@ handler: "StaleWhileRevalidate",
               },
             },
           },
-          
+
           // Admin itinerary images - StaleWhileRevalidate
           {
             urlPattern:
@@ -219,7 +220,7 @@ handler: "StaleWhileRevalidate",
               },
             },
           },
-          
+
           // User-uploaded content - NetworkFirst (updates priority)
           {
             urlPattern:
@@ -241,7 +242,7 @@ handler: "StaleWhileRevalidate",
           // ========================================
           // OTHER API ENDPOINTS
           // ========================================
-          
+
           // Chatbot API - NetworkFirst (AI responses)
           {
             urlPattern:
@@ -263,11 +264,11 @@ handler: "StaleWhileRevalidate",
           // ========================================
           // STATIC ASSETS - AGGRESSIVE CACHING
           // ========================================
-          
+
           // Local images - CacheFirst (versioned by build)
           {
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "local-images-cache",
               expiration: {
@@ -279,11 +280,11 @@ handler: "StaleWhileRevalidate",
               },
             },
           },
-          
+
           // Videos - CacheFirst
           {
             urlPattern: /\.(?:mp4|webm|ogg|mov)$/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "videos-cache",
               expiration: {
@@ -294,15 +295,14 @@ handler: "StaleWhileRevalidate",
             },
           },
           {
-  urlPattern: /index\.html/,
-  handler: "NetworkFirst",
-},
+            urlPattern: /index\.html/,
+            handler: "NetworkFirst",
+          },
 
-          
           // 3D Models - CacheFirst
           {
             urlPattern: /\.(?:glb|gltf)$/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "3d-models-cache",
               expiration: {
@@ -311,11 +311,11 @@ handler: "StaleWhileRevalidate",
               },
             },
           },
-          
+
           // Fonts - CacheFirst
           {
             urlPattern: /\.(?:woff|woff2|ttf|eot)$/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "fonts-cache",
               expiration: {
@@ -328,11 +328,11 @@ handler: "StaleWhileRevalidate",
           // ========================================
           // EXTERNAL RESOURCES - TOUR-CRITICAL
           // ========================================
-          
+
           // Mapbox tiles - CacheFirst (OFFLINE MAPS)
           {
             urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "mapbox-tiles-cache",
               expiration: {
@@ -344,12 +344,12 @@ handler: "StaleWhileRevalidate",
               },
             },
           },
-          
+
           // Google Fonts & CDN - CacheFirst
           {
             urlPattern:
               /^https:\/\/(fonts\.googleapis|fonts\.gstatic|cdn\.jsdelivr\.net|unpkg\.com|www\.gstatic)\.com\/.*/i,
-handler: "StaleWhileRevalidate",
+            handler: "StaleWhileRevalidate",
             options: {
               cacheName: "external-cdn-cache",
               expiration: {
@@ -368,7 +368,7 @@ handler: "StaleWhileRevalidate",
         ],
       },
       devOptions: {
-        enabled: false, // Disable in development to avoid offline cache issues
+        enabled: true,
         type: "module",
       },
     }),
