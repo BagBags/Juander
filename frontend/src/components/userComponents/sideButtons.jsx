@@ -11,6 +11,16 @@ export default function SideButtons({ userType = "tourist" }) {
     window.navigator.standalone ||
     document.referrer.includes("android-app://");
 
+  const isRealPhone = () => {
+    const ua = navigator.userAgent.toLowerCase();
+    const uaMobile =
+      navigator.userAgentData?.mobile ?? /android|iphone|ipad|ipod/.test(ua);
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const noHover = window.matchMedia("(hover: none)").matches;
+    const touchPoints = navigator.maxTouchPoints || 0;
+    return !!uaMobile && coarse && noHover && touchPoints > 0;
+  };
+
   const allIcons = [
     {
       url: "icons/SideIcons1/TourMap.webp",
@@ -72,7 +82,8 @@ export default function SideButtons({ userType = "tourist" }) {
     >
       {icons.map((icon, index) => {
         let visibilityClass = "";
-        if (icon.Device === "Mobile") visibilityClass = "block xl:hidden";
+        if (icon.Device === "Mobile")
+          visibilityClass = isRealPhone() ? "block" : "hidden";
         else visibilityClass = "block";
 
         // Uniform sizes across all icons for consistency

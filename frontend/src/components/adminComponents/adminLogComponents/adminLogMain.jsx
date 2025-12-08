@@ -28,7 +28,7 @@ export default function AdminLogMain() {
         }/logs`,
         {
           headers: { Authorization: `Bearer ${token}` },
-          params: { limit: 200 },
+          params: { limit: 1000 },
         }
       );
       setLogs(res.data);
@@ -176,6 +176,44 @@ export default function AdminLogMain() {
     } catch {
       return String(v);
     }
+  };
+
+  const fieldNameMap = {
+    profilePicture: "Profile Picture",
+    siteDescriptionTagalog: "Site Description Tagalog",
+    siteDescription: "Site Description",
+    siteName: "Site Name",
+    facadeUrl: "Facade URL",
+    mediaUrl: "Media URL",
+    imageUrl: "Image URL",
+    glbUrl: "3D Model URL",
+    averageTimeSpent: "Average Time Spent",
+    openingTime: "Opening Time",
+    closingTime: "Closing Time",
+    category: "Category",
+    latitude: "Latitude",
+    longitude: "Longitude",
+    status: "Status",
+    keywords: "Keywords",
+    tags: "Tags",
+    name: "Name",
+    description: "Description",
+    email: "Email",
+    firstName: "First Name",
+    lastName: "Last Name",
+  };
+
+  const prettifyKey = (k) => {
+    if (!k) return "";
+    if (fieldNameMap[k]) return fieldNameMap[k];
+    const spaced = k
+      .replace(/_/g, " ")
+      .replace(/Url\b/gi, "URL")
+      .replace(/([a-z])([A-Z])/g, "$1 $2");
+    return spaced
+      .split(" ")
+      .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+      .join(" ");
   };
 
   // Filter and sort logs based on search, type, and sort order
@@ -447,7 +485,7 @@ export default function AdminLogMain() {
                             ([key, change]) => (
                               <div key={key} className="flex items-start gap-2">
                                 <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
-                                  {key}
+                                  {prettifyKey(key)}
                                 </span>
                                 <span className="text-gray-700">
                                   <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700">

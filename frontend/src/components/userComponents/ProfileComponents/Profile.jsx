@@ -141,7 +141,7 @@ export default function ProfilePage() {
       setNotification({
         isOpen: true,
         type: "success",
-        title: t("uploadSuccess") || "Upload Successful",
+        title: t("Upload Success") || "Upload Successful",
         message: "Profile picture updated successfully!",
         autoClose: true,
         autoCloseDuration: 2000,

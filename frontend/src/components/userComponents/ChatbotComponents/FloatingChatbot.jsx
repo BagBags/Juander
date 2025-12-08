@@ -12,6 +12,7 @@ export default function FloatingChatbot() {
   const [vvOffset, setVvOffset] = useState({ x: 0, y: 0 });
 
   const nodeRef = useRef(null);
+  const modalRef = useRef(null);
   const wasDragged = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const touchStartPos = useRef({ x: 0, y: 0 });
@@ -26,14 +27,14 @@ export default function FloatingChatbot() {
   const handleDrag = (_, data) => {
     // Only mark as dragged if moved more than 5px from start
     const dragDistance = Math.sqrt(
-      Math.pow(data.x - dragStartPos.current.x, 2) + 
-      Math.pow(data.y - dragStartPos.current.y, 2)
+      Math.pow(data.x - dragStartPos.current.x, 2) +
+        Math.pow(data.y - dragStartPos.current.y, 2)
     );
-    
+
     if (dragDistance > 5) {
       wasDragged.current = true;
     }
-    
+
     setPosition({ x: data.x, y: data.y });
   };
 
@@ -41,10 +42,10 @@ export default function FloatingChatbot() {
     // Always snap to left side (partially off-screen)
     const snappedX = -30;
     const newPos = { x: snappedX, y: data.y };
-    
+
     setPosition(newPos);
     setDraggedPosition(newPos);
-    
+
     // Reset wasDragged after a short delay to allow click handler to check it
     setTimeout(() => {
       wasDragged.current = false;
@@ -65,11 +66,11 @@ export default function FloatingChatbot() {
     }
   };
 
-  // Lock body scroll while modal is open and track VisualViewport offsets for zoom/pan
   useEffect(() => {
     let prevOverflow = "";
     let prevTouchAction = "";
     let prevOverscroll = "";
+    let prevViewport = "";
 
     if (isOpen) {
       // Prevent background scroll/overscroll while modal is active
@@ -79,14 +80,23 @@ export default function FloatingChatbot() {
       document.body.style.overflow = "hidden";
       document.body.style.touchAction = "none";
       document.body.style.overscrollBehavior = "none";
+      const meta = document.querySelector('meta[name="viewport"]');
+      if (meta) prevViewport = meta.getAttribute("content") || "";
     }
 
     const vv = window.visualViewport;
     const updateOffset = () => {
       if (!vv) return;
       // Align modal to the center of the visual viewport
-      setVvOffset({ x: Math.round(vv.offsetLeft || 0), y: Math.round(vv.offsetTop || 0) });
+      setVvOffset({
+        x: Math.round(vv.offsetLeft || 0),
+        y: Math.round(vv.offsetTop || 0),
+      });
     };
+
+    const el = modalRef.current;
+
+    // Allow pinch inside modal; no gesture or multi-touch prevention here
 
     if (vv) {
       vv.addEventListener("resize", updateOffset);
@@ -99,11 +109,14 @@ export default function FloatingChatbot() {
         vv.removeEventListener("resize", updateOffset);
         vv.removeEventListener("scroll", updateOffset);
       }
+      // No modal gesture teardown needed
       // Restore body styles
       if (isOpen) {
         document.body.style.overflow = prevOverflow || "";
         document.body.style.touchAction = prevTouchAction || "";
         document.body.style.overscrollBehavior = prevOverscroll || "";
+        const meta = document.querySelector('meta[name="viewport"]');
+        if (meta && prevViewport) meta.setAttribute("content", prevViewport);
       }
     };
   }, [isOpen]);
@@ -148,13 +161,13 @@ export default function FloatingChatbot() {
                 const touch = e.changedTouches[0];
                 const touchEndPos = { x: touch.clientX, y: touch.clientY };
                 const touchDuration = Date.now() - touchStartTime.current;
-                
+
                 // Calculate distance moved
                 const distance = Math.sqrt(
                   Math.pow(touchEndPos.x - touchStartPos.current.x, 2) +
-                  Math.pow(touchEndPos.y - touchStartPos.current.y, 2)
+                    Math.pow(touchEndPos.y - touchStartPos.current.y, 2)
                 );
-                
+
                 // If moved less than 10px and duration less than 300ms, it's a tap
                 if (distance < 10 && touchDuration < 300) {
                   e.preventDefault();
@@ -162,7 +175,45 @@ export default function FloatingChatbot() {
                   handleToggle();
                 }
               }}
+              style={{ position: "relative" }}
             >
+              <button
+                aria-label="Open chatbot"
+                className="drag-handle"
+                onClick={handleToggle}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  touchStartPos.current = {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                  };
+                  touchStartTime.current = Date.now();
+                }}
+                onTouchEnd={(e) => {
+                  const touch = e.changedTouches[0];
+                  const touchEndPos = { x: touch.clientX, y: touch.clientY };
+                  const touchDuration = Date.now() - touchStartTime.current;
+                  const distance = Math.sqrt(
+                    Math.pow(touchEndPos.x - touchStartPos.current.x, 2) +
+                      Math.pow(touchEndPos.y - touchStartPos.current.y, 2)
+                  );
+                  if (distance < 10 && touchDuration < 300) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggle();
+                  }
+                }}
+                style={{
+                  position: "absolute",
+                  top: -8,
+                  right: -8,
+                  bottom: -8,
+                  left: -8,
+                  background: "transparent",
+                  pointerEvents: "auto",
+                  zIndex: 5,
+                }}
+              />
               <img
                 src="/icons/juan_open.svg"
                 alt="Juan"
@@ -186,16 +237,18 @@ export default function FloatingChatbot() {
             position: "fixed",
             willChange: "transform",
             overscrollBehavior: "contain",
+            touchAction: "auto",
           }}
+          ref={modalRef}
           className="bg-white shadow-2xl flex flex-col z-[12000]
                      w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem]
                      sm:rounded-2xl"
         >
-          <div 
+          <div
             className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20"
             style={{
               paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)",
-              height: "calc(3.5rem + env(safe-area-inset-top))"
+              height: "calc(3.5rem + env(safe-area-inset-top))",
             }}
           >
             <h2 className="font-bold text-lg text-white tracking-wide drop-shadow-sm">

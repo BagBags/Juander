@@ -25,43 +25,117 @@ import LoginPage from "./components/loginComponents/loginPage";
 import { UserProvider } from "./contexts/UserContext";
 
 // Admin Side
-const LazyAdminHome = React.lazy(() => import("./components/adminComponents/adminHomeComponents/adminHome"));
-const LazyAdminContent = React.lazy(() => import("./components/adminComponents/adminContentComponents/adminContent"));
-const LazyManageEmergency = React.lazy(() => import("./components/adminComponents/manageEmergencyComponents/manageEmergency"));
-const LazyAdminPhotobooth = React.lazy(() => import("./components/adminComponents/adminPhotoboothComponents/adminPhotobooth"));
-const LazyAdminRole = React.lazy(() => import("./components/adminComponents/adminRoleComponents/adminRole"));
-const LazyAdminLog = React.lazy(() => import("./components/adminComponents/adminLogComponents/adminLog"));
-const LazyAdminChatbot = React.lazy(() => import("./components/adminComponents/adminChatbotComponents/adminChatbot"));
-const LazyAdminMap = React.lazy(() => import("./components/adminComponents/adminTourMapComponents/AdminTourMap"));
-const LazyAdminItinerary = React.lazy(() => import("./components/adminComponents/adminItineraryComponents/adminItinerary"));
-const LazyAdminReviews = React.lazy(() => import("./components/adminComponents/adminReviewsComponents/adminReviews"));
-const LazyAdminReports = React.lazy(() => import("./components/adminComponents/adminReportsComponents/adminReports"));
-const LazyAdminProfileLayout = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminProfileLayout"));
-const LazyAdminProfile = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminProfile"));
-const LazyAdminAccount = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminAccount"));
-const LazyAdminBirthday = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminBirthday"));
-const LazyAdminGender = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminGender"));
-const LazyAdminCountry = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminCountry"));
-const LazyAdminLanguage = React.lazy(() => import("./components/adminComponents/adminProfileComponents/adminLanguage"));
+const LazyAdminHome = React.lazy(() =>
+  import("./components/adminComponents/adminHomeComponents/adminHome")
+);
+const LazyAdminContent = React.lazy(() =>
+  import("./components/adminComponents/adminContentComponents/adminContent")
+);
+const LazyManageEmergency = React.lazy(() =>
+  import(
+    "./components/adminComponents/manageEmergencyComponents/manageEmergency"
+  )
+);
+const LazyAdminPhotobooth = React.lazy(() =>
+  import(
+    "./components/adminComponents/adminPhotoboothComponents/adminPhotobooth"
+  )
+);
+const LazyAdminRole = React.lazy(() =>
+  import("./components/adminComponents/adminRoleComponents/adminRole")
+);
+const LazyAdminLog = React.lazy(() =>
+  import("./components/adminComponents/adminLogComponents/adminLog")
+);
+const LazyAdminChatbot = React.lazy(() =>
+  import("./components/adminComponents/adminChatbotComponents/adminChatbot")
+);
+const LazyAdminMap = React.lazy(() =>
+  import("./components/adminComponents/adminTourMapComponents/AdminTourMap")
+);
+const LazyAdminItinerary = React.lazy(() =>
+  import("./components/adminComponents/adminItineraryComponents/adminItinerary")
+);
+const LazyAdminReviews = React.lazy(() =>
+  import("./components/adminComponents/adminReviewsComponents/adminReviews")
+);
+const LazyAdminReports = React.lazy(() =>
+  import("./components/adminComponents/adminReportsComponents/adminReports")
+);
+const LazyAdminProfileLayout = React.lazy(() =>
+  import(
+    "./components/adminComponents/adminProfileComponents/adminProfileLayout"
+  )
+);
+const LazyAdminProfile = React.lazy(() =>
+  import("./components/adminComponents/adminProfileComponents/adminProfile")
+);
+const LazyAdminAccount = React.lazy(() =>
+  import("./components/adminComponents/adminProfileComponents/adminAccount")
+);
+const LazyAdminBirthday = React.lazy(() =>
+  import("./components/adminComponents/adminProfileComponents/adminBirthday")
+);
+const LazyAdminGender = React.lazy(() =>
+  import("./components/adminComponents/adminProfileComponents/adminGender")
+);
+const LazyAdminCountry = React.lazy(() =>
+  import("./components/adminComponents/adminProfileComponents/adminCountry")
+);
+const LazyAdminLanguage = React.lazy(() =>
+  import("./components/adminComponents/adminProfileComponents/adminLanguage")
+);
 // Tourist Side
-const LazyHomepage = React.lazy(() => import("./components/userComponents/HomepageComponents/Homepage"));
-const LazyEmergencyPage = React.lazy(() => import("./components/userComponents/EmegencyComponents/EmergencyPage"));
-const LazyProfilePage = React.lazy(() => import("./components/userComponents/ProfileComponents/Profile"));
-const LazyPhotobooth = React.lazy(() => import("./components/userComponents/photoboothComponents/Photobooth"));
-const LazyAccount = React.lazy(() => import("./components/userComponents/ProfileComponents/Account"));
-const LazyProfileLayout = React.lazy(() => import("./components/userComponents/ProfileComponents/ProfileLayout"));
+const LazyHomepage = React.lazy(() =>
+  import("./components/userComponents/HomepageComponents/Homepage")
+);
+const LazyEmergencyPage = React.lazy(() =>
+  import("./components/userComponents/EmegencyComponents/EmergencyPage")
+);
+const LazyProfilePage = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Profile")
+);
+const LazyPhotobooth = React.lazy(() =>
+  import("./components/userComponents/photoboothComponents/Photobooth")
+);
+const LazyAccount = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Account")
+);
+const LazyProfileLayout = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/ProfileLayout")
+);
 import "./App.css";
-const LazyBirthday = React.lazy(() => import("./components/userComponents/ProfileComponents/Birthday"));
-const LazyGender = React.lazy(() => import("./components/userComponents/ProfileComponents/Gender"));
-const LazyCountry = React.lazy(() => import("./components/userComponents/ProfileComponents/Country"));
-const LazyLanguage = React.lazy(() => import("./components/userComponents/ProfileComponents/Language"));
-const LazySettings = React.lazy(() => import("./components/userComponents/ProfileComponents/Settings"));
-const LazyTripArchives = React.lazy(() => import("./components/userComponents/TripArchive/TripArchive"));
-const LazyCreateItineraryPage = React.lazy(() => import("./components/userComponents/CreateItinerary/CreateItinerary"));
+const LazyBirthday = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Birthday")
+);
+const LazyGender = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Gender")
+);
+const LazyCountry = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Country")
+);
+const LazyLanguage = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Language")
+);
+const LazySettings = React.lazy(() =>
+  import("./components/userComponents/ProfileComponents/Settings")
+);
+const LazyTripArchives = React.lazy(() =>
+  import("./components/userComponents/TripArchive/TripArchive")
+);
+const LazyCreateItineraryPage = React.lazy(() =>
+  import("./components/userComponents/CreateItinerary/CreateItinerary")
+);
 import TourMap from "./components/userComponents/TourMap/LazyUserMap";
-const LazyChatbot = React.lazy(() => import("./components/userComponents/ChatbotComponents/Chatbot"));
-const LazyTouristItinerary = React.lazy(() => import("./components/userComponents/HomepageComponents/TouristItinerary"));
-const LazyTouristItineraryMap = React.lazy(() => import("./components/userComponents/HomepageComponents/TouristItinerariesMap"));
+const LazyChatbot = React.lazy(() =>
+  import("./components/userComponents/ChatbotComponents/Chatbot")
+);
+const LazyTouristItinerary = React.lazy(() =>
+  import("./components/userComponents/HomepageComponents/TouristItinerary")
+);
+const LazyTouristItineraryMap = React.lazy(() =>
+  import("./components/userComponents/HomepageComponents/TouristItinerariesMap")
+);
 import ttsService from "./utils/textToSpeech";
 import {
   setPhotoboothRouteActive,
@@ -70,20 +144,48 @@ import {
 } from "./utils/cameraLifecycle";
 
 // Guest Side
-const LazyGuestHomepage = React.lazy(() => import("./components/userComponents/HomepageComponents/GuestHomepage"));
-const LazyGuestProfile = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestProfile"));
-const LazyGuestProfileLayout = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestProfileLayout"));
+const LazyGuestHomepage = React.lazy(() =>
+  import("./components/userComponents/HomepageComponents/GuestHomepage")
+);
+const LazyGuestProfile = React.lazy(() =>
+  import("./components/userComponents/GuestProfileComponents/GuestProfile")
+);
+const LazyGuestProfileLayout = React.lazy(() =>
+  import(
+    "./components/userComponents/GuestProfileComponents/GuestProfileLayout"
+  )
+);
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TouristProtectedRoute from "./components/TouristProtectedRoute";
-const LazyGuestLanguage = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestLanguage"));
-const LazyGuestItinerary = React.lazy(() => import("./components/userComponents/GuestItineraryComponents/GuestItinerary"));
-const LazyGuestItineraryMap = React.lazy(() => import("./components/userComponents/GuestItineraryComponents/GuestItineraryMap"));
+const LazyGuestLanguage = React.lazy(() =>
+  import("./components/userComponents/GuestProfileComponents/GuestLanguage")
+);
+const LazyGuestItinerary = React.lazy(() =>
+  import("./components/userComponents/GuestItineraryComponents/GuestItinerary")
+);
+const LazyGuestItineraryMap = React.lazy(() =>
+  import(
+    "./components/userComponents/GuestItineraryComponents/GuestItineraryMap"
+  )
+);
 import TourProvider from "./components/TourComponents/TourProvider";
-import { mapTourSteps, emergencyTourSteps, profileTourSteps, guestProfileTourSteps, tourMapSteps, photoboothTourSteps, tripArchiveTourSteps } from "./components/TourComponents/tourSteps";
-const LazyGuestSettings = React.lazy(() => import("./components/userComponents/GuestProfileComponents/GuestSettings"));
+import {
+  mapTourSteps,
+  emergencyTourSteps,
+  profileTourSteps,
+  guestProfileTourSteps,
+  tourMapSteps,
+  photoboothTourSteps,
+  tripArchiveTourSteps,
+} from "./components/TourComponents/tourSteps";
+const LazyGuestSettings = React.lazy(() =>
+  import("./components/userComponents/GuestProfileComponents/GuestSettings")
+);
 const LazyNotFound = React.lazy(() => import("./components/NotFound"));
 import ModernLoader from "./components/shared/ModernLoader";
-const LazyCompleteProfile = React.lazy(() => import("./components/userComponents/CompleteProfile"));
+const LazyCompleteProfile = React.lazy(() =>
+  import("./components/userComponents/CompleteProfile")
+);
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
 
 // Helper wrapper to inject location for AnimatePresence
@@ -96,10 +198,34 @@ function AnimatedRoutes() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupForm />} />
-        <Route path="/CompleteProfile" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyCompleteProfile /> </React.Suspense>} />
+        <Route
+          path="/CompleteProfile"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyCompleteProfile />{" "}
+            </React.Suspense>
+          }
+        />
         {/* Public Pages */}\
-        <Route path="/GuestHomepage" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestHomepage /> </React.Suspense>} />
-        <Route path="/GuestItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestItinerary /> </React.Suspense>} />
+        <Route
+          path="/GuestHomepage"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyGuestHomepage />{" "}
+            </React.Suspense>
+          }
+        />
+        <Route
+          path="/GuestItinerary"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyGuestItinerary />{" "}
+            </React.Suspense>
+          }
+        />
         <Route
           path="/GuestItineraryMap/:itineraryId"
           element={
@@ -110,7 +236,10 @@ function AnimatedRoutes() {
               disableScrolling={true}
               tourType="map"
             >
-              <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestItineraryMap /> </React.Suspense>
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyGuestItineraryMap />{" "}
+              </React.Suspense>
             </TourProvider>
           }
         />
@@ -128,7 +257,15 @@ function AnimatedRoutes() {
             </TourProvider>
           }
         />
-        <Route path="/Chatbot" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyChatbot /> </React.Suspense>} />
+        <Route
+          path="/Chatbot"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyChatbot />{" "}
+            </React.Suspense>
+          }
+        />
         <Route
           path="/Emergency"
           element={
@@ -139,7 +276,10 @@ function AnimatedRoutes() {
               disableScrolling={true}
               tourType="emergency"
             >
-              <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyEmergencyPage /> </React.Suspense>
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyEmergencyPage />{" "}
+              </React.Suspense>
             </TourProvider>
           }
         />
@@ -153,12 +293,23 @@ function AnimatedRoutes() {
               disableScrolling={true}
               tourType="photobooth"
             >
-              <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyPhotobooth /> </React.Suspense>
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyPhotobooth />{" "}
+              </React.Suspense>
             </TourProvider>
           }
         />
         {/* Guest Profile Section */}
-        <Route path="/GuestProfile" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestProfileLayout /> </React.Suspense>}> 
+        <Route
+          path="/GuestProfile"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyGuestProfileLayout />{" "}
+            </React.Suspense>
+          }
+        >
           <Route
             index
             element={
@@ -169,38 +320,209 @@ function AnimatedRoutes() {
                 disableScrolling={true}
                 tourType="guestProfile"
               >
-                <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestProfile /> </React.Suspense>
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyGuestProfile />{" "}
+                </React.Suspense>
               </TourProvider>
             }
           />
-          <Route path="GuestLanguage" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestLanguage /> </React.Suspense>} />
-          <Route path="GuestSettings" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGuestSettings /> </React.Suspense>} />
+          <Route
+            path="GuestLanguage"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyGuestLanguage />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="GuestSettings"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyGuestSettings />{" "}
+              </React.Suspense>
+            }
+          />
         </Route>
         <Route element={<AdminProtectedRoute />}>
           {/* Admin */}
-          <Route path="/AdminHome" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminHome /> </React.Suspense>} />
-          <Route path="/AdminManageContent" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminContent /> </React.Suspense>} />
-          <Route path="/AdminManageEmergency" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyManageEmergency /> </React.Suspense>} />
-          <Route path="/AdminManageRole" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminRole /> </React.Suspense>} />
-          <Route path="/AdminLog" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminLog /> </React.Suspense>} />
-          <Route path="/AdminTourMap" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminMap /> </React.Suspense>} />
-          <Route path="/AdminManageChatbot" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminChatbot /> </React.Suspense>} />
-          <Route path="/AdminItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminItinerary /> </React.Suspense>} />
-          <Route path="/AdminPhotobooth" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminPhotobooth /> </React.Suspense>} />
-          <Route path="/AdminReviews" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminReviews /> </React.Suspense>} />
-          <Route path="/AdminReports" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminReports /> </React.Suspense>} />
-          <Route path="/AdminProfile" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminProfileLayout /> </React.Suspense>}>
-            <Route index element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminProfile /> </React.Suspense>} />
-            <Route path="Account" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminAccount /> </React.Suspense>} />
-            <Route path="Birthday" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminBirthday /> </React.Suspense>} />
-            <Route path="Gender" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminGender /> </React.Suspense>} />
-            <Route path="Country" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminCountry /> </React.Suspense>} />
-            <Route path="Language" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAdminLanguage /> </React.Suspense>} />
+          <Route
+            path="/AdminHome"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminHome />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminManageContent"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminContent />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminManageEmergency"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyManageEmergency />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminManageRole"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminRole />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminLog"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminLog />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminTourMap"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminMap />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminManageChatbot"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminChatbot />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminItinerary"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminItinerary />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminPhotobooth"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminPhotobooth />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminReviews"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminReviews />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminReports"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminReports />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/AdminProfile"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyAdminProfileLayout />{" "}
+              </React.Suspense>
+            }
+          >
+            <Route
+              index
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAdminProfile />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Account"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAdminAccount />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Birthday"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAdminBirthday />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Gender"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAdminGender />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Country"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAdminCountry />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Language"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAdminLanguage />{" "}
+                </React.Suspense>
+              }
+            />
           </Route>
         </Route>
         <Route element={<TouristProtectedRoute />}>
           {/* Tourist */}
-          <Route path="/Homepage" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyHomepage /> </React.Suspense>} />{" "}
+          <Route
+            path="/Homepage"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyHomepage />{" "}
+              </React.Suspense>
+            }
+          />{" "}
           <Route
             path="/TripArchive"
             element={
@@ -211,12 +533,31 @@ function AnimatedRoutes() {
                 disableScrolling={true}
                 tourType="tripArchive"
               >
-                <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyTripArchives /> </React.Suspense>
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyTripArchives />{" "}
+                </React.Suspense>
               </TourProvider>
             }
           />
-          <Route path="/CreateItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyCreateItineraryPage /> </React.Suspense>} />
-          <Route path="/TouristItinerary" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyTouristItinerary /> </React.Suspense>} />
+          <Route
+            path="/CreateItinerary"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyCreateItineraryPage />{" "}
+              </React.Suspense>
+            }
+          />
+          <Route
+            path="/TouristItinerary"
+            element={
+              <React.Suspense fallback={<ModernLoader progress={95} />}>
+                {" "}
+                <LazyTouristItinerary />{" "}
+              </React.Suspense>
+            }
+          />
           <Route
             path="/TouristItineraryMap/:itineraryId"
             element={
@@ -227,7 +568,10 @@ function AnimatedRoutes() {
                 disableScrolling={true}
                 tourType="map"
               >
-                <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyTouristItineraryMap /> </React.Suspense>
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyTouristItineraryMap />{" "}
+                </React.Suspense>
               </TourProvider>
             }
           />
@@ -250,22 +594,81 @@ function AnimatedRoutes() {
                   disableScrolling={true}
                   tourType="profile"
                 >
-                  <React.Suspense fallback={<ModernLoader progress={95} />}> <LazyProfilePage /> </React.Suspense>
+                  <React.Suspense fallback={<ModernLoader progress={95} />}>
+                    {" "}
+                    <LazyProfilePage />{" "}
+                  </React.Suspense>
                 </TourProvider>
               }
             />
-            <Route path="Account" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyAccount /> </React.Suspense>} />
-            <Route path="Birthday" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyBirthday /> </React.Suspense>} />
-            <Route path="Gender" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyGender /> </React.Suspense>} />
-            <Route path="Country" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyCountry /> </React.Suspense>} />
-            <Route path="Language" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyLanguage /> </React.Suspense>} />
-            <Route path="Settings" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazySettings /> </React.Suspense>} />
+            <Route
+              path="Account"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyAccount />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Birthday"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyBirthday />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Gender"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyGender />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Country"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyCountry />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Language"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazyLanguage />{" "}
+                </React.Suspense>
+              }
+            />
+            <Route
+              path="Settings"
+              element={
+                <React.Suspense fallback={<ModernLoader progress={95} />}>
+                  {" "}
+                  <LazySettings />{" "}
+                </React.Suspense>
+              }
+            />
           </Route>
         </Route>
         {/* <Route element={<GuestProtectedRoute />}> */}
         {/* </Route> */}
         {/* 404 Not Found - Must be last */}
-        <Route path="*" element={<React.Suspense fallback={<ModernLoader progress={95} />}> <LazyNotFound /> </React.Suspense>} />
+        <Route
+          path="*"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyNotFound />{" "}
+            </React.Suspense>
+          }
+        />
       </Routes>
     </AnimatePresence>
   );
@@ -347,6 +750,63 @@ function CameraLifecycleOnRouteLeave() {
   return null;
 }
 
+function GlobalZoomReset() {
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    let startContent = "";
+    let pinching = false;
+    const disabled =
+      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no";
+    const enabled =
+      "width=device-width, initial-scale=1, maximum-scale=10, user-scalable=yes";
+    const onGestureStart = () => {
+      const c = meta.getAttribute("content") || "";
+      startContent = c;
+      meta.setAttribute("content", enabled);
+    };
+    const onGestureEnd = () => {
+      if (!startContent) return;
+      meta.setAttribute("content", disabled);
+      setTimeout(() => {
+        meta.setAttribute("content", startContent);
+        startContent = "";
+      }, 200);
+    };
+    const onTouchStart = (e) => {
+      if (e.touches && e.touches.length > 1) {
+        const c = meta.getAttribute("content") || "";
+        startContent = c;
+        pinching = true;
+        meta.setAttribute("content", enabled);
+      }
+    };
+    const onTouchEnd = () => {
+      if (pinching) {
+        meta.setAttribute("content", disabled);
+        setTimeout(() => {
+          meta.setAttribute("content", startContent);
+          startContent = "";
+          pinching = false;
+        }, 200);
+      }
+    };
+    document.addEventListener("gesturestart", onGestureStart);
+    document.addEventListener("gestureend", onGestureEnd);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener("gesturestart", onGestureStart);
+      document.removeEventListener("gestureend", onGestureEnd);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     const savedLang = localStorage.getItem("language") || "en";
@@ -360,6 +820,7 @@ export default function App() {
             <AuthPersistence>
               <AnimatedRoutes />
               <TTSCancelOnRouteLeave />
+              <GlobalZoomReset />
               <CameraLifecycleOnRouteLeave />
               <ConnectionStatus />
               <PWAInstallPrompt />

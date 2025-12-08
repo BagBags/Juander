@@ -19,14 +19,14 @@ export default function AdminHome() {
         }`}
       >
         {/* Page Header */}
-        <div className="w-full bg-white shadow-md px-8 py-4">
-          <h1 className="text-2xl text-gray-800 pr-20 pl-20 font-medium">
+        <div className="w-full bg-white shadow-md px-4 sm:px-6 md:px-8 py-4">
+          <h1 className="text-2xl text-gray-800 font-medium">
             Chatbot Knowledge Base
           </h1>
         </div>
 
         {/* Main Content */}
-        <main className="p-6">
+        <main className="px-3 sm:px-4 md:px-6 py-6">
           <AdminChatbotMain />
         </main>
       </div>

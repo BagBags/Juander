@@ -284,7 +284,7 @@ export default function Birthday() {
             {t("save")}
           </button>
           <p className="mt-auto mb-8 text-xs text-center text-gray-400">
-            \u00A9 {new Date().getFullYear()} {t("intramurosAdmin")}. Developed
+             {new Date().getFullYear()} {t("intramurosAdmin")}. Developed
             by UST College of Information and Computing Sciences.
           </p>
         </div>

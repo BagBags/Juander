@@ -23,6 +23,8 @@ export default function Photobooth() {
   const canvasRef = useRef(null);
   const overlayRef = useRef(null);
   const overlayImgRef = useRef(null);
+  const videoElRef = useRef(null);
+  const mediaStreamRef = useRef(null);
 
   const [jeelizReady, setJeelizReady] = useState(false);
   const [cameraKey, setCameraKey] = useState(0);
@@ -285,6 +287,10 @@ export default function Photobooth() {
                   return;
                 }
                 setJeelizReady(true);
+                try {
+                  videoElRef.current = spec && spec.videoElement ? spec.videoElement : null;
+                  mediaStreamRef.current = videoElRef.current && videoElRef.current.srcObject ? videoElRef.current.srcObject : null;
+                } catch {}
               },
               callbackTrack: function (ds) {
                 // Ensure the camera video is rendered into the WebGL canvas each frame
@@ -379,9 +385,55 @@ export default function Photobooth() {
           window.JEELIZFACEFILTER.destroy();
         }
       } catch {}
+      try {
+        const v = videoElRef.current;
+        const s = mediaStreamRef.current || (v && v.srcObject);
+        if (s && typeof s.getTracks === "function") {
+          s.getTracks().forEach((t) => {
+            try { t.stop(); } catch {}
+          });
+        }
+        if (v) {
+          try { v.pause && v.pause(); } catch {}
+          try { v.srcObject = null; } catch {}
+          try { v.removeAttribute("src"); } catch {}
+          try { v.load && v.load(); } catch {}
+        }
+      } catch {}
       scheduleCameraStop(0);
     };
   }, [cameraKey, facingMode]);
+
+  useEffect(() => {
+    const hardStop = () => {
+      try {
+        if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
+          window.JEELIZFACEFILTER.destroy();
+        }
+      } catch {}
+      try {
+        const v = videoElRef.current;
+        const s = mediaStreamRef.current || (v && v.srcObject);
+        if (s && typeof s.getTracks === "function") {
+          s.getTracks().forEach((t) => {
+            try { t.stop(); } catch {}
+          });
+        }
+        if (v) {
+          try { v.pause && v.pause(); } catch {}
+          try { v.srcObject = null; } catch {}
+          try { v.removeAttribute("src"); } catch {}
+          try { v.load && v.load(); } catch {}
+        }
+      } catch {}
+    };
+    window.addEventListener("pagehide", hardStop);
+    window.addEventListener("beforeunload", hardStop);
+    return () => {
+      window.removeEventListener("pagehide", hardStop);
+      window.removeEventListener("beforeunload", hardStop);
+    };
+  }, []);
 
   // Reinitialize camera when returning to the app (fix black camera on resume)
   useEffect(() => {

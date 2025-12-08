@@ -200,7 +200,10 @@ export default function SiteModalFullScreen({
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: description, lang: userLanguage === 'english' ? 'english' : 'filipino' }),
+                body: JSON.stringify({
+                  text: description,
+                  lang: userLanguage === "english" ? "english" : "filipino",
+                }),
               }
             );
             if (!res.ok) throw new Error("TTS request failed");
@@ -249,7 +252,8 @@ export default function SiteModalFullScreen({
             // 2️⃣ Match itinerary
             if (!itineraryId) return false;
             if (r.itineraryId) {
-              if (typeof r.itineraryId === "string") return r.itineraryId === itineraryId;
+              if (typeof r.itineraryId === "string")
+                return r.itineraryId === itineraryId;
               return r.itineraryId._id === itineraryId;
             }
             return false;
@@ -436,127 +440,131 @@ export default function SiteModalFullScreen({
             formData.append("existingPhotos", JSON.stringify(existingPhotos));
             reviewImages.forEach((img) => formData.append("photos", img));
 
-        await axios.put(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/reviews/${editingReviewId}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
+            await axios.put(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/reviews/${editingReviewId}`,
+              formData,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "multipart/form-data",
+                },
+              }
+            );
+            setNotification({
+              isOpen: true,
+              title: "Success",
+              message: "Review updated successfully!",
+              type: "success",
+            });
+          } else {
+            // For creating, send as FormData with photos
+            const formData = new FormData();
+            formData.append("siteId", selectedPin._id);
+            formData.append("itineraryId", itineraryId);
+            formData.append("rating", rating);
+            formData.append("reviewText", reviewText.trim());
+
+            // Append photos if any
+            reviewImages.forEach((image) => {
+              formData.append("photos", image);
+            });
+
+            await axios.post(
+              `${
+                import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+              }/reviews`,
+              formData,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "multipart/form-data",
+                },
+              }
+            );
+            setNotification({
+              isOpen: true,
+              title: "Success",
+              message: "Review submitted successfully!",
+              type: "success",
+            });
           }
-        );
-        setNotification({
-          isOpen: true,
-          title: "Success",
-          message: "Review updated successfully!",
-          type: "success",
-        });
-      } else {
-        // For creating, send as FormData with photos
-        const formData = new FormData();
-        formData.append("siteId", selectedPin._id);
-        formData.append("itineraryId", itineraryId);
-        formData.append("rating", rating);
-        formData.append("reviewText", reviewText.trim());
 
-        // Append photos if any
-        reviewImages.forEach((image) => {
-          formData.append("photos", image);
-        });
+          // Reset form
+          setRating(0);
+          setReviewText("");
+          setReviewImages([]);
+          setImagePreviewUrls([]);
+          setExistingPhotos([]);
+          setShowReviewForm(false);
+          setEditingReviewId(null);
 
-        await axios.post(
-          `${
-            import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-          }/reviews`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
+          // Refresh user reviews
+          const response = await axios.get(
+            `${
+              import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+            }/reviews/site/${selectedPin._id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const userId = getLocalUserId();
+          const reviewsData = response.data.reviews || response.data;
+          const myReviews = reviewsData.filter((r) => {
+            // 1️⃣ Match user
+            let userMatch = false;
+            if (r.userId) {
+              if (typeof r.userId === "string") userMatch = r.userId === userId;
+              else userMatch = r.userId._id === userId;
+            }
+            if (!userMatch) return false;
+
+            // 2️⃣ Match itinerary
+            if (!itineraryId) return false;
+            if (r.itineraryId) {
+              if (typeof r.itineraryId === "string")
+                return r.itineraryId === itineraryId;
+              return r.itineraryId._id === itineraryId;
+            }
+            return false;
+          });
+          setUserReviews(myReviews);
+
+          // Refresh parent component's reviews
+          if (onReviewSubmitted) {
+            onReviewSubmitted();
           }
-        );
-        setNotification({
-          isOpen: true,
-          title: "Success",
-          message: "Review submitted successfully!",
-          type: "success",
-        });
-      }
-
-      // Reset form
-      setRating(0);
-      setReviewText("");
-      setReviewImages([]);
-      setImagePreviewUrls([]);
-      setExistingPhotos([]);
-      setShowReviewForm(false);
-      setEditingReviewId(null);
-
-      // Refresh user reviews
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
-        }/reviews/site/${selectedPin._id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const userId = getLocalUserId();
-      const reviewsData = response.data.reviews || response.data;
-      const myReviews = reviewsData.filter((r) => {
-        // 1️⃣ Match user
-        let userMatch = false;
-        if (r.userId) {
-          if (typeof r.userId === "string") userMatch = r.userId === userId;
-          else userMatch = r.userId._id === userId;
+        } catch (err) {
+          console.error("Error submitting review:", err);
+          setNotification({
+            isOpen: true,
+            title: "Error",
+            message: err.response?.data?.error || "Failed to submit review",
+            type: "error",
+          });
+        } finally {
+          setIsSubmitting(false);
+          setConfirmModal((prev) => ({
+            ...prev,
+            isOpen: false,
+            loading: false,
+          }));
         }
-        if (!userMatch) return false;
+      },
+    }); // Added missing closing brace here
+    // Prevent immediate submission until user confirms
+    return;
+  };
 
-        // 2️⃣ Match itinerary
-        if (!itineraryId) return false;
-        if (r.itineraryId) {
-          if (typeof r.itineraryId === "string") return r.itineraryId === itineraryId;
-          return r.itineraryId._id === itineraryId;
-        }
-        return false;
-      });
-      setUserReviews(myReviews);
-
-      // Refresh parent component's reviews
-      if (onReviewSubmitted) {
-        onReviewSubmitted();
-      }
-    } catch (err) {
-      console.error("Error submitting review:", err);
-      setNotification({
-        isOpen: true,
-        title: "Error",
-        message: err.response?.data?.error || "Failed to submit review",
-        type: "error",
-      });
-    } finally {
-      setIsSubmitting(false);
-      setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
-    }
-  }
-}); // Added missing closing brace here
-// Prevent immediate submission until user confirms
-return;
-};
-
-const handleEditReview = (review) => {
-  setRating(review.rating);
-  setReviewText(review.reviewText || "");
-  setEditingReviewId(review._id);
-  // Note: Existing images from review.photos would need to be handled separately
-  // For now, editing will allow adding new images only
-  setExistingPhotos(review.photos || []);
-  setReviewImages([]);
-  setImagePreviewUrls([]);
-  setShowReviewForm(true);
-
+  const handleEditReview = (review) => {
+    setRating(review.rating);
+    setReviewText(review.reviewText || "");
+    setEditingReviewId(review._id);
+    // Note: Existing images from review.photos would need to be handled separately
+    // For now, editing will allow adding new images only
+    setExistingPhotos(review.photos || []);
+    setReviewImages([]);
+    setImagePreviewUrls([]);
+    setShowReviewForm(true);
   };
 
   const handleDeleteReview = async (reviewId) => {
@@ -733,7 +741,7 @@ const handleEditReview = (review) => {
           <>
             {/* 3D Model Preview */}
             {selectedPin.glbUrl && selectedPin.glbUrl.endsWith(".glb") && (
-              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gray-200">
+              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                 <Suspense
                   fallback={
                     <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -773,7 +781,10 @@ const handleEditReview = (review) => {
                     </div>
                   }
                 >
-                  <ModelPreview url={selectedPin.glbUrl} />
+                  <ModelPreview
+                    key={selectedPin.glbUrl}
+                    url={selectedPin.glbUrl}
+                  />
                 </Suspense>
               </div>
             )}
@@ -1240,7 +1251,7 @@ const handleEditReview = (review) => {
                               </div>
                               {!isGuestMode && (
                                 <div className="flex gap-2">
-                                                                    <button
+                                  <button
                                     onClick={() =>
                                       handleDeleteReview(review._id)
                                     }
@@ -1262,10 +1273,31 @@ const handleEditReview = (review) => {
                                 {review.photos.map((photo, idx) => (
                                   <img
                                     key={idx}
-                                    src={photo.startsWith("http") ? photo : `${(import.meta.env.VITE_API_BASE_URL?.replace('/api','') || 'http://localhost:5000')}${photo}`}
+                                    src={
+                                      photo.startsWith("http")
+                                        ? photo
+                                        : `${
+                                            import.meta.env.VITE_API_BASE_URL?.replace(
+                                              "/api",
+                                              ""
+                                            ) || "http://localhost:5000"
+                                          }${photo}`
+                                    }
                                     alt={`Photo ${idx + 1}`}
                                     className="w-16 h-16 object-cover rounded-md border border-gray-300 flex-shrink-0 cursor-pointer hover:border-[#f04e37]"
-                                    onClick={() => window.open(photo.startsWith('http') ? photo : `${(import.meta.env.VITE_API_BASE_URL?.replace('/api','') || 'http://localhost:5000')}${photo}`, '_blank')}
+                                    onClick={() =>
+                                      window.open(
+                                        photo.startsWith("http")
+                                          ? photo
+                                          : `${
+                                              import.meta.env.VITE_API_BASE_URL?.replace(
+                                                "/api",
+                                                ""
+                                              ) || "http://localhost:5000"
+                                            }${photo}`,
+                                        "_blank"
+                                      )
+                                    }
                                   />
                                 ))}
                               </div>
@@ -1276,8 +1308,9 @@ const handleEditReview = (review) => {
                     )}
 
                     {/* Write/Edit Review Button */}
-                    {!isGuestMode && !showReviewForm && (
-                      userReviews.length === 0 ? (
+                    {!isGuestMode &&
+                      !showReviewForm &&
+                      (userReviews.length === 0 ? (
                         <button
                           onClick={() => setShowReviewForm(true)}
                           className="w-full py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-all"
@@ -1293,8 +1326,7 @@ const handleEditReview = (review) => {
                           <Edit2 className="w-4 h-4" />
                           Edit your Review
                         </button>
-                      )
-                    )}
+                      ))}
 
                     {/* Review Form */}
                     {!isGuestMode && showReviewForm && (
@@ -1354,7 +1386,10 @@ const handleEditReview = (review) => {
                           {existingPhotos.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-2">
                               {existingPhotos.map((photo, index) => (
-                                <div key={`existing-${index}`} className="relative w-20 h-20">
+                                <div
+                                  key={`existing-${index}`}
+                                  className="relative w-20 h-20"
+                                >
                                   <img
                                     src={photo}
                                     alt={`Existing photo ${index + 1}`}
@@ -1362,7 +1397,9 @@ const handleEditReview = (review) => {
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => handleRemoveExistingPhoto(index)}
+                                    onClick={() =>
+                                      handleRemoveExistingPhoto(index)
+                                    }
                                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
                                   >
                                     <X className="w-4 h-4" />
@@ -1412,7 +1449,9 @@ const handleEditReview = (review) => {
                                   />
                                 </svg>
                                 <span>
-                                  Add Photos ({existingPhotos.length + reviewImages.length}/5)
+                                  Add Photos (
+                                  {existingPhotos.length + reviewImages.length}
+                                  /5)
                                 </span>
                               </div>
                               <input

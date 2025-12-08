@@ -27,10 +27,13 @@ export default function PhotoboothSlider({
   // Snapchat-like: active center filter is larger than inactive ones
   const inactiveSize = isMobile ? 64 : 76;
   const activeSize = isMobile ? 84 : 100;
-  const containerHeight = activeSize + 24;
+  const activeBorder = 4;
+  const inactiveBorder = 2;
+  const activeOuter = activeSize + activeBorder * 2;
+  const containerHeight = activeOuter + 24;
   const marginX = isMobile ? 8 : 12;
-  // Slightly larger center capture circle to emphasize active
-  const captureSize = isMobile ? 84 : 96;
+  // Center capture circle should line up exactly with active filter outer ring
+  const captureSize = activeOuter;
 
   useEffect(() => {
     const carousel = carouselRef.current;
@@ -123,9 +126,9 @@ export default function PhotoboothSlider({
           alignItems: "center",
           overscrollBehaviorX: "contain",
           overscrollBehaviorY: "none",
-          // Center uses active size so the selected thumbnail aligns perfectly in the middle
-          paddingLeft: `calc(50% - ${activeSize / 2}px)`,
-          paddingRight: `calc(50% - ${activeSize / 2}px)`,
+          // Center padding accounts for the active filter's border thickness
+          paddingLeft: `calc(50% - ${(activeOuter) / 2}px)`,
+          paddingRight: `calc(50% - ${(activeOuter) / 2}px)`,
         }}
         className="hide-scrollbar"
       >
@@ -146,8 +149,8 @@ export default function PhotoboothSlider({
               borderRadius: "50%",
               border:
                 filter.id === selectedFilterId
-                  ? "4px solid #fff" // bold white ring for active, Snapchat style
-                  : "2px solid #ccc",
+                  ? `${activeBorder}px solid #fff`
+                  : `${inactiveBorder}px solid #ccc`,
               scrollSnapAlign: "center",
               scrollSnapStop: "always",
               position: "relative",

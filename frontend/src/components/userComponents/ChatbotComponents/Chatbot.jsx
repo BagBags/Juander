@@ -71,6 +71,7 @@ export default function Chatbot() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
+  const [kbPadding, setKbPadding] = useState(0);
 
   // Save messages to localStorage whenever they change with timestamp
   useEffect(() => {
@@ -145,6 +146,26 @@ export default function Chatbot() {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const updateKb = () => {
+      if (!vv) return;
+      const gap = Math.max(0, (window.innerHeight - vv.height - (vv.offsetTop || 0)));
+      setKbPadding(gap);
+    };
+    if (vv) {
+      vv.addEventListener('resize', updateKb);
+      vv.addEventListener('scroll', updateKb);
+      updateKb();
+    }
+    return () => {
+      if (vv) {
+        vv.removeEventListener('resize', updateKb);
+        vv.removeEventListener('scroll', updateKb);
       }
     };
   }, []);
@@ -822,7 +843,7 @@ IMPORTANT RULES:
     <div
       className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
       style={{
-        paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",
+        paddingBottom: `calc(1.25rem + env(safe-area-inset-bottom) + ${kbPadding}px)`,
       }}
     >
       <style>{`
@@ -967,15 +988,14 @@ IMPORTANT RULES:
           disabled={isBotTyping}
           className={`p-2 rounded-full transition-all ${
             isListening
-              ? "bg-red-500 text-white animate-pulse"
-              : "bg-transparent text-gray-600 hover:bg-gray-200"
+              ? "bg-red-500 text-white ring-2 ring-red-400"
+              : "bg-transparent text-[#f04e37] hover:bg-gray-200"
           }`}
           title={isListening ? "Stop listening" : "Speak your message"}
         >
           <FontAwesomeIcon
             icon={isListening ? faStop : faMicrophone}
             className="w-4 h-4"
-            style={{ color: isListening ? "white" : "#f04e37" }}
           />
         </button>
         <input

@@ -34,19 +34,21 @@
     /* IMPORTANT: Do NOT add safe-area padding to body */
     /* Safe areas are handled by individual components (BackHeader, etc.) */
     /* This prevents double-padding and layout issues */
-    
+
     /* Prevent overscroll bounce on iOS */
     overscroll-behavior-y: none;
     /* Smooth rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Prevent iOS zoom on input focus */
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: 16px !important;
   }
-  
+
   /* PWA: Full viewport height accounting for safe areas */
   #root {
     min-height: 100vh;
@@ -61,7 +63,7 @@
   .font-poppins {
     font-family: "Poppins", sans-serif;
   }
-  
+
   /* Icon-only select: hide trigger text, keep dropdown options readable */
   .icon-only-select {
     color: transparent !important;
@@ -93,11 +95,11 @@
     margin: 1cm;
     size: A4;
   }
-  
+
   .page-break-before {
     page-break-before: always;
   }
-  
+
   /* Ensure logo prints in color */
   * {
     -webkit-print-color-adjust: exact !important;
