@@ -1629,7 +1629,8 @@ const handleDeleteReview = (reviewId) => {
                 <textarea
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
-                  className="w-full border-2 border-gray-200 rounded-2xl p-4 text-sm bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f04e37] focus:border-transparent transition-all"
+                  className="w-full border-2 border-gray-200 rounded-2xl p-4 text-base bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#f04e37] focus:border-transparent transition-all"
+                  style={{ fontSize: "16px" }}
                   rows="4"
                   placeholder="Share your experience..."
                 />

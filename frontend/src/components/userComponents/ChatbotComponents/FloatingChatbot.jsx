@@ -9,7 +9,7 @@ export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: -30, y: 550 }); // Start peeking from left
   const [draggedPosition, setDraggedPosition] = useState({ x: -30, y: 550 });
-  const [vvOffset, setVvOffset] = useState({ x: 0, y: 0 });
+  
 
   const nodeRef = useRef(null);
   const modalRef = useRef(null);
@@ -73,7 +73,6 @@ export default function FloatingChatbot() {
     let prevViewport = "";
 
     if (isOpen) {
-      // Prevent background scroll/overscroll while modal is active
       prevOverflow = document.body.style.overflow;
       prevTouchAction = document.body.style.touchAction;
       prevOverscroll = document.body.style.overscrollBehavior;
@@ -84,33 +83,7 @@ export default function FloatingChatbot() {
       if (meta) prevViewport = meta.getAttribute("content") || "";
     }
 
-    const vv = window.visualViewport;
-    const updateOffset = () => {
-      if (!vv) return;
-      // Align modal to the center of the visual viewport
-      setVvOffset({
-        x: Math.round(vv.offsetLeft || 0),
-        y: Math.round(vv.offsetTop || 0),
-      });
-    };
-
-    const el = modalRef.current;
-
-    // Allow pinch inside modal; no gesture or multi-touch prevention here
-
-    if (vv) {
-      vv.addEventListener("resize", updateOffset);
-      vv.addEventListener("scroll", updateOffset);
-      updateOffset();
-    }
-
     return () => {
-      if (vv) {
-        vv.removeEventListener("resize", updateOffset);
-        vv.removeEventListener("scroll", updateOffset);
-      }
-      // No modal gesture teardown needed
-      // Restore body styles
       if (isOpen) {
         document.body.style.overflow = prevOverflow || "";
         document.body.style.touchAction = prevTouchAction || "";
@@ -233,7 +206,7 @@ export default function FloatingChatbot() {
           style={{
             top: "50%",
             left: "50%",
-            transform: `translate(calc(-50% + ${vvOffset.x}px), calc(-50% + ${vvOffset.y}px))`,
+            transform: "translate(-50%, -50%)",
             position: "fixed",
             willChange: "transform",
             overscrollBehavior: "contain",

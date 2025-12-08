@@ -191,8 +191,7 @@ export default function TripArchivesPage() {
         isOpen: true,
         type: "warning",
         title: "Inappropriate language",
-        message:
-          "Please avoid using inappropriate language in your review.",
+        message: "Please avoid using inappropriate language in your review.",
         autoClose: true,
         autoCloseDuration: 2500,
       });
@@ -465,7 +464,8 @@ export default function TripArchivesPage() {
               <textarea
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
-                className="w-full border-2 border-gray-300 rounded-lg p-3 text-sm bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                className="w-full border-2 border-gray-300 rounded-lg p-3 text-base bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                style={{ fontSize: "16px" }}
                 rows="4"
                 placeholder="Share your experience..."
               />

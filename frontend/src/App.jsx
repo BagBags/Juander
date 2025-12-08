@@ -750,62 +750,6 @@ function CameraLifecycleOnRouteLeave() {
   return null;
 }
 
-function GlobalZoomReset() {
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="viewport"]');
-    if (!meta) return;
-    let startContent = "";
-    let pinching = false;
-    const disabled =
-      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no";
-    const enabled =
-      "width=device-width, initial-scale=1, maximum-scale=10, user-scalable=yes";
-    const onGestureStart = () => {
-      const c = meta.getAttribute("content") || "";
-      startContent = c;
-      meta.setAttribute("content", enabled);
-    };
-    const onGestureEnd = () => {
-      if (!startContent) return;
-      meta.setAttribute("content", disabled);
-      setTimeout(() => {
-        meta.setAttribute("content", startContent);
-        startContent = "";
-      }, 200);
-    };
-    const onTouchStart = (e) => {
-      if (e.touches && e.touches.length > 1) {
-        const c = meta.getAttribute("content") || "";
-        startContent = c;
-        pinching = true;
-        meta.setAttribute("content", enabled);
-      }
-    };
-    const onTouchEnd = () => {
-      if (pinching) {
-        meta.setAttribute("content", disabled);
-        setTimeout(() => {
-          meta.setAttribute("content", startContent);
-          startContent = "";
-          pinching = false;
-        }, 200);
-      }
-    };
-    document.addEventListener("gesturestart", onGestureStart);
-    document.addEventListener("gestureend", onGestureEnd);
-    document.addEventListener("touchstart", onTouchStart, { passive: true });
-    document.addEventListener("touchend", onTouchEnd, { passive: true });
-    document.addEventListener("touchcancel", onTouchEnd, { passive: true });
-    return () => {
-      document.removeEventListener("gesturestart", onGestureStart);
-      document.removeEventListener("gestureend", onGestureEnd);
-      document.removeEventListener("touchstart", onTouchStart);
-      document.removeEventListener("touchend", onTouchEnd);
-      document.removeEventListener("touchcancel", onTouchEnd);
-    };
-  }, []);
-  return null;
-}
 
 export default function App() {
   useEffect(() => {
@@ -820,7 +764,6 @@ export default function App() {
             <AuthPersistence>
               <AnimatedRoutes />
               <TTSCancelOnRouteLeave />
-              <GlobalZoomReset />
               <CameraLifecycleOnRouteLeave />
               <ConnectionStatus />
               <PWAInstallPrompt />

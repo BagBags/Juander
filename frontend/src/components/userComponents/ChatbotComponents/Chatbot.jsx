@@ -14,6 +14,8 @@ export default function Chatbot() {
   const messagesEndRef = useRef(null);
   const sessionId = useRef(uuidv4());
   const lastBotMessageRef = useRef("");
+  const composerRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Get user-specific localStorage key
   const getUserKey = (baseKey) => {
@@ -72,6 +74,7 @@ export default function Chatbot() {
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
   const [kbPadding, setKbPadding] = useState(0);
+  const [composerH, setComposerH] = useState(56);
 
   // Save messages to localStorage whenever they change with timestamp
   useEffect(() => {
@@ -168,6 +171,18 @@ export default function Chatbot() {
         vv.removeEventListener('scroll', updateKb);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const measure = () => {
+      if (composerRef.current) {
+        const h = composerRef.current.offsetHeight || 56;
+        setComposerH(h);
+      }
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, []);
 
   useEffect(() => {
@@ -843,7 +858,7 @@ IMPORTANT RULES:
     <div
       className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
       style={{
-        paddingBottom: `calc(1.25rem + env(safe-area-inset-bottom) + ${kbPadding}px)`,
+        paddingBottom: `calc(${composerH}px + env(safe-area-inset-bottom) + ${kbPadding}px)`,
       }}
     >
       <style>{`
@@ -982,7 +997,16 @@ IMPORTANT RULES:
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md">
+      <div
+        ref={composerRef}
+        className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md mx-4"
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: `calc(env(safe-area-inset-bottom) + ${kbPadding}px)`,
+        }}
+      >
         <button
           onClick={toggleListening}
           disabled={isBotTyping}
@@ -1007,9 +1031,13 @@ IMPORTANT RULES:
               handleSend();
             }
           }}
+          onFocus={() => {
+            inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }}
           disabled={isBotTyping || isListening}
           className="flex-grow bg-transparent outline-none px-2 py-1 text-base"
           style={{ fontSize: "16px" }}
+          ref={inputRef}
           placeholder={
             isBotTyping
               ? "Juan is typing..."

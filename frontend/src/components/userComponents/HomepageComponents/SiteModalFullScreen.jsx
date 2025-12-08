@@ -1407,7 +1407,8 @@ export default function SiteModalFullScreen({
                             onChange={(e) => setReviewText(e.target.value)}
                             placeholder="Share your experience..."
                             rows={4}
-                            className="w-full px-3 py-2 text-sm rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
+                            className="w-full px-3 py-2 text-base rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none resize-none"
+                            style={{ fontSize: "16px" }}
                             maxLength={500}
                           />
                           <p className="text-xs text-gray-500 mt-1 text-right">

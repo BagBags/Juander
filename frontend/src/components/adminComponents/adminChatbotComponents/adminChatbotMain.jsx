@@ -742,7 +742,7 @@ export default function AdminChatbot() {
                     }}
                     placeholder="Information (English)*"
                     rows={4}
-                    className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                    className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-base ${
                       errors.info_en
                         ? "border-red-500 focus:border-red-500 focus:ring-red-200"
                         : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
@@ -772,7 +772,7 @@ export default function AdminChatbot() {
                     }}
                     placeholder="Information (Filipino)*"
                     rows={4}
-                    className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                    className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-base ${
                       errors.info_fil
                         ? "border-red-500 focus:border-red-500 focus:ring-red-200"
                         : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
@@ -800,7 +800,7 @@ export default function AdminChatbot() {
                       }
                     }}
                     placeholder="Keywords (comma separated)*"
-                    className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                    className={`w-full border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-base ${
                       errors.keywords
                         ? "border-red-500 focus:border-red-500 focus:ring-red-200"
                         : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"
@@ -895,7 +895,7 @@ export default function AdminChatbot() {
                   }}
                   placeholder="Tag name"
                   maxLength={70}
-                  className={`flex-1 border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-sm ${
+                  className={`flex-1 border-2 rounded-lg focus:ring-2 outline-none transition text-gray-700 bg-white p-2 text-base ${
                     errors.tagName
                       ? "border-red-500 focus:border-red-500 focus:ring-red-200"
                       : "border-gray-300 focus:border-gray-400 focus:ring-gray-200"

@@ -391,9 +391,10 @@ export default function CreateItineraryPage() {
   // Validation helper functions
   const containsHTML = (str = "") => /<[^>]*>/g.test(str);
   const containsEmoji = (str = "") =>
-    /[\p{Extended_Pictographic}\u{1F300}-\u{1F6FF}\u{1F600}-\u{1F64F}]/u.test(str);
-  const isValidNamePattern = (str = "") =>
-    /^[A-Za-z0-9\s&,.'\-]+$/.test(str);
+    /[\p{Extended_Pictographic}\u{1F300}-\u{1F6FF}\u{1F600}-\u{1F64F}]/u.test(
+      str
+    );
+  const isValidNamePattern = (str = "") => /^[A-Za-z0-9\s&,.'\-]+$/.test(str);
 
   useEffect(() => {
     // No TTS here; voice guidance is exclusive to itinerary maps
@@ -1338,7 +1339,8 @@ export default function CreateItineraryPage() {
                             }
                           }}
                           placeholder="e.g., Historical Tour, Weekend Adventure"
-                          className="w-full px-4 py-3 md:py-2.5 md:text-sm rounded-xl md:rounded-lg bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none"
+                          className="w-full px-4 py-3 md:py-2.5 rounded-xl md:rounded-lg bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none text-base"
+                          style={{ fontSize: "16px" }}
                         />
                         {nameError && (
                           <p className="text-xs text-red-600 mt-1">
@@ -1614,7 +1616,8 @@ export default function CreateItineraryPage() {
                           <select
                             value={rHour}
                             onChange={(e) => setRHour(e.target.value)}
-                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-base border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                            style={{ fontSize: "16px" }}
                           >
                             <option value="" disabled>
                               Hour
@@ -1630,7 +1633,8 @@ export default function CreateItineraryPage() {
                           <select
                             value={rMinute}
                             onChange={(e) => setRMinute(e.target.value)}
-                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-base border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                            style={{ fontSize: "16px" }}
                           >
                             <option value="" disabled>
                               Minute
@@ -1646,7 +1650,8 @@ export default function CreateItineraryPage() {
                           <select
                             value={rPeriod}
                             onChange={(e) => setRPeriod(e.target.value)}
-                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-sm border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                            className="w-full px-2.5 py-3 md:py-2 border-2 rounded-lg md:rounded-md text-base border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+                            style={{ fontSize: "16px" }}
                           >
                             <option value="AM">AM</option>
                             <option value="PM">PM</option>
@@ -1704,7 +1709,8 @@ export default function CreateItineraryPage() {
                             value={siteSearchQuery}
                             onChange={(e) => setSiteSearchQuery(e.target.value)}
                             placeholder="Search by name or description"
-                            className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none create-itinerary-search"
+                            className="w-full h-10 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 transition-all outline-none create-itinerary-search text-base"
+                            style={{ fontSize: "16px" }}
                           />
                         </div>
                       </div>

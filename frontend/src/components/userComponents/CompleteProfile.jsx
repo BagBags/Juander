@@ -391,7 +391,8 @@ export default function CompleteProfile() {
                   setFieldErrors((prev) => ({ ...prev, firstName: msg }));
                 }}
                 maxLength={50}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent text-base"
+                style={{ fontSize: "16px" }}
                 placeholder="Enter your first name"
               />
               {fieldErrors.firstName && (
@@ -418,7 +419,8 @@ export default function CompleteProfile() {
                   setFieldErrors((prev) => ({ ...prev, lastName: msg }));
                 }}
                 maxLength={50}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent text-base"
+                style={{ fontSize: "16px" }}
                 placeholder="Enter your last name"
               />
               {fieldErrors.lastName && (
@@ -476,7 +478,8 @@ export default function CompleteProfile() {
                         birthdayMonth: undefined,
                       }));
                   }}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent text-base"
+                  style={{ fontSize: "16px" }}
                 >
                   <option value="" disabled>
                     Month
@@ -506,7 +509,8 @@ export default function CompleteProfile() {
                       birthday: { ...formData.birthday, date: e.target.value },
                     })
                   }
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent text-base"
+                  style={{ fontSize: "16px" }}
                 >
                   <option value="" disabled>
                     Day
@@ -555,7 +559,8 @@ export default function CompleteProfile() {
                         birthdayYear: undefined,
                       }));
                   }}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent text-base"
+                  style={{ fontSize: "16px" }}
                 >
                   <option value="" disabled>
                     Year
@@ -676,7 +681,8 @@ export default function CompleteProfile() {
                 placeholder="Search country..."
                 value={countrySearch}
                 onChange={(e) => setCountrySearch(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent mb-3"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#f04e37] focus:border-transparent mb-3 text-base"
+                style={{ fontSize: "16px" }}
               />
             </div>
 

@@ -86,14 +86,16 @@ export default function TourMapSearchModal({ isOpen, onClose, pins = [], onSelec
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or description"
-              className="w-full h-11 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-white text-gray-900 placeholder-gray-400 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none text-base"
+              style={{ fontSize: "16px" }}
             />
           </div>
           <div className="w-40">
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full h-11 px-3 rounded-xl bg-white text-gray-900 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none"
+              className="w-full h-11 px-3 rounded-xl bg-white text-gray-900 border-2 border-gray-200 focus:border-[#f04e37] focus:ring-2 focus:ring-[#f04e37]/20 outline-none text-base"
+              style={{ fontSize: "16px" }}
             >
               {categories.map((c) => (
                 <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>
