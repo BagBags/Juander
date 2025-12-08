@@ -9,7 +9,6 @@ export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: -30, y: 550 }); // Start peeking from left
   const [draggedPosition, setDraggedPosition] = useState({ x: -30, y: 550 });
-  
 
   const nodeRef = useRef(null);
   const modalRef = useRef(null);
@@ -81,6 +80,12 @@ export default function FloatingChatbot() {
       document.body.style.overscrollBehavior = "none";
       const meta = document.querySelector('meta[name="viewport"]');
       if (meta) prevViewport = meta.getAttribute("content") || "";
+      if (meta) {
+        meta.setAttribute(
+          "content",
+          "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+        );
+      }
     }
 
     return () => {
@@ -198,47 +203,45 @@ export default function FloatingChatbot() {
       </div>
 
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+        <div
+          className="fixed inset-0 z-[12000] flex items-center justify-center"
           style={{
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            position: "fixed",
-            willChange: "transform",
             overscrollBehavior: "contain",
-            touchAction: "auto",
+            touchAction: "none",
+            WebkitTextSizeAdjust: "100%",
           }}
-          ref={modalRef}
-          className="bg-white shadow-2xl flex flex-col z-[12000]
-                     w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem]
-                     sm:rounded-2xl"
         >
-          <div
-            className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20"
-            style={{
-              paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)",
-              height: "calc(3.5rem + env(safe-area-inset-top))",
-            }}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            ref={modalRef}
+            className="bg-white shadow-2xl flex flex-col w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem] sm:rounded-2xl"
           >
-            <h2 className="font-bold text-lg text-white tracking-wide drop-shadow-sm">
-              AskJuan
-            </h2>
-            <button
-              onClick={handleToggle}
-              className="p-2 rounded-full hover:bg-white/20 transition transform hover:scale-110 active:scale-95"
+            <div
+              className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20"
+              style={{
+                paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)",
+                height: "calc(3.5rem + env(safe-area-inset-top))",
+              }}
             >
-              <X className="w-6 h-6 text-white" />
-            </button>
-          </div>
+              <h2 className="font-bold text-lg text-white tracking-wide drop-shadow-sm">
+                AskJuan
+              </h2>
+              <button
+                onClick={handleToggle}
+                className="p-2 rounded-full hover:bg-white/20 transition transform hover:scale-110 active:scale-95"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
 
-          <div className="flex-1 overflow-hidden">
-            <Chatbot />
-          </div>
-        </motion.div>
+            <div className="flex-1 overflow-hidden">
+              <Chatbot />
+            </div>
+          </motion.div>
+        </div>
       )}
     </>
   );

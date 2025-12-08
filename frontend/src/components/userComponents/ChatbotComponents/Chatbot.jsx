@@ -871,7 +871,7 @@ IMPORTANT RULES:
     >
       <style>{`
         @media screen and (max-width: 768px) {
-          input:focus {
+          input, select, textarea {
             font-size: 16px !important;
           }
         }

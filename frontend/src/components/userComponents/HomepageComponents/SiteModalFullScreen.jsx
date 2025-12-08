@@ -76,6 +76,7 @@ export default function SiteModalFullScreen({
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
   const audioRef = React.useRef(null);
+  const arIframeRef = React.useRef(null);
 
   const requestSensorPermissions = async () => {
     try {
@@ -90,13 +91,91 @@ export default function SiteModalFullScreen({
           reqs.push(DOE.requestPermission());
         }
       }
-      if (!reqs.length) return true;
+      if (!reqs.length) {
+        const isIOS =
+          typeof navigator !== "undefined" &&
+          /iPad|iPhone|iPod/.test(navigator.userAgent);
+        return !isIOS;
+      }
       const results = await Promise.allSettled(reqs);
       return results.every(
         (r) => r.status === "fulfilled" && r.value === "granted"
       );
     } catch {
       return false;
+    }
+  };
+
+  const requestSensorPermissionsDetailed = async () => {
+    const result = { motion: false, orientation: false };
+    try {
+      if (
+        typeof window !== "undefined" &&
+        typeof window.DeviceMotionEvent !== "undefined" &&
+        typeof window.DeviceMotionEvent.requestPermission === "function"
+      ) {
+        result.motion =
+          (await window.DeviceMotionEvent.requestPermission()) === "granted";
+      } else {
+        result.motion = true;
+      }
+    } catch {}
+
+    try {
+      if (
+        typeof window !== "undefined" &&
+        typeof window.DeviceOrientationEvent !== "undefined" &&
+        typeof window.DeviceOrientationEvent.requestPermission === "function"
+      ) {
+        result.orientation =
+          (await window.DeviceOrientationEvent.requestPermission()) ===
+          "granted";
+      } else {
+        result.orientation = true;
+      }
+    } catch {}
+
+    return result;
+  };
+
+  const handleEnableSensors = async () => {
+    const permission = await requestSensorPermissionsDetailed();
+    const iframeWindow = arIframeRef.current?.contentWindow;
+    const targetOrigin = (() => {
+      try {
+        return scannedArUrl ? new URL(scannedArUrl).origin : "*";
+      } catch {
+        return "*";
+      }
+    })();
+
+    if (!iframeWindow) {
+      setNotification({
+        isOpen: true,
+        title: "Permission",
+        message: "Unable to reach AR frame. Please open in browser.",
+        type: "warning",
+      });
+      return;
+    }
+
+    if (permission.motion && permission.orientation) {
+      iframeWindow.postMessage(
+        { type: "sensor-permission", status: "granted" },
+        targetOrigin
+      );
+    } else {
+      iframeWindow.postMessage(
+        { type: "sensor-permission", status: "denied" },
+        targetOrigin
+      );
+      setNotification({
+        isOpen: true,
+        title: "Permission Required",
+        message:
+          "Motion & Orientation permissions were not granted. If no prompt appeared, open the AR in the browser for full sensor access.",
+        type: "warning",
+      });
     }
   };
 
@@ -697,26 +776,12 @@ export default function SiteModalFullScreen({
           <div className="rounded-xl flex flex-col min-h-[80vh]">
             {scannedArUrl ? (
               <div className="flex flex-col h-full">
-                <div
-                  className="relative flex-1 w-full"
-                  allow="camera; fullscreen; xr-spatial-tracking; gyroscope; accelerometer; magnetometer; ambient-light-sensor; xr; device-orientation; geolocation; web-share; clipboard-write; autoplay; display-capture; picture-in-picture; microphone"
-                >
+                <div className="relative flex-1 w-full">
                   <button
                     type="button"
                     aria-label="Enable Motion & Orientation"
                     title="Enable Motion & Orientation"
-                    onClick={async () => {
-                      const granted = await requestSensorPermissions();
-                      if (!granted) {
-                        setNotification({
-                          isOpen: true,
-                          title: "Permission Required",
-                          message:
-                            "Motion & Orientation permissions were not granted. If no prompt appeared, open the AR experience in the browser for full sensor access.",
-                          type: "warning",
-                        });
-                      }
-                    }}
+                    onClick={handleEnableSensors}
                     className="absolute top-3 right-3 z-10 rounded-full p-2 bg-white/25 hover:bg-white/35 backdrop-blur-md border border-white/30 shadow-sm text-gray-800"
                   >
                     <FontAwesomeIcon
@@ -731,8 +796,10 @@ export default function SiteModalFullScreen({
                     title="AR Experience"
                     className="absolute inset-0 w-full h-full border-0"
                     allowFullScreen
+                    allow="camera; microphone; accelerometer; gyroscope; magnetometer; xr-spatial-tracking; geolocation; clipboard-write; web-share; autoplay; picture-in-picture; display-capture; fullscreen"
                     sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
                     referrerPolicy="no-referrer-when-downgrade"
+                    ref={arIframeRef}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -770,7 +837,7 @@ export default function SiteModalFullScreen({
                   className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
                 >
                   <Glasses className="w-4 h-4" />
-                  Open in Browser
+                  View in Browser
                 </button>
               </div>
             ) : (
