@@ -686,7 +686,16 @@ export default function SiteModalFullScreen({
                     aria-label="Enable Motion & Orientation"
                     title="Enable Motion & Orientation"
                     onClick={async () => {
-                      await requestSensorPermissions();
+                      const granted = await requestSensorPermissions();
+                      if (!granted) {
+                        setNotification({
+                          isOpen: true,
+                          title: "Permission Required",
+                          message:
+                            "Motion & Orientation permissions were not granted. If no prompt appeared, open the AR experience in the browser for full sensor access.",
+                          type: "warning",
+                        });
+                      }
                     }}
                     className="absolute top-3 right-3 z-10 rounded-full p-2 bg-white/25 hover:bg-white/35 backdrop-blur-md border border-white/30 shadow-sm text-gray-800"
                   >
@@ -744,7 +753,17 @@ export default function SiteModalFullScreen({
               </div>
             ) : (
               <QRScanner
-                onScanSuccess={(url) => {
+                onScanSuccess={async (url) => {
+                  const granted = await requestSensorPermissions();
+                  if (!granted) {
+                    setNotification({
+                      isOpen: true,
+                      title: "Permission Required",
+                      message:
+                        "If motion/orientation permission did not appear, you may need to open the AR in the browser for full sensor access.",
+                      type: "warning",
+                    });
+                  }
                   // Check if iOS 26+ in PWA mode - show prompt to open in new tab
                   if (isiOS26Plus() && isPWA()) {
                     const confirmOpen = window.confirm(
@@ -1229,7 +1248,17 @@ export default function SiteModalFullScreen({
             {/* AR Mode Button - Mobile & Tablet */}
             {selectedPin.arEnabled && (
               <button
-                onClick={() => {
+                onClick={async () => {
+                  const granted = await requestSensorPermissions();
+                  if (!granted) {
+                    setNotification({
+                      isOpen: true,
+                      title: "Permission Required",
+                      message:
+                        "To use AR, please allow Motion & Orientation access when prompted. If no prompt appears, open the AR experience in the browser after scanning.",
+                      type: "warning",
+                    });
+                  }
                   setShowAR(true);
                   // No automatic TTS here; only "Listen to Description" should speak
                 }}

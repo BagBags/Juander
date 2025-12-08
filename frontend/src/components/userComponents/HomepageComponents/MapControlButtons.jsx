@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Locate, MapPin, Volume2, VolumeX, User, Car, Bike, Footprints } from "lucide-react";
+import {
+  Locate,
+  MapPin,
+  Volume2,
+  VolumeX,
+  User,
+  Car,
+  Bike,
+  Footprints,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
 
@@ -22,7 +31,8 @@ export default function MapControlButtons({
   const [isTTSEnabled, setIsTTSEnabled] = useState(ttsService.isEnabled);
   const isTTSSupported = ttsService.isSupported();
   const [needsCompassPermission, setNeedsCompassPermission] = useState(false);
-  const [compassPermissionGranted, setCompassPermissionGranted] = useState(false);
+  const [compassPermissionGranted, setCompassPermissionGranted] =
+    useState(false);
 
   const handleTTSToggle = () => {
     if (!isTTSSupported) return;
@@ -31,20 +41,28 @@ export default function MapControlButtons({
     if (newState) {
       const msg = t("tts_voiceEnabled") || "Voice guidance enabled";
       ttsService.speak(msg);
-      try { window.dispatchEvent(new Event("tts-activated")); } catch {}
+      try {
+        window.dispatchEvent(new Event("tts-activated"));
+      } catch {}
     }
   };
 
   // Check if compass permission is needed (iOS 13+)
   useEffect(() => {
-    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
       setNeedsCompassPermission(true);
     }
   }, []);
 
   // Request compass permission for iOS
   const requestCompassPermission = async () => {
-    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
       try {
         const response = await DeviceOrientationEvent.requestPermission();
         if (response === "granted") {
@@ -126,8 +144,16 @@ export default function MapControlButtons({
               ? "bg-blue-500 hover:bg-blue-600 text-white border-blue-600 animate-pulse"
               : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
           }`}
-          title={needsCompassPermission && !compassPermissionGranted ? "Enable compass & center" : "Go to my location"}
-          aria-label={needsCompassPermission && !compassPermissionGranted ? "Enable compass and center to location" : "Center to my location"}
+          title={
+            needsCompassPermission && !compassPermissionGranted
+              ? "Enable compass & center"
+              : "Go to my location"
+          }
+          aria-label={
+            needsCompassPermission && !compassPermissionGranted
+              ? "Enable compass and center to location"
+              : "Center to my location"
+          }
         >
           <Locate className="w-5 h-5" />
         </button>
@@ -151,7 +177,9 @@ export default function MapControlButtons({
       {enableTransportMode && (
         <div className="relative">
           <button
-            onClick={() => setShowTransportPanel && setShowTransportPanel((v) => !v)}
+            onClick={() =>
+              setShowTransportPanel && setShowTransportPanel((v) => !v)
+            }
             className="map-transport-button bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-all duration-200 active:scale-95"
             title="Transport mode"
             aria-label="Transport mode"
@@ -163,12 +191,14 @@ export default function MapControlButtons({
           {showTransportPanel && (
             <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-white/95 backdrop-blur-md shadow-xl rounded-xl p-2 border border-gray-200 flex items-center gap-2">
               <button
-                onClick={() => { 
-                  setTransportMode && setTransportMode('walking'); 
+                onClick={() => {
+                  setTransportMode && setTransportMode("walking");
                   setShowTransportPanel && setShowTransportPanel(false);
                 }}
                 className={`flex items-center gap-2 px-2 py-1 rounded-md border text-sm transition ${
-                  transportMode === 'walking' ? 'bg-[#f04e37]/10 text-[#f04e37] border-[#f04e37]' : 'text-gray-700 border-gray-200 hover:bg-gray-50'
+                  transportMode === "walking"
+                    ? "bg-[#f04e37]/10 text-[#f04e37] border-[#f04e37]"
+                    : "text-gray-700 border-gray-200 hover:bg-gray-50"
                 }`}
               >
                 <Footprints className="w-4 h-4" />
@@ -176,12 +206,14 @@ export default function MapControlButtons({
               </button>
 
               <button
-                onClick={() => { 
-                  setTransportMode && setTransportMode('cycling'); 
+                onClick={() => {
+                  setTransportMode && setTransportMode("cycling");
                   setShowTransportPanel && setShowTransportPanel(false);
                 }}
                 className={`flex items-center gap-2 px-2 py-1 rounded-md border text-sm transition ${
-                  transportMode === 'cycling' ? 'bg-[#f04e37]/10 text-[#f04e37] border-[#f04e37]' : 'text-gray-700 border-gray-200 hover:bg-gray-50'
+                  transportMode === "cycling"
+                    ? "bg-[#f04e37]/10 text-[#f04e37] border-[#f04e37]"
+                    : "text-gray-700 border-gray-200 hover:bg-gray-50"
                 }`}
               >
                 <Bike className="w-4 h-4" />
@@ -189,12 +221,14 @@ export default function MapControlButtons({
               </button>
 
               <button
-                onClick={() => { 
-                  setTransportMode && setTransportMode('driving'); 
+                onClick={() => {
+                  setTransportMode && setTransportMode("driving");
                   setShowTransportPanel && setShowTransportPanel(false);
                 }}
                 className={`flex items-center gap-2 px-2 py-1 rounded-md border text-sm transition ${
-                  transportMode === 'driving' ? 'bg-[#f04e37]/10 text-[#f04e37] border-[#f04e37]' : 'text-gray-700 border-gray-200 hover:bg-gray-50'
+                  transportMode === "driving"
+                    ? "bg-[#f04e37]/10 text-[#f04e37] border-[#f04e37]"
+                    : "text-gray-700 border-gray-200 hover:bg-gray-50"
                 }`}
               >
                 <Car className="w-4 h-4" />
