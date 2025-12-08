@@ -60,8 +60,8 @@ export default function ConfirmModal({
   const showCancel = cancelText && cancelText.trim() !== "";
 
   return (
-    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn" style={{ pointerEvents: 'auto' }}>
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl animate-fadeIn" style={{ pointerEvents: 'auto' }}>
+    <div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn" style={{ pointerEvents: 'auto' }}>
+      <div className="relative w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl animate-fadeIn" style={{ pointerEvents: 'auto' }}>
         {/* Icon Circle */}
         <div className="flex justify-center pt-8 pb-4">
           <div
