@@ -438,23 +438,35 @@ export default function Photobooth() {
   // Reinitialize camera when returning to the app (fix black camera on resume)
   useEffect(() => {
     const handleVisible = () => {
-      if (document.visibilityState === "visible") {
-        try {
-          if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
-            window.JEELIZFACEFILTER.destroy();
-          }
-        } catch {}
-        setJeelizReady(false);
-        setCameraKey((k) => k + 1);
-      }
+      // Only re-initialize if:
+      // 1. The document is now visible **and**
+      // 2. Jeeliz has already completed its first successful start-up.
+      //    (When the permission prompt closes the tab regains focus, but Jeeliz is still
+      //    initializing — restarting at that moment causes a race that leaves the
+      //    camera stream blank.)
+      if (document.visibilityState !== "visible" || !jeelizReady) return;
+
+      try {
+        if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
+          window.JEELIZFACEFILTER.destroy();
+        }
+      } catch {}
+
+      setJeelizReady(false);
+      setCameraKey((k) => k + 1);
     };
+
     window.addEventListener("visibilitychange", handleVisible);
+    // The "focus" event fires right after the permission prompt. Keep it for real
+    // app-resume scenarios, but apply the same guard above.
     window.addEventListener("focus", handleVisible);
+
     return () => {
       window.removeEventListener("visibilitychange", handleVisible);
       window.removeEventListener("focus", handleVisible);
     };
-  }, []);
+    // Depend on jeelizReady so we always have the latest state inside the handler.
+  }, [jeelizReady]);
 
   // Toggle camera function
   const toggleCamera = useCallback(() => {

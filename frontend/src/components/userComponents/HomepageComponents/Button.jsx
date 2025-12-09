@@ -5,22 +5,25 @@ import { Compass } from "lucide-react";
 export default function Button({ navigate }) {
   const { t } = useTranslation();
 
-  const isRealPhone = () => {
-    const ua = navigator.userAgent.toLowerCase();
-    const uaMobile =
-      navigator.userAgentData?.mobile ?? /android|iphone|ipad|ipod/.test(ua);
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
-    const noHover = window.matchMedia("(hover: none)").matches;
-    const touchPoints = navigator.maxTouchPoints || 0;
-    return !!uaMobile && coarse && noHover && touchPoints > 0;
-  };
-  const isPhone = isRealPhone();
+  // const isRealPhone = () => true;
+  // const isPhone = isRealPhone();
+    // Track viewport width to adjust behavior & label
+  const DESKTOP_BREAKPOINT = 1400; // Navigate desktop to Tour Map, mobile/tablet to Tourist Itinerary/tablet
+  const [isDesktop, setIsDesktop] = React.useState(() => window.innerWidth >= DESKTOP_BREAKPOINT);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= DESKTOP_BREAKPOINT);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleClick = () => {
-    if (isPhone) {
-      navigate("/TouristItinerary");
-    } else {
+    if (isDesktop) {
       navigate("/TourMap");
+    } else {
+      navigate("/TouristItinerary");
     }
   };
 
@@ -42,13 +45,13 @@ export default function Button({ navigate }) {
     focus:outline-none 
     transition-all duration-300 ease-out
     border border-white/50
-    flex items-center justify-center gap-3 z-40"
+    flex items-center justify-center gap-3 z-[100]" 
     >
       <Compass className="w-5 h-5" />
       <span
-        className={isPhone ? "leading-tight" : "whitespace-nowrap leading-none"}
+        // className={isPhone ? "leading-tight" : "whitespace-nowrap leading-none"}
       >
-        {isPhone ? t("startTour") : t("explore")}
+         <span>{isDesktop ? t("explore") : t("startTour")}</span>
       </span>
     </button>
   );
