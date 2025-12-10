@@ -26,6 +26,26 @@ import { faGroupArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 
 const ModelPreview = lazy(() => import("../TourMap/SiteCardModelPreview"));
 
+class ErrorBoundaryLocal extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 md:h-80 bg-gray-50">
+          <p className="text-sm text-gray-600">3D model preview unavailable</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function SiteModalFullScreen({
   selectedPin,
   onClose,
@@ -811,7 +831,9 @@ export default function SiteModalFullScreen({
                     <button
                       onClick={() => {
                         if (
-                          window.confirm("Open AR experience in new browser tab?")
+                          window.confirm(
+                            "Open AR experience in new browser tab?"
+                          )
                         ) {
                           window.open(
                             scannedArUrl,
@@ -823,7 +845,10 @@ export default function SiteModalFullScreen({
                           setAskedSensors(false);
                         }
                       }}
-                      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }} className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
+                      style={{
+                        bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+                      }}
+                      className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
                     >
                       <Glasses className="w-4 h-4" />
                       Open in Browser
@@ -921,10 +946,12 @@ export default function SiteModalFullScreen({
                     </div>
                   }
                 >
-                  <ModelPreview
-                    key={selectedPin.glbUrl}
-                    url={selectedPin.glbUrl}
-                  />
+                  <ErrorBoundaryLocal>
+                    <ModelPreview
+                      key={selectedPin.glbUrl}
+                      url={selectedPin.glbUrl}
+                    />
+                  </ErrorBoundaryLocal>
                 </Suspense>
               </div>
             )}

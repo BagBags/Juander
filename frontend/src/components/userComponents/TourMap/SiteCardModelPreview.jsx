@@ -35,13 +35,23 @@ class ErrorBoundary extends Component {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
           </div>
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-sm text-gray-600 text-center">
             3D model preview unavailable
           </p>
+          <button
+            type="button"
+            className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50"
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              this.props.onRetry && this.props.onRetry();
+            }}
+          >
+            Retry
+          </button>
         </div>
       );
     }
@@ -78,6 +88,42 @@ export default function SiteCardModelPreview({ url }) {
   const sceneRef = useRef(null);
   const savedPoseRef = useRef(null);
   const isAnimatingRef = useRef(false);
+
+  const doRetry = () => {
+    try {
+      useGLTF.clear(url);
+    } catch {}
+    setLoadError(false);
+    setErrorMessage(null);
+    setPreviewKey((k) => k + 1);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadError(false);
+    setErrorMessage(null);
+    (async () => {
+      try {
+        const res = await fetch(url, {
+          method: "HEAD",
+          mode: "cors",
+          cache: "no-cache",
+        });
+        if (!res.ok && !cancelled) {
+          setErrorMessage(`Model unavailable (${res.status})`);
+          setLoadError(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setErrorMessage("Network or CORS error. Tap Retry.");
+          setLoadError(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
 
   useEffect(() => {
     savedRef.current = false;
@@ -213,11 +259,7 @@ export default function SiteCardModelPreview({ url }) {
         <button
           type="button"
           className="mt-3 inline-flex items-center px-3 py-1.5 rounded-md bg-white border border-gray-300 text-gray-700 text-sm shadow-sm hover:bg-gray-50"
-          onClick={() => {
-            setLoadError(false);
-            setErrorMessage(null);
-            setPreviewKey((k) => k + 1);
-          }}
+          onClick={doRetry}
         >
           Retry
         </button>
@@ -226,7 +268,7 @@ export default function SiteCardModelPreview({ url }) {
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary onRetry={doRetry}>
       <div
         className="relative w-full h-full"
         data-no-pull

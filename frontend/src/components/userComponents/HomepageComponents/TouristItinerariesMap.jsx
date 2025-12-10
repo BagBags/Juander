@@ -623,21 +623,21 @@ export default function TouristItineraryMap() {
   }, []);
 
   // Check if user is within Intramuros boundaries
-useEffect(() => {
-  if (!userLocation || !mask?.geometry) return;
+  useEffect(() => {
+    if (!userLocation || !mask?.geometry) return;
 
-  const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
+    const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
 
-  if (!withinBounds) {
-    console.warn("⚠️ User is outside Intramuros boundaries");
-    setIsOutsideBounds(true);
-    setShowLocationBlockModal(true);
-  } else {
-    setIsOutsideBounds(false);
-    setShowLocationBlockModal(false);
-  }
-}, [userLocation, mask]);
-  
+    if (!withinBounds) {
+      console.warn("⚠️ User is outside Intramuros boundaries");
+      setIsOutsideBounds(true);
+      setShowLocationBlockModal(true);
+    } else {
+      setIsOutsideBounds(false);
+      setShowLocationBlockModal(false);
+    }
+  }, [userLocation, mask]);
+
   /** Fetch itinerary sites */
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -870,10 +870,12 @@ useEffect(() => {
               setSavedProgress(response.data);
 
               // Show modal as informational (optional) - state already restored
-              setTimeout(() => {
-                setShowResumeModal(true);
-                console.log("✅ Resume modal shown (state already restored)");
-              }, 100);
+              if (isGuidanceRunning) {
+                setTimeout(() => {
+                  setShowResumeModal(true);
+                  console.log("✅ Resume modal shown (state already restored)");
+                }, 100);
+              }
             } else {
               // No progress, start fresh
               if (restoredPins.length > 0) {
@@ -926,10 +928,12 @@ useEffect(() => {
             console.log("✅ Saved newly created optimizedOrder to database");
 
             // Show modal
-            setTimeout(() => {
-              setShowResumeModal(true);
-              console.log("✅ Resume modal shown");
-            }, 100);
+            if (isGuidanceRunning) {
+              setTimeout(() => {
+                setShowResumeModal(true);
+                console.log("✅ Resume modal shown");
+              }, 100);
+            }
           } else {
             // UserLocation not ready yet - will optimize when it becomes available
             console.log(
@@ -1006,10 +1010,12 @@ useEffect(() => {
       console.log("✅ Saved optimizedOrder to database for future refreshes");
 
       // Show modal
-      setTimeout(() => {
-        setShowResumeModal(true);
-        console.log("✅ Resume modal shown after userLocation ready");
-      }, 100);
+      if (isGuidanceRunning) {
+        setTimeout(() => {
+          setShowResumeModal(true);
+          console.log("✅ Resume modal shown after userLocation ready");
+        }, 100);
+      }
     }
   }, [userLocation, pins.length, optimizedPins.length, savedProgress]);
 
@@ -1962,7 +1968,7 @@ useEffect(() => {
     const interval = setInterval(() => {
       try {
         if (
-          !isTourRunning &&
+          isGuidanceRunning &&
           !notification.isOpen &&
           !showFullModal &&
           !showGpsModal &&
@@ -1987,7 +1993,7 @@ useEffect(() => {
     }, 120000);
     return () => clearInterval(interval);
   }, [
-    isTourRunning,
+    isGuidanceRunning,
     notification.isOpen,
     showFullModal,
     showGpsModal,

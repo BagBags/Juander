@@ -41,11 +41,15 @@ class LazyLoadErrorBoundary extends React.Component {
     // Listen for online/offline events
     window.addEventListener('online', this.handleOnline);
     window.addEventListener('offline', this.handleOffline);
+    window.addEventListener('unhandledrejection', this.handleUnhandledRejection);
+    window.addEventListener('error', this.handleGlobalError);
   }
 
   componentWillUnmount() {
     window.removeEventListener('online', this.handleOnline);
     window.removeEventListener('offline', this.handleOffline);
+    window.removeEventListener('unhandledrejection', this.handleUnhandledRejection);
+    window.removeEventListener('error', this.handleGlobalError);
   }
 
   handleOnline = () => {
@@ -60,6 +64,36 @@ class LazyLoadErrorBoundary extends React.Component {
     // Clear error state and reload
     this.setState({ hasError: false, error: null });
     window.location.reload();
+  };
+
+  handleUnhandledRejection = (event) => {
+    const error = event?.reason;
+    const isChunkError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Loading chunk') ||
+      error?.message?.includes('ChunkLoadError') ||
+      error?.name === 'ChunkLoadError';
+    this.setState({
+      hasError: true,
+      error,
+      isOffline: !navigator.onLine,
+      isChunkError,
+    });
+  };
+
+  handleGlobalError = (event) => {
+    const error = event?.error || new Error(event?.message || 'Unknown error');
+    const isChunkError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Loading chunk') ||
+      error?.message?.includes('ChunkLoadError') ||
+      error?.name === 'ChunkLoadError';
+    this.setState({
+      hasError: true,
+      error,
+      isOffline: !navigator.onLine,
+      isChunkError,
+    });
   };
 
   render() {

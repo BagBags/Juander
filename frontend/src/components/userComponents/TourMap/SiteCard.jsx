@@ -28,6 +28,26 @@ import { faGroupArrowsRotate } from "@fortawesome/free-solid-svg-icons";
 
 const ModelPreview = lazy(() => import("./SiteCardModelPreview"));
 
+class ErrorBoundaryLocal extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64 md:h-80 bg-gray-50">
+          <p className="text-sm text-gray-600">3D model preview unavailable</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const SiteCard = ({ pin, onClose, distance }) => {
   const [showAR, setShowAR] = useState(false);
   const [scannedArUrl, setScannedArUrl] = useState(null);
@@ -441,6 +461,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
               {/* 3D Model Preview */}
               {pin.glbUrl && pin.glbUrl.endsWith(".glb") && (
                 <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                  <ErrorBoundaryLocal>
                   <Suspense
                     fallback={
                       <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -484,6 +505,7 @@ const SiteCard = ({ pin, onClose, distance }) => {
                   >
                     <ModelPreview url={pin.glbUrl} />
                   </Suspense>
+                  </ErrorBoundaryLocal>
                 </div>
               )}
 

@@ -86,7 +86,7 @@ const LazyAdminLanguage = React.lazy(() =>
   import("./components/adminComponents/adminProfileComponents/adminLanguage")
 );
 // Tourist Side
-const LazyHomepage = React.lazy(() =>
+const LazyHomepage = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/Homepage")
 );
 const LazyEmergencyPage = React.lazy(() =>
@@ -133,7 +133,7 @@ const LazyChatbot = React.lazy(() =>
 const LazyTouristItinerary = React.lazy(() =>
   import("./components/userComponents/HomepageComponents/TouristItinerary")
 );
-const LazyTouristItineraryMap = React.lazy(() =>
+const LazyTouristItineraryMap = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/TouristItinerariesMap")
 );
 import ttsService from "./utils/textToSpeech";
@@ -144,7 +144,7 @@ import {
 } from "./utils/cameraLifecycle";
 
 // Guest Side
-const LazyGuestHomepage = React.lazy(() =>
+const LazyGuestHomepage = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/GuestHomepage")
 );
 const LazyGuestProfile = React.lazy(() =>
@@ -163,7 +163,7 @@ const LazyGuestLanguage = React.lazy(() =>
 const LazyGuestItinerary = React.lazy(() =>
   import("./components/userComponents/GuestItineraryComponents/GuestItinerary")
 );
-const LazyGuestItineraryMap = React.lazy(() =>
+const LazyGuestItineraryMap = lazyWithRetry(() =>
   import(
     "./components/userComponents/GuestItineraryComponents/GuestItineraryMap"
   )
@@ -181,9 +181,9 @@ import {
 const LazyGuestSettings = React.lazy(() =>
   import("./components/userComponents/GuestProfileComponents/GuestSettings")
 );
-const LazyNotFound = React.lazy(() => import("./components/NotFound"));
+const LazyNotFound = lazyWithRetry(() => import("./components/NotFound"));
 import ModernLoader from "./components/shared/ModernLoader";
-const LazyCompleteProfile = React.lazy(() =>
+const LazyCompleteProfile = lazyWithRetry(() =>
   import("./components/userComponents/CompleteProfile")
 );
 // import GuestProtectedRoute from "./components/GuestProtectedRoute";
@@ -752,7 +752,6 @@ function CameraLifecycleOnRouteLeave() {
   return null;
 }
 
-
 export default function App() {
   useEffect(() => {
     const savedLang = localStorage.getItem("language") || "en";
@@ -776,3 +775,15 @@ export default function App() {
     </LazyLoadErrorBoundary>
   );
 }
+
+const lazyWithRetry = (importer) =>
+  React.lazy(() =>
+    importer().catch((error) => {
+      if (!navigator.onLine) throw error;
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          importer().then(resolve).catch(reject);
+        }, 800);
+      });
+    })
+  );

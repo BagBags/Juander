@@ -1518,7 +1518,7 @@ export default function GuestItineraryMap() {
     const interval = setInterval(() => {
       try {
         if (
-          !isTourRunning &&
+          isGuidanceRunning &&
           !notification.isOpen &&
           !showFullModal &&
           !showGpsModal &&
@@ -1543,7 +1543,7 @@ export default function GuestItineraryMap() {
     }, 120000);
     return () => clearInterval(interval);
   }, [
-    isTourRunning,
+    isGuidanceRunning,
     notification.isOpen,
     showFullModal,
     showGpsModal,

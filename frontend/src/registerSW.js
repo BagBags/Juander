@@ -1,4 +1,5 @@
 // Service Worker Registration with Auto-Update
+let reloadScheduled = false;
 export function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
 
@@ -31,7 +32,11 @@ export function registerServiceWorker() {
         });
 
         navigator.serviceWorker.addEventListener("controllerchange", () => {
-          window.location.reload();
+          if (reloadScheduled) return;
+          reloadScheduled = true;
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
         });
       })
       .catch(() => {});
@@ -39,9 +44,10 @@ export function registerServiceWorker() {
 }
 
 function showUpdateNotification() {
-  // Optional: Show a toast/notification to user
-  // Auto-reload after a short delay
+  if (reloadScheduled) return;
+  if (document.visibilityState !== "visible") return;
+  reloadScheduled = true;
   setTimeout(() => {
     window.location.reload();
-  }, 1000);
+  }, 2000);
 }
