@@ -1,5 +1,25 @@
 // Service Worker Registration with Auto-Update
 let reloadScheduled = false;
+function scheduleReload() {
+  if (reloadScheduled) return;
+  reloadScheduled = true;
+  const isIOS = /iPad|iPhone|iPod/i.test(navigator.userAgent);
+  const delay = isIOS ? 3000 : 2000;
+  if (document.visibilityState === "visible") {
+    setTimeout(() => {
+      window.location.reload();
+    }, delay);
+  } else {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      document.removeEventListener("visibilitychange", onVisible);
+      setTimeout(() => {
+        window.location.reload();
+      }, delay);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+  }
+}
 export function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
 
@@ -26,28 +46,14 @@ export function registerServiceWorker() {
               navigator.serviceWorker.controller
             ) {
               newWorker.postMessage({ type: "SKIP_WAITING" });
-              showUpdateNotification();
+              scheduleReload();
             }
           });
         });
-
         navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (reloadScheduled) return;
-          reloadScheduled = true;
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
+          scheduleReload();
         });
       })
       .catch(() => {});
   });
-}
-
-function showUpdateNotification() {
-  if (reloadScheduled) return;
-  if (document.visibilityState !== "visible") return;
-  reloadScheduled = true;
-  setTimeout(() => {
-    window.location.reload();
-  }, 2000);
 }

@@ -42,7 +42,12 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
             ? "/3DModels/Pin2.glb"
             : "/3DModels/Pin1.glb";
 
-        const modelScene = await loadModel(modelUrl);
+        let modelScene;
+        try {
+          modelScene = await loadModel(modelUrl);
+        } catch (e) {
+          continue;
+        }
 
         const merc = mapboxgl.MercatorCoordinate.fromLngLat(
           [pin.longitude, pin.latitude],
@@ -73,19 +78,21 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
 
             // Prefer WebGL2 if available
             const canvas = map.getCanvas();
-            const webgl2Context = canvas.getContext("webgl2");
-
             this.renderer = new WebGLRenderer({
               canvas,
-              context: webgl2Context || gl, // fallback to Mapbox-provided GL
+              context: gl,
               antialias: true,
             });
+            try {
+              this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            } catch {}
 
             this.renderer.autoClear = false;
           },
 
           render: function (gl, matrix) {
             if (!this.renderer) return;
+            if (gl && gl.isContextLost && gl.isContextLost()) return;
             const m = new Matrix4().fromArray(matrix);
             this.camera.projectionMatrix = m;
             this.renderer.resetState();

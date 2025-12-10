@@ -18,6 +18,32 @@ import PWAInstallPrompt from "./components/shared/PWAInstallPrompt";
 import LazyLoadErrorBoundary from "./components/shared/LazyLoadErrorBoundary";
 import AuthPersistence from "./components/AuthPersistence";
 
+const lazyWithRetry = (importer) => {
+  const max = 2;
+  return React.lazy(() => {
+    let attempt = 0;
+    const tryImport = () =>
+      importer().catch((error) => {
+        attempt += 1;
+        try {
+          console.warn("lazy import failed", {
+            errorMessage: error?.message,
+            online: navigator.onLine,
+            ua: navigator.userAgent,
+            attempt,
+          });
+        } catch {}
+        if (!navigator.onLine || attempt >= max) throw error;
+        const delay = 800 * Math.pow(2, attempt - 1);
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            tryImport().then(resolve).catch(reject);
+          }, delay);
+        });
+      });
+    return tryImport();
+  });
+};
 import SignupForm from "./components/loginComponents/signupForm";
 import LoginPage from "./components/loginComponents/loginPage";
 
@@ -25,112 +51,112 @@ import LoginPage from "./components/loginComponents/loginPage";
 import { UserProvider } from "./contexts/UserContext";
 
 // Admin Side
-const LazyAdminHome = React.lazy(() =>
+const LazyAdminHome = lazyWithRetry(() =>
   import("./components/adminComponents/adminHomeComponents/adminHome")
 );
-const LazyAdminContent = React.lazy(() =>
+const LazyAdminContent = lazyWithRetry(() =>
   import("./components/adminComponents/adminContentComponents/adminContent")
 );
-const LazyManageEmergency = React.lazy(() =>
+const LazyManageEmergency = lazyWithRetry(() =>
   import(
     "./components/adminComponents/manageEmergencyComponents/manageEmergency"
   )
 );
-const LazyAdminPhotobooth = React.lazy(() =>
+const LazyAdminPhotobooth = lazyWithRetry(() =>
   import(
     "./components/adminComponents/adminPhotoboothComponents/adminPhotobooth"
   )
 );
-const LazyAdminRole = React.lazy(() =>
+const LazyAdminRole = lazyWithRetry(() =>
   import("./components/adminComponents/adminRoleComponents/adminRole")
 );
-const LazyAdminLog = React.lazy(() =>
+const LazyAdminLog = lazyWithRetry(() =>
   import("./components/adminComponents/adminLogComponents/adminLog")
 );
-const LazyAdminChatbot = React.lazy(() =>
+const LazyAdminChatbot = lazyWithRetry(() =>
   import("./components/adminComponents/adminChatbotComponents/adminChatbot")
 );
-const LazyAdminMap = React.lazy(() =>
+const LazyAdminMap = lazyWithRetry(() =>
   import("./components/adminComponents/adminTourMapComponents/AdminTourMap")
 );
-const LazyAdminItinerary = React.lazy(() =>
+const LazyAdminItinerary = lazyWithRetry(() =>
   import("./components/adminComponents/adminItineraryComponents/adminItinerary")
 );
-const LazyAdminReviews = React.lazy(() =>
+const LazyAdminReviews = lazyWithRetry(() =>
   import("./components/adminComponents/adminReviewsComponents/adminReviews")
 );
-const LazyAdminReports = React.lazy(() =>
+const LazyAdminReports = lazyWithRetry(() =>
   import("./components/adminComponents/adminReportsComponents/adminReports")
 );
-const LazyAdminProfileLayout = React.lazy(() =>
+const LazyAdminProfileLayout = lazyWithRetry(() =>
   import(
     "./components/adminComponents/adminProfileComponents/adminProfileLayout"
   )
 );
-const LazyAdminProfile = React.lazy(() =>
+const LazyAdminProfile = lazyWithRetry(() =>
   import("./components/adminComponents/adminProfileComponents/adminProfile")
 );
-const LazyAdminAccount = React.lazy(() =>
+const LazyAdminAccount = lazyWithRetry(() =>
   import("./components/adminComponents/adminProfileComponents/adminAccount")
 );
-const LazyAdminBirthday = React.lazy(() =>
+const LazyAdminBirthday = lazyWithRetry(() =>
   import("./components/adminComponents/adminProfileComponents/adminBirthday")
 );
-const LazyAdminGender = React.lazy(() =>
+const LazyAdminGender = lazyWithRetry(() =>
   import("./components/adminComponents/adminProfileComponents/adminGender")
 );
-const LazyAdminCountry = React.lazy(() =>
+const LazyAdminCountry = lazyWithRetry(() =>
   import("./components/adminComponents/adminProfileComponents/adminCountry")
 );
-const LazyAdminLanguage = React.lazy(() =>
+const LazyAdminLanguage = lazyWithRetry(() =>
   import("./components/adminComponents/adminProfileComponents/adminLanguage")
 );
 // Tourist Side
 const LazyHomepage = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/Homepage")
 );
-const LazyEmergencyPage = React.lazy(() =>
+const LazyEmergencyPage = lazyWithRetry(() =>
   import("./components/userComponents/EmegencyComponents/EmergencyPage")
 );
-const LazyProfilePage = React.lazy(() =>
+const LazyProfilePage = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Profile")
 );
-const LazyPhotobooth = React.lazy(() =>
+const LazyPhotobooth = lazyWithRetry(() =>
   import("./components/userComponents/photoboothComponents/Photobooth")
 );
-const LazyAccount = React.lazy(() =>
+const LazyAccount = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Account")
 );
-const LazyProfileLayout = React.lazy(() =>
+const LazyProfileLayout = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/ProfileLayout")
 );
 import "./App.css";
-const LazyBirthday = React.lazy(() =>
+const LazyBirthday = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Birthday")
 );
-const LazyGender = React.lazy(() =>
+const LazyGender = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Gender")
 );
-const LazyCountry = React.lazy(() =>
+const LazyCountry = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Country")
 );
-const LazyLanguage = React.lazy(() =>
+const LazyLanguage = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Language")
 );
-const LazySettings = React.lazy(() =>
+const LazySettings = lazyWithRetry(() =>
   import("./components/userComponents/ProfileComponents/Settings")
 );
-const LazyTripArchives = React.lazy(() =>
+const LazyTripArchives = lazyWithRetry(() =>
   import("./components/userComponents/TripArchive/TripArchive")
 );
-const LazyCreateItineraryPage = React.lazy(() =>
+const LazyCreateItineraryPage = lazyWithRetry(() =>
   import("./components/userComponents/CreateItinerary/CreateItinerary")
 );
 import TourMap from "./components/userComponents/TourMap/LazyUserMap";
-const LazyChatbot = React.lazy(() =>
+const LazyChatbot = lazyWithRetry(() =>
   import("./components/userComponents/ChatbotComponents/Chatbot")
 );
-const LazyTouristItinerary = React.lazy(() =>
+const LazyTouristItinerary = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/TouristItinerary")
 );
 const LazyTouristItineraryMap = lazyWithRetry(() =>
@@ -147,20 +173,20 @@ import {
 const LazyGuestHomepage = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/GuestHomepage")
 );
-const LazyGuestProfile = React.lazy(() =>
+const LazyGuestProfile = lazyWithRetry(() =>
   import("./components/userComponents/GuestProfileComponents/GuestProfile")
 );
-const LazyGuestProfileLayout = React.lazy(() =>
+const LazyGuestProfileLayout = lazyWithRetry(() =>
   import(
     "./components/userComponents/GuestProfileComponents/GuestProfileLayout"
   )
 );
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import TouristProtectedRoute from "./components/TouristProtectedRoute";
-const LazyGuestLanguage = React.lazy(() =>
+const LazyGuestLanguage = lazyWithRetry(() =>
   import("./components/userComponents/GuestProfileComponents/GuestLanguage")
 );
-const LazyGuestItinerary = React.lazy(() =>
+const LazyGuestItinerary = lazyWithRetry(() =>
   import("./components/userComponents/GuestItineraryComponents/GuestItinerary")
 );
 const LazyGuestItineraryMap = lazyWithRetry(() =>
@@ -178,7 +204,7 @@ import {
   photoboothTourSteps,
   tripArchiveTourSteps,
 } from "./components/TourComponents/tourSteps";
-const LazyGuestSettings = React.lazy(() =>
+const LazyGuestSettings = lazyWithRetry(() =>
   import("./components/userComponents/GuestProfileComponents/GuestSettings")
 );
 const LazyNotFound = lazyWithRetry(() => import("./components/NotFound"));
@@ -775,15 +801,3 @@ export default function App() {
     </LazyLoadErrorBoundary>
   );
 }
-
-const lazyWithRetry = (importer) =>
-  React.lazy(() =>
-    importer().catch((error) => {
-      if (!navigator.onLine) throw error;
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          importer().then(resolve).catch(reject);
-        }, 800);
-      });
-    })
-  );
