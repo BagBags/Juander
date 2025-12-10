@@ -213,6 +213,13 @@ export default function Settings() {
         message: "Juander has been installed on your device.",
       });
     };
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then(() => {
+          if (!installed) setInstallAvailable(true);
+        })
+        .catch(() => {});
+    }
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
     window.addEventListener("appinstalled", onAppInstalled);
     return () => {
@@ -698,7 +705,7 @@ export default function Settings() {
                     </p>
                     <button
                       onClick={triggerAndroidInstall}
-                      disabled={!installAvailable || installed}
+                      disabled={!installPrompt || installed}
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background:
@@ -708,7 +715,7 @@ export default function Settings() {
                       <Download className="w-5 h-5" />
                       {installed
                         ? "Already Installed"
-                        : installAvailable
+                        : installPrompt
                         ? "Install App"
                         : "Install Not Available"}
                     </button>
