@@ -14,6 +14,7 @@ import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { WifiOff, Navigation, ListOrdered } from "lucide-react";
 import { guestApi } from "../../../utils/offlineAwareApi";
+import { useGLTF } from "@react-three/drei";
 import {
   optimizeRoute,
   getNextSite,
@@ -371,6 +372,45 @@ export default function GuestItineraryMap() {
 
     if (itineraryId) fetchItinerary();
   }, [itineraryId]);
+
+  useEffect(() => {
+    const url = selectedPin?.glbUrl;
+    if (url && typeof url === "string" && url.endsWith(".glb")) {
+      try {
+        useGLTF.preload(url);
+      } catch {}
+    }
+  }, [selectedPin]);
+
+  useEffect(() => {
+    const url = activePin?.glbUrl;
+    if (url && typeof url === "string" && url.endsWith(".glb")) {
+      try {
+        useGLTF.preload(url);
+      } catch {}
+    }
+  }, [activePin]);
+
+  useEffect(() => {
+    const list = optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
+    const candidates = [];
+    if (list && list.length > 0) {
+      candidates.push(list[0]);
+      if (list[1]) candidates.push(list[1]);
+      if (currentPinIndex != null && list[currentPinIndex]) {
+        candidates.push(list[currentPinIndex]);
+        if (list[currentPinIndex + 1]) candidates.push(list[currentPinIndex + 1]);
+      }
+    }
+    const urls = candidates
+      .map((p) => p?.glbUrl)
+      .filter((u) => u && typeof u === "string" && u.endsWith(".glb"));
+    urls.forEach((u) => {
+      try {
+        useGLTF.preload(u);
+      } catch {}
+    });
+  }, [pins, optimizedPins, currentPinIndex]);
 
   /** Load saved progress from localStorage */
   useEffect(() => {

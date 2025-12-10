@@ -164,7 +164,10 @@ function CustomFeeModal({ isOpen, onClose, sites }) {
   );
 }
 
-export default function TouristItineraryMain({ initialItineraries, onModalStateChange }) {
+export default function TouristItineraryMain({
+  initialItineraries,
+  onModalStateChange,
+}) {
   const [itineraries, setItineraries] = useState(
     initialItineraries || { admin: [], user: [] }
   );
@@ -358,7 +361,8 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
                   `${apiBase}/itinerary-progress/${it._id}`,
                   { headers }
                 );
-                const visitedCount = (progressRes.data?.visitedSites || []).length;
+                const visitedCount = (progressRes.data?.visitedSites || [])
+                  .length;
                 const activeSitesCount = (it.sites || []).filter(
                   (s) => s.status === "active"
                 ).length;
@@ -493,14 +497,11 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
       y: currentY,
     });
 
-    // If horizontal movement is dominant, prevent vertical scroll
     if (adminTouchStart.x && adminTouchStart.y) {
       const diffX = Math.abs(currentX - adminTouchStart.x);
       const diffY = Math.abs(currentY - adminTouchStart.y);
-
-      if (diffX > diffY && diffX > 10) {
-        e.preventDefault();
-      }
+      void diffX;
+      void diffY;
     }
   };
 
@@ -540,14 +541,11 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
       y: currentY,
     });
 
-    // If horizontal movement is dominant, prevent vertical scroll
     if (userTouchStart.x && userTouchStart.y) {
       const diffX = Math.abs(currentX - userTouchStart.x);
       const diffY = Math.abs(currentY - userTouchStart.y);
-
-      if (diffX > diffY && diffX > 10) {
-        e.preventDefault();
-      }
+      void diffX;
+      void diffY;
     }
   };
 
@@ -966,35 +964,44 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
                 // Breaks before first site
                 breaksArr
                   .filter((b) => Number(b.position) === 0)
-                  .forEach((b) => sequence.push({ type: 'break', data: b }));
+                  .forEach((b) => sequence.push({ type: "break", data: b }));
                 (detailsItinerary.sites || []).forEach((site, idx) => {
-                  sequence.push({ type: 'site', data: site });
+                  sequence.push({ type: "site", data: site });
                   breaksArr
                     .filter((b) => Number(b.position) === idx + 1)
-                    .forEach((b) => sequence.push({ type: 'break', data: b }));
+                    .forEach((b) => sequence.push({ type: "break", data: b }));
                 });
 
                 let cursor = roundToStep(start, 5);
                 const items = sequence.map((it) => {
-                  if (it.type === 'break') {
+                  if (it.type === "break") {
                     const pseudoSite = {
                       _id: `break-${it.data.id || Math.random()}`,
-                      siteName: it.data.label || 'Break/Lunch',
-                      title: it.data.label || 'Break/Lunch',
+                      siteName: it.data.label || "Break/Lunch",
+                      title: it.data.label || "Break/Lunch",
                       averageTimeSpent: it.data.minutes || 0,
                       isBreak: true,
                     };
-                    const item = { time: roundToStep(cursor, 5), site: pseudoSite };
-                    cursor = roundToStep(cursor + (Number(it.data.minutes) || 0), 5);
+                    const item = {
+                      time: roundToStep(cursor, 5),
+                      site: pseudoSite,
+                    };
+                    cursor = roundToStep(
+                      cursor + (Number(it.data.minutes) || 0),
+                      5
+                    );
                     return item;
                   }
                   const site = it.data;
                   const v =
-                    typeof site?.averageTimeSpent === 'number'
+                    typeof site?.averageTimeSpent === "number"
                       ? site.averageTimeSpent
                       : Number(site?.averageTimeSpent);
                   const item = { time: roundToStep(cursor, 5), site };
-                  cursor = roundToStep(cursor + (isNaN(v) || v <= 0 ? 0 : v), 5);
+                  cursor = roundToStep(
+                    cursor + (isNaN(v) || v <= 0 ? 0 : v),
+                    5
+                  );
                   return item;
                 });
                 if (!items.length) return null;
@@ -1112,8 +1119,11 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
                             </div>
                           )}
                           {site.siteDescription && (
-                            <p className="text-sm text-gray-700 mt-1 break-words whitespace-normal line-clamp-3">{String(site.siteDescription).replace(/\r?\n+/g, " ").trim()}
-                                                          </p>
+                            <p className="text-sm text-gray-700 mt-1 break-words whitespace-normal line-clamp-3">
+                              {String(site.siteDescription)
+                                .replace(/\r?\n+/g, " ")
+                                .trim()}
+                            </p>
                           )}
                           {site.feeType && site.feeType !== "none" && (
                             <p className="text-xs text-[#f04e37] font-medium mt-1">
@@ -1152,7 +1162,8 @@ export default function TouristItineraryMain({ initialItineraries, onModalStateC
             aria-labelledby="tourist-site-details-title"
             aria-describedby="tourist-site-details-content"
             tabIndex={-1}
-            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn max-h-[90vh] sm:max-h-[85vh] overflow-y-auto modern-scrollbar" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+            className="relative bg-white w-full sm:max-w-2xl mx-0 sm:mx-4 rounded-3xl shadow-2xl animate-fadeIn max-h-[90vh] sm:max-h-[85vh] overflow-y-auto modern-scrollbar"
+            style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
           >
             <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center gap-2">

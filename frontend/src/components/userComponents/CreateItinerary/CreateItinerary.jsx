@@ -229,6 +229,8 @@ export default function CreateItineraryPage() {
   const [rMinute, setRMinute] = useState("00");
   const [rPeriod, setRPeriod] = useState("AM");
   const [nameError, setNameError] = useState("");
+  const [showScrollHint, setShowScrollHint] = useState(true);
+  const mainScrollRef = useRef(null);
   const TAGALOG_BAD_WORDS = useMemo(() => {
     const base = [
       "putangina",
@@ -1164,6 +1166,20 @@ export default function CreateItineraryPage() {
     setSitesErrorMsg(msgs.length ? msgs.join("\n") : "");
   }, [selected, breaks, rHour, rMinute, rPeriod]);
 
+  useEffect(() => {
+    const el = mainScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const y = el.scrollTop || 0;
+      setShowScrollHint(y < 16 && activeTab === "create");
+    };
+    onScroll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [activeTab]);
+
   return (
     <TourProvider
       steps={createItineraryTourSteps}
@@ -1306,7 +1322,15 @@ export default function CreateItineraryPage() {
             <div
               className="flex-1 w-full max-w-[1100px] mx-auto px-4 pb-8 md:pb-6 overflow-y-auto tour-page-scroll"
               style={{ WebkitOverflowScrolling: "touch" }}
+              ref={mainScrollRef}
             >
+              {activeTab === "create" && showScrollHint && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] pointer-events-none">
+                  <div className="w-12 h-12 rounded-full bg-white/90 shadow-xl border border-white/60 flex items-center justify-center animate-bounce">
+                    <FaChevronDown className="w-5 h-5 text-[#f04e37]" />
+                  </div>
+                </div>
+              )}
               {/* CREATE ITINERARY TAB */}
               {activeTab === "create" && (
                 <div className="space-y-6 animate-fadeIn">
