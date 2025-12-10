@@ -189,47 +189,38 @@ export default function ProfilePage() {
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
             <div className="relative flex-shrink-0 w-28 h-28 z-10">
               <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
-              {!imageError ? (
-                <img
-                  key={currentUser?.profilePicture}
-                  src={
-                    previewImage
-                      ? previewImage
-                      : currentUser?.authProvider === "google"
-                      ? currentUser?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          `${currentUser?.firstName || "User"} ${
-                            currentUser?.lastName || ""
-                          }`
-                        )}&background=ffffff&color=f04e37&size=200&bold=true`
-                      : currentUser?.profilePicture
-                      ? currentUser.profilePicture.startsWith("http")
-                        ? currentUser.profilePicture
-                        : `${
-                            import.meta.env.VITE_API_BASE_URL?.replace(
-                              "/api",
-                              ""
-                            ) || "http://localhost:5000"
-                          }${currentUser.profilePicture}`
-                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                          `${currentUser?.firstName || "User"} ${
-                            currentUser?.lastName || ""
-                          }`
-                        )}&background=ffffff&color=f04e37&size=200&bold=true`
-                  }
-                  alt="Profile"
-                  className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
-                  onError={(e) => {
-                    console.log("Image failed to load, using fallback");
-                    setImageError(true);
-                  }}
-                  {...(currentUser?.authProvider !== "google" && { crossOrigin: "anonymous" })}
-                />
-              ) : (
+              {(() => {
+                const imgSrc = previewImage
+                  ? previewImage
+                  : currentUser?.authProvider === "google"
+                  ? currentUser?.profilePicture || null
+                  : currentUser?.profilePicture
+                  ? currentUser.profilePicture.startsWith("http")
+                    ? currentUser.profilePicture
+                    : `${
+                        import.meta.env.VITE_API_BASE_URL?.replace(
+                          "/api",
+                          ""
+                        ) || "http://localhost:5000"
+                      }${currentUser.profilePicture}`
+                  : null;
+
+                return imgSrc && !imageError ? (
+                  <img
+                    key={imgSrc}
+                    src={imgSrc}
+                    alt="Profile"
+                    className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
+                    onError={() => setImageError(true)}
+                    {...(currentUser?.authProvider !== "google" && { crossOrigin: "anonymous" })}
+                  />
+                ) : (
                 <div className="w-full h-full rounded-full border-4 border-white bg-white flex items-center justify-center text-[#f04e37] font-bold text-3xl shadow-2xl relative">
                   {currentUser?.firstName?.[0]?.toUpperCase() || "U"}
                   {currentUser?.lastName?.[0]?.toUpperCase() || ""}
                 </div>
-              )}
+                );
+              })()}
 
               {/* Upload button */}
               {currentUser?.authProvider === "local" && (

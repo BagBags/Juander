@@ -1,10 +1,11 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react";
 
 /**
  * Modern Notification Modal - Replaces alert() and confirm()
  * Types: success, error, warning, info
- * 
+ *
  * For alerts: Just provide isOpen, onClose, title, message, type
  * For confirmations: Also provide onConfirm callback to show Cancel/Confirm buttons
  */
@@ -66,10 +67,9 @@ export default function NotificationModal({
   const currentConfig = config[type] || config.info;
   const Icon = currentConfig.icon;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[20000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl animate-slideUp">
-        {/* Icon Circle */}
         <div className="flex justify-center pt-8 pb-4">
           <div
             className={`w-16 h-16 rounded-full flex items-center justify-center ${currentConfig.bgColor} ${currentConfig.borderColor} border-2`}
@@ -77,17 +77,14 @@ export default function NotificationModal({
             <Icon className={`w-8 h-8 ${currentConfig.iconColor}`} />
           </div>
         </div>
-
-        {/* Content */}
         <div className="px-8 pb-6 text-center">
-          {title && <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>}
+          {title && (
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+          )}
           <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
         </div>
-
-        {/* Action Buttons */}
         <div className="px-8 pb-8">
           {onConfirm ? (
-            // Confirmation mode: Show Cancel + Confirm buttons
             <div className="flex gap-3">
               <button
                 onClick={onClose}
@@ -106,7 +103,6 @@ export default function NotificationModal({
               </button>
             </div>
           ) : (
-            // Alert mode: Show single OK button
             <button
               onClick={onClose}
               className={`w-full px-4 py-3 ${currentConfig.buttonColor} text-white font-medium rounded-xl transition-colors`}
@@ -116,6 +112,7 @@ export default function NotificationModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

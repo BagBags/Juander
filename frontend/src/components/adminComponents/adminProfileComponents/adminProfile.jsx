@@ -154,44 +154,37 @@ export default function AdminProfile() {
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
           <div className="relative flex-shrink-0 w-28 h-28 z-10">
             <div className="absolute inset-0 bg-white/20 rounded-full blur-md animate-pulse"></div>
-            {!imageError ? (
-              <img
-                src={
-                  previewImage
-                    ? previewImage
-                    : currentAdmin?.authProvider === "google"
-                    ? currentAdmin?.profilePicture
-                    : currentAdmin?.profilePicture
-                    ? currentAdmin.profilePicture.startsWith("http")
-                      ? `${currentAdmin.profilePicture}?t=${Date.now()}`
-                      : `${
-                          import.meta.env.VITE_API_BASE_URL?.replace(
-                            "/api",
-                            ""
-                          ) || "http://localhost:5000"
-                        }${currentAdmin.profilePicture}?t=${Date.now()}`
-                    : "https://ui-avatars.com/api/?name=" +
-                      encodeURIComponent(
-                        `${currentAdmin?.firstName || "Admin"} ${
-                          currentAdmin?.lastName || ""
-                        }`
-                      ) +
-                      "&background=ffffff&color=f04e37&size=200&bold=true"
-                }
-                alt="Profile"
-                className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
-                onError={(e) => {
-                  console.log("Image failed to load, using fallback");
-                  setImageError(true);
-                }}
-                crossOrigin="anonymous"
-              />
-            ) : (
+            {(() => {
+              const imgSrc = previewImage
+                ? previewImage
+                : currentAdmin?.authProvider === "google"
+                ? currentAdmin?.profilePicture || null
+                : currentAdmin?.profilePicture
+                ? currentAdmin.profilePicture.startsWith("http")
+                  ? `${currentAdmin.profilePicture}?t=${Date.now()}`
+                  : `${
+                      import.meta.env.VITE_API_BASE_URL?.replace(
+                        "/api",
+                        ""
+                      ) || "http://localhost:5000"
+                    }${currentAdmin.profilePicture}?t=${Date.now()}`
+                : null;
+
+              return imgSrc && !imageError ? (
+                <img
+                  src={imgSrc}
+                  alt="Profile"
+                  className="w-full h-full rounded-full border-4 border-white object-cover bg-white shadow-2xl relative"
+                  onError={() => setImageError(true)}
+                  crossOrigin="anonymous"
+                />
+              ) : (
               <div className="w-full h-full rounded-full border-4 border-white bg-white flex items-center justify-center text-[#f04e37] font-bold text-3xl shadow-2xl relative">
                 {currentAdmin?.firstName?.[0]?.toUpperCase() || "A"}
                 {currentAdmin?.lastName?.[0]?.toUpperCase() || ""}
               </div>
-            )}
+              );
+            })()}
 
             {/* Upload button */}
             {currentAdmin?.authProvider === "local" && (
