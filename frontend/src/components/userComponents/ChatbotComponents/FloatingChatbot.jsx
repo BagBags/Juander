@@ -5,6 +5,8 @@ import Draggable from "react-draggable";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
+const PEEK_OFFSET_X = -30;
+
 export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: -30, y: 550 }); // Start peeking from left

@@ -75,6 +75,7 @@ export default function Chatbot() {
   const audioRef = useRef(null);
   const [kbPadding, setKbPadding] = useState(0);
   const [composerH, setComposerH] = useState(56);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Save messages to localStorage whenever they change with timestamp
   useEffect(() => {
@@ -174,6 +175,12 @@ export default function Chatbot() {
         vv.removeEventListener("scroll", updateKb);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    const mobile = /Mobi|Android|iPhone|iPad/i.test(ua);
+    setIsMobile(mobile);
   }, []);
 
   useEffect(() => {
@@ -864,9 +871,11 @@ IMPORTANT RULES:
 
   return (
     <div
-      className="flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
+      className="relative flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
       style={{
-        paddingBottom: `calc(${composerH}px + env(safe-area-inset-bottom) + ${kbPadding}px)`,
+        paddingBottom: isMobile
+          ? `calc(${composerH}px + env(safe-area-inset-bottom) + ${kbPadding}px)`
+          : `${composerH + 16}px`,
       }}
     >
       <style>{`
@@ -1017,12 +1026,15 @@ IMPORTANT RULES:
 
       <div
         ref={composerRef}
-        className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md mx-4"
+        className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-md mx-4 z-50"
         style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: `calc(env(safe-area-inset-bottom) + ${kbPadding}px)`,
+          position: isMobile ? "fixed" : "absolute",
+          left: isMobile ? 0 : 16,
+          right: isMobile ? 0 : 16,
+          bottom: isMobile
+            ? `calc(env(safe-area-inset-bottom) + ${kbPadding}px)`
+            : 16,
+          width: isMobile ? undefined : "auto",
         }}
       >
         <button
