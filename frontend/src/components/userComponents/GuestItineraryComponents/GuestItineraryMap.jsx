@@ -392,14 +392,16 @@ export default function GuestItineraryMap() {
   }, [activePin]);
 
   useEffect(() => {
-    const list = optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
+    const list =
+      optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
     const candidates = [];
     if (list && list.length > 0) {
       candidates.push(list[0]);
       if (list[1]) candidates.push(list[1]);
       if (currentPinIndex != null && list[currentPinIndex]) {
         candidates.push(list[currentPinIndex]);
-        if (list[currentPinIndex + 1]) candidates.push(list[currentPinIndex + 1]);
+        if (list[currentPinIndex + 1])
+          candidates.push(list[currentPinIndex + 1]);
       }
     }
     const urls = candidates
@@ -899,7 +901,23 @@ export default function GuestItineraryMap() {
 
   /** Build route from user → current pin */
   const buildRoute = async (start, pin) => {
-    if (!start || !pin) return;
+    if (!pin) return;
+    let actualStart = start;
+    if (!actualStart) {
+      try {
+        const map = mapRef.current?.getMap?.();
+        if (map && typeof map.getCenter === "function") {
+          const c = map.getCenter();
+          actualStart = { latitude: c.lat, longitude: c.lng };
+        } else if (viewState?.latitude && viewState?.longitude) {
+          actualStart = {
+            latitude: viewState.latitude,
+            longitude: viewState.longitude,
+          };
+        }
+      } catch {}
+    }
+    if (!actualStart) return;
 
     try {
       const reqId = ++routingReqId.current;
@@ -909,7 +927,7 @@ export default function GuestItineraryMap() {
           localStorage.getItem("i18nextLng")) ||
         "en";
       const url =
-        `https://api.mapbox.com/directions/v5/mapbox/${transportMode}/${start.longitude},${start.latitude};${pin.longitude},${pin.latitude}` +
+        `https://api.mapbox.com/directions/v5/mapbox/${transportMode}/${actualStart.longitude},${actualStart.latitude};${pin.longitude},${pin.latitude}` +
         `?steps=true&geometries=geojson&overview=full&voice_instructions=true&banner_instructions=true` +
         `&alternatives=false&annotations=distance,duration&language=${encodeURIComponent(
           lang
@@ -926,14 +944,14 @@ export default function GuestItineraryMap() {
         const straightLine = {
           type: "LineString",
           coordinates: [
-            [start.longitude, start.latitude],
+            [actualStart.longitude, actualStart.latitude],
             [pin.longitude, pin.latitude],
           ],
         };
 
         // Calculate straight-line distance
-        const dx = pin.latitude - start.latitude;
-        const dy = pin.longitude - start.longitude;
+        const dx = pin.latitude - actualStart.latitude;
+        const dy = pin.longitude - actualStart.longitude;
         const distance = Math.sqrt(dx * dx + dy * dy) * 111000; // rough meters
 
         if (reqId !== routingReqId.current) return;
@@ -957,7 +975,7 @@ export default function GuestItineraryMap() {
           {
             maneuver: {
               instruction: `${verb} directly to ${pin.siteName}`,
-              location: [start.longitude, start.latitude],
+              location: [actualStart.longitude, actualStart.latitude],
             },
           },
         ]);
@@ -1027,7 +1045,7 @@ export default function GuestItineraryMap() {
 
   // Rebuild route when transport mode changes (if we have a target)
   useEffect(() => {
-    if (!showGpsModal && userLocation && selectedPin) {
+    if (!showGpsModal && selectedPin) {
       // Optimistic ETA update to reflect transportMode change instantly
       if (distance) {
         const speedByMode = { walking: 1.4, cycling: 4.0, driving: 8.33 }; // m/s
@@ -1042,11 +1060,7 @@ export default function GuestItineraryMap() {
 
   /** Build route to current pin */
   useEffect(() => {
-    if (
-      userLocation &&
-      optimizedPins.length > 0 &&
-      optimizedPins[currentPinIndex]
-    ) {
+    if (optimizedPins.length > 0 && optimizedPins[currentPinIndex]) {
       buildRoute(userLocation, optimizedPins[currentPinIndex]);
     }
   }, [userLocation, optimizedPins, currentPinIndex]);
@@ -1440,7 +1454,7 @@ export default function GuestItineraryMap() {
 
   /** Go to next stop - follows optimized route order (no re-optimization) */
   const goToNextStop = (justVisitedSiteId = null) => {
-    if (!userLocation || optimizedPins.length === 0) return;
+    if (optimizedPins.length === 0) return;
 
     console.log("🔍 goToNextStop called");
     console.log("Current index:", currentPinIndex);
@@ -1482,7 +1496,7 @@ export default function GuestItineraryMap() {
     setSelectedPin(nextPin);
     setManuallyDismissed(false); // Reset manual dismissal for new site
 
-    if (userLocation) buildRoute(userLocation, nextPin);
+    buildRoute(userLocation, nextPin);
 
     // Save current index to localStorage
     const indexKey = `guest_current_index_${itineraryId}`;
@@ -1543,6 +1557,23 @@ export default function GuestItineraryMap() {
     };
   }, [route]);
 
+  /** Trigger geolocate control once GPS approved and tour running */
+  useEffect(() => {
+    if (
+      geolocateControlRef.current &&
+      !showGpsModal &&
+      gpsApproved &&
+      isGuidanceRunning
+    ) {
+      const timer = setTimeout(() => {
+        try {
+          geolocateControlRef.current?.trigger();
+        } catch {}
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [showGpsModal, gpsApproved, isGuidanceRunning]);
+
   // Initialize TTS service - OFF by default, user controls via toggle button
   useEffect(() => {
     // Don't auto-enable - let user control via toggle button
@@ -1571,7 +1602,7 @@ export default function GuestItineraryMap() {
             type: "warning",
             title: "Stay Alert",
             message:
-              "For your safety, please stay aware of your surroundings and watch the streets while navigating.",
+              "Be mindful of your surroundings. Keep valuables secure, beware of pickpockets, and avoid overpriced services by using trusted vendors.",
           });
           setTimeout(() => {
             setNotification((n) =>
@@ -1705,11 +1736,11 @@ export default function GuestItineraryMap() {
                 setGpsError("");
                 setShowGpsModal(false);
                 setGpsPermissionDenied(false);
-                if (!within) {
-                  setShowLocationBlockModal(true);
-                  setIsBackdropActive(false);
-                  return;
-                }
+                // if (!within) {
+                //   setShowLocationBlockModal(true);
+                //   setIsBackdropActive(false);
+                //   return;
+                // }
                 setGpsApproved(true);
                 setIsBackdropActive(false);
                 setShowModeModal(true);
@@ -1823,7 +1854,7 @@ export default function GuestItineraryMap() {
             </Source>
           )}
 
-          {/* Mapbox Geolocate Control (button only, custom marker used) */}
+          {/* Mapbox Geolocate Control */}
           {gpsApproved && (
             <GeolocateControl
               ref={geolocateControlRef}
@@ -1835,8 +1866,8 @@ export default function GuestItineraryMap() {
               }}
               trackUserLocation={true}
               showUserHeading={false}
-              showAccuracyCircle={false}
-              showUserLocation={false}
+              showAccuracyCircle={true}
+              showUserLocation={true}
               fitBoundsOptions={{ maxZoom: 18 }}
               onGeolocate={handleGeolocate}
               onError={handleGeolocateError}
@@ -1860,8 +1891,7 @@ export default function GuestItineraryMap() {
                   if (!activePin || activePin._id === pin._id) {
                     setCurrentPinIndex(idx);
                     setActivePin(pin);
-                    if (isGuidanceRunning && userLocation)
-                      buildRoute(userLocation, pin);
+                    if (isGuidanceRunning) buildRoute(userLocation, pin);
                   }
                 }}
               >
@@ -1937,6 +1967,12 @@ export default function GuestItineraryMap() {
             setShowTransportPanel={setShowTransportPanel}
             transportMode={transportMode}
             setTransportMode={setTransportMode}
+            onActivateGps={() => {
+              try {
+                geolocateControlRef.current?.trigger();
+                setGpsApproved(true);
+              } catch {}
+            }}
           />
         )}
 
@@ -2010,7 +2046,8 @@ export default function GuestItineraryMap() {
           />
         )}
 
-        {/* Location Block Modal - User outside Intramuros */}
+        {/*
+        Location Block Modal - User outside Intramuros (temporarily disabled)
         <ConfirmModal
           isOpen={showLocationBlockModal}
           onClose={() => {
@@ -2025,6 +2062,7 @@ export default function GuestItineraryMap() {
           cancelText=""
           type="error"
         />
+        */}
 
         {/* Backdrop to prevent bypass during validation */}
         {isBackdropActive && (
@@ -2038,14 +2076,11 @@ export default function GuestItineraryMap() {
               <button
                 type="button"
                 onClick={() => {
-                  if (isOutsideBounds) {
-                    setShowLocationBlockModal(true);
-                    return;
-                  }
+                  // Ask for GPS before starting the tour (Guest flow)
                   setIsBackdropActive(true);
                   setShowGpsModal(true);
                 }}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
+                className="itinerary-start-tour-btn w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
               >
                 <Navigation className="w-5 h-5" /> Start Tour
               </button>
@@ -2069,10 +2104,10 @@ export default function GuestItineraryMap() {
                 <button
                   className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
                   onClick={() => {
-                    if (isOutsideBounds) {
-                      setShowLocationBlockModal(true);
-                      return;
-                    }
+                    // if (isOutsideBounds) {
+                    //   setShowLocationBlockModal(true);
+                    //   return;
+                    // }
                     setTourMode("optimized");
                     setShowModeModal(false);
                     const optimized = optimizeRoute(
@@ -2112,10 +2147,10 @@ export default function GuestItineraryMap() {
                 <button
                   className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
                   onClick={() => {
-                    if (isOutsideBounds) {
-                      setShowLocationBlockModal(true);
-                      return;
-                    }
+                    // if (isOutsideBounds) {
+                    //   setShowLocationBlockModal(true);
+                    //   return;
+                    // }
                     setTourMode("original");
                     setShowModeModal(false);
                     const original = [...pins];

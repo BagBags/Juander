@@ -47,6 +47,8 @@ export default function TourProvider({
   const centeredStepRef = useRef(null);
   const lockedAddBtnRef = useRef(null);
   const currentTargetRef = useRef(null);
+  const autoAdvanceUntilRef = useRef(0);
+  const lastSpotlightRectRef = useRef(null);
 
   const langRaw = (
     localStorage.getItem("i18nextLng") ||
@@ -110,12 +112,9 @@ export default function TourProvider({
       outer.scrollTop -
       Math.max(0, headerOffset) -
       Math.max(0, outer.clientHeight * 0.25);
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
     outer.scrollTo({
       top: Math.max(0, top),
-      behavior: prefersReducedMotion ? "auto" : "smooth",
+      behavior: "auto",
     });
   };
 
@@ -160,7 +159,7 @@ export default function TourProvider({
         ).matches;
         outer.scrollTo({
           top: Math.max(0, center),
-          behavior: prefersReducedMotion ? "auto" : "smooth",
+          behavior: "auto",
         });
         if (!preferInstant) {
           setTimeout(() => {
@@ -170,12 +169,9 @@ export default function TourProvider({
                 offsetWithin2 -
                 Math.max(0, (outer.clientHeight - addBtn.offsetHeight) / 2) -
                 Math.max(0, headerOffset);
-              const prefersReducedMotion2 = window.matchMedia(
-                "(prefers-reduced-motion: reduce)"
-              ).matches;
               outer.scrollTo({
                 top: Math.max(0, center2),
-                behavior: prefersReducedMotion2 ? "auto" : "smooth",
+                behavior: "auto",
               });
             } catch {}
           }, 180);
@@ -189,9 +185,6 @@ export default function TourProvider({
     const scroller = getScrollableAncestor(el);
     if (!scroller) return;
     const headerOffset = isMobile ? 60 : 80;
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
     try {
       const outer = findOuterScrollContainer();
       if (outer && outer.contains(el)) {
@@ -213,7 +206,7 @@ export default function TourProvider({
     ) {
       try {
         el.scrollIntoView({
-          behavior: prefersReducedMotion ? "auto" : "smooth",
+          behavior: "auto",
           block: "center",
         });
       } catch {}
@@ -221,7 +214,7 @@ export default function TourProvider({
         const rect = el.getBoundingClientRect();
         window.scrollTo({
           top: window.scrollY + rect.top - Math.max(0, headerOffset),
-          behavior: prefersReducedMotion ? "auto" : "smooth",
+          behavior: "auto",
         });
       } catch {}
       return;
@@ -232,7 +225,7 @@ export default function TourProvider({
         .scrollTop;
       (document.scrollingElement || document.documentElement).scrollTo({
         top: pageTop + scRectPage.top - headerOffset - 30,
-        behavior: prefersReducedMotion ? "auto" : "smooth",
+        behavior: "auto",
       });
     } catch {}
     try {
@@ -245,7 +238,7 @@ export default function TourProvider({
         Math.max(0, headerOffset);
       scroller.scrollTo({
         top: targetTop,
-        behavior: prefersReducedMotion ? "auto" : "smooth",
+        behavior: "auto",
       });
     } catch {}
   };
@@ -258,6 +251,25 @@ export default function TourProvider({
       if (!style || style.display === "none" || style.visibility === "hidden") {
         return false;
       }
+      const rect = el.getBoundingClientRect();
+      const hasSize = rect.width > 0 && rect.height > 0;
+      const intersectsViewport =
+        rect.bottom > 0 &&
+        rect.right > 0 &&
+        rect.top < window.innerHeight &&
+        rect.left < window.innerWidth;
+      return hasSize && intersectsViewport;
+    } catch {
+      return false;
+    }
+  };
+
+  const isElementVisible = (el) => {
+    try {
+      if (!el) return false;
+      const style = window.getComputedStyle(el);
+      if (!style || style.display === "none" || style.visibility === "hidden")
+        return false;
       const rect = el.getBoundingClientRect();
       const hasSize = rect.width > 0 && rect.height > 0;
       const intersectsViewport =
@@ -289,8 +301,11 @@ export default function TourProvider({
     let i = fromIndex + direction;
     while (i >= 0 && i < steps.length) {
       const tgt = steps[i]?.target;
-      if (tgt && typeof tgt === "string" && isSelectorVisible(tgt)) {
-        return i;
+      if (tgt && typeof tgt === "string") {
+        const el = resolveTarget(tgt);
+        if (isElementVisible(el)) {
+          return i;
+        }
       }
       i += direction;
     }
@@ -414,11 +429,14 @@ export default function TourProvider({
           scrollTargetIntoView(target);
         }
       } catch {}
-      if (target && isSelectorVisible(selector)) {
+      if (isElementVisible(target)) {
         setSpotlightRectStable(target);
       } else {
+        const now = Date.now();
+        if (autoAdvanceUntilRef.current > now) return;
         const nextIdx = findNextVisibleIndex(stepIndex, 1);
         if (typeof nextIdx === "number" && nextIdx !== stepIndex) {
+          autoAdvanceUntilRef.current = now + 600;
           setStepIndex(nextIdx);
         }
       }
@@ -442,7 +460,7 @@ export default function TourProvider({
 
     pollCountRef.current = 0;
     const maxPoll =
-      steps[stepIndex].target === ".create-itinerary-add-btn" ? 1 : 6;
+      steps[stepIndex].target === ".create-itinerary-add-btn" ? 1 : 2;
     const poll = () => {
       pollCountRef.current += 1;
       updateSpotlight();
@@ -455,6 +473,12 @@ export default function TourProvider({
       pollCountRef.current = 0;
     };
   }, [run, stepIndex, steps]);
+
+  useEffect(() => {
+    if (spotlightRect) {
+      lastSpotlightRectRef.current = spotlightRect;
+    }
+  }, [spotlightRect]);
 
   useEffect(() => {
     if (!run) return;
@@ -536,9 +560,11 @@ export default function TourProvider({
             return;
           }
           if (tourType === "emergency") {
-            setHasCompletedTour(
-              !(localStorage.getItem("guestEmergencyTourForceStart") === "true")
-            );
+            const disabled =
+              localStorage.getItem("guestTutorialsDisabled") === "true";
+            const forceStart =
+              localStorage.getItem("guestEmergencyTourForceStart") === "true";
+            setHasCompletedTour(disabled || !forceStart);
             return;
           }
         } catch {}
@@ -547,6 +573,12 @@ export default function TourProvider({
       }
 
       try {
+        const tutorialsDisabled =
+          localStorage.getItem("tutorialsDisabled") === "true";
+        if (tutorialsDisabled) {
+          setHasCompletedTour(true);
+          return;
+        }
         if (tourType === "emergency") {
           const status = await getEmergencyTourStatus();
           setHasCompletedTour(status.hasCompletedEmergencyTour);
@@ -558,8 +590,10 @@ export default function TourProvider({
           setHasCompletedTour(status.hasCompletedGuestProfileTour);
         } else if (tourType === "tourMap") {
           if (userRole === "guest") {
-            const disabled = localStorage.getItem("guestTutorialsDisabled") === "true";
-            const completed = localStorage.getItem("guestTourMapTourCompleted") === "true";
+            const disabled =
+              localStorage.getItem("guestTutorialsDisabled") === "true";
+            const completed =
+              localStorage.getItem("guestTourMapTourCompleted") === "true";
             setHasCompletedTour(disabled || completed);
           } else {
             const status = await getTourMapTourStatus();
@@ -569,6 +603,9 @@ export default function TourProvider({
               forceReplay ? false : status.hasCompletedTourMapTour
             );
           }
+        } else if (tourType === "emergency") {
+          const status = await getEmergencyTourStatus();
+          setHasCompletedTour(status.hasCompletedEmergencyTour);
         } else if (tourType === "photobooth") {
           const status = await getPhotoboothTourStatus();
           setHasCompletedTour(status.hasCompletedPhotoboothTour);
@@ -613,7 +650,13 @@ export default function TourProvider({
             setHasCompletedTour(true);
           }
         } else {
-          setHasCompletedTour(true);
+          const tutorialsDisabled =
+            localStorage.getItem("tutorialsDisabled") === "true";
+          if (tutorialsDisabled) {
+            setHasCompletedTour(true);
+          } else {
+            setHasCompletedTour(true);
+          }
         }
       }
     };
@@ -648,6 +691,7 @@ export default function TourProvider({
           localStorage.removeItem("guestEmergencyTourForceStart");
         }
       } catch {}
+      setHasCompletedTour(true);
       if (userRole === "tourist" && localStorage.getItem("token")) {
         try {
           if (tourType === "createItinerary") {
@@ -667,8 +711,8 @@ export default function TourProvider({
           } else {
             await apiCompleteTour();
           }
-          setHasCompletedTour(true);
         } catch {}
+        setHasCompletedTour(true);
       }
       return;
     }
@@ -699,7 +743,10 @@ export default function TourProvider({
         }
       } catch (e) {}
 
-      if ((status === STATUS.FINISHED || status === STATUS.SKIPPED) &&
+      setHasCompletedTour(true);
+
+      if (
+        (status === STATUS.FINISHED || status === STATUS.SKIPPED) &&
         userRole === "tourist" &&
         localStorage.getItem("token")
       ) {
@@ -715,8 +762,8 @@ export default function TourProvider({
           } else {
             await apiCompleteTour();
           }
-          setHasCompletedTour(true);
         } catch (error) {}
+        setHasCompletedTour(true);
       }
       return;
     }
@@ -747,6 +794,7 @@ export default function TourProvider({
             localStorage.removeItem("guestEmergencyTourForceStart");
           }
         } catch {}
+        setHasCompletedTour(true);
         if (userRole === "tourist" && localStorage.getItem("token")) {
           try {
             if (tourType === "createItinerary") {
@@ -762,8 +810,8 @@ export default function TourProvider({
             } else {
               await apiCompleteTour();
             }
-            setHasCompletedTour(true);
           } catch {}
+          setHasCompletedTour(true);
         }
         return;
       }
@@ -796,12 +844,16 @@ export default function TourProvider({
       }
       setSpotlightRect(null);
       currentTargetRef.current = null;
+      const now = Date.now();
+      if (autoAdvanceUntilRef.current > now) return;
       const nextIdx = findNextVisibleIndex(index, 1);
       if (typeof nextIdx === "number" && nextIdx !== index) {
+        autoAdvanceUntilRef.current = now + 600;
         setStepIndex(nextIdx);
       } else {
         const targetIndex = index + 1;
         const clamped = Math.max(0, Math.min(targetIndex, steps.length - 1));
+        autoAdvanceUntilRef.current = now + 600;
         setStepIndex(clamped);
       }
     }
@@ -832,232 +884,307 @@ export default function TourProvider({
     >
       {children}
       {/* Custom persistent overlay with SVG mask for rounded spotlight */}
-      {run &&
-        spotlightRect &&
-        steps[stepIndex]?.target !== ".trip-tour-ender" && (
-          <>
-            {/* Interaction shield to prevent background handlers during tour */}
-            <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 9996,
-                background: "transparent",
-                pointerEvents: "auto",
-              }}
-              onWheel={(e) => {
-                try {
-                  e.preventDefault();
-                } catch {}
-              }}
-              onTouchMove={(e) => {
-                try {
-                  e.preventDefault();
-                } catch {}
-              }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
+      {run && steps[stepIndex]?.target !== ".trip-tour-ender" && (
+        <>
+          {/* Interaction shield to prevent background handlers during tour */}
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              zIndex: 9996,
+              background: "transparent",
+              pointerEvents: "auto",
+            }}
+            onWheel={(e) => {
+              try {
                 e.preventDefault();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
+              } catch {}
+            }}
+            onTouchMove={(e) => {
+              try {
                 e.preventDefault();
-              }}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
-              onPointerUp={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-              }}
+              } catch {}
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onPointerUp={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+          />
+          <svg
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              zIndex: 9997,
+              pointerEvents: "none",
+            }}
+          >
+            <defs>
+              <mask
+                id="spotlight-mask"
+                maskUnits="userSpaceOnUse"
+                maskContentUnits="userSpaceOnUse"
+              >
+                <rect width="100%" height="100%" fill="white" />
+                <rect
+                  x={
+                    (spotlightRect || lastSpotlightRectRef.current)?.left || -1
+                  }
+                  y={(spotlightRect || lastSpotlightRectRef.current)?.top || -1}
+                  width={
+                    (spotlightRect || lastSpotlightRectRef.current)?.width || 0
+                  }
+                  height={
+                    (spotlightRect || lastSpotlightRectRef.current)?.height || 0
+                  }
+                  rx="20"
+                  ry="20"
+                  fill="black"
+                  style={{ transition: "none" }}
+                />
+              </mask>
+            </defs>
+            <rect
+              width="100%"
+              height="100%"
+              fill="rgba(0, 0, 0, 0.75)"
+              mask="url(#spotlight-mask)"
             />
-            <svg
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                zIndex: 9997,
-                pointerEvents: "none",
-              }}
-            >
-              <defs>
-                <mask id="spotlight-mask">
-                  <rect width="100%" height="100%" fill="white" />
-                  <rect
-                    x={spotlightRect.left}
-                    y={spotlightRect.top}
-                    width={spotlightRect.width}
-                    height={spotlightRect.height}
-                    rx="20"
-                    ry="20"
-                    fill="black"
-                    style={{ transition: "none" }}
-                  />
-                </mask>
-              </defs>
-              <rect
-                width="100%"
-                height="100%"
-                fill="rgba(0, 0, 0, 0.75)"
-                mask="url(#spotlight-mask)"
-              />
-            </svg>
+          </svg>
 
-            {/* Rounded corner overlays to hide sharp edges */}
-            <div
-              style={{
-                position: "fixed",
-                top: spotlightRect.top - 4,
-                left: spotlightRect.left - 4,
-                width: spotlightRect.width + 8,
-                height: spotlightRect.height + 8,
-                borderRadius: "20px",
-                boxShadow: "inset 0 0 0 4px rgba(0, 0, 0, 0.75)",
-                zIndex: 9998,
-                pointerEvents: "none",
-                transition: "none",
-              }}
-            />
+          {/* Rounded corner overlays to hide sharp edges */}
+          <div
+            style={{
+              position: "fixed",
+              top:
+                ((spotlightRect || lastSpotlightRectRef.current)?.top || 0) - 4,
+              left:
+                ((spotlightRect || lastSpotlightRectRef.current)?.left || 0) -
+                4,
+              width:
+                ((spotlightRect || lastSpotlightRectRef.current)?.width || 0) +
+                8,
+              height:
+                ((spotlightRect || lastSpotlightRectRef.current)?.height || 0) +
+                8,
+              borderRadius: "20px",
+              boxShadow: "inset 0 0 0 4px rgba(0, 0, 0, 0.75)",
+              zIndex: 9998,
+              pointerEvents: "none",
+              transition: "none",
+            }}
+          />
 
-            {/* Persistent tooltip positioned near spotlight */}
-            {steps[stepIndex] &&
-              (() => {
-                const margin = isMobile ? 10 : 14;
-                const offset = isMobile ? 6 : 8;
-                const preferAboveTargets = [
-                  ".create-itinerary-save-btn",
-                  ".create-itinerary-search",
-                  ".create-itinerary-add-btn",
-                  ".my-itineraries-tab-btn",
-                  ".my-itinerary-edit-btn",
-                  ".my-itinerary-delete-btn",
-                  ".my-itinerary-view-sites-btn",
-                  ".emergency-first-contact",
-                  ".trip-write-review-btn",
-                  ".trip-edit-review-btn",
-                  ".trip-delete-review-btn",
-                  ".trip-place-card",
-                ];
-                const preferAbove = preferAboveTargets.includes(
-                  steps[stepIndex].target
-                );
-                const width = Math.min(360, window.innerWidth - margin * 2);
-                const height = Math.min(
-                  tooltipSize.height || 220,
-                  window.innerHeight - margin * 2
-                );
-                const centerX = spotlightRect.left + spotlightRect.width / 2;
-                let left = Math.max(
-                  margin,
-                  Math.min(
-                    centerX - width / 2,
-                    window.innerWidth - margin - width
-                  )
-                );
-                let placeBelowTop =
-                  spotlightRect.top + spotlightRect.height + offset;
-                let top;
-                if (
-                  preferAbove &&
-                  spotlightRect.top - offset - height - margin >= margin
-                ) {
-                  top = Math.max(margin, spotlightRect.top - offset - height);
-                } else if (
-                  placeBelowTop + height + margin <=
-                  window.innerHeight
-                ) {
-                  top = placeBelowTop;
-                } else {
-                  top = Math.max(margin, spotlightRect.top - offset - height);
-                }
-                top = Math.min(top, window.innerHeight - margin - height);
-                return (
-                  <div
-                    ref={tooltipWrapRef}
-                    style={{
-                      position: "fixed",
-                      top,
-                      left,
-                      zIndex: 100010,
-                      width,
-                      maxWidth: `calc(100vw - ${margin * 2}px)`,
-                      maxHeight: height,
-                      overflow: "visible",
+          {/* Persistent tooltip positioned near spotlight (only when current target is measured/visible) */}
+          {spotlightRect &&
+            steps[stepIndex] &&
+            (() => {
+              const rect = spotlightRect;
+              const margin = isMobile ? 10 : 14;
+              const offset = isMobile ? 6 : 8;
+              const preferAboveTargets = [
+                ".create-itinerary-save-btn",
+                ".create-itinerary-search",
+                ".create-itinerary-add-btn",
+                ".my-itineraries-tab-btn",
+                ".my-itinerary-edit-btn",
+                ".my-itinerary-delete-btn",
+                ".my-itinerary-view-sites-btn",
+                ".emergency-first-contact",
+                ".trip-write-review-btn",
+                ".trip-edit-review-btn",
+                ".trip-delete-review-btn",
+                ".trip-place-card",
+              ];
+              const preferAbove = preferAboveTargets.includes(
+                steps[stepIndex].target
+              );
+              const width = Math.min(360, window.innerWidth - margin * 2);
+              const height = Math.min(
+                tooltipSize.height || 220,
+                window.innerHeight - margin * 2
+              );
+              const centerX = rect.left + rect.width / 2;
+              let left = Math.max(
+                margin,
+                Math.min(
+                  centerX - width / 2,
+                  window.innerWidth - margin - width
+                )
+              );
+              let placeBelowTop = rect.top + rect.height + offset;
+              let top;
+              if (
+                preferAbove &&
+                rect.top - offset - height - margin >= margin
+              ) {
+                top = Math.max(margin, rect.top - offset - height);
+              } else if (
+                placeBelowTop + height + margin <=
+                window.innerHeight
+              ) {
+                top = placeBelowTop;
+              } else {
+                top = Math.max(margin, rect.top - offset - height);
+              }
+              top = Math.min(top, window.innerHeight - margin - height);
+              return (
+                <div
+                  ref={tooltipWrapRef}
+                  style={{
+                    position: "fixed",
+                    top,
+                    left,
+                    zIndex: 100010,
+                    width,
+                    maxWidth: `calc(100vw - ${margin * 2}px)`,
+                    maxHeight: height,
+                    overflow: "visible",
+                  }}
+                >
+                  <CustomTourTooltip
+                    external
+                    continuous
+                    index={stepIndex}
+                    step={localizeStep(steps[stepIndex])}
+                    isLastStep={stepIndex >= steps.length - 1}
+                    size={steps.length}
+                    onBack={() => {
+                      if (stepIndex <= 0) return;
+                      const prevVisible = findNextVisibleIndex(stepIndex, -1);
+                      const prev =
+                        typeof prevVisible === "number"
+                          ? prevVisible
+                          : stepIndex - 1;
+                      const prevTarget = steps[prev]?.target;
+                      setStepIndex(prev);
+                      if (
+                        prevTarget === ".create-itinerary-save-btn" ||
+                        prevTarget === ".create-itinerary-add-btn" ||
+                        prevTarget === ".create-itinerary-search"
+                      ) {
+                        try {
+                          window.dispatchEvent(
+                            new CustomEvent("tour:returnToCreateItinerary")
+                          );
+                        } catch {}
+                      }
+                      if (prevTarget === ".trip-tab-reviews-btn") {
+                        try {
+                          window.dispatchEvent(
+                            new CustomEvent("tour:tripArchiveOpenReviewsTab")
+                          );
+                        } catch {}
+                      }
+                      if (prevTarget === ".trip-places-list") {
+                        try {
+                          window.dispatchEvent(
+                            new CustomEvent("tour:tripArchiveOpenPlacesTab")
+                          );
+                        } catch {}
+                      }
+                      if (prevTarget === ".trip-tab-places-btn") {
+                        try {
+                          window.dispatchEvent(
+                            new CustomEvent("tour:tripArchiveOpenPlacesTab")
+                          );
+                        } catch {}
+                      }
+                      if (prevTarget === ".trip-write-review-btn") {
+                        try {
+                          window.dispatchEvent(
+                            new CustomEvent("tour:tripArchiveCloseReviewModal")
+                          );
+                        } catch {}
+                      }
+                      if (prevTarget === ".create-itinerary-add-btn") {
+                        try {
+                          const firstAdd =
+                            getFirstInSection(
+                              ".available-sites-section",
+                              ".create-itinerary-add-btn"
+                            ) || resolveTarget(".create-itinerary-add-btn");
+                          lockedAddBtnRef.current = firstAdd;
+                          centeredStepRef.current = null;
+                        } catch {}
+                      }
                     }}
-                  >
-                    <CustomTourTooltip
-                      external
-                      continuous
-                      index={stepIndex}
-                      step={localizeStep(steps[stepIndex])}
-                      isLastStep={stepIndex >= steps.length - 1}
-                      size={steps.length}
-                      onBack={() => {
-                        if (stepIndex <= 0) return;
-                        const prevVisible = findNextVisibleIndex(stepIndex, -1);
-                        const prev = typeof prevVisible === "number" ? prevVisible : stepIndex - 1;
-                        const prevTarget = steps[prev]?.target;
-                        setStepIndex(prev);
-                        if (
-                          prevTarget === ".create-itinerary-save-btn" ||
-                          prevTarget === ".create-itinerary-add-btn" ||
-                          prevTarget === ".create-itinerary-search"
-                        ) {
-                          try {
-                            window.dispatchEvent(
-                              new CustomEvent("tour:returnToCreateItinerary")
-                            );
-                          } catch {}
+                    onSkip={() => {
+                      setRun(false);
+                      setStepIndex(0);
+                      try {
+                        if (tourType === "homepage") {
+                          if (userRole === "guest")
+                            localStorage.removeItem("guestReplayTutorial");
+                          if (userRole === "tourist")
+                            localStorage.removeItem("touristReplayTutorial");
+                        } else if (tourType === "map") {
+                          localStorage.removeItem("mapTourForceStart");
+                        } else if (tourType === "tourMap") {
+                          localStorage.setItem(
+                            "guestTourMapTourCompleted",
+                            "true"
+                          );
+                        } else if (tourType === "guestProfile") {
+                          localStorage.removeItem("guestProfileTourForceStart");
+                        } else if (tourType === "photobooth") {
+                          localStorage.removeItem(
+                            "guestPhotoboothTourForceStart"
+                          );
+                        } else if (tourType === "emergency") {
+                          localStorage.removeItem(
+                            "guestEmergencyTourForceStart"
+                          );
                         }
-                        if (prevTarget === ".trip-tab-reviews-btn") {
+                      } catch {}
+                      setHasCompletedTour(true);
+                      if (
+                        userRole === "tourist" &&
+                        localStorage.getItem("token")
+                      ) {
+                        (async () => {
                           try {
-                            window.dispatchEvent(
-                              new CustomEvent("tour:tripArchiveOpenReviewsTab")
-                            );
+                            if (tourType === "createItinerary") {
+                              await apiCompleteCreateItineraryTour();
+                            } else if (tourType === "emergency") {
+                              await apiCompleteEmergencyTour();
+                            } else if (tourType === "profile") {
+                              await apiCompleteProfileTour();
+                            } else if (tourType === "guestProfile") {
+                              await apiCompleteGuestProfileTour();
+                            } else if (tourType === "tourMap") {
+                              await apiCompleteTourMapTour();
+                            } else if (tourType === "photobooth") {
+                              await apiCompletePhotoboothTour();
+                            } else if (tourType === "tripArchive") {
+                              await apiCompleteTripArchiveTour();
+                            } else {
+                              await apiCompleteTour();
+                            }
+                            setHasCompletedTour(true);
                           } catch {}
-                        }
-                        if (prevTarget === ".trip-places-list") {
-                          try {
-                            window.dispatchEvent(
-                              new CustomEvent("tour:tripArchiveOpenPlacesTab")
-                            );
-                          } catch {}
-                        }
-                        if (prevTarget === ".trip-tab-places-btn") {
-                          try {
-                            window.dispatchEvent(
-                              new CustomEvent("tour:tripArchiveOpenPlacesTab")
-                            );
-                          } catch {}
-                        }
-                        if (prevTarget === ".trip-write-review-btn") {
-                          try {
-                            window.dispatchEvent(
-                              new CustomEvent(
-                                "tour:tripArchiveCloseReviewModal"
-                              )
-                            );
-                          } catch {}
-                        }
-                        if (prevTarget === ".create-itinerary-add-btn") {
-                          try {
-                            const firstAdd =
-                              getFirstInSection(
-                                ".available-sites-section",
-                                ".create-itinerary-add-btn"
-                              ) || resolveTarget(".create-itinerary-add-btn");
-                            lockedAddBtnRef.current = firstAdd;
-                            centeredStepRef.current = null;
-                          } catch {}
-                        }
-                      }}
-                      onSkip={() => {
+                        })();
+                      }
+                    }}
+                    onNext={async () => {
+                      if (stepIndex >= steps.length - 1) {
                         setRun(false);
                         setStepIndex(0);
                         try {
@@ -1092,135 +1219,6 @@ export default function TourProvider({
                           userRole === "tourist" &&
                           localStorage.getItem("token")
                         ) {
-                          (async () => {
-                            try {
-                              if (tourType === "createItinerary") {
-                                await apiCompleteCreateItineraryTour();
-                              } else if (tourType === "emergency") {
-                                await apiCompleteEmergencyTour();
-                              } else if (tourType === "profile") {
-                                await apiCompleteProfileTour();
-                              } else if (tourType === "guestProfile") {
-                                await apiCompleteGuestProfileTour();
-                              } else if (tourType === "tourMap") {
-                                await apiCompleteTourMapTour();
-                              } else if (tourType === "photobooth") {
-                                await apiCompletePhotoboothTour();
-                              } else if (tourType === "tripArchive") {
-                                await apiCompleteTripArchiveTour();
-                              } else {
-                                await apiCompleteTour();
-                              }
-                              setHasCompletedTour(true);
-                            } catch {}
-                          })();
-                        }
-                      }}
-                      onNext={async () => {
-                        if (stepIndex >= steps.length - 1) {
-                          setRun(false);
-                          setStepIndex(0);
-                          try {
-                            if (tourType === "homepage") {
-                              if (userRole === "guest")
-                                localStorage.removeItem("guestReplayTutorial");
-                              if (userRole === "tourist")
-                                localStorage.removeItem(
-                                  "touristReplayTutorial"
-                                );
-                            } else if (tourType === "map") {
-                              localStorage.removeItem("mapTourForceStart");
-                            } else if (tourType === "tourMap") {
-                              localStorage.setItem(
-                                "guestTourMapTourCompleted",
-                                "true"
-                              );
-                            } else if (tourType === "guestProfile") {
-                              localStorage.removeItem(
-                                "guestProfileTourForceStart"
-                              );
-                            } else if (tourType === "photobooth") {
-                              localStorage.removeItem(
-                                "guestPhotoboothTourForceStart"
-                              );
-                            } else if (tourType === "emergency") {
-                              localStorage.removeItem(
-                                "guestEmergencyTourForceStart"
-                              );
-                            }
-                          } catch {}
-                          setHasCompletedTour(true);
-                          if (
-                            userRole === "tourist" &&
-                            localStorage.getItem("token")
-                          ) {
-                            try {
-                              if (tourType === "createItinerary") {
-                                await apiCompleteCreateItineraryTour();
-                              } else if (tourType === "emergency") {
-                                await apiCompleteEmergencyTour();
-                              } else if (tourType === "profile") {
-                                await apiCompleteProfileTour();
-                              } else if (tourType === "guestProfile") {
-                                await apiCompleteGuestProfileTour();
-                              } else {
-                                await apiCompleteTour();
-                              }
-                              setHasCompletedTour(true);
-                            } catch {}
-                          }
-                          return;
-                        }
-                        const nextIdx = findNextVisibleIndex(stepIndex, 1);
-                        const applyNext = () => {
-                          if (
-                            typeof nextIdx === "number" &&
-                            nextIdx !== stepIndex
-                          ) {
-                            setStepIndex(nextIdx);
-                          } else {
-                            const targetIndex = stepIndex + 1;
-                            const clamped = Math.max(
-                              0,
-                              Math.min(targetIndex, steps.length - 1)
-                            );
-                            setStepIndex(clamped);
-                          }
-                        };
-                        applyNext();
-                      }}
-                      onClose={async () => {
-                        setRun(false);
-                        setStepIndex(0);
-                        try {
-                          if (tourType === "homepage") {
-                            if (userRole === "guest")
-                              localStorage.removeItem("guestReplayTutorial");
-                            if (userRole === "tourist")
-                              localStorage.removeItem("touristReplayTutorial");
-                          } else if (tourType === "map") {
-                            localStorage.removeItem("mapTourForceStart");
-                          } else if (tourType === "tourMap") {
-                            localStorage.setItem(
-                              "guestTourMapTourCompleted",
-                              "true"
-                            );
-                          } else if (tourType === "guestProfile") {
-                            localStorage.removeItem(
-                              "guestProfileTourForceStart"
-                            );
-                          } else if (tourType === "photobooth") {
-                            localStorage.removeItem(
-                              "guestPhotoboothTourForceStart"
-                            );
-                          } else if (tourType === "emergency") {
-                            localStorage.removeItem(
-                              "guestEmergencyTourForceStart"
-                            );
-                          }
-                        } catch {}
-                        setHasCompletedTour(true);
-                        if (userRole === "tourist") {
                           try {
                             if (tourType === "createItinerary") {
                               await apiCompleteCreateItineraryTour();
@@ -1230,23 +1228,91 @@ export default function TourProvider({
                               await apiCompleteProfileTour();
                             } else if (tourType === "guestProfile") {
                               await apiCompleteGuestProfileTour();
-                            } else if (tourType === "tourMap") {
-                              await apiCompleteTourMapTour();
-                            } else if (tourType === "photobooth") {
-                              await apiCompletePhotoboothTour();
                             } else {
                               await apiCompleteTour();
                             }
                             setHasCompletedTour(true);
                           } catch {}
                         }
-                      }}
-                    />
-                  </div>
-                );
-              })()}
-          </>
-        )}
+                        return;
+                      }
+                      const nextIdx = findNextVisibleIndex(stepIndex, 1);
+                      const applyNext = () => {
+                        if (
+                          typeof nextIdx === "number" &&
+                          nextIdx !== stepIndex
+                        ) {
+                          setStepIndex(nextIdx);
+                        } else {
+                          const targetIndex = stepIndex + 1;
+                          const clamped = Math.max(
+                            0,
+                            Math.min(targetIndex, steps.length - 1)
+                          );
+                          setStepIndex(clamped);
+                        }
+                      };
+                      applyNext();
+                    }}
+                    onClose={async () => {
+                      setRun(false);
+                      setStepIndex(0);
+                      try {
+                        if (tourType === "homepage") {
+                          if (userRole === "guest")
+                            localStorage.removeItem("guestReplayTutorial");
+                          if (userRole === "tourist")
+                            localStorage.removeItem("touristReplayTutorial");
+                        } else if (tourType === "map") {
+                          localStorage.removeItem("mapTourForceStart");
+                        } else if (tourType === "tourMap") {
+                          localStorage.setItem(
+                            "guestTourMapTourCompleted",
+                            "true"
+                          );
+                        } else if (tourType === "guestProfile") {
+                          localStorage.removeItem("guestProfileTourForceStart");
+                        } else if (tourType === "photobooth") {
+                          localStorage.removeItem(
+                            "guestPhotoboothTourForceStart"
+                          );
+                        } else if (tourType === "emergency") {
+                          localStorage.removeItem(
+                            "guestEmergencyTourForceStart"
+                          );
+                        }
+                      } catch {}
+                      setHasCompletedTour(true);
+                      if (
+                        userRole === "tourist" &&
+                        localStorage.getItem("token")
+                      ) {
+                        try {
+                          if (tourType === "createItinerary") {
+                            await apiCompleteCreateItineraryTour();
+                          } else if (tourType === "emergency") {
+                            await apiCompleteEmergencyTour();
+                          } else if (tourType === "profile") {
+                            await apiCompleteProfileTour();
+                          } else if (tourType === "guestProfile") {
+                            await apiCompleteGuestProfileTour();
+                          } else if (tourType === "tourMap") {
+                            await apiCompleteTourMapTour();
+                          } else if (tourType === "photobooth") {
+                            await apiCompletePhotoboothTour();
+                          } else {
+                            await apiCompleteTour();
+                          }
+                          setHasCompletedTour(true);
+                        } catch {}
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })()}
+        </>
+      )}
       {run &&
         steps[stepIndex]?.target === ".trip-tour-ender" &&
         (() => {
@@ -1339,13 +1405,16 @@ export default function TourProvider({
                   external
                   continuous
                   index={stepIndex}
-                  step={steps[stepIndex]}
+                  step={localizeStep(steps[stepIndex])}
                   isLastStep={stepIndex >= steps.length - 1}
                   size={steps.length}
                   onBack={() => {
                     if (stepIndex <= 0) return;
                     const prevVisible = findNextVisibleIndex(stepIndex, -1);
-                    const prev = typeof prevVisible === "number" ? prevVisible : stepIndex - 1;
+                    const prev =
+                      typeof prevVisible === "number"
+                        ? prevVisible
+                        : stepIndex - 1;
                     const prevTarget = steps[prev]?.target;
                     setStepIndex(prev);
                     if (prevTarget === ".trip-tab-reviews-btn") {
@@ -1369,16 +1438,82 @@ export default function TourProvider({
                   onSkip={() => {
                     setRun(false);
                     setStepIndex(0);
+                    try {
+                      if (tourType === "homepage") {
+                        if (userRole === "guest")
+                          localStorage.removeItem("guestReplayTutorial");
+                        if (userRole === "tourist")
+                          localStorage.removeItem("touristReplayTutorial");
+                      } else if (tourType === "map") {
+                        localStorage.removeItem("mapTourForceStart");
+                      } else if (tourType === "tourMap") {
+                        localStorage.setItem(
+                          "guestTourMapTourCompleted",
+                          "true"
+                        );
+                        localStorage.removeItem("mapTourForceStart");
+                      } else if (tourType === "guestProfile") {
+                        localStorage.removeItem("guestProfileTourForceStart");
+                      } else if (tourType === "photobooth") {
+                        localStorage.removeItem(
+                          "guestPhotoboothTourForceStart"
+                        );
+                      } else if (tourType === "emergency") {
+                        localStorage.removeItem("guestEmergencyTourForceStart");
+                      }
+                    } catch {}
+                    setHasCompletedTour(true);
                   }}
                   onNext={async () => {
                     setRun(false);
                     setStepIndex(0);
+                    try {
+                      if (tourType === "homepage") {
+                        if (userRole === "guest")
+                          localStorage.removeItem("guestReplayTutorial");
+                        if (userRole === "tourist")
+                          localStorage.removeItem("touristReplayTutorial");
+                      } else if (tourType === "map") {
+                        localStorage.removeItem("mapTourForceStart");
+                      } else if (tourType === "tourMap") {
+                        localStorage.setItem(
+                          "guestTourMapTourCompleted",
+                          "true"
+                        );
+                        localStorage.removeItem("mapTourForceStart");
+                      } else if (tourType === "guestProfile") {
+                        localStorage.removeItem("guestProfileTourForceStart");
+                      } else if (tourType === "photobooth") {
+                        localStorage.removeItem(
+                          "guestPhotoboothTourForceStart"
+                        );
+                      } else if (tourType === "emergency") {
+                        localStorage.removeItem("guestEmergencyTourForceStart");
+                      }
+                    } catch {}
+                    setHasCompletedTour(true);
                     if (
                       userRole === "tourist" &&
                       localStorage.getItem("token")
                     ) {
                       try {
-                        await apiCompleteTripArchiveTour();
+                        if (tourType === "createItinerary") {
+                          await apiCompleteCreateItineraryTour();
+                        } else if (tourType === "emergency") {
+                          await apiCompleteEmergencyTour();
+                        } else if (tourType === "profile") {
+                          await apiCompleteProfileTour();
+                        } else if (tourType === "guestProfile") {
+                          await apiCompleteGuestProfileTour();
+                        } else if (tourType === "tourMap") {
+                          await apiCompleteTourMapTour();
+                        } else if (tourType === "photobooth") {
+                          await apiCompletePhotoboothTour();
+                        } else if (tourType === "tripArchive") {
+                          await apiCompleteTripArchiveTour();
+                        } else {
+                          await apiCompleteTour();
+                        }
                         setHasCompletedTour(true);
                       } catch {}
                     }
@@ -1386,12 +1521,53 @@ export default function TourProvider({
                   onClose={async () => {
                     setRun(false);
                     setStepIndex(0);
+                    try {
+                      if (tourType === "homepage") {
+                        if (userRole === "guest")
+                          localStorage.removeItem("guestReplayTutorial");
+                        if (userRole === "tourist")
+                          localStorage.removeItem("touristReplayTutorial");
+                      } else if (tourType === "map") {
+                        localStorage.removeItem("mapTourForceStart");
+                      } else if (tourType === "tourMap") {
+                        localStorage.setItem(
+                          "guestTourMapTourCompleted",
+                          "true"
+                        );
+                        localStorage.removeItem("mapTourForceStart");
+                      } else if (tourType === "guestProfile") {
+                        localStorage.removeItem("guestProfileTourForceStart");
+                      } else if (tourType === "photobooth") {
+                        localStorage.removeItem(
+                          "guestPhotoboothTourForceStart"
+                        );
+                      } else if (tourType === "emergency") {
+                        localStorage.removeItem("guestEmergencyTourForceStart");
+                      }
+                    } catch {}
+                    setHasCompletedTour(true);
                     if (
                       userRole === "tourist" &&
                       localStorage.getItem("token")
                     ) {
                       try {
-                        await apiCompleteTripArchiveTour();
+                        if (tourType === "createItinerary") {
+                          await apiCompleteCreateItineraryTour();
+                        } else if (tourType === "emergency") {
+                          await apiCompleteEmergencyTour();
+                        } else if (tourType === "profile") {
+                          await apiCompleteProfileTour();
+                        } else if (tourType === "guestProfile") {
+                          await apiCompleteGuestProfileTour();
+                        } else if (tourType === "tourMap") {
+                          await apiCompleteTourMapTour();
+                        } else if (tourType === "photobooth") {
+                          await apiCompletePhotoboothTour();
+                        } else if (tourType === "tripArchive") {
+                          await apiCompleteTripArchiveTour();
+                        } else {
+                          await apiCompleteTour();
+                        }
                         setHasCompletedTour(true);
                       } catch {}
                     }

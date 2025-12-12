@@ -9,7 +9,7 @@ import TourProvider from "../../TourComponents/TourProvider";
 import { useTour } from "../../TourComponents/TourContext";
 import { guestTourSteps } from "../../TourComponents/tourSteps";
 import ModernLoader from "../../shared/ModernLoader";
-import { Compass, UserPlus } from "lucide-react";
+import { Compass, UserPlus, X } from "lucide-react";
 
 export default function GuestHomepage() {
   return (
@@ -20,6 +20,7 @@ export default function GuestHomepage() {
       disableScrolling={true}
       tourType="homepage"
     >
+      <GuestHomepageTourAutostart />
       <GuestHomepageContent />
     </TourProvider>
   );
@@ -32,6 +33,8 @@ function GuestHomepageContent() {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showTutorialPromptGuest, setShowTutorialPromptGuest] = useState(false);
+  const [processingGuest, setProcessingGuest] = useState(false);
 
   // Optimized preloading with progress tracking
   useEffect(() => {
@@ -129,20 +132,17 @@ function GuestHomepageContent() {
 
   // No TTS here; voice guidance is exclusive to itinerary maps
 
-  // Auto-start guest tutorial only when explicitly enabled via settings
   useEffect(() => {
-    const disabled = localStorage.getItem("guestTutorialsDisabled") === "true";
-    const replay = localStorage.getItem("guestReplayTutorial") === "true";
-    if (!disabled && replay) {
-      setTimeout(() => {
-        startTour();
-      }, 800);
-    }
-  }, [startTour]);
+    try {
+      const isGuest = localStorage.getItem("guest") === "true";
+      const shown = localStorage.getItem("guestTutorialPromptShown") === "true";
+      if (isGuest && !shown) setShowTutorialPromptGuest(true);
+    } catch {}
+  }, []);
 
   // const isRealPhone = () => true;
   // const isPhone = isRealPhone();
-   const DESKTOP_BREAKPOINT = 1400;
+  const DESKTOP_BREAKPOINT = 1400;
   const [isDesktop, setIsDesktop] = useState(
     () => window.innerWidth >= DESKTOP_BREAKPOINT
   );
@@ -161,6 +161,186 @@ function GuestHomepageContent() {
 
   return (
     <>
+      {showTutorialPromptGuest && (
+        <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative w-full max-w-sm mx-4">
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
+              <img src="/juan/Juan3.png" alt="Juan" className="w-14 h-14" />
+            </div>
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200/60 overflow-hidden">
+              <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex items-center justify-between border-b border-gray-100">
+                <h3 className="text-gray-900 font-semibold text-base sm:text-lg">
+                  {(() => {
+                    const lang = (
+                      localStorage.getItem("i18nextLng") ||
+                      i18n.language ||
+                      "en"
+                    ).toLowerCase();
+                    const isTl =
+                      lang.startsWith("tl") ||
+                      lang.startsWith("fil") ||
+                      lang.startsWith("tagalog");
+                    return isTl ? "Animated Guides" : "Animated Guides";
+                  })()}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowTutorialPromptGuest(false);
+                    try {
+                      localStorage.setItem("guestTutorialPromptShown", "true");
+                    } catch {}
+                  }}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+              <div className="h-1 bg-gray-100">
+                <div
+                  className="h-full bg-[#f04e37]"
+                  style={{ width: "24%" }}
+                ></div>
+              </div>
+              <div className="px-4 sm:px-6 py-4 sm:py-5">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {(() => {
+                    const lang = (
+                      localStorage.getItem("i18nextLng") ||
+                      i18n.language ||
+                      "en"
+                    ).toLowerCase();
+                    const isTl =
+                      lang.startsWith("tl") ||
+                      lang.startsWith("fil") ||
+                      lang.startsWith("tagalog");
+                    return isTl
+                      ? "Gusto mo bang i-enable ang animated guides sa app?"
+                      : "Would you like to enable animated guides across the app?";
+                  })()}
+                </p>
+                <p className="text-xs text-gray-500 mt-3">
+                  {(() => {
+                    const lang = (
+                      localStorage.getItem("i18nextLng") ||
+                      i18n.language ||
+                      "en"
+                    ).toLowerCase();
+                    const isTl =
+                      lang.startsWith("tl") ||
+                      lang.startsWith("fil") ||
+                      lang.startsWith("tagalog");
+                    return isTl
+                      ? "Maaari mo itong i-reactivate sa Settings."
+                      : "You can reactivate this anytime in Settings.";
+                  })()}
+                  <button
+                    onClick={() => navigate("/GuestProfile/GuestSettings")}
+                    className="ml-2 text-[#f04e37] hover:underline"
+                  >
+                    Settings
+                  </button>
+                </p>
+              </div>
+              <div className="px-4 sm:px-6 py-3 sm:py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    disabled={processingGuest}
+                    onClick={() => {
+                      setProcessingGuest(true);
+                      try {
+                        localStorage.setItem("guestTutorialsDisabled", "true");
+                        localStorage.setItem(
+                          "guestTourMapTourCompleted",
+                          "true"
+                        );
+                        localStorage.removeItem("tourMapReplayTutorial");
+                        localStorage.removeItem("guestReplayTutorial");
+                        localStorage.removeItem("mapTourForceStart");
+                        localStorage.removeItem("guestProfileTourForceStart");
+                        localStorage.removeItem(
+                          "guestPhotoboothTourForceStart"
+                        );
+                        localStorage.removeItem("guestEmergencyTourForceStart");
+                        localStorage.setItem(
+                          "guestTutorialPromptShown",
+                          "true"
+                        );
+                      } catch {}
+                      setProcessingGuest(false);
+                      setShowTutorialPromptGuest(false);
+                    }}
+                    className="px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm"
+                  >
+                    {(() => {
+                      const lang = (
+                        localStorage.getItem("i18nextLng") ||
+                        i18n.language ||
+                        "en"
+                      ).toLowerCase();
+                      const isTl =
+                        lang.startsWith("tl") ||
+                        lang.startsWith("fil") ||
+                        lang.startsWith("tagalog");
+                      return isTl ? "Laktawan" : "Skip";
+                    })()}
+                  </button>
+                  <button
+                    disabled={processingGuest}
+                    onClick={() => {
+                      setProcessingGuest(true);
+                      try {
+                        localStorage.removeItem("guestTutorialsDisabled");
+                        localStorage.setItem("guestReplayTutorial", "true");
+                        localStorage.setItem("mapTourForceStart", "true");
+                        localStorage.setItem(
+                          "guestProfileTourForceStart",
+                          "true"
+                        );
+                        localStorage.removeItem("guestTourMapTourCompleted");
+                        localStorage.setItem("tourMapReplayTutorial", "true");
+                        localStorage.setItem(
+                          "guestPhotoboothTourForceStart",
+                          "true"
+                        );
+                        localStorage.setItem(
+                          "guestEmergencyTourForceStart",
+                          "true"
+                        );
+                        localStorage.setItem(
+                          "guestTutorialPromptShown",
+                          "true"
+                        );
+                      } catch {}
+                      setProcessingGuest(false);
+                      setShowTutorialPromptGuest(false);
+                      try {
+                        if (typeof startTour === "function") {
+                          setTimeout(() => startTour(), 300);
+                        }
+                      } catch {}
+                    }}
+                    className="flex items-center gap-1 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full shadow-sm"
+                  >
+                    {(() => {
+                      const lang = (
+                        localStorage.getItem("i18nextLng") ||
+                        i18n.language ||
+                        "en"
+                      ).toLowerCase();
+                      const isTl =
+                        lang.startsWith("tl") ||
+                        lang.startsWith("fil") ||
+                        lang.startsWith("tagalog");
+                      return isTl ? "Simulan" : "Get Started";
+                    })()}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div
         className="min-h-screen flex flex-col items-center justify-start overflow-hidden relative
           bg-[url('/icons/BGEnhanced4.png')] sm:bg-[url('/JuanderBG3.png')] select-none"
@@ -214,7 +394,7 @@ function GuestHomepageContent() {
           className="fixed bottom-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md text-[#f04e37] font-bold shadow-[0_6px_24px_rgba(0,0,0,0.15)] rounded-2xl px-6 min-w-[12rem] sm:min-w-[13rem] lg:min-w-[18rem] h-14 sm:h-16 text-lg sm:text-xl hover:bg-[#f04e37] hover:text-white hover:shadow-[0_10px_36px_rgba(240,78,55,0.35)] hover:-translate-y-0.5 active:translate-y-0 focus:outline-none transition-all duration-300 ease-out border border-white/60 flex items-center justify-center gap-3 z-40"
         >
           <Compass className="w-5 h-5" />
-        <span>{isDesktop ? t("explore") : t("startTour")}</span>
+          <span>{isDesktop ? t("explore") : t("startTour")}</span>
         </button>
 
         {/* Floating Chatbot (Juan Mascot) */}
@@ -222,4 +402,29 @@ function GuestHomepageContent() {
       </div>
     </>
   );
+}
+
+function GuestHomepageTourAutostart() {
+  const { startTour, isTourRunning, hasCompletedTour } = useTour();
+  const didAutoStartRef = React.useRef(false);
+
+  useEffect(() => {
+    if (didAutoStartRef.current) return;
+    if (hasCompletedTour === null) return;
+
+    try {
+      const promptShown =
+        localStorage.getItem("guestTutorialPromptShown") === "true";
+      if (!promptShown) return;
+    } catch {}
+
+    if (hasCompletedTour === false && !isTourRunning) {
+      didAutoStartRef.current = true;
+      setTimeout(() => {
+        startTour();
+      }, 600);
+    }
+  }, [hasCompletedTour, startTour, isTourRunning]);
+
+  return null;
 }

@@ -25,6 +25,7 @@ export default function MapControlButtons({
   setShowTransportPanel,
   transportMode,
   setTransportMode,
+  onActivateGps,
   hideRecenterButton = false,
 }) {
   const { t } = useTranslation();
@@ -89,7 +90,13 @@ export default function MapControlButtons({
     if (needsCompassPermission && !compassPermissionGranted) {
       await requestCompassPermission();
     } else {
-      // Just center to user location
+      // If GPS not yet active or no userLocation, trigger activation
+      if (!userLocation && typeof onActivateGps === "function") {
+        try {
+          onActivateGps();
+        } catch {}
+      }
+      // Center to user location if available
       if (userLocation) {
         setViewState({
           latitude: userLocation.latitude,
@@ -135,8 +142,8 @@ export default function MapControlButtons({
         )}
       </button>
 
-      {/* Recenter to User Location Button with Compass Permission */}
-      {userLocation && !hideRecenterButton && (
+      {/* GPS / Center Button (visible even before GPS to allow activation) */}
+      {!hideRecenterButton && (
         <button
           onClick={handleCenterToUser}
           className={`map-center-btn p-3 rounded-full shadow-lg border-2 transition-all duration-200 active:scale-95 ${
@@ -145,12 +152,16 @@ export default function MapControlButtons({
               : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
           }`}
           title={
-            needsCompassPermission && !compassPermissionGranted
+            !userLocation
+              ? "Enable GPS and center"
+              : needsCompassPermission && !compassPermissionGranted
               ? "Enable compass & center"
               : "Go to my location"
           }
           aria-label={
-            needsCompassPermission && !compassPermissionGranted
+            !userLocation
+              ? "Enable GPS and center"
+              : needsCompassPermission && !compassPermissionGranted
               ? "Enable compass and center to location"
               : "Center to my location"
           }

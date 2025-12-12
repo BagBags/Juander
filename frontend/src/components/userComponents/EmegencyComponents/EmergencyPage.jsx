@@ -145,6 +145,7 @@ function EmergencyTourAutostart() {
   const [started, setStarted] = useState(false);
   useEffect(() => {
     if (started) return;
+    if (hasCompletedTour === null) return;
     if (!hasCompletedTour && !isTourRunning) {
       setStarted(true);
       setTimeout(() => { startTour(); }, 500);

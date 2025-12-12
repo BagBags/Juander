@@ -70,7 +70,8 @@ const SiteCard = ({ pin, onClose, distance }) => {
         typeof window.DeviceMotionEvent !== "undefined" &&
         typeof window.DeviceMotionEvent.requestPermission === "function"
       ) {
-        result.motion = (await window.DeviceMotionEvent.requestPermission()) === "granted";
+        result.motion =
+          (await window.DeviceMotionEvent.requestPermission()) === "granted";
       } else {
         result.motion = true;
       }
@@ -82,7 +83,9 @@ const SiteCard = ({ pin, onClose, distance }) => {
         typeof window.DeviceOrientationEvent !== "undefined" &&
         typeof window.DeviceOrientationEvent.requestPermission === "function"
       ) {
-        result.orientation = (await window.DeviceOrientationEvent.requestPermission()) === "granted";
+        result.orientation =
+          (await window.DeviceOrientationEvent.requestPermission()) ===
+          "granted";
       } else {
         result.orientation = true;
       }
@@ -107,9 +110,15 @@ const SiteCard = ({ pin, onClose, distance }) => {
     }
 
     if (permission.motion && permission.orientation) {
-      iframeWindow.postMessage({ type: "sensor-permission", status: "granted" }, targetOrigin);
+      iframeWindow.postMessage(
+        { type: "sensor-permission", status: "granted" },
+        targetOrigin
+      );
     } else {
-      iframeWindow.postMessage({ type: "sensor-permission", status: "denied" }, targetOrigin);
+      iframeWindow.postMessage(
+        { type: "sensor-permission", status: "denied" },
+        targetOrigin
+      );
     }
   };
 
@@ -353,7 +362,13 @@ const SiteCard = ({ pin, onClose, distance }) => {
         textClassName="text-[#f04e37]"
       >
         {/* Content */}
-        <div className="px-5 py-6 pb-20 max-w-3xl mx-auto">
+        <div
+          className="px-5 py-6 pb-20 max-w-3xl mx-auto"
+          style={{
+            touchAction: "pinch-zoom pan-y pan-x",
+            overscrollBehavior: "contain",
+          }}
+        >
           {/* AR Mode fullscreen inside modal */}
           {showAR ? (
             <div className="rounded-xl flex flex-col min-h-[80vh]">
@@ -415,7 +430,10 @@ const SiteCard = ({ pin, onClose, distance }) => {
                         setScannedArUrl(null);
                       }
                     }}
-                    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }} className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
+                    style={{
+                      bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
+                    }}
+                    className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
                   >
                     <Glasses className="w-4 h-4" />
                     Open in Browser
@@ -436,7 +454,6 @@ const SiteCard = ({ pin, onClose, distance }) => {
 
                       if (confirmOpen) {
                         window.open(url, "_blank", "noopener,noreferrer");
-                        ttsService.speak("Opening AR experience in new tab");
                         setShowAR(false);
                         setScannedArUrl(null);
                       } else {
@@ -446,7 +463,6 @@ const SiteCard = ({ pin, onClose, distance }) => {
                       }
                     } else {
                       setScannedArUrl(url);
-                      ttsService.speak("QR Code scanned successfully");
                     }
                   }}
                   onClose={() => {
@@ -460,51 +476,58 @@ const SiteCard = ({ pin, onClose, distance }) => {
             <>
               {/* 3D Model Preview */}
               {pin.glbUrl && pin.glbUrl.endsWith(".glb") && (
-                <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                <div
+                  className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden"
+                  style={{
+                    backgroundImage: "url(/3DBG.webp)",
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}
+                >
                   <ErrorBoundaryLocal>
-                  <Suspense
-                    fallback={
-                      <div className="flex flex-col items-center justify-center h-full gap-4">
-                        {/* Animated 3D Cube Loader */}
-                        <div className="relative w-16 h-16">
-                          <div className="absolute inset-0 border-4 border-[#f04e37] border-t-transparent rounded-lg animate-spin"></div>
-                          <div
-                            className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin"
-                            style={{
-                              animationDirection: "reverse",
-                              animationDuration: "1s",
-                            }}
-                          ></div>
+                    <Suspense
+                      fallback={
+                        <div className="flex flex-col items-center justify-center h-full gap-4">
+                          {/* Animated 3D Cube Loader */}
+                          <div className="relative w-16 h-16">
+                            <div className="absolute inset-0 border-4 border-[#f04e37] border-t-transparent rounded-lg animate-spin"></div>
+                            <div
+                              className="absolute inset-2 border-4 border-orange-300 border-b-transparent rounded-lg animate-spin"
+                              style={{
+                                animationDirection: "reverse",
+                                animationDuration: "1s",
+                              }}
+                            ></div>
+                          </div>
+                          {/* Loading Text */}
+                          <div className="text-center">
+                            <p className="text-base font-semibold text-gray-700 mb-1">
+                              Loading 3D Model
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Please wait...
+                            </p>
+                          </div>
+                          {/* Progress Dots */}
+                          <div className="flex gap-2">
+                            <div
+                              className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
+                              style={{ animationDelay: "0ms" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
+                              style={{ animationDelay: "150ms" }}
+                            ></div>
+                            <div
+                              className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
+                              style={{ animationDelay: "300ms" }}
+                            ></div>
+                          </div>
                         </div>
-                        {/* Loading Text */}
-                        <div className="text-center">
-                          <p className="text-base font-semibold text-gray-700 mb-1">
-                            Loading 3D Model
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Please wait...
-                          </p>
-                        </div>
-                        {/* Progress Dots */}
-                        <div className="flex gap-2">
-                          <div
-                            className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
-                            style={{ animationDelay: "0ms" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
-                            style={{ animationDelay: "150ms" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-[#f04e37] rounded-full animate-bounce"
-                            style={{ animationDelay: "300ms" }}
-                          ></div>
-                        </div>
-                      </div>
-                    }
-                  >
-                    <ModelPreview url={pin.glbUrl} />
-                  </Suspense>
+                      }
+                    >
+                      <ModelPreview url={pin.glbUrl} />
+                    </Suspense>
                   </ErrorBoundaryLocal>
                 </div>
               )}

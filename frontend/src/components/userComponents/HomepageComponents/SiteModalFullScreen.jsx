@@ -789,6 +789,8 @@ export default function SiteModalFullScreen({
         className="flex-1 overflow-y-auto px-5 py-6 max-w-3xl mx-auto w-full"
         style={{
           paddingBottom: "max(env(safe-area-inset-bottom, 16px), 80px)",
+          touchAction: "pinch-zoom pan-y pan-x",
+          overscrollBehavior: "contain",
         }}
       >
         {/* AR Mode fullscreen inside modal */}
@@ -906,7 +908,14 @@ export default function SiteModalFullScreen({
           <>
             {/* 3D Model Preview */}
             {selectedPin.glbUrl && selectedPin.glbUrl.endsWith(".glb") && (
-              <div className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+              <div
+                className="mb-8 w-full h-64 md:h-80 border border-gray-200 rounded-lg overflow-hidden"
+                style={{
+                  backgroundImage: "url(/3DBG.webp)",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
                 <Suspense
                   fallback={
                     <div className="flex flex-col items-center justify-center h-full gap-4">

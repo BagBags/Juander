@@ -14,7 +14,10 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const buildEmailHtml = ({ title, message, otp, actionUrl, actionText }) => {
   const brand = "#f04e37";
   const brandLight = "#ff6b54";
-  const logoUrl = "https://d39zx5gyblzxjs.cloudfront.net/Logo.svg";
+  const frontendBase = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+  const logoUrl = frontendBase
+    ? `${frontendBase}/icons/LogoWhite.webp`
+    : "/icons/LogoWhite.webp";
   const safeAction = actionUrl || `${process.env.FRONTEND_URL || ""}/login`;
   const btnText = actionText || "Complete your registration";
   return `

@@ -8,6 +8,9 @@ import {
   faVolumeMute,
   faMicrophone,
   faStop,
+  faPause,
+  faPlay,
+  faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Chatbot() {
@@ -70,6 +73,8 @@ export default function Chatbot() {
   const [isBotTyping, setIsBotTyping] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const [speakingMessageIndex, setSpeakingMessageIndex] = useState(null);
+  const [ttsLoadingIndex, setTtsLoadingIndex] = useState(null);
+  const [isTtsPaused, setIsTtsPaused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
@@ -286,6 +291,7 @@ export default function Chatbot() {
 
   const speakMessage = async (text, messageIndex) => {
     if (!text || text === "__loading__") return;
+    if (ttsLoadingIndex !== null) return;
 
     // Stop any existing audio
     if (audioRef.current) {
@@ -296,6 +302,8 @@ export default function Chatbot() {
     try {
       const lang = detectLanguage(text);
       setSpeakingMessageIndex(messageIndex);
+      setTtsLoadingIndex(messageIndex);
+      setIsTtsPaused(false);
       const res = await fetch(
         `${
           import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
@@ -313,18 +321,38 @@ export default function Chatbot() {
       audioRef.current = audio;
       audio.onended = () => {
         setSpeakingMessageIndex(null);
+        setTtsLoadingIndex(null);
+        setIsTtsPaused(false);
         URL.revokeObjectURL(url);
         audioRef.current = null;
+        try {
+          window.dispatchEvent(new Event("chatbot-tts-stopped"));
+        } catch {}
       };
       audio.onerror = () => {
         setSpeakingMessageIndex(null);
+        setTtsLoadingIndex(null);
+        setIsTtsPaused(false);
         URL.revokeObjectURL(url);
         audioRef.current = null;
+        try {
+          window.dispatchEvent(new Event("chatbot-tts-stopped"));
+        } catch {}
       };
+      try {
+        window.dispatchEvent(new Event("chatbot-tts-started"));
+      } catch {}
+      setTtsLoadingIndex(null);
+      setIsTtsPaused(false);
       audio.play();
     } catch (err) {
       console.error("TTS playback error:", err);
       setSpeakingMessageIndex(null);
+      setTtsLoadingIndex(null);
+      setIsTtsPaused(false);
+      try {
+        window.dispatchEvent(new Event("chatbot-tts-stopped"));
+      } catch {}
     }
   };
 
@@ -337,6 +365,10 @@ export default function Chatbot() {
         audioRef.current = null;
       }
       setSpeakingMessageIndex(null);
+      setIsTtsPaused(false);
+      try {
+        window.dispatchEvent(new Event("chatbot-tts-stopped"));
+      } catch {}
     }
   };
 
@@ -346,6 +378,10 @@ export default function Chatbot() {
       audioRef.current = null;
     }
     setSpeakingMessageIndex(null);
+    setIsTtsPaused(false);
+    try {
+      window.dispatchEvent(new Event("chatbot-tts-stopped"));
+    } catch {}
   };
 
   const toggleListening = () => {
@@ -582,9 +618,15 @@ IMPORTANTENG RULES:
 - Magbigay ng kumpletong detalye kung ito ay hiningi sa tanong (oras, presyo, lokasyon).
 - Maging friendly at approachable.
 - Okay lang mag-elaborate basta relevant.
+- HUWAG MAG BANGGIT NG MGA WALA SA LOOB NG INTRAMUROS O KAYA NAMAN NG MGA MALALAPIT DITO.
 - Gumamit ng bullet (•) kung mag eenumerate.
 - HUWAG gumamit ng em dash.
 - Magpakilala ka lamang kung ito hiningi sa tanong.
+- HUWAG NA HUWAG SASAGOT NG MGA PATUNGKOL SA DIREKSYON NG KAHIT NA SAAN AT ANONG BAGAY. KAPAG IKAW AY TINANONG SABIHIN NA WALA IYON SA KAKAYAHAN MO. HUWAG NA MAG BIGAY NG IBA PANG KADUGTONG SA SAGOT MO HUWAG NA MAG TANONG PA NG KADUGTONG O MAG BIGAY NG IBANG IMPORMASYON. SUMAGOT NG MAGALANG. 
+
+- Kapag ikaw ay naka tanggap na Kamusta/Kumusta/Hello/Hi, etc na mga kamukha na nito, sagutin di ito no kamusta, mabuti, mabuhat etc an relevant. at tanungin kung mayroon syang katanungan tungkol sa intramuros
+- Huwag mag dadagdag ng follow up questions sa mga sagot mo.
+
 - HUWAG i-mention ang word na "Knowledge Base"
 - Huwag masyadong mahaba; sapat na ang 1–2 maikling paragraphs.
 `
@@ -612,6 +654,10 @@ IMPORTANT RULES:
 - You may elaborate as long as it stays relevant.
 - Dont mention the word "Knowledge Base"
 - Introduce yourself only if it was specifically asked. 
+- DO NOT MENTION ANYTHING OUTSIDE INTRAMUROS OR NEARBY.
+- NEVER ANSWER QUESTIONS ABOUT DIRECTION, NOR ANYTHING RELATED TO DIRECTION TO ANYWHERE. IF YOU ARE AKSED TO ANSWER ABOUT DIRECTION SAY THAT THIS IS NOT IN YOUR CAPABILITIES AND DO NOT ADD ANYTHING IN YOUR ANSWER. ANSWER RESPECTFULLY
+- IF YOU RECEIVE A Hi/Hello/Whats Up,anything similar etc. answer It back with hi, hello, etc and ask if they have a question about intramuros.
+- Do not add follow up questions in the end of your answers.
 - Use bullets (•) if you will enumerate.
 - DO NOT use em dash.
 - Keep answers short; 1–2 brief paragraphs only.`;
@@ -858,7 +904,6 @@ IMPORTANT RULES:
     "Tell me about Fort Santiago",
     "What's the history of Intramuros?",
     "Where can I eat in Intramuros?",
-    "How do I get to Manila Cathedral?",
   ];
 
   const handleQuickQuestion = (question) => {
@@ -956,11 +1001,41 @@ IMPORTANT RULES:
                     onClick={() => {
                       if (speakingMessageIndex === i && audioRef.current) {
                         if (audioRef.current.paused) {
-                          audioRef.current.play().catch(() => {});
+                          try {
+                            audioRef.current.play();
+                          } catch {}
+                          setIsTtsPaused(false);
+                          try {
+                            window.dispatchEvent(
+                              new Event("chatbot-tts-started")
+                            );
+                          } catch {}
                         } else {
-                          audioRef.current.pause();
+                          try {
+                            audioRef.current.pause();
+                          } catch {}
+                          setIsTtsPaused(true);
+                          try {
+                            window.dispatchEvent(
+                              new Event("chatbot-tts-stopped")
+                            );
+                          } catch {}
                         }
                       } else {
+                        // Ensure only one TTS instance: stop any existing before starting new
+                        if (audioRef.current) {
+                          try {
+                            audioRef.current.pause();
+                          } catch {}
+                          audioRef.current = null;
+                          setSpeakingMessageIndex(null);
+                          setIsTtsPaused(false);
+                          try {
+                            window.dispatchEvent(
+                              new Event("chatbot-tts-stopped")
+                            );
+                          } catch {}
+                        }
                         speakMessage(msg.content, i);
                       }
                     }}
@@ -969,9 +1044,34 @@ IMPORTANT RULES:
                         ? "bg-[#f04e37]/10 text-[#f04e37]"
                         : "text-gray-400 hover:text-[#f04e37] hover:bg-gray-100/50"
                     }`}
-                    title="Listen to message"
+                    disabled={ttsLoadingIndex !== null}
+                    title={
+                      ttsLoadingIndex === i
+                        ? "Loading..."
+                        : speakingMessageIndex === i
+                        ? isTtsPaused
+                          ? "Resume"
+                          : "Pause"
+                        : "Listen"
+                    }
                   >
-                    <FontAwesomeIcon icon={faVolumeUp} className="w-3 h-3" />
+                    {ttsLoadingIndex === i ? (
+                      <FontAwesomeIcon
+                        icon={faSpinner}
+                        className="w-3 h-3 animate-spin"
+                      />
+                    ) : speakingMessageIndex === i ? (
+                      isTtsPaused ? (
+                        <FontAwesomeIcon icon={faPause} className="w-3 h-3" />
+                      ) : (
+                        <FontAwesomeIcon
+                          icon={faVolumeUp}
+                          className="w-3 h-3"
+                        />
+                      )
+                    ) : (
+                      <FontAwesomeIcon icon={faVolumeUp} className="w-3 h-3" />
+                    )}
                   </button>
                 )}
               </div>

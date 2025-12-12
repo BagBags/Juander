@@ -1,5 +1,6 @@
 // components/userComponents/TourMap.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useGLTF } from "@react-three/drei";
 import Map from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -135,6 +136,31 @@ export default function TourMap() {
       setSelectedPin(pinData);
     });
   }, []);
+
+  useEffect(() => {
+    const url = selectedPin?.glbUrl;
+    if (url && typeof url === "string" && url.endsWith(".glb")) {
+      try {
+        useGLTF.preload(url);
+      } catch {}
+    }
+  }, [selectedPin]);
+
+  useEffect(() => {
+    const candidates = [];
+    if (pins && pins.length > 0) {
+      candidates.push(pins[0]);
+      if (pins[1]) candidates.push(pins[1]);
+    }
+    const urls = candidates
+      .map((p) => p?.glbUrl)
+      .filter((u) => u && typeof u === "string" && u.endsWith(".glb"));
+    urls.forEach((u) => {
+      try {
+        useGLTF.preload(u);
+      } catch {}
+    });
+  }, [pins]);
 
   // ------------------ Close card (reset view) ------------------
   const handleCloseCard = () => {

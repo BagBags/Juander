@@ -6,6 +6,22 @@ import ttsService from "../../../utils/textToSpeech";
 import { WifiOff, X, Compass } from "lucide-react";
 import { useTour } from "../../TourComponents/TourContext";
 import ModernLoader from "../../shared/ModernLoader";
+import {
+  resetTour,
+  resetCreateItineraryTour,
+  resetEmergencyTour,
+  resetProfileTour,
+  resetTourMapTour,
+  resetPhotoboothTour,
+  resetTripArchiveTour,
+  completeTour,
+  completeCreateItineraryTour,
+  completeEmergencyTour,
+  completeProfileTour,
+  completeTourMapTour,
+  completePhotoboothTour,
+  completeTripArchiveTour,
+} from "../../../utils/tourApi";
 
 // Lazy load heavy components
 const LogoHeader = lazy(() => import("./logoHeader"));
@@ -18,7 +34,7 @@ const TourProvider = lazy(() => import("../../TourComponents/TourProvider"));
 const { homepageTourSteps } = await import("../../TourComponents/tourSteps");
 
 export default function Homepage() {
-  const { t } = useTranslation(); // 👈 initialize translations
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [isOffline, setIsOffline] = useState(false); // Default to ONLINE for development
@@ -27,6 +43,8 @@ export default function Homepage() {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [componentsLoaded, setComponentsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
+  const [processingTutorial, setProcessingTutorial] = useState(false);
 
   // Monitor online/offline status - simplified (no backend health fetch)
   useEffect(() => {
@@ -193,6 +211,14 @@ export default function Homepage() {
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    try {
+      const hasToken = !!localStorage.getItem("token");
+      const shown = localStorage.getItem("tutorialPromptShown") === "true";
+      if (hasToken && !shown) setShowTutorialPrompt(true);
+    } catch {}
+  }, []);
+
   // Don't render anything until all components are loaded
   if (!componentsLoaded) {
     return <ModernLoader progress={loadingProgress} />;
@@ -209,6 +235,35 @@ export default function Homepage() {
       >
         {/* Autostart inside Provider to satisfy hook context */}
         <HomepageTourAutostart />
+
+        {showTutorialPrompt && (
+          <HomepageTutorialPrompt
+            onClosePrompt={() => {
+              setShowTutorialPrompt(false);
+              try {
+                localStorage.setItem("tutorialPromptShown", "true");
+              } catch {}
+            }}
+            onSkip={() => {
+              setProcessingTutorial(true);
+              try {
+                localStorage.setItem("tutorialsDisabled", "true");
+                localStorage.setItem("tutorialPromptShown", "true");
+              } catch {}
+              setProcessingTutorial(false);
+              setShowTutorialPrompt(false);
+            }}
+            onGetStarted={() => {
+              setProcessingTutorial(true);
+              try {
+                localStorage.removeItem("tutorialsDisabled");
+                localStorage.setItem("tutorialPromptShown", "true");
+              } catch {}
+              setProcessingTutorial(false);
+              setShowTutorialPrompt(false);
+            }}
+          />
+        )}
 
         <div
           className="
@@ -274,6 +329,12 @@ function HomepageTourAutostart() {
     // Wait until the TourProvider finishes fetching the status
     if (hasCompletedTour === null) return;
 
+    try {
+      const promptShown =
+        localStorage.getItem("tutorialPromptShown") === "true";
+      if (!promptShown) return;
+    } catch {}
+
     if (hasCompletedTour === false && !isTourRunning) {
       didAutoStartRef.current = true;
       setTimeout(() => {
@@ -283,4 +344,179 @@ function HomepageTourAutostart() {
   }, [hasCompletedTour, startTour, isTourRunning]);
 
   return null;
+}
+
+function HomepageTutorialPrompt({ onClosePrompt, onSkip, onGetStarted }) {
+  const { i18n } = useTranslation();
+  const { startTour } = useTour();
+  const navigate = useNavigate();
+  const [processing, setProcessing] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="relative w-full max-w-sm mx-4">
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center">
+          <img src="/juan/Juan2.png" alt="Juan" className="w-14 h-14" />
+        </div>
+        <div className="bg-white rounded-2xl shadow-2xl border border-gray-200/60 overflow-hidden">
+          <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-3 flex items-center justify-between border-b border-gray-100">
+            <h3 className="text-gray-900 font-semibold text-base sm:text-lg">
+              {(() => {
+                const lang = (
+                  localStorage.getItem("i18nextLng") ||
+                  i18n.language ||
+                  "en"
+                ).toLowerCase();
+                const isTl =
+                  lang.startsWith("tl") ||
+                  lang.startsWith("fil") ||
+                  lang.startsWith("tagalog");
+                return isTl ? "Animated Guides" : "Animated Guides";
+              })()}
+            </h3>
+            <button
+              onClick={() => {
+                onClosePrompt();
+              }}
+              className="p-2 rounded-full hover:bg-gray-100"
+              aria-label="Dismiss"
+            >
+              <X className="w-5 h-5 text-gray-700" />
+            </button>
+          </div>
+          <div className="h-1 bg-gray-100">
+            <div className="h-full bg-[#f04e37]" style={{ width: "24%" }}></div>
+          </div>
+          <div className="px-4 sm:px-6 py-4 sm:py-5">
+            <p className="text-gray-700 text-sm leading-relaxed">
+              {(() => {
+                const lang = (
+                  localStorage.getItem("i18nextLng") ||
+                  i18n.language ||
+                  "en"
+                ).toLowerCase();
+                const isTl =
+                  lang.startsWith("tl") ||
+                  lang.startsWith("fil") ||
+                  lang.startsWith("tagalog");
+                return isTl
+                  ? "Gusto mo bang i-enable ang animated guides sa app?"
+                  : "Would you like to enable animated guides across the app?";
+              })()}
+            </p>
+            <p className="text-xs text-gray-500 mt-3">
+              {(() => {
+                const lang = (
+                  localStorage.getItem("i18nextLng") ||
+                  i18n.language ||
+                  "en"
+                ).toLowerCase();
+                const isTl =
+                  lang.startsWith("tl") ||
+                  lang.startsWith("fil") ||
+                  lang.startsWith("tagalog");
+                return isTl
+                  ? "Maaari mo itong i-reactivate sa Settings."
+                  : "You can reactivate this anytime in Settings.";
+              })()}
+              <button
+                onClick={() => navigate("/Profile/Settings")}
+                className="ml-2 text-[#f04e37] hover:underline"
+              >
+                Settings
+              </button>
+            </p>
+          </div>
+          <div className="px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                disabled={processing}
+                onClick={async () => {
+                  if (processing) return;
+                  setProcessing(true);
+                  try {
+                    await Promise.all([
+                      completeTour(),
+                      completeCreateItineraryTour(),
+                      completeEmergencyTour(),
+                      completeProfileTour(),
+                      completeTourMapTour(),
+                      completePhotoboothTour(),
+                      completeTripArchiveTour(),
+                    ]).catch(() => {});
+                    try {
+                      localStorage.setItem("tutorialsDisabled", "true");
+                      localStorage.setItem("tutorialPromptShown", "true");
+                      localStorage.removeItem("tourMapReplayTutorial");
+                    } catch {}
+                    onSkip();
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+                className="px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium text-xs sm:text-sm"
+              >
+                {(() => {
+                  const lang = (
+                    localStorage.getItem("i18nextLng") ||
+                    i18n.language ||
+                    "en"
+                  ).toLowerCase();
+                  const isTl =
+                    lang.startsWith("tl") ||
+                    lang.startsWith("fil") ||
+                    lang.startsWith("tagalog");
+                  return isTl ? "Laktawan" : "Skip";
+                })()}
+              </button>
+              <button
+                disabled={processing}
+                onClick={async () => {
+                  if (processing) return;
+                  setProcessing(true);
+                  try {
+                    await Promise.all([
+                      resetTour(),
+                      resetCreateItineraryTour(),
+                      resetEmergencyTour(),
+                      resetProfileTour(),
+                      resetTourMapTour(),
+                      resetPhotoboothTour(),
+                      resetTripArchiveTour(),
+                    ]).catch(() => {});
+                    try {
+                      localStorage.removeItem("tutorialsDisabled");
+                      localStorage.setItem("tutorialPromptShown", "true");
+                    } catch {}
+                    onGetStarted();
+                    setTimeout(() => {
+                      try {
+                        if (typeof startTour === "function") startTour();
+                      } catch {}
+                    }, 300);
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+                className="flex items-center gap-1 px-4 sm:px-5 py-1.5 bg-[#f04e37] hover:bg-[#e03d2d] text-white font-semibold text-xs sm:text-sm rounded-full shadow-sm"
+              >
+                {(() => {
+                  const lang = (
+                    localStorage.getItem("i18nextLng") ||
+                    i18n.language ||
+                    "en"
+                  ).toLowerCase();
+                  const isTl =
+                    lang.startsWith("tl") ||
+                    lang.startsWith("fil") ||
+                    lang.startsWith("tagalog");
+                  return isTl ? "Simulan" : "Get Started";
+                })()}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

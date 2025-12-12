@@ -78,6 +78,15 @@ export const homepageTourSteps = [
 // Guided tour for itinerary map pages (tourist and guest)
 export const mapTourSteps = [
   {
+    target: ".itinerary-start-tour-btn",
+    content: "Begin the tour and enable GPS guidance.",
+    placement: "auto",
+    title: "Start Tour",
+    titleTl: "Simulan ang Tour",
+    contentTl: "Simulan ang tour at i-enable ang GPS.",
+    avatar: "/juan/Juan3.png",
+  },
+  {
     target: ".map-tts-toggle",
     content: "Toggle voice directions.",
     placement: "auto",
@@ -139,6 +148,15 @@ export const mapTourSteps = [
     titleTl: "Susunod / Tapusin",
     contentTl: "Punta sa next na lugar. Tapusin kapag huli na.",
     avatar: "/juan/Juan3.png",
+  },
+  {
+    target: ".trip-tour-ender",
+    content: "You're all set. End the guide or restart.",
+    placement: "auto",
+    title: "Finish Guide",
+    titleTl: "Tapusin ang Guide",
+    contentTl: "Handa ka na. Tapusin o i-restart ang guide.",
+    avatar: "/juan/Juan2.png",
   },
 ];
 

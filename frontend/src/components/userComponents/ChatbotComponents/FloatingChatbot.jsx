@@ -71,7 +71,6 @@ export default function FloatingChatbot() {
     let prevOverflow = "";
     let prevTouchAction = "";
     let prevOverscroll = "";
-    let prevViewport = "";
 
     if (isOpen) {
       prevOverflow = document.body.style.overflow;
@@ -80,14 +79,7 @@ export default function FloatingChatbot() {
       document.body.style.overflow = "hidden";
       document.body.style.touchAction = "none";
       document.body.style.overscrollBehavior = "none";
-      const meta = document.querySelector('meta[name="viewport"]');
-      if (meta) prevViewport = meta.getAttribute("content") || "";
-      if (meta) {
-        meta.setAttribute(
-          "content",
-          "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-        );
-      }
+      
     }
 
     return () => {
@@ -95,8 +87,7 @@ export default function FloatingChatbot() {
         document.body.style.overflow = prevOverflow || "";
         document.body.style.touchAction = prevTouchAction || "";
         document.body.style.overscrollBehavior = prevOverscroll || "";
-        const meta = document.querySelector('meta[name="viewport"]');
-        if (meta && prevViewport) meta.setAttribute("content", prevViewport);
+        
       }
     };
   }, [isOpen]);
@@ -239,7 +230,10 @@ export default function FloatingChatbot() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-hidden">
+            <div
+              className="flex-1 overflow-hidden"
+              style={{ touchAction: "pinch-zoom pan-y pan-x", overscrollBehavior: "contain" }}
+            >
               <Chatbot />
             </div>
           </motion.div>

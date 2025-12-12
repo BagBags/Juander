@@ -202,14 +202,16 @@ export default function TouristItineraryMap() {
   }, [activePin]);
 
   useEffect(() => {
-    const list = optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
+    const list =
+      optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
     const candidates = [];
     if (list && list.length > 0) {
       candidates.push(list[0]);
       if (list[1]) candidates.push(list[1]);
       if (currentPinIndex != null && list[currentPinIndex]) {
         candidates.push(list[currentPinIndex]);
-        if (list[currentPinIndex + 1]) candidates.push(list[currentPinIndex + 1]);
+        if (list[currentPinIndex + 1])
+          candidates.push(list[currentPinIndex + 1]);
       }
     }
     const urls = candidates
@@ -376,9 +378,7 @@ export default function TouristItineraryMap() {
       const nextPin = optimizedPins[nextIndex];
       setActivePin(nextPin);
       setSelectedPin(nextPin);
-      if (userLocation) {
-        buildRoute(userLocation, nextPin);
-      }
+      buildRoute(userLocation, nextPin);
       saveProgress(
         nextIndex,
         visitedSites,
@@ -418,9 +418,7 @@ export default function TouristItineraryMap() {
             const pp = optimizedPins[pi];
             setActivePin(pp);
             setSelectedPin(pp);
-            if (userLocation) {
-              buildRoute(userLocation, pp);
-            }
+            buildRoute(userLocation, pp);
             saveProgress(
               pi,
               visitedSites,
@@ -440,9 +438,7 @@ export default function TouristItineraryMap() {
       const prevPin2 = optimizedPins[prevIndex];
       setActivePin(prevPin2);
       setSelectedPin(prevPin2);
-      if (userLocation) {
-        buildRoute(userLocation, prevPin2);
-      }
+      buildRoute(userLocation, prevPin2);
       saveProgress(
         prevIndex,
         visitedSites,
@@ -497,9 +493,7 @@ export default function TouristItineraryMap() {
       const np = optimizedPins[nextIndex];
       setActivePin(np);
       setSelectedPin(np);
-      if (userLocation) {
-        buildRoute(userLocation, np);
-      }
+      buildRoute(userLocation, np);
       saveProgress(
         nextIndex,
         updatedVisited,
@@ -566,7 +560,7 @@ export default function TouristItineraryMap() {
           const haversineMeters = (lat1, lng1, lat2, lng2) => {
             const R = 6371000;
             const dLat = toRad(lat2 - lat1);
-            const dLng = toRad(lat2 - lat1);
+            const dLng = toRad(lng2 - lng1);
             const a =
               Math.sin(dLat / 2) ** 2 +
               Math.cos(toRad(lat1)) *
@@ -1141,14 +1135,31 @@ export default function TouristItineraryMap() {
   }, [pins, selectedPin, manuallyDismissed, currentPinIndex]);
 
   /** Handle GeolocateControl events */
-  const handleGeolocate = useCallback((e) => {
-    // Update user location when geolocate control gets position
-    const newLoc = {
-      latitude: e.coords.latitude,
-      longitude: e.coords.longitude,
-    };
-    setUserLocation(newLoc);
-  }, []);
+  const handleGeolocate = useCallback(
+    (e) => {
+      const newLoc = {
+        latitude: e.coords.latitude,
+        longitude: e.coords.longitude,
+      };
+      setUserLocation(newLoc);
+      try {
+        const map = mapRef.current?.getMap?.();
+        if (map) {
+          const currentZoom =
+            typeof map.getZoom === "function"
+              ? map.getZoom()
+              : viewState?.zoom || 16;
+          map.easeTo({
+            center: [newLoc.longitude, newLoc.latitude],
+            zoom: Math.max(currentZoom, 16.5),
+            duration: 300,
+            essential: true,
+          });
+        }
+      } catch {}
+    },
+    [viewState]
+  );
 
   const handleGeolocateError = useCallback((e) => {
     console.error("Geolocate error:", e);
@@ -1545,7 +1556,13 @@ export default function TouristItineraryMap() {
 
   /** Build route from user → current pin */
   const buildRoute = async (start, pin) => {
-    if (!start || !pin) return;
+    if (!pin) return;
+    if (!start) {
+      start = {
+        latitude: viewState?.latitude ?? 14.5896,
+        longitude: viewState?.longitude ?? 120.9747,
+      };
+    }
 
     try {
       const reqId = ++routingReqId.current;
@@ -1968,7 +1985,7 @@ export default function TouristItineraryMap() {
       setActivePin(nextPin);
       setSelectedPin(nextPin);
       setManuallyDismissed(false);
-      if (userLocation) buildRoute(userLocation, nextPin);
+      buildRoute(userLocation, nextPin);
 
       saveProgress(
         nextIndex,
@@ -2021,7 +2038,7 @@ export default function TouristItineraryMap() {
             type: "warning",
             title: "Stay Alert",
             message:
-              "For your safety, please stay aware of your surroundings and watch the streets while navigating.",
+              "Be mindful of your surroundings. Keep valuables secure, beware of pickpockets, and avoid overpriced services by using trusted vendors.",
           });
           setTimeout(() => {
             setNotification((n) =>
@@ -2099,16 +2116,35 @@ export default function TouristItineraryMap() {
                 setShowGpsModal(false);
                 setGpsPermissionDenied(false);
                 setGpsError("");
-
-                if (!within) {
-                  setShowLocationBlockModal(true);
-                  setIsBackdropActive(false);
-                  return;
-                }
-
+                // if (!within) {
+                //   setShowLocationBlockModal(true);
+                //   setIsBackdropActive(false);
+                //   return;
+                // }
                 setGpsApproved(true);
                 setIsBackdropActive(false);
-                setShowModeModal(true);
+                (async () => {
+                  try {
+                    setTourMode("original");
+                    const original = [...pins];
+                    setOptimizedPins(original);
+                    if (original.length > 0) {
+                      setCurrentPinIndex(0);
+                      setSelectedPin(original[0]);
+                      setActivePin(original[0]);
+                      await saveProgress(
+                        0,
+                        visitedSites,
+                        skippedSites,
+                        loc,
+                        original
+                      );
+                      buildRoute(loc, original[0]);
+                    }
+                    setIsPreviewMode(false);
+                    setIsGuidanceRunning(true);
+                  } catch {}
+                })();
               },
               (err) => {
                 if (err.code === err.PERMISSION_DENIED) {
@@ -2220,21 +2256,22 @@ export default function TouristItineraryMap() {
           )}
 
           {/* GeolocateControl appears after GPS approval */}
-          {gpsApproved && (
-            <GeolocateControl
-              ref={geolocateControlRef}
-              positionOptions={{
-                enableHighAccuracy: true,
-                maximumAge: 0,
-                timeout: 6000,
-              }}
-              trackUserLocation={true}
-              showUserHeading={false}
-              onGeolocate={handleGeolocate}
-              onError={handleGeolocateError}
-              style={{ position: "absolute", bottom: 10, right: 10 }}
-            />
-          )}
+          <GeolocateControl
+            ref={geolocateControlRef}
+            position="top-right"
+            positionOptions={{
+              enableHighAccuracy: true,
+              maximumAge: 0,
+              timeout: 10000,
+            }}
+            trackUserLocation={true}
+            showUserHeading={false}
+            showAccuracyCircle={true}
+            showUserLocation={true}
+            fitBoundsOptions={{ maxZoom: 18 }}
+            onGeolocate={handleGeolocate}
+            onError={handleGeolocateError}
+          />
 
           {/* Site markers - preview uses raw pins, tour uses optimized */}
           {(isGuidanceRunning ? optimizedPins : pins).map((pin, idx) => {
@@ -2253,8 +2290,7 @@ export default function TouristItineraryMap() {
                   if (!activePin || activePin._id === pin._id) {
                     setCurrentPinIndex(idx);
                     setActivePin(pin);
-                    if (isGuidanceRunning && userLocation)
-                      buildRoute(userLocation, pin);
+                    if (isGuidanceRunning) buildRoute(userLocation, pin);
                   }
                 }}
               >
@@ -2330,6 +2366,11 @@ export default function TouristItineraryMap() {
             setShowTransportPanel={setShowTransportPanel}
             transportMode={transportMode}
             setTransportMode={setTransportMode}
+            onActivateGps={() => {
+              try {
+                geolocateControlRef.current?.trigger();
+              } catch {}
+            }}
           />
         )}
 
@@ -2431,7 +2472,8 @@ export default function TouristItineraryMap() {
           type="warning"
         />
 
-        {/* Location Block Modal - User outside Intramuros */}
+        {/*
+        Location Block Modal - User outside Intramuros (temporarily disabled)
         <ConfirmModal
           isOpen={showLocationBlockModal}
           onClose={() => {
@@ -2446,6 +2488,7 @@ export default function TouristItineraryMap() {
           cancelText=""
           type="error"
         />
+        */}
 
         {/* Backdrop to prevent bypass during GPS validation */}
         {isBackdropActive && (
@@ -2459,10 +2502,121 @@ export default function TouristItineraryMap() {
               <button
                 type="button"
                 onClick={() => {
-                  setIsBackdropActive(true);
-                  setShowGpsModal(true);
+                  try {
+                    if (navigator?.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const loc = {
+                            latitude: pos.coords.latitude,
+                            longitude: pos.coords.longitude,
+                          };
+                          setUserLocation(loc);
+                          setGpsApproved(true);
+                          (async () => {
+                            try {
+                              setTourMode("original");
+                              const original = [...pins];
+                              setOptimizedPins(original);
+                              if (original.length > 0) {
+                                setCurrentPinIndex(0);
+                                setSelectedPin(original[0]);
+                                setActivePin(original[0]);
+                                await saveProgress(
+                                  0,
+                                  visitedSites,
+                                  skippedSites,
+                                  loc,
+                                  original
+                                );
+                                buildRoute(loc, original[0]);
+                              }
+                              setIsPreviewMode(false);
+                              setIsGuidanceRunning(true);
+                            } catch {}
+                          })();
+                        },
+                        (err) => {
+                          setGpsPermissionDenied(
+                            err?.code === err.PERMISSION_DENIED
+                          );
+                          setGpsError(
+                            err?.code === err.PERMISSION_DENIED
+                              ? "Location access denied. Enable location in browser settings, then refresh."
+                              : "We couldn't access your location. You can proceed without GPS."
+                          );
+                          try {
+                            setTourMode("original");
+                            const original = [...pins];
+                            setOptimizedPins(original);
+                            if (original.length > 0) {
+                              setCurrentPinIndex(0);
+                              setSelectedPin(original[0]);
+                              setActivePin(original[0]);
+                              saveProgress(
+                                0,
+                                visitedSites,
+                                skippedSites,
+                                null,
+                                original
+                              );
+                            }
+                            setIsPreviewMode(false);
+                            setIsGuidanceRunning(true);
+                          } catch {}
+                        },
+                        {
+                          enableHighAccuracy: true,
+                          maximumAge: 0,
+                          timeout: 5000,
+                        }
+                      );
+                    } else {
+                      setGpsError(
+                        "GPS is unavailable in this browser. You can proceed without GPS."
+                      );
+                      try {
+                        setTourMode("original");
+                        const original = [...pins];
+                        setOptimizedPins(original);
+                        if (original.length > 0) {
+                          setCurrentPinIndex(0);
+                          setSelectedPin(original[0]);
+                          setActivePin(original[0]);
+                          saveProgress(
+                            0,
+                            visitedSites,
+                            skippedSites,
+                            null,
+                            original
+                          );
+                        }
+                        setIsPreviewMode(false);
+                        setIsGuidanceRunning(true);
+                      } catch {}
+                    }
+                  } catch {
+                    try {
+                      setTourMode("original");
+                      const original = [...pins];
+                      setOptimizedPins(original);
+                      if (original.length > 0) {
+                        setCurrentPinIndex(0);
+                        setSelectedPin(original[0]);
+                        setActivePin(original[0]);
+                        saveProgress(
+                          0,
+                          visitedSites,
+                          skippedSites,
+                          null,
+                          original
+                        );
+                      }
+                      setIsPreviewMode(false);
+                      setIsGuidanceRunning(true);
+                    } catch {}
+                  }
                 }}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
+                className="itinerary-start-tour-btn w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
               >
                 <Navigation className="w-5 h-5" /> Start Tour
               </button>
@@ -2473,95 +2627,7 @@ export default function TouristItineraryMap() {
           </div>
         )}
 
-        {/* Tour Mode Choice */}
-        {showModeModal && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Choose How You Want to Follow the Tour
-                </h3>
-              </div>
-              <div className="p-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <button
-                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
-                  onClick={async () => {
-                    if (isOutsideBounds) {
-                      setShowLocationBlockModal(true);
-                      return;
-                    }
-                    setTourMode("optimized");
-                    setShowModeModal(false);
-                    const optimized = optimizeRoute(
-                      userLocation,
-                      pins,
-                      visitedSites
-                    );
-                    setOptimizedPins(optimized);
-                    if (optimized.length > 0) {
-                      setCurrentPinIndex(0);
-                      setSelectedPin(optimized[0]);
-                      setActivePin(optimized[0]);
-                      await saveProgress(
-                        0,
-                        visitedSites,
-                        skippedSites,
-                        userLocation,
-                        optimized
-                      );
-                      buildRoute(userLocation, optimized[0]);
-                    }
-                    setIsPreviewMode(false);
-                    setIsGuidanceRunning(true);
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-blue-600 font-semibold">
-                    <Navigation className="w-5 h-5" /> Optimized Route
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Automatically arranges the sites based on your current
-                    location for the fastest route.
-                  </p>
-                </button>
-                <button
-                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
-                  onClick={async () => {
-                    if (isOutsideBounds) {
-                      setShowLocationBlockModal(true);
-                      return;
-                    }
-                    setTourMode("original");
-                    setShowModeModal(false);
-                    const original = [...pins];
-                    setOptimizedPins(original);
-                    if (original.length > 0) {
-                      setCurrentPinIndex(0);
-                      setSelectedPin(original[0]);
-                      setActivePin(original[0]);
-                      await saveProgress(
-                        0,
-                        visitedSites,
-                        skippedSites,
-                        userLocation,
-                        original
-                      );
-                      buildRoute(userLocation, original[0]);
-                    }
-                    setIsPreviewMode(false);
-                    setIsGuidanceRunning(true);
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-gray-800 font-semibold">
-                    <ListOrdered className="w-5 h-5" /> Original Order
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Follow the sites in the order they were originally added.
-                  </p>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Tour mode choice removed; start uses original order automatically */}
       </div>
     </div>
   );

@@ -259,122 +259,150 @@ export default function Photobooth() {
         const JR =
           window.JeelizResizer || window.JEELIZRESIZER || window.JEELIZRESIZER2;
         if (!JZ || !JR) return;
-
-        JR.size_canvas({
-          canvasId: "jeeFaceFilterCanvas",
-          callback: function (isError, bestVideoSettings) {
-            if (isError) {
-              console.error("JeelizResizer error: ", isError);
-              return;
-            }
-            try {
-              // Configure camera based on facing mode
-              bestVideoSettings.facingMode = facingMode;
-              bestVideoSettings.flipX = facingMode === "user"; // Only flip for front camera
-            } catch {}
-            JZ.init({
-              canvasId: "jeeFaceFilterCanvas",
-              NNCPath:
-                "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/neuralNets/",
-              videoSettings: bestVideoSettings,
-              followZRot: true,
-              onWebcamGet: function () {
-                setJeelizReady(true);
-              },
-              callbackReady: function (errCode, spec) {
-                if (errCode) {
-                  console.error("Jeeliz init error:", errCode);
-                  return;
-                }
-                setJeelizReady(true);
-                try {
-                  videoElRef.current = spec && spec.videoElement ? spec.videoElement : null;
-                  mediaStreamRef.current = videoElRef.current && videoElRef.current.srcObject ? videoElRef.current.srcObject : null;
-                } catch {}
-              },
-              callbackTrack: function (ds) {
-                // Ensure the camera video is rendered into the WebGL canvas each frame
-                try {
-                  JZ.render_video();
-                } catch {}
-                // Save the latest detect state for overlay/capture
-                detectStateRef.current = ds;
-                // Update overlay position. Frames/Borders should show even without a face.
-                const cont = overlayRef.current;
-                const imgEl = overlayImgRef.current;
-                const canvas = canvasRef.current;
-                const width = canvas?.clientWidth || 0;
-                const height = canvas?.clientHeight || 0;
-                const category = imgEl?.dataset?.category || "general";
-
-                if (cont && imgEl) {
-                  // Always show frame/border overlays fullscreen
-                  if (category === "frame" || category === "border") {
-                    try {
-                      cont.style.display = "block";
-                      cont.style.position = "absolute";
-                      cont.style.left = "0px";
-                      cont.style.top = "0px";
-                      cont.style.width = `${width}px`;
-                      cont.style.height = `${height}px`;
-                      cont.style.transform = "none";
-                    } catch {}
-                    return; // No face detection required
+        const tryInit = () => {
+          const canvasEl = document.getElementById("jeeFaceFilterCanvas");
+          if (!canvasEl) {
+            setTimeout(tryInit, 120);
+            return;
+          }
+          const rect = canvasEl.getBoundingClientRect();
+          const parentRect = canvasEl.parentElement?.getBoundingClientRect();
+          if (
+            rect.width === 0 ||
+            rect.height === 0 ||
+            (parentRect && (parentRect.width === 0 || parentRect.height === 0))
+          ) {
+            setTimeout(tryInit, 120);
+            return;
+          }
+          setTimeout(
+            () =>
+              JR.size_canvas({
+                canvasId: "jeeFaceFilterCanvas",
+                callback: function (isError, bestVideoSettings) {
+                  if (isError) {
+                    console.error("JeelizResizer error: ", isError);
+                    return;
                   }
+                  try {
+                    bestVideoSettings.facingMode = facingMode;
+                    bestVideoSettings.flipX = facingMode === "user";
+                  } catch {}
+                  JZ.init({
+                    canvasId: "jeeFaceFilterCanvas",
+                    NNCPath:
+                      "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/neuralNets/",
+                    videoSettings: bestVideoSettings,
+                    followZRot: true,
+                    onWebcamGet: function () {
+                      setJeelizReady(true);
+                    },
+                    callbackReady: function (errCode, spec) {
+                      if (errCode) {
+                        console.error("Jeeliz init error:", errCode);
+                        return;
+                      }
+                      setJeelizReady(true);
+                      try {
+                        videoElRef.current =
+                          spec && spec.videoElement ? spec.videoElement : null;
+                        mediaStreamRef.current =
+                          videoElRef.current && videoElRef.current.srcObject
+                            ? videoElRef.current.srcObject
+                            : null;
+                      } catch {}
+                    },
+                    callbackTrack: function (ds) {
+                      try {
+                        JZ.render_video();
+                      } catch {}
+                      detectStateRef.current = ds;
+                      const cont = overlayRef.current;
+                      const imgEl = overlayImgRef.current;
+                      const canvas = canvasRef.current;
+                      const width = canvas?.clientWidth || 0;
+                      const height = canvas?.clientHeight || 0;
+                      const category = imgEl?.dataset?.category || "general";
 
-                  // For other categories, require a face to position the overlay
-                  if (ds && ds.detected > 0.5) {
-                    try {
-                      cont.style.display = "block";
-                    } catch {}
-                    const s = Math.max(0, Math.min(1, ds.s || 0.3));
-                    const centerX = (ds.x + 1) * 0.5 * width;
-                    const centerY = (1 - (ds.y + 1) * 0.5) * height; // flip Y
+                      if (cont && imgEl) {
+                        if (category === "frame" || category === "border") {
+                          try {
+                            cont.style.display = "block";
+                            cont.style.position = "absolute";
+                            cont.style.left = "0px";
+                            cont.style.top = "0px";
+                            cont.style.width = `${width}px`;
+                            cont.style.height = `${height}px`;
+                            cont.style.transform = "none";
+                          } catch {}
+                          return;
+                        }
 
-                    let widthRatio = 1.4;
-                    let heightRatio = 0.5;
-                    let offsetY = 0;
-                    if (category === "head") {
-                      // Reduce hat size and keep it above the head
-                      widthRatio = 2.2;
-                      heightRatio = 2.2;
-                      offsetY = -1.5;
-                    } else if (category === "eyes") {
-                      widthRatio = 3.5;
-                      heightRatio = 1.5;
-                      offsetY = -0.25;
-                    } else if (category === "general") {
-                      // Expand general stickers to cover the face area
-                      widthRatio = 0.9;
-                      heightRatio = 2.4;
-                      offsetY = 0.0;
-                    }
+                        if (ds && ds.detected > 0.5) {
+                          try {
+                            cont.style.display = "block";
+                          } catch {}
+                          const s = Math.max(0, Math.min(1, ds.s || 0.3));
+                          const centerX = (ds.x + 1) * 0.5 * width;
+                          const centerY = (1 - (ds.y + 1) * 0.5) * height;
 
-                    const frameW = s * width; // detection frame side
-                    const overlayW = frameW * widthRatio;
-                    const overlayH = frameW * heightRatio;
+                          let widthRatio = 1.4;
+                          let heightRatio = 0.5;
+                          let offsetY = 0;
+                          if (category === "head") {
+                            widthRatio = 2.2;
+                            heightRatio = 2.2;
+                            offsetY = 1.7;
+                          } else if (category === "eyes") {
+                            widthRatio = 3.5;
+                            heightRatio = 1.5;
+                            offsetY = -0.25;
+                          } else if (category === "general") {
+                            widthRatio = 0.9;
+                            heightRatio = 2.4;
+                            offsetY = 0.0;
+                          }
 
-                    const px = centerX;
-                    const py = centerY + offsetY * frameW;
-                    const angleRad = ds.rz || 0; // rotation around Z
+                          const frameW = s * width;
+                          const overlayW = frameW * widthRatio;
+                          const overlayH = frameW * heightRatio;
 
-                    cont.style.position = "absolute";
-                    cont.style.left = `${Math.round(px - overlayW / 2)}px`;
-                    cont.style.top = `${Math.round(py - overlayH / 2)}px`;
-                    cont.style.width = `${Math.round(overlayW)}px`;
-                    cont.style.height = `${Math.round(overlayH)}px`;
-                    cont.style.transformOrigin = "center center";
-                    cont.style.transform = `rotate(${-angleRad}rad)`;
-                  } else {
-                    try {
-                      cont.style.display = "none";
-                    } catch {}
-                  }
-                }
-              },
-            });
-          },
-        });
+                          let px = centerX;
+                          let py = centerY + offsetY * frameW;
+                          const angleRad = ds.rz || 0;
+                          const rotateRad =
+                            facingMode === "user" ? -angleRad : angleRad;
+                          if (category === "head") {
+                            const o = offsetY * frameW;
+                            const dx = Math.sin(rotateRad) * o;
+                            const dy = -Math.cos(rotateRad) * o;
+                            px = centerX + dx;
+                            py = centerY + dy;
+                          }
+
+                          cont.style.position = "absolute";
+                          cont.style.left = `${Math.round(
+                            px - overlayW / 2
+                          )}px`;
+                          cont.style.top = `${Math.round(py - overlayH / 2)}px`;
+                          cont.style.width = `${Math.round(overlayW)}px`;
+                          cont.style.height = `${Math.round(overlayH)}px`;
+                          cont.style.transformOrigin = "center center";
+                          cont.style.transform = `rotate(${rotateRad}rad)`;
+                        } else {
+                          try {
+                            cont.style.display = "none";
+                          } catch {}
+                        }
+                      }
+                    },
+                  });
+                },
+              }),
+            0
+          );
+        };
+        tryInit();
       })
       .catch((e) => console.error("Failed to load Jeeliz scripts:", e));
 
@@ -390,14 +418,24 @@ export default function Photobooth() {
         const s = mediaStreamRef.current || (v && v.srcObject);
         if (s && typeof s.getTracks === "function") {
           s.getTracks().forEach((t) => {
-            try { t.stop(); } catch {}
+            try {
+              t.stop();
+            } catch {}
           });
         }
         if (v) {
-          try { v.pause && v.pause(); } catch {}
-          try { v.srcObject = null; } catch {}
-          try { v.removeAttribute("src"); } catch {}
-          try { v.load && v.load(); } catch {}
+          try {
+            v.pause && v.pause();
+          } catch {}
+          try {
+            v.srcObject = null;
+          } catch {}
+          try {
+            v.removeAttribute("src");
+          } catch {}
+          try {
+            v.load && v.load();
+          } catch {}
         }
       } catch {}
       scheduleCameraStop(500);
@@ -416,14 +454,24 @@ export default function Photobooth() {
         const s = mediaStreamRef.current || (v && v.srcObject);
         if (s && typeof s.getTracks === "function") {
           s.getTracks().forEach((t) => {
-            try { t.stop(); } catch {}
+            try {
+              t.stop();
+            } catch {}
           });
         }
         if (v) {
-          try { v.pause && v.pause(); } catch {}
-          try { v.srcObject = null; } catch {}
-          try { v.removeAttribute("src"); } catch {}
-          try { v.load && v.load(); } catch {}
+          try {
+            v.pause && v.pause();
+          } catch {}
+          try {
+            v.srcObject = null;
+          } catch {}
+          try {
+            v.removeAttribute("src");
+          } catch {}
+          try {
+            v.load && v.load();
+          } catch {}
         }
       } catch {}
     };
@@ -720,12 +768,14 @@ export default function Photobooth() {
 
         <div
           className="camera-view"
-          style={{ display: showPreview ? "none" : "block" }}
+          style={{
+            opacity: showPreview ? 0 : 1,
+            pointerEvents: showPreview ? "none" : "auto",
+          }}
         >
           <canvas
             ref={canvasRef}
             id="jeeFaceFilterCanvas"
-            key={cameraKey}
             width="600"
             height="600"
             style={{ width: "100%", height: "100%", display: "block" }}

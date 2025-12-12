@@ -14,16 +14,16 @@ export default function PhotoboothSlider({
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const isSnappingRef = useRef(false);
   const settleTimerRef = useRef(null);
-  
+
   // Responsive sizing
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
-  
+
   // Snapchat-like: active center filter is larger than inactive ones
   const inactiveSize = isMobile ? 64 : 76;
   const activeSize = isMobile ? 84 : 100;
@@ -49,6 +49,23 @@ export default function PhotoboothSlider({
     }
   }, [repeatedFilters]);
 
+  // After selected filter changes and its size/border animates, re-center using the
+  // updated dimensions to avoid slight left-shift on iOS Safari.
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    const idx = repeatedFilters.findIndex((f) => f.id === selectedFilterId);
+    if (idx < 0) return;
+    const target = carousel.children[idx];
+    if (!target) return;
+    // Wait for DOM/layout to reflect the new size before measuring
+    requestAnimationFrame(() => {
+      const left =
+        target.offsetLeft - (carousel.offsetWidth - target.offsetWidth) / 2;
+      carousel.scrollTo({ left, behavior: "smooth" });
+    });
+  }, [selectedFilterId, repeatedFilters]);
+
   useEffect(() => {
     const carousel = carouselRef.current;
     if (!carousel) return;
@@ -71,11 +88,14 @@ export default function PhotoboothSlider({
       const id = repeatedFilters[closestIdx]?.id;
       if (!id) return;
       const target = children[closestIdx];
-      const left = target.offsetLeft - (carousel.offsetWidth - target.offsetWidth) / 2;
+      const left =
+        target.offsetLeft - (carousel.offsetWidth - target.offsetWidth) / 2;
       isSnappingRef.current = true;
       setSelectedFilterId(id);
       carousel.scrollTo({ left, behavior: "smooth" });
-      setTimeout(() => { isSnappingRef.current = false; }, 200);
+      setTimeout(() => {
+        isSnappingRef.current = false;
+      }, 200);
     };
 
     const onScroll = () => {
@@ -127,8 +147,8 @@ export default function PhotoboothSlider({
           overscrollBehaviorX: "contain",
           overscrollBehaviorY: "none",
           // Center padding accounts for the active filter's border thickness
-          paddingLeft: `calc(50% - ${(activeOuter) / 2}px)`,
-          paddingRight: `calc(50% - ${(activeOuter) / 2}px)`,
+          paddingLeft: `calc(50% - ${activeOuter / 2}px)`,
+          paddingRight: `calc(50% - ${activeOuter / 2}px)`,
         }}
         className="hide-scrollbar"
       >
@@ -197,22 +217,27 @@ export default function PhotoboothSlider({
                 pointerEvents: "none",
               }}
               onError={(e) => {
-                const currentSrc = e.currentTarget.getAttribute('src') || '';
+                const currentSrc = e.currentTarget.getAttribute("src") || "";
                 console.warn(`❌ Failed to load filter image: ${filter.label}`);
                 console.warn(`   Tried URL: ${currentSrc}`);
-                console.warn(`   Original URL: ${filter.originalImage || 'none'}`);
-                
+                console.warn(
+                  `   Original URL: ${filter.originalImage || "none"}`
+                );
+
                 // If proxy path failed and we have originalImage, try it
                 const original = filter.originalImage;
-                if (original && currentSrc.includes('/photobooth/filters/proxy')) {
+                if (
+                  original &&
+                  currentSrc.includes("/photobooth/filters/proxy")
+                ) {
                   console.log(`   🔄 Retrying with original URL: ${original}`);
-                  e.currentTarget.setAttribute('src', original);
+                  e.currentTarget.setAttribute("src", original);
                   return;
                 }
-                e.target.style.opacity = '0.5';
+                e.target.style.opacity = "0.5";
               }}
             />
-            
+
             {/* Label overlay */}
             <span
               style={{

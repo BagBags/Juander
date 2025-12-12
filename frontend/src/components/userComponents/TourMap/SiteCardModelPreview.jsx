@@ -82,12 +82,15 @@ export default function SiteCardModelPreview({ url }) {
   const [loadError, setLoadError] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [previewKey, setPreviewKey] = useState(0);
+  const [slowLoading, setSlowLoading] = useState(false);
   const controlsRef = useRef(null);
   const savedRef = useRef(false);
   const hasMovedRef = useRef(false);
   const sceneRef = useRef(null);
   const savedPoseRef = useRef(null);
   const isAnimatingRef = useRef(false);
+  const timeoutRef = useRef(null);
+  const slowTimerRef = useRef(null);
 
   const doRetry = () => {
     try {
@@ -102,6 +105,42 @@ export default function SiteCardModelPreview({ url }) {
     let cancelled = false;
     setLoadError(false);
     setErrorMessage(null);
+    setSlowLoading(false);
+    try {
+      if (url && typeof url === "string" && url.endsWith(".glb")) {
+        useGLTF.preload(url);
+      }
+    } catch {}
+    try {
+      const testCanvas = document.createElement("canvas");
+      const testGl =
+        testCanvas.getContext("webgl") ||
+        testCanvas.getContext("experimental-webgl");
+      if (!testGl) {
+        setErrorMessage("WebGL unavailable on this device");
+        setLoadError(true);
+      }
+    } catch {}
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    const conn =
+      (typeof navigator !== "undefined" &&
+        (navigator.connection ||
+          navigator.mozConnection ||
+          navigator.webkitConnection)) ||
+      null;
+    let threshold = 12000;
+    const et = conn && conn.effectiveType;
+    if (et === "slow-2g" || et === "2g") threshold = 40000;
+    else if (et === "3g") threshold = 25000;
+    else if (et === "4g") threshold = 12000;
+    else if (conn && typeof conn.downlink === "number" && conn.downlink < 1)
+      threshold = 25000;
+    if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    slowTimerRef.current = setTimeout(() => {
+      if (!sceneRef.current && !loadError) {
+        setSlowLoading(true);
+      }
+    }, threshold);
     (async () => {
       try {
         const res = await fetch(url, {
@@ -122,6 +161,8 @@ export default function SiteCardModelPreview({ url }) {
     })();
     return () => {
       cancelled = true;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
     };
   }, [url]);
 
@@ -303,6 +344,11 @@ export default function SiteCardModelPreview({ url }) {
                   Loading 3D Model
                 </p>
                 <p className="text-sm text-gray-500">Please wait...</p>
+                {slowLoading && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Slow connection detected. Still loading…
+                  </p>
+                )}
               </div>
               {/* Progress Dots */}
               <div className="flex gap-2 mt-3">
@@ -324,8 +370,18 @@ export default function SiteCardModelPreview({ url }) {
         >
           <Canvas
             key={previewKey}
+            dpr={Math.min(
+              2,
+              (typeof window !== "undefined" && window.devicePixelRatio) || 1
+            )}
+            gl={{
+              antialias: false,
+              alpha: true,
+              powerPreference: "low-power",
+              preserveDrawingBuffer: false,
+            }}
             onCreated={({ gl }) => {
-              gl.setClearColor("#e5e7eb", 1);
+              gl.setClearColor("#000000", 0);
               const canvas = gl.domElement;
               const lost = (e) => {
                 e.preventDefault();
@@ -354,6 +410,9 @@ export default function SiteCardModelPreview({ url }) {
                   url={url}
                   onReady={(s) => {
                     sceneRef.current = s;
+                    setSlowLoading(false);
+                    if (slowTimerRef.current)
+                      clearTimeout(slowTimerRef.current);
                     const c = controlsRef.current;
                     if (!c) return;
                     const box = new THREE.Box3().setFromObject(s);

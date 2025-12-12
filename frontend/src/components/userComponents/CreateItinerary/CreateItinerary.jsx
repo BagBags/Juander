@@ -676,6 +676,108 @@ export default function CreateItineraryPage() {
     return messages;
   };
 
+  const autoFixScheduling = () => {
+    try {
+      const selectedSites = selected
+        .map((id) => sites.find((s) => s._id === id))
+        .filter(Boolean);
+      const fortSites = selectedSites.filter((s) => s.insideFortSantiago);
+      let newOrder = selected.slice();
+      if (fortSites.length) {
+        const firstFortIndex = selectedSites.findIndex(
+          (s) => s.insideFortSantiago
+        );
+        const nonFortBefore = selectedSites
+          .slice(0, firstFortIndex)
+          .filter((s) => !s.insideFortSantiago);
+        const nonFortAfter = selectedSites
+          .slice(firstFortIndex)
+          .filter((s) => !s.insideFortSantiago);
+        newOrder = [...nonFortBefore, ...fortSites, ...nonFortAfter].map(
+          (s) => s._id
+        );
+        setSelected(newOrder);
+      }
+
+      const orderedSites = newOrder
+        .map((id) => sites.find((s) => s._id === id))
+        .filter(Boolean);
+      const items = [];
+      const preBreaks = (breaks || []).filter((b) => Number(b.position) === 0);
+      for (const b of preBreaks) items.push({ type: "break", break: b });
+      for (let idx = 0; idx < orderedSites.length; idx++) {
+        const site = orderedSites[idx];
+        items.push({ type: "site", site });
+        const afterBreaks = (breaks || []).filter(
+          (b) => Number(b.position) === idx + 1
+        );
+        for (const b of afterBreaks) items.push({ type: "break", break: b });
+      }
+
+      if (items.length) {
+        let prevEnd = null;
+        const offsets = items.map((it) => {
+          if (it.type === "break") {
+            const s0 = prevEnd === null ? 0 : prevEnd;
+            const e0 = roundToStep(s0 + (Number(it.break.minutes) || 0), 5);
+            prevEnd = e0;
+            return { start: s0, end: e0 };
+          } else {
+            const vRaw =
+              typeof it.site?.averageTimeSpent === "number"
+                ? it.site.averageTimeSpent
+                : Number(it.site?.averageTimeSpent);
+            const v = isNaN(vRaw) || vRaw <= 0 ? 0 : vRaw;
+            const s0 = prevEnd === null ? 0 : roundToStep(prevEnd + 10, 5);
+            const e0 = roundToStep(s0 + v, 5);
+            prevEnd = e0;
+            return { start: s0, end: e0 };
+          }
+        });
+
+        let maxCandidate = null;
+        for (let i = 0, si = 0; i < items.length; i++) {
+          const it = items[i];
+          if (it.type !== "site") continue;
+          const openM = parseToMinutes(orderedSites[si++]?.openingTime);
+          if (openM === null) continue;
+          const cand = openM - offsets[i].start;
+          if (maxCandidate === null || cand > maxCandidate) maxCandidate = cand;
+        }
+        if (maxCandidate !== null) {
+          const newStart = roundToStep(Math.max(maxCandidate, 0), 5);
+          const sel = minutesToSelects(newStart);
+          setRHour(sel.hour);
+          setRMinute(sel.minute);
+          setRPeriod(sel.period);
+        }
+      }
+
+      const msgs = computeSiteConflicts();
+      setSitesErrorMsg(msgs.length ? msgs.join("\n") : "");
+      const startMsg =
+        rHour !== "" && rMinute !== ""
+          ? ` Start time set to ${formatMinutesToClock(
+              selectsToMinutes(Number(rHour), Number(rMinute), rPeriod)
+            )}.`
+          : "";
+      setNotification({
+        isOpen: true,
+        type: msgs.length ? "info" : "success",
+        title: fortSites.length
+          ? msgs.length
+            ? "Reordered with Fort Santiago bundled"
+            : "Scheduling fixed"
+          : msgs.length
+            ? "Start time adjusted"
+            : "Scheduling fixed",
+        message: msgs.length
+          ? "Some conflicts may remain; review and adjust times." + startMsg
+          : "Conflicts resolved." + startMsg,
+      });
+    } catch {}
+  };
+
   const openDetails = (itinerary) => {
     setDetailsItinerary(itinerary);
     setShowDetailsModal(true);
@@ -1180,6 +1282,15 @@ export default function CreateItineraryPage() {
     };
   }, [activeTab]);
 
+  useEffect(() => {
+    const onWinScroll = () => {
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      if (y > 16) setShowScrollHint(false);
+    };
+    window.addEventListener("scroll", onWinScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onWinScroll);
+  }, []);
+
   return (
     <TourProvider
       steps={createItineraryTourSteps}
@@ -1623,9 +1734,18 @@ export default function CreateItineraryPage() {
                               </Droppable>
                             </DragDropContext>
                             {sitesErrorMsg && (
-                              <p className="text-xs text-red-600 mt-2 whitespace-pre-line">
-                                {sitesErrorMsg}
-                              </p>
+                              <div className="mt-2 flex flex-col gap-2">
+                                <p className="text-xs text-red-600 whitespace-pre-line">
+                                  {sitesErrorMsg}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={autoFixScheduling}
+                                  className="self-start px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#f04e37] text-white hover:bg-[#e03d2d]"
+                                >
+                                  Auto-fix scheduling
+                                </button>
+                              </div>
                             )}
                           </>
                         );
