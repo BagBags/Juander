@@ -1736,14 +1736,38 @@ export default function GuestItineraryMap() {
                 setGpsError("");
                 setShowGpsModal(false);
                 setGpsPermissionDenied(false);
-                // if (!within) {
-                //   setShowLocationBlockModal(true);
-                //   setIsBackdropActive(false);
-                //   return;
-                // }
                 setGpsApproved(true);
                 setIsBackdropActive(false);
-                setShowModeModal(true);
+                if (!within) {
+                  setShowLocationBlockModal(true);
+                  setIsBackdropActive(false);
+                  return;
+                }
+                (async () => {
+                  try {
+                    setTourMode("original");
+                    const original = [...pins];
+                    setOptimizedPins(original);
+                    if (original.length > 0) {
+                      setCurrentPinIndex(0);
+                      setSelectedPin(original[0]);
+                      setActivePin(original[0]);
+                      try {
+                        const orderKey = `guest_optimized_order_${itineraryId}`;
+                        const optimizedOrder = original.map((pin) => pin._id);
+                        localStorage.setItem(
+                          orderKey,
+                          JSON.stringify(optimizedOrder)
+                        );
+                        const indexKey = `guest_current_index_${itineraryId}`;
+                        localStorage.setItem(indexKey, "0");
+                      } catch {}
+                      buildRoute(loc, original[0]);
+                    }
+                    setIsPreviewMode(false);
+                    setIsGuidanceRunning(true);
+                  } catch {}
+                })();
               },
               (err) => {
                 if (err.code === err.PERMISSION_DENIED) {
@@ -1758,6 +1782,28 @@ export default function GuestItineraryMap() {
                 }
                 setShowGpsModal(false);
                 setIsBackdropActive(false);
+                try {
+                  setTourMode("original");
+                  const original = [...pins];
+                  setOptimizedPins(original);
+                  if (original.length > 0) {
+                    setCurrentPinIndex(0);
+                    setSelectedPin(original[0]);
+                    setActivePin(original[0]);
+                    try {
+                      const orderKey = `guest_optimized_order_${itineraryId}`;
+                      const optimizedOrder = original.map((pin) => pin._id);
+                      localStorage.setItem(
+                        orderKey,
+                        JSON.stringify(optimizedOrder)
+                      );
+                      const indexKey = `guest_current_index_${itineraryId}`;
+                      localStorage.setItem(indexKey, "0");
+                    } catch {}
+                  }
+                  setIsPreviewMode(false);
+                  setIsGuidanceRunning(true);
+                } catch {}
               },
               { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
             );
@@ -1767,6 +1813,28 @@ export default function GuestItineraryMap() {
             );
             setShowGpsModal(false);
             setIsBackdropActive(false);
+            try {
+              setTourMode("original");
+              const original = [...pins];
+              setOptimizedPins(original);
+              if (original.length > 0) {
+                setCurrentPinIndex(0);
+                setSelectedPin(original[0]);
+                setActivePin(original[0]);
+                try {
+                  const orderKey = `guest_optimized_order_${itineraryId}`;
+                  const optimizedOrder = original.map((pin) => pin._id);
+                  localStorage.setItem(
+                    orderKey,
+                    JSON.stringify(optimizedOrder)
+                  );
+                  const indexKey = `guest_current_index_${itineraryId}`;
+                  localStorage.setItem(indexKey, "0");
+                } catch {}
+              }
+              setIsPreviewMode(false);
+              setIsGuidanceRunning(true);
+            } catch {}
           }
         }}
         onDecline={() => {
@@ -2046,8 +2114,6 @@ export default function GuestItineraryMap() {
           />
         )}
 
-        {/*
-        Location Block Modal - User outside Intramuros (temporarily disabled)
         <ConfirmModal
           isOpen={showLocationBlockModal}
           onClose={() => {
@@ -2062,7 +2128,6 @@ export default function GuestItineraryMap() {
           cancelText=""
           type="error"
         />
-        */}
 
         {/* Backdrop to prevent bypass during validation */}
         {isBackdropActive && (
@@ -2087,102 +2152,6 @@ export default function GuestItineraryMap() {
               <p className="text-center text-xs text-gray-600 mt-2">
                 Preview mode — pins are visible; GPS starts after you begin
               </p>
-            </div>
-          </div>
-        )}
-
-        {/* Tour Mode Choice */}
-        {showModeModal && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Choose How You Want to Follow the Tour
-                </h3>
-              </div>
-              <div className="p-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <button
-                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition"
-                  onClick={() => {
-                    // if (isOutsideBounds) {
-                    //   setShowLocationBlockModal(true);
-                    //   return;
-                    // }
-                    setTourMode("optimized");
-                    setShowModeModal(false);
-                    const optimized = optimizeRoute(
-                      userLocation,
-                      pins,
-                      visitedSites
-                    );
-                    setOptimizedPins(optimized);
-                    if (optimized.length > 0) {
-                      setCurrentPinIndex(0);
-                      setSelectedPin(optimized[0]);
-                      setActivePin(optimized[0]);
-                      try {
-                        const orderKey = `guest_optimized_order_${itineraryId}`;
-                        const optimizedOrder = optimized.map((pin) => pin._id);
-                        localStorage.setItem(
-                          orderKey,
-                          JSON.stringify(optimizedOrder)
-                        );
-                        const indexKey = `guest_current_index_${itineraryId}`;
-                        localStorage.setItem(indexKey, "0");
-                      } catch {}
-                      buildRoute(userLocation, optimized[0]);
-                    }
-                    setIsPreviewMode(false);
-                    setIsGuidanceRunning(true);
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-blue-600 font-semibold">
-                    <Navigation className="w-5 h-5" /> Optimized Route
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Automatically arranges the sites based on your current
-                    location for the fastest route.
-                  </p>
-                </button>
-                <button
-                  className="flex flex-col items-start gap-2 p-4 rounded-xl border border-gray-200 hover:border-gray-700 hover:bg-gray-50 transition"
-                  onClick={() => {
-                    // if (isOutsideBounds) {
-                    //   setShowLocationBlockModal(true);
-                    //   return;
-                    // }
-                    setTourMode("original");
-                    setShowModeModal(false);
-                    const original = [...pins];
-                    setOptimizedPins(original);
-                    if (original.length > 0) {
-                      setCurrentPinIndex(0);
-                      setSelectedPin(original[0]);
-                      setActivePin(original[0]);
-                      try {
-                        const orderKey = `guest_optimized_order_${itineraryId}`;
-                        const optimizedOrder = original.map((pin) => pin._id);
-                        localStorage.setItem(
-                          orderKey,
-                          JSON.stringify(optimizedOrder)
-                        );
-                        const indexKey = `guest_current_index_${itineraryId}`;
-                        localStorage.setItem(indexKey, "0");
-                      } catch {}
-                      buildRoute(userLocation, original[0]);
-                    }
-                    setIsPreviewMode(false);
-                    setIsGuidanceRunning(true);
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-gray-800 font-semibold">
-                    <ListOrdered className="w-5 h-5" /> Original Order
-                  </div>
-                  <p className="text-sm text-gray-700">
-                    Follow the sites in the order they were originally added.
-                  </p>
-                </button>
-              </div>
             </div>
           </div>
         )}

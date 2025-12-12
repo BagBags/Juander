@@ -778,6 +778,56 @@ function CameraLifecycleOnRouteLeave() {
   return null;
 }
 
+function CameraPermissionKeeper() {
+  useEffect(() => {
+    const hasActiveStream = () => {
+      try {
+        const videos = document.querySelectorAll("video");
+        for (const v of videos) {
+          const s = v.srcObject;
+          if (s && typeof s.getTracks === "function") {
+            const live = s.getTracks().some((t) => t.readyState === "live");
+            if (live) return true;
+          }
+        }
+      } catch {}
+      return false;
+    };
+
+    const preflight = async () => {
+      if (hasActiveStream()) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+        try {
+          stream.getTracks().forEach((t) => {
+            try {
+              t.stop();
+            } catch {}
+          });
+        } catch {}
+      } catch {}
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") preflight();
+    };
+    const onFocus = () => preflight();
+    const onPageShow = () => preflight();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, []);
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     const savedLang = localStorage.getItem("language") || "en";
@@ -792,6 +842,7 @@ export default function App() {
               <AnimatedRoutes />
               <TTSCancelOnRouteLeave />
               <CameraLifecycleOnRouteLeave />
+              <CameraPermissionKeeper />
               <ConnectionStatus />
               <PWAInstallPrompt />
             </AuthPersistence>

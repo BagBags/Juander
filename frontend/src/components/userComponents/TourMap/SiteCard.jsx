@@ -416,54 +416,16 @@ const SiteCard = ({ pin, onClose, distance }) => {
                     <X className="w-4 h-4" />
                     Exit AR Experience
                   </button>
-                  <button
-                    onClick={() => {
-                      if (
-                        window.confirm("Open AR experience in new browser tab?")
-                      ) {
-                        window.open(
-                          scannedArUrl,
-                          "_blank",
-                          "noopener,noreferrer"
-                        );
-                        setShowAR(false);
-                        setScannedArUrl(null);
-                      }
-                    }}
-                    style={{
-                      bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
-                    }}
-                    className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
-                  >
-                    <Glasses className="w-4 h-4" />
-                    Open in Browser
-                  </button>
+                  
                 </div>
               ) : (
                 <QRScanner
                   onScanSuccess={(url) => {
-                    // Check if iOS 26+ in PWA mode - show prompt to open in new tab
-                    if (isiOS26Plus() && isPWA()) {
-                      const confirmOpen = window.confirm(
-                        "iOS 26+ AR Compatibility Notice\n\n" +
-                          "Your device is running iOS 26 or higher in PWA mode. " +
-                          "AR experiences may not work properly within the app due to browser restrictions.\n\n" +
-                          "Would you like to open the AR experience in a new browser tab instead? " +
-                          "This will provide the best AR experience with full sensor access."
-                      );
-
-                      if (confirmOpen) {
-                        window.open(url, "_blank", "noopener,noreferrer");
-                        setShowAR(false);
-                        setScannedArUrl(null);
-                      } else {
-                        // User declined, close AR scanner
-                        setShowAR(false);
-                        setScannedArUrl(null);
-                      }
-                    } else {
-                      setScannedArUrl(url);
-                    }
+                    try {
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    } catch {}
+                    setShowAR(false);
+                    setScannedArUrl(null);
                   }}
                   onClose={() => {
                     setShowAR(false);

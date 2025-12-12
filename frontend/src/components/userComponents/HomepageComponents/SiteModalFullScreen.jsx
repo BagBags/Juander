@@ -98,6 +98,17 @@ export default function SiteModalFullScreen({
   const audioRef = React.useRef(null);
   const arIframeRef = React.useRef(null);
 
+  useEffect(() => {
+    if (showAR && scannedArUrl) {
+      try {
+        window.open(scannedArUrl, "_blank", "noopener,noreferrer");
+      } catch {}
+      setShowAR(false);
+      setScannedArUrl(null);
+      setAskedSensors(false);
+    }
+  }, [showAR, scannedArUrl]);
+
   const requestSensorPermissions = async () => {
     try {
       const reqs = [];
@@ -829,33 +840,6 @@ export default function SiteModalFullScreen({
                       minHeight: "80vh",
                     }}
                   />
-                  {scannedArUrl && (
-                    <button
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            "Open AR experience in new browser tab?"
-                          )
-                        ) {
-                          window.open(
-                            scannedArUrl,
-                            "_blank",
-                            "noopener,noreferrer"
-                          );
-                          setShowAR(false);
-                          setScannedArUrl(null);
-                          setAskedSensors(false);
-                        }
-                      }}
-                      style={{
-                        bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
-                      }}
-                      className="fixed left-1/2 -translate-x-1/2 z-20 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 text-sm font-bold rounded-xl shadow-lg transition-colors flex items-center gap-2"
-                    >
-                      <Glasses className="w-4 h-4" />
-                      Open in Browser
-                    </button>
-                  )}
                 </div>
                 <button
                   onClick={() => {
@@ -872,29 +856,12 @@ export default function SiteModalFullScreen({
             ) : (
               <QRScanner
                 onScanSuccess={(url) => {
-                  // Check if iOS 26+ in PWA mode - show prompt to open in new tab
-                  if (isiOS26Plus() && isPWA()) {
-                    const confirmOpen = window.confirm(
-                      "iOS 26+ AR Compatibility Notice\n\n" +
-                        "Your device is running iOS 26 or higher in PWA mode. " +
-                        "AR experiences may not work properly within the app due to browser restrictions.\n\n" +
-                        "Would you like to open the AR experience in a new browser tab instead? " +
-                        "This will provide the best AR experience with full sensor access."
-                    );
-
-                    if (confirmOpen) {
-                      window.open(url, "_blank", "noopener,noreferrer");
-                      setShowAR(false);
-                      setScannedArUrl(null);
-                    } else {
-                      // User declined, close AR scanner
-                      setShowAR(false);
-                      setScannedArUrl(null);
-                    }
-                  } else {
-                    setScannedArUrl(url);
-                  }
-                  // No automatic TTS here; only "Listen to Description" should speak
+                  try {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  } catch {}
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                  setAskedSensors(false);
                 }}
                 onClose={() => {
                   setShowAR(false);
@@ -1366,19 +1333,8 @@ export default function SiteModalFullScreen({
             {/* AR Mode Button - Mobile & Tablet */}
             {selectedPin.arEnabled && (
               <button
-                onClick={async () => {
-                  const granted = await requestSensorPermissions();
-                  if (!granted) {
-                    setNotification({
-                      isOpen: true,
-                      title: "Permission Required",
-                      message:
-                        "To use AR, please allow Motion & Orientation access when prompted. If no prompt appears, open the AR experience in the browser after scanning.",
-                      type: "warning",
-                    });
-                  }
+                onClick={() => {
                   setShowAR(true);
-                  // No automatic TTS here; only "Listen to Description" should speak
                 }}
                 className="xl:hidden w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
                 style={{

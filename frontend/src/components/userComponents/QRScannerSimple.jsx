@@ -14,6 +14,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   const [error, setError] = useState(null);
   const [scannedUrl, setScannedUrl] = useState(null);
   const scanIntervalRef = useRef(null);
+  const [cameraRetryKey, setCameraRetryKey] = useState(0);
   const jsQRRef = useRef(null);
 
   // Load jsQR dynamically when component mounts
@@ -135,6 +136,34 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
         setScannedUrl(code.data);
         stopScanning();
 
+        try {
+          const v = webcamRef.current?.video;
+          const s = webcamRef.current?.stream || v?.srcObject;
+          if (s && typeof s.getTracks === "function") {
+            s.getTracks().forEach((t) => {
+              try {
+                t.stop();
+              } catch (e) {
+                void e;
+              }
+            });
+          }
+          if (v) {
+            try {
+              v.pause();
+            } catch {}
+            try {
+              v.srcObject = null;
+            } catch {}
+            try {
+              v.removeAttribute("src");
+            } catch {}
+            try {
+              v.load();
+            } catch {}
+          }
+        } catch {}
+
         // Call success callback
         if (onScanSuccess) {
           onScanSuccess(code.data);
@@ -150,6 +179,119 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
     );
     stopScanning();
   };
+
+  const preflightCameraAccess = async () => {
+    try {
+      // Attempt to trigger permission prompt proactively
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      // Immediately release the stream; the permission state should persist
+      try {
+        stream.getTracks().forEach((t) => {
+          try {
+            t.stop();
+          } catch (e) {
+            void e;
+          }
+        });
+      } catch {}
+      return true;
+    } catch (e) {
+      console.warn("Preflight camera access failed:", e?.name || e);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        preflightCameraAccess().finally(() => {
+          setCameraRetryKey((k) => k + 1);
+        });
+      } else {
+        stopScanning();
+        try {
+          const v = webcamRef.current?.video;
+          const s = webcamRef.current?.stream || v?.srcObject;
+          if (s && typeof s.getTracks === "function") {
+            s.getTracks().forEach((t) => {
+              try {
+                t.stop();
+              } catch (e) {
+                void e;
+              }
+            });
+          }
+          if (v) {
+            try {
+              v.pause();
+            } catch {}
+            try {
+              v.srcObject = null;
+            } catch {}
+            try {
+              v.removeAttribute("src");
+            } catch {}
+            try {
+              v.load();
+            } catch {}
+          }
+        } catch {}
+      }
+    };
+    const onFocus = () => {
+      preflightCameraAccess().finally(() => {
+        setCameraRetryKey((k) => k + 1);
+      });
+    };
+    const onPageShow = () => {
+      preflightCameraAccess().finally(() => {
+        setCameraRetryKey((k) => k + 1);
+      });
+    };
+    const onPageHide = () => {
+      stopScanning();
+      try {
+        const v = webcamRef.current?.video;
+        const s = webcamRef.current?.stream || v?.srcObject;
+        if (s && typeof s.getTracks === "function") {
+          s.getTracks().forEach((t) => {
+            try {
+              t.stop();
+            } catch (e) {
+              void e;
+            }
+          });
+        }
+        if (v) {
+          try {
+            v.pause();
+          } catch {}
+          try {
+            v.srcObject = null;
+          } catch {}
+          try {
+            v.removeAttribute("src");
+          } catch {}
+          try {
+            v.load();
+          } catch {}
+        }
+      } catch {}
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col h-full bg-gray-900">
@@ -220,9 +362,40 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
                 </h3>
                 <p className="text-sm text-red-700 mb-4">{error}</p>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setError(null);
-                    startScanning();
+                    setCameraReady(false);
+                    stopScanning();
+                    cancelCameraStop();
+                    await preflightCameraAccess();
+                    try {
+                      const v = webcamRef.current?.video;
+                      const s = webcamRef.current?.stream || v?.srcObject;
+                      if (s && typeof s.getTracks === "function") {
+                        s.getTracks().forEach((t) => {
+                          try {
+                            t.stop();
+                          } catch (e) {
+                            void e;
+                          }
+                        });
+                      }
+                      if (v) {
+                        try {
+                          v.pause();
+                        } catch {}
+                        try {
+                          v.srcObject = null;
+                        } catch {}
+                        try {
+                          v.removeAttribute("src");
+                        } catch {}
+                        try {
+                          v.load();
+                        } catch {}
+                      }
+                    } catch {}
+                    setCameraRetryKey((k) => k + 1);
                   }}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                 >
@@ -280,6 +453,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
             {/* Camera View */}
             <div className="relative rounded-lg md:rounded-xl overflow-hidden border-2 md:border-4 border-white shadow-2xl">
               <Webcam
+                key={cameraRetryKey}
                 ref={webcamRef}
                 audio={false}
                 screenshotFormat="image/jpeg"

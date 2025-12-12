@@ -2472,8 +2472,6 @@ export default function TouristItineraryMap() {
           type="warning"
         />
 
-        {/*
-        Location Block Modal - User outside Intramuros (temporarily disabled)
         <ConfirmModal
           isOpen={showLocationBlockModal}
           onClose={() => {
@@ -2488,7 +2486,6 @@ export default function TouristItineraryMap() {
           cancelText=""
           type="error"
         />
-        */}
 
         {/* Backdrop to prevent bypass during GPS validation */}
         {isBackdropActive && (
@@ -2512,6 +2509,14 @@ export default function TouristItineraryMap() {
                           };
                           setUserLocation(loc);
                           setGpsApproved(true);
+                          const withinNow = mask?.geometry
+                            ? isUserWithinIntramuros(loc, mask.geometry)
+                            : true;
+                          if (!withinNow) {
+                            setShowLocationBlockModal(true);
+                            setIsBackdropActive(false);
+                            return;
+                          }
                           (async () => {
                             try {
                               setTourMode("original");
@@ -2542,27 +2547,10 @@ export default function TouristItineraryMap() {
                           setGpsError(
                             err?.code === err.PERMISSION_DENIED
                               ? "Location access denied. Enable location in browser settings, then refresh."
-                              : "We couldn't access your location. You can proceed without GPS."
+                              : "We couldn't access your location. Please enable GPS to start the tour."
                           );
-                          try {
-                            setTourMode("original");
-                            const original = [...pins];
-                            setOptimizedPins(original);
-                            if (original.length > 0) {
-                              setCurrentPinIndex(0);
-                              setSelectedPin(original[0]);
-                              setActivePin(original[0]);
-                              saveProgress(
-                                0,
-                                visitedSites,
-                                skippedSites,
-                                null,
-                                original
-                              );
-                            }
-                            setIsPreviewMode(false);
-                            setIsGuidanceRunning(true);
-                          } catch {}
+                          setShowLocationBlockModal(true);
+                          setIsBackdropActive(false);
                         },
                         {
                           enableHighAccuracy: true,
@@ -2572,48 +2560,14 @@ export default function TouristItineraryMap() {
                       );
                     } else {
                       setGpsError(
-                        "GPS is unavailable in this browser. You can proceed without GPS."
+                        "GPS is unavailable in this browser. Please enable location services to start the tour."
                       );
-                      try {
-                        setTourMode("original");
-                        const original = [...pins];
-                        setOptimizedPins(original);
-                        if (original.length > 0) {
-                          setCurrentPinIndex(0);
-                          setSelectedPin(original[0]);
-                          setActivePin(original[0]);
-                          saveProgress(
-                            0,
-                            visitedSites,
-                            skippedSites,
-                            null,
-                            original
-                          );
-                        }
-                        setIsPreviewMode(false);
-                        setIsGuidanceRunning(true);
-                      } catch {}
+                      setShowLocationBlockModal(true);
+                      setIsBackdropActive(false);
                     }
                   } catch {
-                    try {
-                      setTourMode("original");
-                      const original = [...pins];
-                      setOptimizedPins(original);
-                      if (original.length > 0) {
-                        setCurrentPinIndex(0);
-                        setSelectedPin(original[0]);
-                        setActivePin(original[0]);
-                        saveProgress(
-                          0,
-                          visitedSites,
-                          skippedSites,
-                          null,
-                          original
-                        );
-                      }
-                      setIsPreviewMode(false);
-                      setIsGuidanceRunning(true);
-                    } catch {}
+                    setShowLocationBlockModal(true);
+                    setIsBackdropActive(false);
                   }
                 }}
                 className="itinerary-start-tour-btn w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"

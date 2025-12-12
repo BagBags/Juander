@@ -485,21 +485,26 @@ export default function Photobooth() {
 
   // Reinitialize camera when returning to the app (fix black camera on resume)
   useEffect(() => {
-    const handleVisible = () => {
-      // Only re-initialize if:
-      // 1. The document is now visible **and**
-      // 2. Jeeliz has already completed its first successful start-up.
-      //    (When the permission prompt closes the tab regains focus, but Jeeliz is still
-      //    initializing — restarting at that moment causes a race that leaves the
-      //    camera stream blank.)
+    const handleVisible = async () => {
       if (document.visibilityState !== "visible" || !jeelizReady) return;
-
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode },
+          audio: false,
+        });
+        try {
+          s.getTracks().forEach((t) => {
+            try {
+              t.stop();
+            } catch {}
+          });
+        } catch {}
+      } catch {}
       try {
         if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
           window.JEELIZFACEFILTER.destroy();
         }
       } catch {}
-
       setJeelizReady(false);
       setCameraKey((k) => k + 1);
     };
