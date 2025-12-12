@@ -373,59 +373,103 @@ const SiteCard = ({ pin, onClose, distance }) => {
           {showAR ? (
             <div className="rounded-xl flex flex-col min-h-[80vh]">
               {scannedArUrl ? (
-                <div className="flex flex-col h-full">
-                  <div className="relative flex-1 w-full">
-                    <button
-                      type="button"
-                      aria-label="Enable Motion & Orientation"
-                      title="Enable Motion & Orientation"
-                      onClick={handleEnableSensors}
-                      className="absolute top-3 right-3 z-10 rounded-full p-2 bg-white/25 hover:bg-white/35 backdrop-blur-md border border-white/30 shadow-sm text-gray-800"
-                    >
-                      <FontAwesomeIcon
-                        icon={faGroupArrowsRotate}
-                        className="w-5 h-5"
-                      />
-                    </button>
-                    <iframe
-                      scrolling="no"
-                      id="arloopa-frame"
-                      src={scannedArUrl}
-                      title="AR Experience"
-                      className="absolute inset-0 w-full h-full border-0"
-                      allow="camera; microphone; accelerometer; gyroscope; magnetometer; xr-spatial-tracking; geolocation; clipboard-write; web-share; autoplay; picture-in-picture; display-capture; fullscreen"
-                      allowFullScreen
-                      sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-camera allow-microphone allow-sensors allow-xr-spatial-tracking allow-top-navigation"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      ref={arIframeRef}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        border: "none",
-                        minHeight: "80vh",
-                      }}
-                    />
+                <div className="flex flex-col items-center justify-center h-full gap-6 p-6">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 w-full max-w-md">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Glasses className="w-5 h-5 text-[#f04e37]" />
+                      <h3 className="text-base font-bold text-gray-900">
+                        AR link ready
+                      </h3>
+                    </div>
+                    <p className="text-xs text-gray-600 break-all mb-4">
+                      {scannedArUrl}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          const url = scannedArUrl;
+                          let newWin = null;
+                          try {
+                            newWin = window.open(
+                              url,
+                              "_blank",
+                              "noopener,noreferrer"
+                            );
+                          } catch {}
+                          if (!newWin) {
+                            try {
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.target = "_blank";
+                              a.rel = "noopener noreferrer";
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                            } catch {
+                              try {
+                                window.location.assign(url);
+                              } catch {}
+                            }
+                          }
+                          setShowAR(false);
+                          setScannedArUrl(null);
+                        }}
+                        className="flex-1 px-4 py-2.5 rounded-lg text-white font-semibold text-sm shadow transition-colors"
+                        style={{
+                          background:
+                            "linear-gradient(to right, #f04e37, #d9442f)",
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background =
+                            "linear-gradient(to right, #d9442f, #c23d2a)")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background =
+                            "linear-gradient(to right, #f04e37, #d9442f)")
+                        }
+                      >
+                        Open in new tab
+                      </button>
+                      <button
+                        onClick={() => {
+                          const url = scannedArUrl;
+                          try {
+                            window.location.assign(url);
+                          } catch {}
+                          setShowAR(false);
+                          setScannedArUrl(null);
+                        }}
+                        className="px-4 py-2.5 rounded-lg text-gray-800 font-semibold text-sm bg-gray-100 hover:bg-gray-200 transition-colors"
+                      >
+                        Open here
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setShowAR(false);
-                      setScannedArUrl(null);
-                    }}
-                    className="mt-2 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2.5 text-sm font-medium rounded-lg shadow transition-colors flex items-center justify-center gap-2"
-                  >
-                    <X className="w-4 h-4" />
-                    Exit AR Experience
-                  </button>
-                  
                 </div>
               ) : (
                 <QRScanner
                   onScanSuccess={(url) => {
+                    let newWin = null;
                     try {
-                      window.open(url, "_blank", "noopener,noreferrer");
+                      newWin = window.open(
+                        url,
+                        "_blank",
+                        "noopener,noreferrer"
+                      );
                     } catch {}
-                    setShowAR(false);
-                    setScannedArUrl(null);
+                    if (newWin && typeof newWin.focus === "function") {
+                      try {
+                        newWin.focus();
+                      } catch {}
+                    }
+                    if (!newWin) {
+                      try {
+                        setScannedArUrl(url);
+                      } catch {}
+                    } else {
+                      setShowAR(false);
+                      setScannedArUrl(null);
+                    }
                   }}
                   onClose={() => {
                     setShowAR(false);

@@ -842,27 +842,66 @@ function CameraPermissionKeeper() {
 function JeelizErrorShield() {
   const location = useLocation();
   useEffect(() => {
-    const isPhotobooth =
-      location.pathname.startsWith("/Photobooth") ||
-      location.pathname.startsWith("/PhotoboothJeeliz");
     const onError = (e) => {
-      const src = e?.filename || "";
-      if (!isPhotobooth && /jeelizFaceFilter\.js/i.test(src)) {
-        if (typeof e.preventDefault === "function") e.preventDefault();
-        return true;
-      }
+      try {
+        const msg = String(e?.message || "");
+        const src = String(e?.filename || "");
+        const stack = String((e?.error && e.error.stack) || "");
+        const text = `${msg}\n${src}\n${stack}`;
+        const looksJeeliz = /jeeliz|FaceFilter|jeeFaceFilterCanvas/i.test(text);
+        const nullHeight =
+          /Cannot read properties of null \(reading 'height'\)/i.test(msg);
+        if (looksJeeliz || nullHeight) {
+          if (typeof e.preventDefault === "function") e.preventDefault();
+          if (typeof e.stopPropagation === "function") e.stopPropagation();
+          return true;
+        }
+      } catch {}
     };
     const onUnhandled = (e) => {
-      const s = (e?.reason && e.reason.stack) || "";
-      if (!isPhotobooth && /jeelizFaceFilter\.js/i.test(s)) {
-        if (typeof e.preventDefault === "function") e.preventDefault();
-      }
+      try {
+        const reason = e?.reason || {};
+        const msg = String(reason?.message || "");
+        const stack = String(reason?.stack || "");
+        const looksJeeliz = /jeeliz|FaceFilter|jeeFaceFilterCanvas/i.test(
+          `${msg}\n${stack}`
+        );
+        const nullHeight =
+          /Cannot read properties of null \(reading 'height'\)/i.test(msg);
+        if (looksJeeliz || nullHeight) {
+          if (typeof e.preventDefault === "function") e.preventDefault();
+          if (typeof e.stopPropagation === "function") e.stopPropagation();
+        }
+      } catch {}
     };
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onUnhandled);
+    window.addEventListener("error", onError, true);
+    window.addEventListener("unhandledrejection", onUnhandled, true);
+    const origOnError = window.onerror;
+    window.onerror = function (message, source, lineno, colno, error) {
+      try {
+        const msg = String(message || "");
+        const src = String(source || "");
+        const stack = String((error && error.stack) || "");
+        const looksJeeliz = /jeeliz|FaceFilter|jeeFaceFilterCanvas/i.test(
+          `${msg}\n${src}\n${stack}`
+        );
+        const nullHeight =
+          /Cannot read properties of null \(reading 'height'\)/i.test(msg);
+        if (looksJeeliz || nullHeight) return true;
+      } catch {}
+      if (typeof origOnError === "function") {
+        try {
+          return origOnError(message, source, lineno, colno, error);
+        } catch {}
+      }
+      return false;
+    };
     return () => {
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onUnhandled);
+      window.removeEventListener("error", onError, true);
+      window.removeEventListener("unhandledrejection", onUnhandled, true);
+      try {
+        delete window.onerror;
+      } catch {}
     };
   }, [location.pathname]);
   return null;
@@ -872,57 +911,35 @@ function JeelizDomShield() {
   const location = useLocation();
   useEffect(() => {
     try {
-      if (!window.__JUANDER_ORIG_GETBYID) {
-        window.__JUANDER_ORIG_GETBYID = document.getElementById.bind(document);
-      }
-      const placeholder =
-        window.__JUANDER_JEE_PLACEHOLDER ||
-        (() => {
-          const p = {
-            id: "jeeFaceFilterCanvas",
-            width: 1,
-            height: 1,
-            clientWidth: 1,
-            clientHeight: 1,
-            style: {},
-            parentElement: {
-              getBoundingClientRect: () => ({
-                width: 1,
-                height: 1,
-                left: 0,
-                top: 0,
-              }),
-            },
-            getBoundingClientRect: () => ({
-              width: 1,
-              height: 1,
-              left: 0,
-              top: 0,
-            }),
-            addEventListener: () => {},
-            removeEventListener: () => {},
-          };
-          window.__JUANDER_JEE_PLACEHOLDER = p;
-          return p;
-        })();
-      if (!window.__JUANDER_PATCHED_GETBYID) {
-        const orig = window.__JUANDER_ORIG_GETBYID;
-        document.getElementById = function (id) {
-          const el = orig(id);
-          if (!el && id === "jeeFaceFilterCanvas") return placeholder;
-          return el;
-        };
-        window.__JUANDER_PATCHED_GETBYID = true;
+      const isPhotobooth =
+        location.pathname.startsWith("/Photobooth") ||
+        location.pathname.startsWith("/PhotoboothJeeliz");
+      const existing = document.getElementById("jeeFaceFilterCanvas");
+      if (!isPhotobooth) {
+        if (!existing) {
+          const c = document.createElement("canvas");
+          c.id = "jeeFaceFilterCanvas";
+          c.width = 1;
+          c.height = 1;
+          c.style.position = "fixed";
+          c.style.left = "-10000px";
+          c.style.top = "-10000px";
+          c.setAttribute("data-juander-placeholder", "true");
+          document.body.appendChild(c);
+        }
+      } else {
+        const placeholder =
+          existing &&
+          existing.getAttribute("data-juander-placeholder") === "true"
+            ? existing
+            : null;
+        if (placeholder) {
+          try {
+            document.body.removeChild(placeholder);
+          } catch {}
+        }
       }
     } catch {}
-    return () => {
-      try {
-        if (window.__JUANDER_ORIG_GETBYID) {
-          document.getElementById = window.__JUANDER_ORIG_GETBYID;
-          delete window.__JUANDER_PATCHED_GETBYID;
-        }
-      } catch {}
-    };
   }, [location.pathname]);
   return null;
 }
