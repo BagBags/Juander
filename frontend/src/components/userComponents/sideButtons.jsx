@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { User, Phone } from "lucide-react";
 
 export default function SideButtons({ userType = "tourist" }) {
   const { t } = useTranslation();
@@ -39,20 +40,20 @@ export default function SideButtons({ userType = "tourist" }) {
       tourClass: "side-button-photobooth", // Tour target
     },
     {
-      url: "icons/SideIcons1/Hotlines.webp",
+      icon: Phone,
       label: "hotlines",
       to: "/Emergency",
       Device: "Mobile",
       allowedFor: ["tourist", "guest"],
-      tourClass: "side-button-emergency", // Tour target
+      tourClass: "side-button-emergency",
     },
     {
-      url: "icons/SideIcons1/Profile.webp",
+      icon: User,
       label: "profile",
       to: userType === "guest" ? "/GuestProfile" : "/Profile",
       Device: "All",
       allowedFor: ["tourist", "guest"],
-      tourClass: "side-button-profile", // Tour target
+      tourClass: "side-button-profile",
     },
     {
       url: "icons/SideIcons1/Archive.webp",
@@ -74,7 +75,7 @@ export default function SideButtons({ userType = "tourist" }) {
     >
       {icons.map((icon, index) => {
         let visibilityClass = "";
-       if (icon.Device === "Mobile") visibilityClass = "block xl:hidden";
+        if (icon.Device === "Mobile") visibilityClass = "block xl:hidden";
         else visibilityClass = "block";
 
         // Uniform sizes across all icons for consistency
@@ -101,11 +102,21 @@ export default function SideButtons({ userType = "tourist" }) {
                      shadow-lg hover:shadow-yellow-300/50 hover:scale-110
                      transition-transform duration-300 ease-out`}
             >
-              <img
-                src={icon.url}
-                alt={`icon-${index}`}
-                className={`${iconSize} object-contain`}
-              />
+              {icon.icon ? (
+                React.createElement(icon.icon, {
+                  className: `${iconSize}`,
+                  color: "white",
+                  stroke: "white",
+                  fill: "white",
+                  strokeWidth: 2,
+                })
+              ) : (
+                <img
+                  src={icon.url}
+                  alt={`icon-${index}`}
+                  className={`${iconSize} object-contain`}
+                />
+              )}
             </div>
 
             <span

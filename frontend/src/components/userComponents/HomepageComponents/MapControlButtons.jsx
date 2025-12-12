@@ -8,6 +8,7 @@ import {
   Car,
   Bike,
   Footprints,
+  Info,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ttsService from "../../../utils/textToSpeech";
@@ -27,6 +28,7 @@ export default function MapControlButtons({
   setTransportMode,
   onActivateGps,
   hideRecenterButton = false,
+  onOpenItineraryInfo,
 }) {
   const { t } = useTranslation();
   const [isTTSEnabled, setIsTTSEnabled] = useState(ttsService.isEnabled);
@@ -181,6 +183,22 @@ export default function MapControlButtons({
           title="Show current destination"
         >
           <MapPin className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Itinerary Info Button */}
+      {typeof onOpenItineraryInfo === "function" && (
+        <button
+          onClick={() => {
+            try {
+              onOpenItineraryInfo();
+            } catch {}
+          }}
+          className="map-itinerary-info-btn bg-white hover:bg-gray-50 text-gray-700 p-3 rounded-full shadow-lg border border-gray-200 transition-all duration-200 active:scale-95"
+          title="Itinerary overview"
+          aria-label="Itinerary overview"
+        >
+          <Info className="w-5 h-5" />
         </button>
       )}
 

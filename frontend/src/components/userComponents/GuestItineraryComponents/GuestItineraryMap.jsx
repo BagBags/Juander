@@ -95,6 +95,10 @@ export default function GuestItineraryMap() {
   const lastUpdateTimeRef = useRef(0);
   const nearestPointOnRoute = useRef(null);
   const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [detailsItinerary, setDetailsItinerary] = useState(
+    (location.state && location.state.itinerary) || null
+  );
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
 
   // Start tour if forced via Settings (must be inside component)
@@ -2041,6 +2045,7 @@ export default function GuestItineraryMap() {
                 setGpsApproved(true);
               } catch {}
             }}
+            onOpenItineraryInfo={() => setShowInfoModal(true)}
           />
         )}
 
@@ -2163,6 +2168,366 @@ export default function GuestItineraryMap() {
         >
           Restart Route
         </button> */}
+
+        {/* Itinerary Overview Modal */}
+        {showInfoModal && detailsItinerary && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowInfoModal(false)}
+            />
+            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 mt-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto overflow-x-hidden modern-scrollbar">
+              <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center justify-center rounded-full bg-[#f04e37] w-8 h-8">
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="white"
+                    >
+                      <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm.75 6.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM11 10h2v8h-2v-8z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {detailsItinerary.name}
+                    </h3>
+                    <p className="text-xs text-gray-500">Itinerary overview</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowInfoModal(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <svg
+                    className="w-5 h-5 text-gray-600"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+
+              {resolveUrl(detailsItinerary.imageUrl) && (
+                <div className="h-36 sm:h-56 md:h-64 w-full overflow-hidden">
+                  <img
+                    src={resolveUrl(detailsItinerary.imageUrl)}
+                    alt={detailsItinerary.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="px-6 py-5 sm:px-8 sm:py-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
+                    <svg
+                      className="w-4 h-4 text-gray-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
+                      {(() => {
+                        const totalMinutes = (
+                          detailsItinerary.sites || []
+                        ).reduce((sum, s) => {
+                          const v =
+                            typeof s?.averageTimeSpent === "number"
+                              ? s.averageTimeSpent
+                              : Number(s?.averageTimeSpent);
+                          return sum + (isNaN(v) || v <= 0 ? 0 : v);
+                        }, 0);
+                        const computedHours =
+                          Math.round((totalMinutes / 60) * 2) / 2;
+                        const value =
+                          detailsItinerary.duration &&
+                          detailsItinerary.duration > 0
+                            ? detailsItinerary.duration
+                            : computedHours;
+                        return value && value > 0
+                          ? `Duration: ${value} ${
+                              value === 1 ? "hour" : "hours"
+                            }`
+                          : "Duration: Flexible";
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5">
+                    <svg
+                      className="w-4 h-4 text-gray-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1118 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span className="text-sm font-medium text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">{`Sites: ${
+                      (detailsItinerary.sites || []).length
+                    } site(s)`}</span>
+                  </div>
+                </div>
+
+                {detailsItinerary.description && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                      Description
+                    </h4>
+                    <p className="text-gray-800 text-sm leading-relaxed">
+                      {detailsItinerary.description}
+                    </p>
+                    {typeof detailsItinerary.recommendedStartMinutes ===
+                      "number" && (
+                      <div className="mt-3 inline-flex items-center gap-2 px-2 py-1 sm:px-3 sm:py-1.5 rounded-md bg-gray-50 border border-gray-200">
+                        <svg
+                          className="w-4 h-4 text-gray-600"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <span className="text-sm text-gray-700 whitespace-nowrap">
+                          Recommended Start:{" "}
+                          {(() => {
+                            const m =
+                              detailsItinerary.recommendedStartMinutes || 0;
+                            const h = Math.floor(m / 60);
+                            const mm = String(m % 60).padStart(2, "0");
+                            const ampm = h >= 12 ? "PM" : "AM";
+                            const hh = h % 12 || 12;
+                            return `${hh}:${mm} ${ampm}`;
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(() => {
+                  const roundToStep = (min, step = 5) =>
+                    Math.round(min / step) * step;
+                  const start =
+                    typeof detailsItinerary.recommendedStartMinutes === "number"
+                      ? detailsItinerary.recommendedStartMinutes
+                      : 7 * 60;
+                  const sequence = [];
+                  const breaksArr = Array.isArray(detailsItinerary.breaks)
+                    ? detailsItinerary.breaks
+                    : [];
+                  breaksArr
+                    .filter((b) => Number(b.position) === 0)
+                    .forEach((b) => sequence.push({ type: "break", data: b }));
+                  (detailsItinerary.sites || []).forEach((site, idx) => {
+                    sequence.push({ type: "site", data: site });
+                    breaksArr
+                      .filter((b) => Number(b.position) === idx + 1)
+                      .forEach((b) =>
+                        sequence.push({ type: "break", data: b })
+                      );
+                  });
+                  let cursor = roundToStep(start, 5);
+                  const items = sequence.map((it) => {
+                    if (it.type === "break") {
+                      const pseudoSite = {
+                        _id: `break-${it.data.id || Math.random()}`,
+                        siteName: it.data.label || "Break/Lunch",
+                        title: it.data.label || "Break/Lunch",
+                        averageTimeSpent: it.data.minutes || 0,
+                        isBreak: true,
+                      };
+                      const item = {
+                        time: roundToStep(cursor, 5),
+                        site: pseudoSite,
+                      };
+                      cursor = roundToStep(
+                        cursor + (Number(it.data.minutes) || 0),
+                        5
+                      );
+                      return item;
+                    }
+                    const site = it.data;
+                    const v =
+                      typeof site?.averageTimeSpent === "number"
+                        ? site.averageTimeSpent
+                        : Number(site?.averageTimeSpent);
+                    const item = { time: roundToStep(cursor, 5), site };
+                    cursor = roundToStep(
+                      cursor + (isNaN(v) || v <= 0 ? 0 : v),
+                      5
+                    );
+                    return item;
+                  });
+                  if (!items.length) return null;
+                  const isSuggested = !!detailsItinerary?.isAdminCreated;
+                  return (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-500 mb-1">
+                        {isSuggested ? "Suggested Schedule" : "Schedule"}
+                      </h4>
+                      {!isSuggested && (
+                        <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
+                          <svg
+                            className="w-4 h-4 text-gray-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                          </svg>
+                          <span>
+                            Start Time:{" "}
+                            {(() => {
+                              const m = start;
+                              const h = Math.floor(m / 60);
+                              const mm = String(m % 60).padStart(2, "0");
+                              const ampm = h >= 12 ? "PM" : "AM";
+                              const hh = h % 12 || 12;
+                              return `${hh}:${mm} ${ampm}`;
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                      {(() => {
+                        const segments = items.map((it) => {
+                          const site = it.site;
+                          const minutes = site.isBreak
+                            ? site.averageTimeSpent || 0
+                            : (typeof site?.averageTimeSpent === "number"
+                                ? site.averageTimeSpent
+                                : Number(site?.averageTimeSpent)) || 0;
+                          const end = roundToStep(it.time + minutes, 5);
+                          return { start: it.time, end, site };
+                        });
+                        const fmt = (m) => {
+                          const h = Math.floor(m / 60);
+                          const mm = String(m % 60).padStart(2, "0");
+                          const ampm = h >= 12 ? "PM" : "AM";
+                          const hh = h % 12 || 12;
+                          return `${hh}:${mm} ${ampm}`;
+                        };
+                        return (
+                          <div className="space-y-3 sm:space-y-4">
+                            {segments.map(({ start, end, site }, i) => (
+                              <div
+                                key={site._id || i}
+                                className="flex items-center gap-4 sm:gap-5 py-1.5"
+                              >
+                                <div className="w-[160px] sm:w-[220px] flex-shrink-0 flex items-center justify-center gap-2 rounded-lg bg-gray-50 border border-gray-200 px-2 py-1 sm:px-3 sm:py-1.5">
+                                  <svg
+                                    className="w-4 h-4 text-gray-600"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                  </svg>
+                                  <span className="text-sm sm:hidden font-semibold text-gray-900 whitespace-nowrap">{`${fmt(
+                                    start
+                                  )} – ${fmt(end)}`}</span>
+                                  <span className="hidden sm:inline text-sm sm:text-base font-semibold text-gray-900 whitespace-nowrap">{`${fmt(
+                                    start
+                                  )} to ${fmt(end)}`}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-800 line-clamp-2 sm:line-clamp-1">
+                                    {site.siteName || site.title}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2">
+                    Included Sites
+                  </h4>
+                  <div className="space-y-3 pr-2">
+                    {(detailsItinerary.sites || []).map((site, i) => {
+                      const thumb =
+                        site.mediaFiles?.find((m) => m.type === "image")?.url ||
+                        site.mediaUrl;
+                      const img = resolveUrl(thumb);
+                      return (
+                        <div
+                          key={site._id || i}
+                          className="flex w-full text-left gap-3 p-3 border border-gray-200 rounded-xl bg-white"
+                        >
+                          <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            {img ? (
+                              <img
+                                src={img}
+                                alt={site.siteName || site.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <svg
+                                  className="w-6 h-6"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1118 0z"></path>
+                                  <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base font-semibold text-gray-900 truncate">
+                              {site.siteName || site.title}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
