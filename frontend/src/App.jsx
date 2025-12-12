@@ -746,7 +746,7 @@ function CameraLifecycleOnRouteLeave() {
     // components like QRScanner a chance to mount, acquire the camera and
     // cancel the stop before it triggers.
     if (!isPhotobooth) {
-      scheduleCameraStop(500);
+      scheduleCameraStop(0);
     } else {
       // If we're on Photobooth, ensure any pending stop is canceled
       cancelCameraStop();
@@ -779,7 +779,17 @@ function CameraLifecycleOnRouteLeave() {
 }
 
 function CameraPermissionKeeper() {
+  const location = useLocation();
   useEffect(() => {
+    const isCameraRoute = () => {
+      const p = location.pathname || "";
+      return (
+        p.startsWith("/Photobooth") ||
+        p.startsWith("/PhotoboothJeeliz") ||
+        p.startsWith("/TouristItineraryMap/") ||
+        p.startsWith("/GuestItineraryMap/")
+      );
+    };
     const hasActiveStream = () => {
       try {
         const videos = document.querySelectorAll("video");
@@ -795,6 +805,7 @@ function CameraPermissionKeeper() {
     };
 
     const preflight = async () => {
+      if (!isCameraRoute()) return;
       if (hasActiveStream()) return;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -824,7 +835,95 @@ function CameraPermissionKeeper() {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, []);
+  }, [location.pathname]);
+  return null;
+}
+
+function JeelizErrorShield() {
+  const location = useLocation();
+  useEffect(() => {
+    const isPhotobooth =
+      location.pathname.startsWith("/Photobooth") ||
+      location.pathname.startsWith("/PhotoboothJeeliz");
+    const onError = (e) => {
+      const src = e?.filename || "";
+      if (!isPhotobooth && /jeelizFaceFilter\.js/i.test(src)) {
+        if (typeof e.preventDefault === "function") e.preventDefault();
+        return true;
+      }
+    };
+    const onUnhandled = (e) => {
+      const s = (e?.reason && e.reason.stack) || "";
+      if (!isPhotobooth && /jeelizFaceFilter\.js/i.test(s)) {
+        if (typeof e.preventDefault === "function") e.preventDefault();
+      }
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
+  }, [location.pathname]);
+  return null;
+}
+
+function JeelizDomShield() {
+  const location = useLocation();
+  useEffect(() => {
+    try {
+      if (!window.__JUANDER_ORIG_GETBYID) {
+        window.__JUANDER_ORIG_GETBYID = document.getElementById.bind(document);
+      }
+      const placeholder =
+        window.__JUANDER_JEE_PLACEHOLDER ||
+        (() => {
+          const p = {
+            id: "jeeFaceFilterCanvas",
+            width: 1,
+            height: 1,
+            clientWidth: 1,
+            clientHeight: 1,
+            style: {},
+            parentElement: {
+              getBoundingClientRect: () => ({
+                width: 1,
+                height: 1,
+                left: 0,
+                top: 0,
+              }),
+            },
+            getBoundingClientRect: () => ({
+              width: 1,
+              height: 1,
+              left: 0,
+              top: 0,
+            }),
+            addEventListener: () => {},
+            removeEventListener: () => {},
+          };
+          window.__JUANDER_JEE_PLACEHOLDER = p;
+          return p;
+        })();
+      if (!window.__JUANDER_PATCHED_GETBYID) {
+        const orig = window.__JUANDER_ORIG_GETBYID;
+        document.getElementById = function (id) {
+          const el = orig(id);
+          if (!el && id === "jeeFaceFilterCanvas") return placeholder;
+          return el;
+        };
+        window.__JUANDER_PATCHED_GETBYID = true;
+      }
+    } catch {}
+    return () => {
+      try {
+        if (window.__JUANDER_ORIG_GETBYID) {
+          document.getElementById = window.__JUANDER_ORIG_GETBYID;
+          delete window.__JUANDER_PATCHED_GETBYID;
+        }
+      } catch {}
+    };
+  }, [location.pathname]);
   return null;
 }
 
@@ -832,6 +931,35 @@ export default function App() {
   useEffect(() => {
     const savedLang = localStorage.getItem("language") || "en";
     i18n.changeLanguage(savedLang);
+  }, []);
+  useEffect(() => {
+    try {
+      if (!window.__JUANDER_PATCHED_SRC_OBJECT) {
+        const proto =
+          HTMLMediaElement?.prototype || HTMLVideoElement?.prototype;
+        const desc =
+          proto && Object.getOwnPropertyDescriptor(proto, "srcObject");
+        if (desc && typeof desc.set === "function") {
+          const origSet = desc.set;
+          const patchedSet = function (value) {
+            try {
+              if (value && typeof value.getTracks === "function") {
+                if (!window.__JUANDER_TRACKED_STREAMS) {
+                  window.__JUANDER_TRACKED_STREAMS = new Set();
+                }
+                window.__JUANDER_TRACKED_STREAMS.add(value);
+              }
+            } catch {}
+            return origSet.call(this, value);
+          };
+          Object.defineProperty(proto, "srcObject", {
+            ...desc,
+            set: patchedSet,
+          });
+          window.__JUANDER_PATCHED_SRC_OBJECT = true;
+        }
+      }
+    } catch {}
   }, []);
   return (
     <LazyLoadErrorBoundary>
@@ -843,6 +971,8 @@ export default function App() {
               <TTSCancelOnRouteLeave />
               <CameraLifecycleOnRouteLeave />
               <CameraPermissionKeeper />
+              <JeelizErrorShield />
+              <JeelizDomShield />
               <ConnectionStatus />
               <PWAInstallPrompt />
             </AuthPersistence>

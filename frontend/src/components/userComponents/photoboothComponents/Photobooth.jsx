@@ -25,6 +25,7 @@ export default function Photobooth() {
   const overlayImgRef = useRef(null);
   const videoElRef = useRef(null);
   const mediaStreamRef = useRef(null);
+  const fallbackVideoRef = useRef(null);
 
   const [jeelizReady, setJeelizReady] = useState(false);
   const [cameraKey, setCameraKey] = useState(0);
@@ -253,26 +254,147 @@ export default function Photobooth() {
 
     let destroyed = false;
 
-    loadJeeliz()
+    const preflightChooseMode = async () => {
+      try {
+        // Try environment first
+        const envOk = await navigator.mediaDevices
+          .getUserMedia({
+            video: { facingMode: { exact: "environment" } },
+            audio: false,
+          })
+          .then((s) => {
+            try {
+              s.getTracks().forEach((t) => {
+                try {
+                  t.stop();
+                } catch {}
+              });
+            } catch {}
+            return true;
+          })
+          .catch(() => false);
+        if (envOk) {
+          if (facingMode !== "environment") setFacingMode("environment");
+          return "environment";
+        }
+        // Fallback to user/front
+        const userOk = await navigator.mediaDevices
+          .getUserMedia({
+            video: { facingMode: { exact: "user" } },
+            audio: false,
+          })
+          .then((s) => {
+            try {
+              s.getTracks().forEach((t) => {
+                try {
+                  t.stop();
+                } catch {}
+              });
+            } catch {}
+            return true;
+          })
+          .catch(() => false);
+        if (userOk) {
+          if (facingMode !== "user") setFacingMode("user");
+          return "user";
+        }
+      } catch {}
+      return facingMode;
+    };
+
+    preflightChooseMode()
+      .then(() => loadJeeliz())
       .then(() => {
         const JZ = window.JEELIZFACEFILTER;
-        const JR =
+        let JR =
           window.JeelizResizer || window.JEELIZRESIZER || window.JEELIZRESIZER2;
-        if (!JZ || !JR) return;
+        if (!JZ) return;
+        if (!JR) {
+          JR = {
+            size_canvas: (opts) => {
+              try {
+                const id = opts && opts.canvasId;
+                const el = id ? document.getElementById(id) : null;
+                const rect =
+                  el && typeof el.getBoundingClientRect === "function"
+                    ? el.getBoundingClientRect()
+                    : { width: 600, height: 600 };
+                const bestVideoSettings = {
+                  facingMode,
+                  width: { ideal: Math.max(320, Math.round(rect.width)) },
+                  height: { ideal: Math.max(240, Math.round(rect.height)) },
+                };
+                if (opts && typeof opts.callback === "function") {
+                  opts.callback(false, bestVideoSettings);
+                }
+              } catch (e) {
+                if (opts && typeof opts.callback === "function") {
+                  opts.callback("resizer_missing");
+                }
+              }
+            },
+          };
+          window.JeelizResizer = JR;
+        }
+        try {
+          if (!JR.__safeWrapped && typeof JR.size_canvas === "function") {
+            const origSize = JR.size_canvas.bind(JR);
+            JR.size_canvas = (opts) => {
+              try {
+                const id = opts && opts.canvasId;
+                const el = id ? document.getElementById(id) : null;
+                if (!el) {
+                  if (opts && typeof opts.callback === "function") {
+                    opts.callback("canvas_missing");
+                  }
+                  return;
+                }
+              } catch {}
+              return origSize(opts);
+            };
+            JR.__safeWrapped = true;
+          }
+        } catch {}
+        try {
+          if (!JZ.__renderWrapped && typeof JZ.render_video === "function") {
+            const origRender = JZ.render_video.bind(JZ);
+            JZ.render_video = () => {
+              if (destroyed) return;
+              const el = document.getElementById("jeeFaceFilterCanvas");
+              if (!el) return;
+              try {
+                return origRender();
+              } catch {}
+            };
+            JZ.__renderWrapped = true;
+          }
+        } catch {}
         const tryInit = () => {
+          if (destroyed) return;
           const canvasEl = document.getElementById("jeeFaceFilterCanvas");
           if (!canvasEl) {
-            setTimeout(tryInit, 120);
+            setTimeout(() => {
+              if (!destroyed) tryInit();
+            }, 120);
             return;
           }
-          const rect = canvasEl.getBoundingClientRect();
-          const parentRect = canvasEl.parentElement?.getBoundingClientRect();
+          const rect =
+            canvasEl && typeof canvasEl.getBoundingClientRect === "function"
+              ? canvasEl.getBoundingClientRect()
+              : { width: 0, height: 0 };
+          const parentRect =
+            canvasEl?.parentElement &&
+            typeof canvasEl.parentElement.getBoundingClientRect === "function"
+              ? canvasEl.parentElement.getBoundingClientRect()
+              : { width: 0, height: 0 };
           if (
             rect.width === 0 ||
             rect.height === 0 ||
             (parentRect && (parentRect.width === 0 || parentRect.height === 0))
           ) {
-            setTimeout(tryInit, 120);
+            setTimeout(() => {
+              if (!destroyed) tryInit();
+            }, 120);
             return;
           }
           setTimeout(
@@ -280,6 +402,7 @@ export default function Photobooth() {
               JR.size_canvas({
                 canvasId: "jeeFaceFilterCanvas",
                 callback: function (isError, bestVideoSettings) {
+                  if (destroyed) return;
                   if (isError) {
                     console.error("JeelizResizer error: ", isError);
                     return;
@@ -288,6 +411,7 @@ export default function Photobooth() {
                     bestVideoSettings.facingMode = facingMode;
                     bestVideoSettings.flipX = facingMode === "user";
                   } catch {}
+                  if (destroyed) return;
                   JZ.init({
                     canvasId: "jeeFaceFilterCanvas",
                     NNCPath:
@@ -295,11 +419,21 @@ export default function Photobooth() {
                     videoSettings: bestVideoSettings,
                     followZRot: true,
                     onWebcamGet: function () {
+                      if (destroyed) return;
                       setJeelizReady(true);
                     },
                     callbackReady: function (errCode, spec) {
+                      if (destroyed) return;
                       if (errCode) {
                         console.error("Jeeliz init error:", errCode);
+                        try {
+                          if (facingMode === "environment") {
+                            setFacingMode("user");
+                          } else {
+                            setFacingMode("environment");
+                          }
+                          setCameraKey((k) => k + 1);
+                        } catch {}
                         return;
                       }
                       setJeelizReady(true);
@@ -310,9 +444,29 @@ export default function Photobooth() {
                           videoElRef.current && videoElRef.current.srcObject
                             ? videoElRef.current.srcObject
                             : null;
+                        const fv = fallbackVideoRef.current;
+                        if (fv && mediaStreamRef.current) {
+                          try {
+                            fv.srcObject = mediaStreamRef.current;
+                            fv.muted = true;
+                            fv.autoplay = true;
+                            fv.playsInline = true;
+                            fv.style.transform =
+                              facingMode === "user" ? "scaleX(-1)" : "none";
+                            const p = fv.play && fv.play();
+                            if (p && typeof p.catch === "function") {
+                              p.catch(() => {});
+                            }
+                          } catch {}
+                        }
                       } catch {}
                     },
                     callbackTrack: function (ds) {
+                      if (destroyed) return;
+                      const canvasEl = document.getElementById(
+                        "jeeFaceFilterCanvas"
+                      );
+                      if (!canvasEl) return;
                       try {
                         JZ.render_video();
                       } catch {}
@@ -320,8 +474,9 @@ export default function Photobooth() {
                       const cont = overlayRef.current;
                       const imgEl = overlayImgRef.current;
                       const canvas = canvasRef.current;
-                      const width = canvas?.clientWidth || 0;
-                      const height = canvas?.clientHeight || 0;
+                      if (!canvas) return;
+                      const width = canvas.clientWidth || 0;
+                      const height = canvas.clientHeight || 0;
                       const category = imgEl?.dataset?.category || "general";
 
                       if (cont && imgEl) {
@@ -437,8 +592,25 @@ export default function Photobooth() {
             v.load && v.load();
           } catch {}
         }
+        try {
+          const fv = fallbackVideoRef.current;
+          if (fv) {
+            try {
+              fv.pause && fv.pause();
+            } catch {}
+            try {
+              fv.srcObject = null;
+            } catch {}
+            try {
+              fv.removeAttribute("src");
+            } catch {}
+            try {
+              fv.load && fv.load();
+            } catch {}
+          }
+        } catch {}
       } catch {}
-      scheduleCameraStop(500);
+      scheduleCameraStop(0);
     };
   }, [cameraKey, facingMode]);
 
@@ -473,6 +645,12 @@ export default function Photobooth() {
             v.load && v.load();
           } catch {}
         }
+      } catch {}
+      try {
+        delete window.JEELIZFACEFILTER;
+        delete window.JeelizResizer;
+        delete window.JEELIZRESIZER;
+        delete window.JEELIZRESIZER2;
       } catch {}
     };
     window.addEventListener("pagehide", hardStop);
@@ -528,6 +706,12 @@ export default function Photobooth() {
     try {
       if (window.JEELIZFACEFILTER && window.JEELIZFACEFILTER.destroy) {
         window.JEELIZFACEFILTER.destroy();
+      }
+    } catch {}
+    try {
+      const fv = fallbackVideoRef.current;
+      if (fv) {
+        fv.style.transform = facingMode === "user" ? "none" : "scaleX(-1)"; // will be reset in callbackReady
       }
     } catch {}
     setJeelizReady(false);
@@ -778,12 +962,26 @@ export default function Photobooth() {
             pointerEvents: showPreview ? "none" : "auto",
           }}
         >
+          <video
+            ref={fallbackVideoRef}
+            className="webcam"
+            muted
+            playsInline
+            autoPlay
+            aria-hidden="true"
+          />
           <canvas
             ref={canvasRef}
             id="jeeFaceFilterCanvas"
             width="600"
             height="600"
-            style={{ width: "100%", height: "100%", display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "block",
+              position: "relative",
+              zIndex: 1,
+            }}
           />
 
           {/* Overlay image positioned by Jeeliz detectState */}
