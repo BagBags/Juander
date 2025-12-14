@@ -127,6 +127,35 @@ const AdminPinCard = ({
     }
   }, [pin._id]);
 
+  const [mvReady, setMvReady] = useState(false);
+  useEffect(() => {
+    const src = "https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js";
+    if (window.customElements && window.customElements.get("model-viewer")) {
+      setMvReady(true);
+      return;
+    }
+    let script = document.querySelector(`script[src="${src}"]`);
+    if (script) {
+      if (script.dataset.loaded === "true") {
+        setMvReady(true);
+      } else {
+        script.addEventListener("load", () => setMvReady(true), { once: true });
+      }
+      return;
+    }
+    script = document.createElement("script");
+    script.type = "module";
+    script.src = src;
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      setMvReady(true);
+    };
+    script.onerror = () => {
+      setMvReady(false);
+    };
+    document.head.appendChild(script);
+  }, []);
+
   // English section handlers
   const addEnglishSection = () => {
     setDescriptionSections([...descriptionSections, ""]);
@@ -782,41 +811,46 @@ const AdminPinCard = ({
               {pin.glbUrl && (
                 <ModelErrorBoundary>
                   <div className="relative mb-3 w-full h-64 border border-gray-200 rounded-lg">
-                    <Canvas
-                      onCreated={({ gl }) => gl.setClearColor("#e5e7eb", 1)}
-                    >
-                      <Suspense fallback={null}>
-                        <ambientLight intensity={1.2} />
-                        <directionalLight
-                          position={[10, 10, 10]}
-                          intensity={1.5}
-                        />
-                        <directionalLight
-                          position={[-5, 5, -5]}
-                          intensity={0.5}
-                        />
-                        <Bounds fit clip observe margin={0.8}>
-                          <Center>
-                            <ModelPreview
-                              url={
-                                pin.glbUrl
-                                  ? pin.glbUrl.startsWith("http")
-                                    ? pin.glbUrl
-                                    : `${BACKEND_URL}${
-                                        pin.glbUrl.startsWith("/") ? "" : "/"
-                                      }${pin.glbUrl}`
-                                  : null
-                              }
-                            />
-                          </Center>
-                        </Bounds>
-                        <OrbitControls
-                          enableZoom={true}
-                          minPolarAngle={Math.PI / 3}
-                          maxPolarAngle={Math.PI / 2}
-                        />
-                      </Suspense>
-                    </Canvas>
+                    {mvReady ? (
+                      <model-viewer
+                        src={
+                          pin.glbUrl
+                            ? pin.glbUrl.startsWith("http")
+                              ? pin.glbUrl
+                              : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
+                            : undefined
+                        }
+                        camera-controls
+                        interaction-prompt="none"
+                        touch-action="none"
+                        style={{ width: "100%", height: "100%", background: "#e5e7eb" }}
+                        exposure="1"
+                        shadow-intensity="1"
+                        ar-modes="webxr scene-viewer quick-look"
+                      />
+                    ) : (
+                      <Canvas onCreated={({ gl }) => gl.setClearColor("#e5e7eb", 1)}>
+                        <Suspense fallback={null}>
+                          <ambientLight intensity={1.2} />
+                          <directionalLight position={[10, 10, 10]} intensity={1.5} />
+                          <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+                          <Bounds fit clip observe margin={0.8}>
+                            <Center>
+                              <ModelPreview
+                                url={
+                                  pin.glbUrl
+                                    ? pin.glbUrl.startsWith("http")
+                                      ? pin.glbUrl
+                                      : `${BACKEND_URL}${pin.glbUrl.startsWith("/") ? "" : "/"}${pin.glbUrl}`
+                                    : null
+                                }
+                              />
+                            </Center>
+                          </Bounds>
+                          <OrbitControls enableZoom={true} minPolarAngle={Math.PI / 3} maxPolarAngle={Math.PI / 2} />
+                        </Suspense>
+                      </Canvas>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleRemoveGlb(selectedPinIndex)}

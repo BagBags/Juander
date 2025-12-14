@@ -17,6 +17,10 @@ export default defineConfig({
       // Prebundle map libs to ensure proper ESM default exports in dev
       "mapbox-gl",
       "react-map-gl",
+      // Prebundle Three ecosystem to unify instance
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
     ],
     exclude: [
       // Defer heavy libs; keep UI libs for correct ESM resolution in dev
@@ -377,6 +381,12 @@ export default defineConfig({
       template: "treemap", // "sunburst" or "network" also work
     }),
   ],
+  resolve: {
+    dedupe: ["react", "react-dom", "three"],
+    alias: {
+      three: path.resolve(process.cwd(), "node_modules/three"),
+    },
+  },
   build: {
     target: "esnext",
     minify: "esbuild",

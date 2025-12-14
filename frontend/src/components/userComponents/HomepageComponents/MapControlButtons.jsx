@@ -110,7 +110,10 @@ export default function MapControlButtons({
   };
 
   return (
-    <div className="absolute top-24 right-4 md:top-24 z-40 flex flex-col gap-2 items-end">
+    <div
+      className="absolute right-4 z-40 flex flex-col gap-2 items-end"
+      style={{ top: "calc(env(safe-area-inset-top) + 96px)" }}
+    >
       {/* Voice Guidance Toggle Button */}
       <button
         onClick={handleTTSToggle}

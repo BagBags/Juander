@@ -12,7 +12,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "./TouristItinerariesMap.css";
 import axios from "axios";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { useGLTF } from "@react-three/drei";
 import {
   Navigation,
   MapPin,
@@ -105,6 +104,7 @@ export default function TouristItineraryMap() {
   const lastUpdateTimeRef = useRef(0);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [transportMode, setTransportMode] = useState("walking"); // walking | cycling | driving
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Start tour if forced via Settings (must be inside component)
   useEffect(() => {
@@ -115,6 +115,31 @@ export default function TouristItineraryMap() {
       }
     } catch {}
   }, [startTour]);
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    if (!map) return;
+    const onZoomStart = () => setIsAnimating(true);
+    const onZoomEnd = () => setIsAnimating(false);
+    const onMoveStart = () => setIsAnimating(true);
+    const onMoveEnd = () => setIsAnimating(false);
+    const onRotateStart = () => setIsAnimating(true);
+    const onRotateEnd = () => setIsAnimating(false);
+    map.on("zoomstart", onZoomStart);
+    map.on("zoomend", onZoomEnd);
+    map.on("movestart", onMoveStart);
+    map.on("moveend", onMoveEnd);
+    map.on("rotatestart", onRotateStart);
+    map.on("rotateend", onRotateEnd);
+    return () => {
+      map.off("zoomstart", onZoomStart);
+      map.off("zoomend", onZoomEnd);
+      map.off("movestart", onMoveStart);
+      map.off("moveend", onMoveEnd);
+      map.off("rotatestart", onRotateStart);
+      map.off("rotateend", onRotateEnd);
+    };
+  }, []);
 
   // Hide/dismiss modals while the tour runs to avoid interruptions
   useEffect(() => {
@@ -188,45 +213,52 @@ export default function TouristItineraryMap() {
   }, [itineraryId]);
 
   useEffect(() => {
-    const url = selectedPin?.glbUrl;
-    if (url && typeof url === "string" && url.endsWith(".glb")) {
-      try {
-        useGLTF.preload(url);
-      } catch {}
-    }
-  }, [selectedPin]);
+    try {
+      const raw = sessionStorage.getItem("AR_RETURN");
+      if (!raw) return;
+      const ctx = JSON.parse(raw);
+      if (!ctx || !ctx.pinId) return;
+      const list =
+        optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
+      const found = list.find((p) => p && p._id === ctx.pinId);
+      if (found) {
+        setSelectedPin(found);
+        setShowFullModal(true);
+      }
+      sessionStorage.removeItem("AR_RETURN");
+    } catch {}
+  }, [pins, optimizedPins]);
 
   useEffect(() => {
-    const url = activePin?.glbUrl;
-    if (url && typeof url === "string" && url.endsWith(".glb")) {
-      try {
-        useGLTF.preload(url);
-      } catch {}
-    }
-  }, [activePin]);
-
-  useEffect(() => {
-    const list =
+    const base =
       optimizedPins && optimizedPins.length > 0 ? optimizedPins : pins;
     const candidates = [];
-    if (list && list.length > 0) {
-      candidates.push(list[0]);
-      if (list[1]) candidates.push(list[1]);
-      if (currentPinIndex != null && list[currentPinIndex]) {
-        candidates.push(list[currentPinIndex]);
-        if (list[currentPinIndex + 1])
-          candidates.push(list[currentPinIndex + 1]);
-      }
-    }
-    const urls = candidates
+    if (base && base.length > 0) candidates.push(base[0]);
+    if (base && base[1]) candidates.push(base[1]);
+    if (selectedPin) candidates.push(selectedPin);
+    if (activePin) candidates.push(activePin);
+    const links = [];
+    candidates
       .map((p) => p?.glbUrl)
-      .filter((u) => u && typeof u === "string" && u.endsWith(".glb"));
-    urls.forEach((u) => {
-      try {
-        useGLTF.preload(u);
-      } catch {}
-    });
-  }, [pins, optimizedPins, currentPinIndex]);
+      .filter((u) => u && typeof u === "string" && u.endsWith(".glb"))
+      .forEach((u) => {
+        try {
+          const l = document.createElement("link");
+          l.rel = "prefetch";
+          l.href = u;
+          l.crossOrigin = "anonymous";
+          document.head.appendChild(l);
+          links.push(l);
+        } catch {}
+      });
+    return () => {
+      links.forEach((l) => {
+        try {
+          document.head.removeChild(l);
+        } catch {}
+      });
+    };
+  }, [pins, optimizedPins, selectedPin, activePin]);
 
   // Handler to mark site as done (permanent)
   const handleMarkAsDone = async (siteId) => {
@@ -2226,7 +2258,15 @@ export default function TouristItineraryMap() {
       )}
 
       {/* Map Container - Takes remaining height */}
-      <div className="flex-1 relative overflow-hidden">
+      <div
+        className="flex-1 relative overflow-hidden"
+        style={{
+          touchAction: "none",
+          overscrollBehavior: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+        }}
+      >
         <Map
           ref={mapRef}
           {...viewState}
@@ -2235,7 +2275,14 @@ export default function TouristItineraryMap() {
           onMove={handleMapMove}
           maxBounds={INTRAMUROS_BOUNDS}
           attributionControl={false}
-          style={{ width: "100%", height: "100%" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            transform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            willChange: "transform",
+          }}
         >
           {/* Greyed out area */}
           {inverseMask && (
@@ -2243,7 +2290,10 @@ export default function TouristItineraryMap() {
               <Layer
                 id="inverse-fill"
                 type="fill"
-                paint={{ "fill-color": "#000", "fill-opacity": 0.5 }}
+                paint={{
+                  "fill-color": "#000",
+                  "fill-opacity": isAnimating ? 0.35 : 0.7,
+                }}
               />
             </Source>
           )}
@@ -2590,12 +2640,18 @@ export default function TouristItineraryMap() {
 
         {/* Itinerary Overview Modal */}
         {showInfoModal && detailsItinerary && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+            style={{
+              paddingTop: "env(safe-area-inset-top)",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
             <div
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={() => setShowInfoModal(false)}
             />
-            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 mt-4 rounded-3xl shadow-2xl animate-fadeIn h-[90vh] sm:h-[85vh] overflow-y-auto overflow-x-hidden modern-scrollbar">
+            <div className="relative bg-white w-full sm:max-w-3xl md:max-w-4xl mx-0 sm:mx-4 mt-4 rounded-3xl shadow-2xl animate-fadeIn h-[92svh] sm:h-[88svh] overflow-y-auto overflow-x-hidden modern-scrollbar">
               <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center justify-center rounded-full bg-[#f04e37] w-8 h-8">

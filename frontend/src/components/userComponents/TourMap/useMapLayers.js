@@ -33,6 +33,7 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
       });
 
     const add3DPins = async () => {
+      const layerIds = [];
       for (const pin of pins) {
         const layerId = `pin-3d-${pin._id}`;
         if (map.getLayer(layerId)) continue;
@@ -45,7 +46,7 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
         let modelScene;
         try {
           modelScene = await loadModel(modelUrl);
-        } catch (e) {
+        } catch {
           continue;
         }
 
@@ -68,6 +69,7 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
           onAdd: function (map, gl) {
             this.camera = new Camera();
             this.scene = new Scene();
+            this.map = map;
 
             // Lights
             const dirLight = new DirectionalLight(0xffffff, 0.8);
@@ -84,24 +86,144 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
               antialias: true,
             });
             try {
-              this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-            } catch {}
+              this.renderer.setPixelRatio(
+                Math.min(window.devicePixelRatio || 1, 2)
+              );
+            } catch {
+              null;
+            }
 
             this.renderer.autoClear = false;
+            try {
+              /* rely on gl.isContextLost() checks in render */
+            } catch {
+              null;
+            }
+            try {
+              const canvas = map.getCanvas();
+              const onLost = (evt) => {
+                try {
+                  if (evt && typeof evt.preventDefault === "function") {
+                    evt.preventDefault();
+                  }
+                } catch {
+                  null;
+                }
+                try {
+                  this.renderer = null;
+                } catch {
+                  null;
+                }
+                try {
+                  this.map &&
+                    this.map.setLayoutProperty(layerId, "visibility", "none");
+                } catch {
+                  null;
+                }
+              };
+              const onRestored = () => {
+                try {
+                  this.map &&
+                    this.map.setLayoutProperty(
+                      layerId,
+                      "visibility",
+                      "visible"
+                    );
+                  this.map &&
+                    this.map.triggerRepaint &&
+                    this.map.triggerRepaint();
+                } catch {
+                  null;
+                }
+              };
+              canvas.addEventListener("webglcontextlost", onLost, false);
+              canvas.addEventListener(
+                "webglcontextrestored",
+                onRestored,
+                false
+              );
+              this._onCtxLost = onLost;
+              this._onCtxRestored = onRestored;
+            } catch {
+              null;
+            }
+          },
+          onRemove: function (map) {
+            try {
+              const canvas = map.getCanvas();
+              if (this._onCtxLost)
+                canvas.removeEventListener(
+                  "webglcontextlost",
+                  this._onCtxLost,
+                  false
+                );
+              if (this._onCtxRestored)
+                canvas.removeEventListener(
+                  "webglcontextrestored",
+                  this._onCtxRestored,
+                  false
+                );
+            } catch {
+              null;
+            }
+            try {
+              this.renderer = null;
+            } catch {
+              null;
+            }
           },
 
           render: function (gl, matrix) {
-            if (!this.renderer) return;
-            if (gl && gl.isContextLost && gl.isContextLost()) return;
+            if (gl && gl.isContextLost && gl.isContextLost()) {
+              try {
+                this.renderer = null;
+              } catch {
+                null;
+              }
+              return;
+            }
+            if (!this.renderer && gl) {
+              try {
+                const canvas = gl.canvas || this.map?.getCanvas?.();
+                this.renderer = new WebGLRenderer({
+                  canvas,
+                  context: gl,
+                  antialias: true,
+                });
+                this.renderer.autoClear = false;
+                try {
+                  this.map &&
+                    this.map.setLayoutProperty(
+                      layerId,
+                      "visibility",
+                      "visible"
+                    );
+                } catch {
+                  null;
+                }
+              } catch {
+                null;
+              }
+            }
             const m = new Matrix4().fromArray(matrix);
             this.camera.projectionMatrix = m;
             this.renderer.resetState();
+            try {
+              // Prevent previous 3D pass from occluding base map tiles
+              this.renderer.clearDepth();
+              if (gl && typeof gl.clear === "function" && gl.DEPTH_BUFFER_BIT) {
+                gl.clear(gl.DEPTH_BUFFER_BIT);
+              }
+            } catch {
+              null;
+            }
             this.renderer.render(this.scene, this.camera);
             map.triggerRepaint();
           },
         };
 
         map.addLayer(customLayer);
+        layerIds.push(layerId);
       }
 
       // Invisible click layer
@@ -128,15 +250,79 @@ export default function useMapLayers(mapRef, pins, selectedPin) {
           paint: { "circle-radius": 20, "circle-opacity": 0 },
         });
       }
+
+      const hide3D = () => {
+        try {
+          layerIds.forEach((id) => {
+            if (map.getLayer(id))
+              map.setLayoutProperty(id, "visibility", "none");
+          });
+          map && map.triggerRepaint && map.triggerRepaint();
+        } catch {
+          null;
+        }
+      };
+      const show3D = () => {
+        try {
+          layerIds.forEach((id) => {
+            if (map.getLayer(id))
+              map.setLayoutProperty(id, "visibility", "visible");
+          });
+          map && map.triggerRepaint && map.triggerRepaint();
+        } catch {
+          null;
+        }
+      };
+      const onZoomStart = () => hide3D();
+      const onZoomEnd = () => show3D();
+      const onMoveStart = () => {
+        try {
+          if (map.isZooming() || map.isRotating() || map.isMoving()) hide3D();
+        } catch {
+          null;
+        }
+      };
+      const onMoveEnd = () => show3D();
+      map.on("zoomstart", onZoomStart);
+      map.on("zoomend", onZoomEnd);
+      map.on("movestart", onMoveStart);
+      map.on("moveend", onMoveEnd);
+
+      return () => {
+        map.off("zoomstart", onZoomStart);
+        map.off("zoomend", onZoomEnd);
+        map.off("movestart", onMoveStart);
+        map.off("moveend", onMoveEnd);
+      };
     };
 
+    let detachHandlers = null;
     if (map.isStyleLoaded()) {
-      add3DPins();
+      add3DPins()
+        .then((d) => {
+          detachHandlers = d;
+        })
+        .catch(() => {
+          null;
+        });
     } else {
-      map.once("style.load", add3DPins);
+      map.once("style.load", () => {
+        add3DPins()
+          .then((d) => {
+            detachHandlers = d;
+          })
+          .catch(() => {
+            null;
+          });
+      });
     }
 
     return () => {
+      try {
+        if (detachHandlers) detachHandlers();
+      } catch {
+        null;
+      }
       pins.forEach((pin) => {
         const layerId = `pin-3d-${pin._id}`;
         if (map.getLayer(layerId)) map.removeLayer(layerId);

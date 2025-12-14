@@ -1,6 +1,5 @@
 // components/userComponents/TourMap.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useGLTF } from "@react-three/drei";
 import Map from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import axios from "axios";
@@ -9,7 +8,8 @@ import { useApi } from "./useApi";
 import MapMarkers from "./MapMarkers";
 import MapOverlays from "./MapOverlays";
 import MapLayers from "./MapLayers";
-import { useTranslation } from "react-i18next";
+import useMapLayers from "./useMapLayers";
+
 import FloatingChatbot from "../ChatbotComponents/FloatingChatbot";
 import TourMapSearchModal from "./TourMapSearchModal";
 import TourMapControlButtons from "./TourMapControlButtons";
@@ -36,34 +36,16 @@ const INITIAL_VIEW = {
 };
 
 export default function TourMap() {
-  const { t } = useTranslation();
   const mapRef = useRef(null);
   const isProgrammaticMoveRef = useRef(false);
   const [selectedPin, setSelectedPin] = useState(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [mapError, setMapError] = useState(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Custom hooks
   const { mask, inverseMask, pins } = useApi(api);
-
-  // Monitor online/offline status
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setMapError(null);
-    };
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
+  useMapLayers(mapRef, pins, selectedPin);
 
   // Remove non-itinerary TTS announcements
   // No TTS here; voice guidance is exclusive to itinerary maps
@@ -105,6 +87,15 @@ export default function TourMap() {
     });
   };
 
+  // ------------------ Open pin ------------------
+  const openPin = useCallback((pinData) => {
+    if (!pinData) return;
+
+    flyToPin(pinData, () => {
+      setSelectedPin(pinData);
+    });
+  }, []);
+
   // ------------------ Handle map clicks ------------------
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
@@ -126,40 +117,63 @@ export default function TourMap() {
 
     map.on("click", handleMapClick);
     return () => map.off("click", handleMapClick);
-  }, [pins]);
+  }, [pins, openPin]);
 
-  // ------------------ Open pin ------------------
-  const openPin = useCallback((pinData) => {
-    if (!pinData) return;
-
-    flyToPin(pinData, () => {
-      setSelectedPin(pinData);
-    });
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    if (!map) return;
+    const onZoomStart = () => setIsAnimating(true);
+    const onZoomEnd = () => setIsAnimating(false);
+    const onMoveStart = () => setIsAnimating(true);
+    const onMoveEnd = () => setIsAnimating(false);
+    const onRotateStart = () => setIsAnimating(true);
+    const onRotateEnd = () => setIsAnimating(false);
+    map.on("zoomstart", onZoomStart);
+    map.on("zoomend", onZoomEnd);
+    map.on("movestart", onMoveStart);
+    map.on("moveend", onMoveEnd);
+    map.on("rotatestart", onRotateStart);
+    map.on("rotateend", onRotateEnd);
+    return () => {
+      map.off("zoomstart", onZoomStart);
+      map.off("zoomend", onZoomEnd);
+      map.off("movestart", onMoveStart);
+      map.off("moveend", onMoveEnd);
+      map.off("rotatestart", onRotateStart);
+      map.off("rotateend", onRotateEnd);
+    };
   }, []);
 
   useEffect(() => {
-    const url = selectedPin?.glbUrl;
-    if (url && typeof url === "string" && url.endsWith(".glb")) {
-      try {
-        useGLTF.preload(url);
-      } catch {}
-    }
-  }, [selectedPin]);
-
-  useEffect(() => {
+    const list = pins || [];
     const candidates = [];
-    if (pins && pins.length > 0) {
-      candidates.push(pins[0]);
-      if (pins[1]) candidates.push(pins[1]);
-    }
-    const urls = candidates
+    if (list.length > 0) candidates.push(list[0]);
+    if (list[1]) candidates.push(list[1]);
+    const links = [];
+    candidates
       .map((p) => p?.glbUrl)
-      .filter((u) => u && typeof u === "string" && u.endsWith(".glb"));
-    urls.forEach((u) => {
-      try {
-        useGLTF.preload(u);
-      } catch {}
-    });
+      .filter((u) => u && typeof u === "string" && u.endsWith(".glb"))
+      .forEach((u) => {
+        try {
+          const l = document.createElement("link");
+          l.rel = "prefetch";
+          l.href = u;
+          l.crossOrigin = "anonymous";
+          document.head.appendChild(l);
+          links.push(l);
+        } catch {
+          null;
+        }
+      });
+    return () => {
+      links.forEach((l) => {
+        try {
+          document.head.removeChild(l);
+        } catch {
+          null;
+        }
+      });
+    };
   }, [pins]);
 
   // ------------------ Close card (reset view) ------------------
@@ -174,7 +188,9 @@ export default function TourMap() {
           typeof map.getMaxBounds === "function" ? map.getMaxBounds() : null;
         if (currentMax) hadBounds = true;
         if (typeof map.setMaxBounds === "function") map.setMaxBounds(null);
-      } catch {}
+      } catch {
+        null;
+      }
 
       isProgrammaticMoveRef.current = true;
       map.flyTo({
@@ -194,7 +210,9 @@ export default function TourMap() {
           if (hadBounds && typeof map.setMaxBounds === "function") {
             map.setMaxBounds(MAX_BOUNDS);
           }
-        } catch {}
+        } catch {
+          null;
+        }
       });
     }
   };
@@ -204,91 +222,108 @@ export default function TourMap() {
       className="relative w-full"
       style={{
         height: "100dvh",
+        minHeight: "100svh",
         overflow: "hidden",
         overscrollBehavior: "none",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       <TourMapTourAutostart />
 
       {/* Map */}
-      <Map
-        ref={mapRef}
-        initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5, maxZoom: 20 }}
-        maxBounds={MAX_BOUNDS}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        attributionControl={false}
-        onMove={(evt) => {
-          if (isProgrammaticMoveRef.current) {
-            setViewState(evt.viewState);
-            return;
-          }
-          const [minLng, minLat] = INTRAMUROS_BOUNDS[0];
-          const [maxLng, maxLat] = INTRAMUROS_BOUNDS[1];
-          const prevLng = viewState.longitude;
-          const prevLat = viewState.latitude;
-          const incomingLng = evt.viewState.longitude;
-          const incomingLat = evt.viewState.latitude;
-
-          let nextLng = incomingLng;
-          let nextLat = incomingLat;
-
-          const withinLng = prevLng >= minLng && prevLng <= maxLng;
-          const withinLat = prevLat >= minLat && prevLat <= maxLat;
-
-          if (withinLng) {
-            if (incomingLng > maxLng) nextLng = prevLng;
-            if (incomingLng < minLng) nextLng = prevLng;
-          } else {
-            if (prevLng > maxLng) nextLng = Math.min(prevLng, incomingLng);
-            if (prevLng < minLng) nextLng = Math.max(prevLng, incomingLng);
-          }
-
-          if (withinLat) {
-            if (incomingLat > maxLat) nextLat = prevLat;
-            if (incomingLat < minLat) nextLat = prevLat;
-          } else {
-            if (prevLat > maxLat) nextLat = Math.min(prevLat, incomingLat);
-            if (prevLat < minLat) nextLat = Math.max(prevLat, incomingLat);
-          }
-          const clampedPitch = Math.min(60, Math.max(0, evt.viewState.pitch));
-          setViewState({
-            ...evt.viewState,
-            longitude: nextLng,
-            latitude: nextLat,
-            pitch: clampedPitch,
-          });
-        }}
-        mapStyle="mapbox://styles/mapbox/streets-v11"
-        className="w-full h-full translate-y-10 sm:translate-y-12 md:translate-y-14"
-        maxZoom={20}
-        minZoom={15.5}
-        minPitch={0}
-        maxPitch={60}
-        renderWorldCopies={false}
-        onError={(e) => {
-          console.error("Map error:", e);
-          if (!navigator.onLine) {
-            setMapError(
-              "Map tiles unavailable offline. Showing cached tiles only."
-            );
-          }
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 0,
         }}
       >
-        {/* Tour pins */}
-        <MapMarkers.PinMarkers
-          pins={pins}
-          selectedPin={selectedPin}
-          onPinClick={openPin}
-        />
+        <Map
+          ref={mapRef}
+          initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5, maxZoom: 20 }}
+          maxBounds={MAX_BOUNDS}
+          mapboxAccessToken={MAPBOX_TOKEN}
+          attributionControl={false}
+          fadeDuration={0}
+          style={{
+            transform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            willChange: "transform",
+          }}
+          onMove={(evt) => {
+            if (isProgrammaticMoveRef.current) {
+              setViewState(evt.viewState);
+              return;
+            }
+            const [minLng, minLat] = INTRAMUROS_BOUNDS[0];
+            const [maxLng, maxLat] = INTRAMUROS_BOUNDS[1];
+            const prevLng = viewState.longitude;
+            const prevLat = viewState.latitude;
+            const incomingLng = evt.viewState.longitude;
+            const incomingLat = evt.viewState.latitude;
 
-        {/* Map Layers */}
-        <MapLayers mask={mask} inverseMask={inverseMask} route={null} />
-      </Map>
+            let nextLng = incomingLng;
+            let nextLat = incomingLat;
+
+            const withinLng = prevLng >= minLng && prevLng <= maxLng;
+            const withinLat = prevLat >= minLat && prevLat <= maxLat;
+
+            if (withinLng) {
+              if (incomingLng > maxLng) nextLng = prevLng;
+              if (incomingLng < minLng) nextLng = prevLng;
+            } else {
+              if (prevLng > maxLng) nextLng = Math.min(prevLng, incomingLng);
+              if (prevLng < minLng) nextLng = Math.max(prevLng, incomingLng);
+            }
+
+            if (withinLat) {
+              if (incomingLat > maxLat) nextLat = prevLat;
+              if (incomingLat < minLat) nextLat = prevLat;
+            } else {
+              if (prevLat > maxLat) nextLat = Math.min(prevLat, incomingLat);
+              if (prevLat < minLat) nextLat = Math.max(prevLat, incomingLat);
+            }
+            const clampedPitch = Math.min(60, Math.max(0, evt.viewState.pitch));
+            setViewState({
+              ...evt.viewState,
+              longitude: nextLng,
+              latitude: nextLat,
+              pitch: clampedPitch,
+            });
+          }}
+          mapStyle="mapbox://styles/mapbox/streets-v11"
+          className="w-full h-full"
+          maxZoom={20}
+          minZoom={15.5}
+          minPitch={0}
+          maxPitch={60}
+          renderWorldCopies={false}
+          onError={(e) => {
+            console.error("Map error:", e);
+          }}
+        >
+          <MapMarkers.PinMarkers
+            pins={pins}
+            selectedPin={selectedPin}
+            onPinClick={openPin}
+          />
+
+          <MapLayers
+            mask={mask}
+            inverseMask={inverseMask}
+            route={null}
+            animating={isAnimating}
+          />
+        </Map>
+      </div>
 
       {/* Control Buttons: Search */}
-      <TourMapControlButtons onOpenSearch={() => setShowSearchModal(true)} />
+      {!showSearchModal && !selectedPin && (
+        <TourMapControlButtons onOpenSearch={() => setShowSearchModal(true)} />
+      )}
 
       {/* UI Overlays */}
       <MapOverlays
@@ -321,7 +356,11 @@ function TourMapTourAutostart() {
     if ((hasCompletedTour === false || replayFlag) && !isTourRunning) {
       didAutoStartRef.current = true;
       if (replayFlag) {
-        try { localStorage.removeItem("tourMapReplayTutorial"); } catch {}
+        try {
+          localStorage.removeItem("tourMapReplayTutorial");
+        } catch {
+          null;
+        }
       }
       setTimeout(() => {
         startTour();

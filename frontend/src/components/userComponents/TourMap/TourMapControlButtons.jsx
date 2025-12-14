@@ -1,11 +1,18 @@
 import React from "react";
 import { Search } from "lucide-react";
 
-export default function TourMapControlButtons({
-  onOpenSearch,
-}) {
+export default function TourMapControlButtons({ onOpenSearch }) {
   return (
-    <div className="absolute top-24 left-4 md:top-24 z-40 flex flex-col gap-2 items-start">
+    <div
+      className="fixed left-4 z-[10050] flex flex-col gap-2 items-start"
+      style={{
+        top: "calc(env(safe-area-inset-top) + 16px)",
+        touchAction: "none",
+        overscrollBehavior: "none",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+      }}
+    >
       {/* Search Button */}
       <button
         onClick={onOpenSearch}

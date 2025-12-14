@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useNavigate,
 } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 
@@ -161,6 +162,12 @@ const LazyTouristItinerary = lazyWithRetry(() =>
 );
 const LazyTouristItineraryMap = lazyWithRetry(() =>
   import("./components/userComponents/HomepageComponents/TouristItinerariesMap")
+);
+const LazyARExperiencePage = lazyWithRetry(() =>
+  import("./components/userComponents/ARExperiencePage")
+);
+const LazyQRScanner = lazyWithRetry(() =>
+  import("./components/userComponents/QRScannerSimple")
 );
 import ttsService from "./utils/textToSpeech";
 import {
@@ -324,6 +331,24 @@ function AnimatedRoutes() {
                 <LazyPhotobooth />{" "}
               </React.Suspense>
             </TourProvider>
+          }
+        />
+        <Route
+          path="/ARExperience"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <LazyARExperiencePage />{" "}
+            </React.Suspense>
+          }
+        />
+        <Route
+          path="/ARScanner"
+          element={
+            <React.Suspense fallback={<ModernLoader progress={95} />}>
+              {" "}
+              <ARScannerRoute />{" "}
+            </React.Suspense>
           }
         />
         {/* Guest Profile Section */}
@@ -787,7 +812,8 @@ function CameraPermissionKeeper() {
         p.startsWith("/Photobooth") ||
         p.startsWith("/PhotoboothJeeliz") ||
         p.startsWith("/TouristItineraryMap/") ||
-        p.startsWith("/GuestItineraryMap/")
+        p.startsWith("/GuestItineraryMap/") ||
+        p.startsWith("/ARScanner")
       );
     };
     const hasActiveStream = () => {
@@ -944,10 +970,48 @@ function JeelizDomShield() {
   return null;
 }
 
+function ARScannerRoute() {
+  const navigate = useNavigate();
+  return (
+    <LazyQRScanner
+      onScanSuccess={(url) => {
+        try {
+          navigate(`/ARExperience?url=${encodeURIComponent(url)}`);
+        } catch {}
+      }}
+      onClose={() => {
+        try {
+          navigate(-1);
+        } catch {}
+      }}
+    />
+  );
+}
+
 export default function App() {
   useEffect(() => {
     const savedLang = localStorage.getItem("language") || "en";
     i18n.changeLanguage(savedLang);
+  }, []);
+  useEffect(() => {
+    try {
+      if (window.customElements && window.customElements.get("model-viewer"))
+        return;
+      const src =
+        "https://unpkg.com/@google/model-viewer@4.0.0/dist/model-viewer.min.js";
+      let script = document.querySelector(`script[src="${src}"]`);
+      if (!script) {
+        script = document.createElement("script");
+        script.type = "module";
+        script.src = src;
+        script.onload = () => {
+          try {
+            script.dataset.loaded = "true";
+          } catch {}
+        };
+        document.head.appendChild(script);
+      }
+    } catch {}
   }, []);
   useEffect(() => {
     try {

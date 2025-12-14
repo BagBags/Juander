@@ -362,17 +362,7 @@ export default function ManagePhotobooth() {
           <p className="text-red-500 text-xs mt-1">{errors.name}</p>
         )}
 
-        <input
-          type="text"
-          name="imageUrl"
-          value={form.imageUrl}
-          onChange={handleChange}
-          placeholder="Or paste image URL"
-          maxLength={1000}
-          className="w-full p-3 border-2 border-gray-300 rounded-lg
-             focus:border-gray-400 focus:ring-2 focus:ring-gray-200 outline-none transition"
-          disabled={!!form.imageFile}
-        />
+        
 
         <div className="relative w-full">
           <select

@@ -1,7 +1,5 @@
-import React, { Suspense, useState, useEffect, lazy } from "react";
+import React, { Suspense, useState, useEffect, lazy, useRef } from "react";
 import { motion } from "framer-motion";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF, Center, Bounds } from "@react-three/drei";
 import {
   X,
   MapPin,
@@ -15,12 +13,12 @@ import {
   Star,
   Play,
   Square,
-  ExternalLink,
 } from "lucide-react";
 import ttsService from "../../../utils/textToSpeech";
 import { useTranslation } from "react-i18next";
 import { FaStar } from "react-icons/fa";
 import QRScanner from "../QRScannerSimple";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import MediaCarousel from "../../shared/MediaCarousel";
 import PullToRefresh from "../../shared/PullToRefresh";
@@ -50,6 +48,7 @@ class ErrorBoundaryLocal extends React.Component {
 }
 
 const SiteCard = ({ pin, onClose, distance }) => {
+  const navigate = useNavigate();
   const [showAR, setShowAR] = useState(false);
   const [scannedArUrl, setScannedArUrl] = useState(null);
   const [siteReviews, setSiteReviews] = useState([]);
@@ -57,6 +56,49 @@ const SiteCard = ({ pin, onClose, distance }) => {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [userLanguage, setUserLanguage] = useState("english");
+  const descZoomRef = React.useRef(null);
+  const descPinchRef = React.useRef(null);
+  const onDescTouchStart = (e) => {
+    const el = descZoomRef.current;
+    if (!el) return;
+    if (e.touches && e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx, dy) || 1;
+      descPinchRef.current = { d };
+      el.style.transition = "none";
+      el.style.willChange = "transform";
+      const rect = el.getBoundingClientRect();
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const ox = ((cx - rect.left) / rect.width) * 100;
+      const oy = ((cy - rect.top) / rect.height) * 100;
+      el.style.transformOrigin = `${ox}% ${oy}%`;
+    }
+  };
+  const onDescTouchMove = (e) => {
+    const el = descZoomRef.current;
+    if (!el) return;
+    const st = descPinchRef.current;
+    if (!st) return;
+    if (e.touches && e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx, dy) || st.d;
+      let s = d / st.d;
+      if (s < 1) s = 1;
+      if (s > 2.5) s = 2.5;
+      el.style.transform = `scale(${s})`;
+      e.preventDefault();
+    }
+  };
+  const onDescTouchEnd = () => {
+    const el = descZoomRef.current;
+    if (!el) return;
+    descPinchRef.current = null;
+    el.style.transition = "transform 200ms ease-out";
+    el.style.transform = "scale(1)";
+  };
   const [showFeeModal, setShowFeeModal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const speechCheckIntervalRef = React.useRef(null);
@@ -305,8 +347,74 @@ const SiteCard = ({ pin, onClose, distance }) => {
     }
   };
 
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      try {
+        const scope = rootRef.current || document.body;
+        const canvases = scope.querySelectorAll("canvas");
+        canvases.forEach((canvas) => {
+          try {
+            const isMap =
+              (canvas.classList &&
+                canvas.classList.contains("mapboxgl-canvas")) ||
+              !!canvas.closest(
+                ".mapboxgl-map,.mapboxgl-canvas-container,.mapboxgl-control-container"
+              );
+            if (isMap) return;
+            const gl =
+              canvas.getContext("webgl2") ||
+              canvas.getContext("webgl") ||
+              canvas.getContext("experimental-webgl");
+            if (gl && typeof gl.getExtension === "function") {
+              const ext = gl.getExtension("WEBGL_lose_context");
+              if (ext && typeof ext.loseContext === "function") {
+                ext.loseContext();
+              }
+            }
+          } catch {
+            null;
+          }
+        });
+        const videos = scope.querySelectorAll("video");
+        videos.forEach((v) => {
+          try {
+            const s = v.srcObject;
+            if (s && typeof s.getTracks === "function") {
+              s.getTracks().forEach((t) => {
+                try {
+                  t.stop();
+                } catch {
+                  null;
+                }
+              });
+            }
+            v.pause();
+            v.srcObject = null;
+            v.removeAttribute("src");
+            v.load();
+          } catch {
+            null;
+          }
+        });
+        const mvs = scope.querySelectorAll("model-viewer");
+        mvs.forEach((el) => {
+          try {
+            el.removeAttribute("src");
+          } catch {
+            null;
+          }
+        });
+      } catch {
+        null;
+      }
+    };
+  }, []);
+
   return (
     <motion.div
+      ref={rootRef}
       initial={{ opacity: 0, y: 16, scale: 0.992 }}
       animate={{
         opacity: 1,
@@ -320,11 +428,12 @@ const SiteCard = ({ pin, onClose, distance }) => {
         scale: 0.996,
         transition: { duration: 0.38, ease: "easeOut" },
       }}
-      className="absolute inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
+      className="fixed inset-0 z-[10000] bg-gradient-to-b from-gray-50 to-white flex flex-col"
       style={{
         willChange: "transform, opacity",
         paddingTop: "env(safe-area-inset-top)",
         paddingBottom: "env(safe-area-inset-bottom)",
+        height: "100svh",
         WebkitOverflowScrolling: "touch",
         overscrollBehaviorY: "contain",
         touchAction: "pan-y",
@@ -364,96 +473,37 @@ const SiteCard = ({ pin, onClose, distance }) => {
       >
         {/* Content */}
         <div
-          className="px-5 py-6 pb-20 max-w-3xl mx-auto"
+          className="px-5 py-6 max-w-3xl mx-auto"
           style={{
             touchAction: "pinch-zoom pan-y pan-x",
             overscrollBehavior: "contain",
+            paddingBottom: "max(env(safe-area-inset-bottom, 16px), 80px)",
           }}
         >
           {/* AR Mode fullscreen inside modal */}
           {showAR ? (
-            <div className="rounded-xl flex flex-col min-h-[80vh]">
-              {scannedArUrl ? (
-                <div className="relative w-full flex-1 min-h-[75svh] rounded-xl overflow-hidden bg-black">
-                  <iframe
-                    ref={arIframeRef}
-                    id="arloopa-frame"
-                    src={scannedArUrl}
-                    title="AR Experience"
-                    className="absolute inset-0 w-full h-full border-0"
-                    scrolling="no"
-                    allow="camera; microphone; accelerometer; gyroscope; magnetometer; xr-spatial-tracking; geolocation; clipboard-write; web-share; autoplay; picture-in-picture; display-capture; fullscreen"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-presentation allow-top-navigation-by-user-activation"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                  <div className="absolute bottom-3 right-3 z-50">
-                    <button
-                      onClick={() => {
-                        const url = scannedArUrl;
-                        let newWin = null;
-                        try {
-                          newWin = window.open(
-                            url,
-                            "_blank",
-                            "noopener,noreferrer"
-                          );
-                        } catch {}
-                        if (!newWin) {
-                          try {
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.target = "_blank";
-                            a.rel = "noopener noreferrer";
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                          } catch {
-                            try {
-                              window.location.assign(url);
-                            } catch {}
-                          }
-                        }
-                      }}
-                      className="bg-gradient-to-r from-[#f04e37] to-[#d9442f] text-white p-3 rounded-full shadow-lg border border-white/20 transition-all duration-200 active:scale-95 hover:opacity-95"
-                      title="Open in browser"
-                      aria-label="Open in browser"
-                      style={{ marginBottom: "env(safe-area-inset-bottom)" }}
-                    >
-                      <ExternalLink className="w-5 h-5 text-white" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <QRScanner
-                  onScanSuccess={(url) => {
-                    let newWin = null;
-                    try {
-                      newWin = window.open(
-                        url,
-                        "_blank",
-                        "noopener,noreferrer"
-                      );
-                    } catch {}
-                    if (newWin && typeof newWin.focus === "function") {
-                      try {
-                        newWin.focus();
-                      } catch {}
-                    }
-                    if (!newWin) {
-                      try {
-                        setScannedArUrl(url);
-                      } catch {}
-                    } else {
-                      setShowAR(false);
-                      setScannedArUrl(null);
-                    }
-                  }}
-                  onClose={() => {
-                    setShowAR(false);
-                    setScannedArUrl(null);
-                  }}
-                />
-              )}
+            <div className="rounded-xl grid place-items-center min-h-[85svh]">
+              <QRScanner
+                onScanSuccess={(url) => {
+                  try {
+                    const ctx = {
+                      pinId: pin?._id,
+                      mode: "tourmap",
+                      path: window.location.pathname,
+                    };
+                    sessionStorage.setItem("AR_RETURN", JSON.stringify(ctx));
+                  } catch {}
+                  try {
+                    navigate(`/ARExperience?url=${encodeURIComponent(url)}`);
+                  } catch {}
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                }}
+                onClose={() => {
+                  setShowAR(false);
+                  setScannedArUrl(null);
+                }}
+              />
             </div>
           ) : (
             <>
@@ -800,9 +850,14 @@ const SiteCard = ({ pin, onClose, distance }) => {
                 )}
               </button>
 
-              {/* Description - Enhanced Typography with Language Support */}
               <div className="bg-white rounded-xl p-5 mb-8 border border-gray-200 shadow-sm">
-                <div className="prose prose-sm max-w-none">
+                <div
+                  className="prose prose-sm max-w-none"
+                  ref={descZoomRef}
+                  onTouchStart={onDescTouchStart}
+                  onTouchMove={onDescTouchMove}
+                  onTouchEnd={onDescTouchEnd}
+                >
                   <div className="text-base leading-relaxed text-gray-700 space-y-4">
                     {(() => {
                       let description = "";
@@ -928,8 +983,23 @@ const SiteCard = ({ pin, onClose, distance }) => {
               {pin.arEnabled && (
                 <button
                   onClick={() => {
-                    setShowAR(true);
-                    ttsService.speak("Opening AR Scanner");
+                    try {
+                      const ctx = {
+                        pinId: pin?._id,
+                        mode: "tourmap",
+                        path: window.location.pathname,
+                      };
+                      sessionStorage.setItem("AR_RETURN", JSON.stringify(ctx));
+                    } catch {}
+                    try {
+                      ttsService.speak("Opening AR Scanner");
+                    } catch {}
+                    try {
+                      if (typeof onClose === "function") onClose();
+                    } catch {}
+                    try {
+                      navigate("/ARScanner");
+                    } catch {}
                   }}
                   className="xl:hidden w-full text-center text-white px-5 py-4 text-base font-bold rounded-xl shadow-lg hover:shadow-xl mb-8 transition-all duration-200 active:scale-98 flex items-center justify-center gap-2"
                   style={{

@@ -30,7 +30,7 @@ export default function PhotoboothSlider({
   const activeBorder = 4;
   const inactiveBorder = 2;
   const activeOuter = activeSize + activeBorder * 2;
-  const containerHeight = activeOuter + 24;
+  const containerHeight = activeOuter;
   const marginX = isMobile ? 8 : 12;
   // Center capture circle should line up exactly with active filter outer ring
   const captureSize = activeOuter;
@@ -138,7 +138,6 @@ export default function PhotoboothSlider({
           overflowX: "scroll",
           overflowY: "hidden",
           display: "flex",
-          padding: "10px 0",
           scrollSnapType: "x mandatory",
           scrollBehavior: "smooth",
           scrollbarWidth: "none",
@@ -146,7 +145,6 @@ export default function PhotoboothSlider({
           alignItems: "center",
           overscrollBehaviorX: "contain",
           overscrollBehaviorY: "none",
-          // Center padding accounts for the active filter's border thickness
           paddingLeft: `calc(50% - ${activeOuter / 2}px)`,
           paddingRight: `calc(50% - ${activeOuter / 2}px)`,
         }}

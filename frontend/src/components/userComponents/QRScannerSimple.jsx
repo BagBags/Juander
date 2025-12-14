@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import * as jsqrModule from "jsqr";
 import Webcam from "react-webcam";
-import { Camera, X, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import BackHeader from "./BackButton";
 import {
   cancelCameraStop,
   scheduleCameraStop,
@@ -27,6 +28,74 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
         console.error("Failed to load jsQR library:", err);
         setError("Failed to load QR scanner library. Please refresh the page.");
       });
+  }, []);
+
+  useEffect(() => {
+    try {
+      const canvases = document.querySelectorAll("canvas");
+      canvases.forEach((canvas) => {
+        try {
+          const gl =
+            canvas.getContext("webgl2") ||
+            canvas.getContext("webgl") ||
+            canvas.getContext("experimental-webgl");
+          if (gl && typeof gl.getExtension === "function") {
+            const ext = gl.getExtension("WEBGL_lose_context");
+            if (ext && typeof ext.loseContext === "function") {
+              ext.loseContext();
+            }
+          }
+        } catch {}
+      });
+    } catch {}
+    try {
+      const tracked = window.__JUANDER_TRACKED_STREAMS;
+      if (tracked && typeof tracked.forEach === "function") {
+        tracked.forEach((s) => {
+          try {
+            if (s && typeof s.getTracks === "function") {
+              s.getTracks().forEach((t) => {
+                try {
+                  t.stop();
+                } catch {}
+              });
+            }
+          } catch {}
+        });
+        try {
+          tracked.clear?.();
+        } catch {}
+      }
+    } catch {}
+    try {
+      const vs = Array.from(document.querySelectorAll("video"));
+      const thisVideo = webcamRef.current?.video || null;
+      vs.forEach((v) => {
+        if (thisVideo && v === thisVideo) return;
+        try {
+          const s = v.srcObject;
+          if (s && typeof s.getTracks === "function") {
+            s.getTracks().forEach((t) => {
+              try {
+                t.stop();
+              } catch {}
+            });
+          }
+        } catch {}
+        try {
+          v.pause();
+        } catch {}
+        try {
+          v.srcObject = null;
+        } catch {}
+        try {
+          v.removeAttribute("src");
+        } catch {}
+        try {
+          v.load();
+        } catch {}
+      });
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -294,64 +363,57 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-gray-900">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#f04e37] to-[#d9442f] p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Camera className="w-6 h-6 text-white" />
-          <h2 className="text-lg font-bold text-white">Scan QR Code for AR</h2>
-        </div>
-        <button
-          onClick={() => {
-            try {
-              stopScanning();
-              const v = webcamRef.current?.video;
-              const s = webcamRef.current?.stream || v?.srcObject;
-              if (s && typeof s.getTracks === "function") {
-                s.getTracks().forEach((t) => {
-                  try {
-                    t.stop();
-                  } catch (e) {
-                    void e;
-                  }
-                });
-              }
-              if (v) {
+    <div
+      className="min-h-screen h-[100dvh] bg-gray-900 flex flex-col overflow-hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div
+        className="fixed inset-x-0"
+        style={{
+          top: 0,
+          height: "env(safe-area-inset-top)",
+          backgroundColor: "white",
+          zIndex: 49,
+        }}
+      />
+      <BackHeader
+        title="Scan QR"
+        className="bg-white text-gray-900 shadow-sm"
+        onBack={() => {
+          try {
+            stopScanning();
+            const v = webcamRef.current?.video;
+            const s = webcamRef.current?.stream || v?.srcObject;
+            if (s && typeof s.getTracks === "function") {
+              s.getTracks().forEach((t) => {
                 try {
-                  v.pause();
+                  t.stop();
                 } catch (e) {
                   void e;
                 }
-                try {
-                  v.srcObject = null;
-                } catch (e) {
-                  void e;
-                }
-                try {
-                  v.removeAttribute("src");
-                } catch (e) {
-                  void e;
-                }
-                try {
-                  v.load();
-                } catch (e) {
-                  void e;
-                }
-              }
-            } catch (e) {
-              void e;
+              });
             }
-            if (onClose) onClose();
-          }}
-          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          aria-label="Close scanner"
-        >
-          <X className="w-6 h-6 text-white" />
-        </button>
-      </div>
+            if (v) {
+              try {
+                v.pause();
+              } catch {}
+              try {
+                v.srcObject = null;
+              } catch {}
+              try {
+                v.removeAttribute("src");
+              } catch {}
+              try {
+                v.load();
+              } catch {}
+            }
+          } catch {}
+          if (onClose) onClose();
+        }}
+      />
 
       {/* Scanner Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-4 overflow-hidden">
+      <div className="flex-1 min-h-0 relative p-0">
         {error ? (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 max-w-md">
             <div className="flex items-start gap-3">
@@ -434,10 +496,10 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-md relative">
+          <div className="absolute inset-0 w-full h-full">
             {/* Loading indicator */}
             {!cameraReady && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-50 rounded-xl">
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-50">
                 <div className="text-center p-4 md:p-8">
                   <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-[#f04e37] border-t-transparent rounded-full animate-spin mx-auto mb-3 md:mb-4"></div>
                   <p className="text-white text-base md:text-lg font-bold mb-1 md:mb-2">
@@ -451,7 +513,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
             )}
 
             {/* Camera View */}
-            <div className="relative rounded-lg md:rounded-xl overflow-hidden border-2 md:border-4 border-white shadow-2xl">
+            <div className="relative w-full h-full">
               <Webcam
                 key={cameraRetryKey}
                 ref={webcamRef}
@@ -464,8 +526,8 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
                 }}
                 onUserMedia={handleCameraReady}
                 onUserMediaError={handleWebcamError}
-                className="w-full h-[55svh] object-cover"
-                style={{ width: "100%" }}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ width: "100%", height: "100%" }}
               />
 
               {/* Scanning Overlay */}
@@ -486,7 +548,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
             </div>
 
             {/* Instructions */}
-            <div className="mt-3 md:mt-6 text-center px-2">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center px-2">
               <p className="text-white text-xs md:text-sm mb-1 md:mb-2 font-medium">
                 Position the QR code within the frame
               </p>

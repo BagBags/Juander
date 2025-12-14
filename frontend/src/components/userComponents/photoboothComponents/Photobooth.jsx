@@ -44,6 +44,7 @@ export default function Photobooth() {
     title: "",
     message: "",
   });
+  const lastInitRef = useRef(0);
 
   const ensureCanvasDimensions = useCallback(() => {
     const el = document.getElementById("jeeFaceFilterCanvas");
@@ -387,13 +388,16 @@ export default function Photobooth() {
             JZ.__renderWrapped = true;
           }
         } catch (e) {}
+        let initAttempts = 0;
         const tryInit = () => {
           if (destroyed) return;
           const canvasEl = document.getElementById("jeeFaceFilterCanvas");
           if (!canvasEl) {
+            initAttempts += 1;
+            const d = Math.min(500, 100 + initAttempts * 50);
             setTimeout(() => {
               if (!destroyed) tryInit();
-            }, 120);
+            }, d);
             return;
           }
           const rect =
@@ -405,172 +409,205 @@ export default function Photobooth() {
             typeof canvasEl.parentElement.getBoundingClientRect === "function"
               ? canvasEl.parentElement.getBoundingClientRect()
               : { width: 0, height: 0 };
-          if (
-            rect.width === 0 ||
-            rect.height === 0 ||
-            (parentRect && (parentRect.width === 0 || parentRect.height === 0))
-          ) {
+          const vh = Math.max(
+            window.innerHeight || 0,
+            document.documentElement.clientHeight || 0
+          );
+          const vw = Math.max(
+            window.innerWidth || 0,
+            document.documentElement.clientWidth || 0
+          );
+          const isVisible = document.visibilityState === "visible";
+          const hasSize =
+            rect.width > 0 &&
+            rect.height > 0 &&
+            parentRect &&
+            parentRect.width > 0 &&
+            parentRect.height > 0 &&
+            vh > 0 &&
+            vw > 0;
+          if (!hasSize || !isVisible) {
+            initAttempts += 1;
+            const d = Math.min(600, 120 + initAttempts * 60);
             setTimeout(() => {
               if (!destroyed) tryInit();
-            }, 120);
+            }, d);
             return;
           }
-          setTimeout(() => {
+          requestAnimationFrame(() => {
             ensureCanvasDimensions();
-            JR.size_canvas({
-              canvasId: "jeeFaceFilterCanvas",
-              callback: function (isError, bestVideoSettings) {
-                if (destroyed) return;
-                if (isError) {
-                  console.error("JeelizResizer error: ", isError);
-                  return;
-                }
-                try {
-                  bestVideoSettings.facingMode = facingMode;
-                  bestVideoSettings.flipX = facingMode === "user";
-                } catch (e) {}
-                if (destroyed) return;
-                JZ.init({
-                  canvasId: "jeeFaceFilterCanvas",
-                  NNCPath:
-                    "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/neuralNets/",
-                  videoSettings: bestVideoSettings,
-                  followZRot: true,
-                  onWebcamGet: function () {
-                    if (destroyed) return;
-                    setJeelizReady(true);
-                  },
-                  callbackReady: function (errCode, spec) {
-                    if (destroyed) return;
-                    if (errCode) {
-                      console.error("Jeeliz init error:", errCode);
+            const preflight =
+              navigator.mediaDevices && navigator.mediaDevices.getUserMedia
+                ? navigator.mediaDevices
+                    .getUserMedia({ video: { facingMode }, audio: false })
+                    .then((s) => {
                       try {
-                        if (facingMode === "environment") {
-                          setFacingMode("user");
-                        } else {
-                          setFacingMode("environment");
-                        }
-                        setCameraKey((k) => k + 1);
-                      } catch (e) {}
-                      return;
-                    }
-                    setJeelizReady(true);
-                    try {
-                      videoElRef.current =
-                        spec && spec.videoElement ? spec.videoElement : null;
-                      mediaStreamRef.current =
-                        videoElRef.current && videoElRef.current.srcObject
-                          ? videoElRef.current.srcObject
-                          : null;
-                      const fv = fallbackVideoRef.current;
-                      if (fv && mediaStreamRef.current) {
+                        s.getTracks().forEach((t) => t.stop());
+                      } catch {}
+                    })
+                    .catch(() => {})
+                : Promise.resolve();
+            preflight.then(() => {
+              JR.size_canvas({
+                canvasId: "jeeFaceFilterCanvas",
+                callback: function (isError, bestVideoSettings) {
+                  if (destroyed) return;
+                  if (isError) {
+                    console.error("JeelizResizer error: ", isError);
+                    return;
+                  }
+                  try {
+                    bestVideoSettings.facingMode = facingMode;
+                    bestVideoSettings.flipX = facingMode === "user";
+                  } catch (e) {}
+                  if (destroyed) return;
+                  JZ.init({
+                    canvasId: "jeeFaceFilterCanvas",
+                    NNCPath:
+                      "https://cdn.jsdelivr.net/gh/jeeliz/jeelizFaceFilter@latest/neuralNets/",
+                    videoSettings: bestVideoSettings,
+                    followZRot: true,
+                    onWebcamGet: function () {
+                      if (destroyed) return;
+                      try {
+                        lastInitRef.current = Date.now();
+                      } catch {}
+                      setJeelizReady(true);
+                    },
+                    callbackReady: function (errCode, spec) {
+                      if (destroyed) return;
+                      if (errCode) {
+                        console.error("Jeeliz init error:", errCode);
                         try {
-                          fv.srcObject = mediaStreamRef.current;
-                          fv.muted = true;
-                          fv.autoplay = true;
-                          fv.playsInline = true;
-                          fv.style.transform =
-                            facingMode === "user" ? "scaleX(-1)" : "none";
-                          const p = fv.play && fv.play();
-                          if (p && typeof p.catch === "function") {
-                            p.catch(() => {});
+                          if (facingMode === "environment") {
+                            setFacingMode("user");
+                          } else {
+                            setFacingMode("environment");
                           }
-                        } catch (e) {}
-                      }
-                    } catch (e) {}
-                  },
-                  callbackTrack: function (ds) {
-                    if (destroyed) return;
-                    const canvasEl = document.getElementById(
-                      "jeeFaceFilterCanvas"
-                    );
-                    if (!canvasEl) return;
-                    try {
-                      JZ.render_video();
-                    } catch {}
-                    detectStateRef.current = ds;
-                    const cont = overlayRef.current;
-                    const imgEl = overlayImgRef.current;
-                    const canvas = canvasRef.current;
-                    if (!canvas) return;
-                    ensureCanvasDimensions();
-                    const { width, height } = getSafeCanvasSize();
-                    const category = imgEl?.dataset?.category || "general";
-
-                    if (cont && imgEl) {
-                      if (category === "frame" || category === "border") {
-                        try {
-                          cont.style.display = "block";
-                          cont.style.position = "absolute";
-                          cont.style.left = "0px";
-                          cont.style.top = "0px";
-                          cont.style.width = `${width}px`;
-                          cont.style.height = `${height}px`;
-                          cont.style.transform = "none";
+                          setCameraKey((k) => k + 1);
                         } catch (e) {}
                         return;
                       }
+                      setJeelizReady(true);
+                      try {
+                        videoElRef.current =
+                          spec && spec.videoElement ? spec.videoElement : null;
+                        mediaStreamRef.current =
+                          videoElRef.current && videoElRef.current.srcObject
+                            ? videoElRef.current.srcObject
+                            : null;
+                        const fv = fallbackVideoRef.current;
+                        if (fv && mediaStreamRef.current) {
+                          try {
+                            fv.srcObject = mediaStreamRef.current;
+                            fv.muted = true;
+                            fv.autoplay = true;
+                            fv.playsInline = true;
+                            fv.style.transform =
+                              facingMode === "user" ? "scaleX(-1)" : "none";
+                            const p = fv.play && fv.play();
+                            if (p && typeof p.catch === "function") {
+                              p.catch(() => {});
+                            }
+                          } catch (e) {}
+                        }
+                      } catch (e) {}
+                    },
+                    callbackTrack: function (ds) {
+                      if (destroyed) return;
+                      const canvasEl = document.getElementById(
+                        "jeeFaceFilterCanvas"
+                      );
+                      if (!canvasEl) return;
+                      try {
+                        JZ.render_video();
+                      } catch {}
+                      detectStateRef.current = ds;
+                      const cont = overlayRef.current;
+                      const imgEl = overlayImgRef.current;
+                      const canvas = canvasRef.current;
+                      if (!canvas) return;
+                      ensureCanvasDimensions();
+                      const { width, height } = getSafeCanvasSize();
+                      const category = imgEl?.dataset?.category || "general";
 
-                      if (ds && ds.detected > 0.5) {
-                        try {
-                          cont.style.display = "block";
-                        } catch (e) {}
-                        const s = Math.max(0, Math.min(1, ds.s || 0.3));
-                        const centerX = (ds.x + 1) * 0.5 * width;
-                        const centerY = (1 - (ds.y + 1) * 0.5) * height;
-
-                        let widthRatio = 1.4;
-                        let heightRatio = 0.5;
-                        let offsetY = 0;
-                        if (category === "head") {
-                          widthRatio = 2.2;
-                          heightRatio = 2.2;
-                          offsetY = 1.7;
-                        } else if (category === "eyes") {
-                          widthRatio = 3.5;
-                          heightRatio = 1.5;
-                          offsetY = -0.25;
-                        } else if (category === "general") {
-                          widthRatio = 0.9;
-                          heightRatio = 2.4;
-                          offsetY = 0.0;
+                      if (cont && imgEl) {
+                        if (category === "frame" || category === "border") {
+                          try {
+                            cont.style.display = "block";
+                            cont.style.position = "absolute";
+                            cont.style.left = "0px";
+                            cont.style.top = "0px";
+                            cont.style.width = `${width}px`;
+                            cont.style.height = `${height}px`;
+                            cont.style.transform = "none";
+                          } catch (e) {}
+                          return;
                         }
 
-                        const frameW = s * width;
-                        const overlayW = frameW * widthRatio;
-                        const overlayH = frameW * heightRatio;
+                        if (ds && ds.detected > 0.5) {
+                          try {
+                            cont.style.display = "block";
+                          } catch (e) {}
+                          const s = Math.max(0, Math.min(1, ds.s || 0.3));
+                          const centerX = (ds.x + 1) * 0.5 * width;
+                          const centerY = (1 - (ds.y + 1) * 0.5) * height;
 
-                        let px = centerX;
-                        let py = centerY + offsetY * frameW;
-                        const angleRad = ds.rz || 0;
-                        const rotateRad =
-                          facingMode === "user" ? -angleRad : angleRad;
-                        if (category === "head") {
-                          const o = offsetY * frameW;
-                          const dx = Math.sin(rotateRad) * o;
-                          const dy = -Math.cos(rotateRad) * o;
-                          px = centerX + dx;
-                          py = centerY + dy;
+                          let widthRatio = 1.4;
+                          let heightRatio = 0.5;
+                          let offsetY = 0;
+                          if (category === "head") {
+                            widthRatio = 2.2;
+                            heightRatio = 2.2;
+                            offsetY = 1.7;
+                          } else if (category === "eyes") {
+                            widthRatio = 3.5;
+                            heightRatio = 1.5;
+                            offsetY = -0.25;
+                          } else if (category === "general") {
+                            widthRatio = 0.9;
+                            heightRatio = 2.4;
+                            offsetY = 0.0;
+                          }
+
+                          const frameW = s * width;
+                          const overlayW = frameW * widthRatio;
+                          const overlayH = frameW * heightRatio;
+
+                          let px = centerX;
+                          let py = centerY + offsetY * frameW;
+                          const angleRad = ds.rz || 0;
+                          const rotateRad =
+                            facingMode === "user" ? -angleRad : angleRad;
+                          if (category === "head") {
+                            const o = offsetY * frameW;
+                            const dx = Math.sin(rotateRad) * o;
+                            const dy = -Math.cos(rotateRad) * o;
+                            px = centerX + dx;
+                            py = centerY + dy;
+                          }
+
+                          cont.style.position = "absolute";
+                          cont.style.left = `${Math.round(
+                            px - overlayW / 2
+                          )}px`;
+                          cont.style.top = `${Math.round(py - overlayH / 2)}px`;
+                          cont.style.width = `${Math.round(overlayW)}px`;
+                          cont.style.height = `${Math.round(overlayH)}px`;
+                          cont.style.transformOrigin = "center center";
+                          cont.style.transform = `rotate(${rotateRad}rad)`;
+                        } else {
+                          try {
+                            cont.style.display = "none";
+                          } catch (e) {}
                         }
-
-                        cont.style.position = "absolute";
-                        cont.style.left = `${Math.round(px - overlayW / 2)}px`;
-                        cont.style.top = `${Math.round(py - overlayH / 2)}px`;
-                        cont.style.width = `${Math.round(overlayW)}px`;
-                        cont.style.height = `${Math.round(overlayH)}px`;
-                        cont.style.transformOrigin = "center center";
-                        cont.style.transform = `rotate(${rotateRad}rad)`;
-                      } else {
-                        try {
-                          cont.style.display = "none";
-                        } catch (e) {}
                       }
-                    }
-                  },
-                });
-              },
+                    },
+                  });
+                },
+              });
             });
-          }, 0);
+          });
         };
         tryInit();
       })
@@ -625,7 +662,6 @@ export default function Photobooth() {
           }
         } catch {}
       } catch {}
-      scheduleCameraStop(0);
     };
   }, [cameraKey, facingMode]);
 
@@ -681,6 +717,11 @@ export default function Photobooth() {
     const handleVisible = async () => {
       if (document.visibilityState !== "visible" || !jeelizReady) return;
       try {
+        const now = Date.now();
+        const last = lastInitRef.current || 0;
+        if (now - last < 2000) return;
+      } catch {}
+      try {
         const s = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
           audio: false,
@@ -703,15 +744,9 @@ export default function Photobooth() {
     };
 
     window.addEventListener("visibilitychange", handleVisible);
-    // The "focus" event fires right after the permission prompt. Keep it for real
-    // app-resume scenarios, but apply the same guard above.
-    window.addEventListener("focus", handleVisible);
-
     return () => {
       window.removeEventListener("visibilitychange", handleVisible);
-      window.removeEventListener("focus", handleVisible);
     };
-    // Depend on jeelizReady so we always have the latest state inside the handler.
   }, [jeelizReady]);
 
   // Toggle camera function

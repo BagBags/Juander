@@ -2,7 +2,7 @@
 import React from "react";
 import { Source, Layer } from "react-map-gl";
 
-const MapLayers = ({ mask, inverseMask, route }) => {
+const MapLayers = ({ mask, inverseMask, route, animating = false }) => {
   return (
     <>
       {/* Mask */}
@@ -22,7 +22,7 @@ const MapLayers = ({ mask, inverseMask, route }) => {
           <Layer
             id="inverse-mask-fill"
             type="fill"
-            paint={{ "fill-color": "#000", "fill-opacity": 0.7 }}
+            paint={{ "fill-color": "#000", "fill-opacity": animating ? 0.35 : 0.7 }}
           />
         </Source>
       )}

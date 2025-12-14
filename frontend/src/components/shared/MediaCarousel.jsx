@@ -117,8 +117,14 @@ const MediaCarousel = ({ mediaFiles = [], className = "" }) => {
                       : `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5000"}${media.url}`
                   }
                   alt={`Media ${index + 1}`}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain cursor-zoom-in"
                   draggable="false"
+                  onClick={() => {
+                    const u = media.url.startsWith('http') 
+                      ? media.url 
+                      : `${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:5000"}${media.url}`;
+                    try { window.open(u, '_blank'); } catch {}
+                  }}
                 />
               )}
             </div>

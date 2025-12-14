@@ -49,11 +49,13 @@ export default function GuestItinerary() {
       className="min-h-screen bg-orange-600 via-[#f04e37] flex flex-col relative"
       style={{
         overscrollBehavior: "none",
-        touchAction: "pan-y",
+        touchAction: "none",
+        userSelect: "none",
+        WebkitUserSelect: "none",
         height: "100dvh",
         overflow: "hidden",
         // paddingTop handled by BackHeader
-        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingBottom: 0,
       }}
     >
       {!modalOpen && (
@@ -65,9 +67,15 @@ export default function GuestItinerary() {
 
       {/* Main Content */}
       <PullToRefresh onRefresh={handleRefresh}>
-        <div className="flex flex-col items-center justify-center pt-6 px-4 md:px-0" style={{overscrollBehaviorY:'contain'}}>
+        <div
+          className="flex flex-col items-center justify-center pt-6 px-4 md:px-0"
+          style={{ overscrollBehaviorY: "contain" }}
+        >
           <div className="flex-1 max-w-6xl w-full flex flex-col gap-4">
-            <GuestItineraryMain key={refreshKey} onModalStateChange={setModalOpen} />
+            <GuestItineraryMain
+              key={refreshKey}
+              onModalStateChange={setModalOpen}
+            />
           </div>
         </div>
       </PullToRefresh>

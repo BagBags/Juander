@@ -914,6 +914,50 @@ IMPORTANT RULES:
     }, 100);
   };
 
+  const bubbleRefs = useRef({});
+  const pinchRef = useRef({});
+  const onBubbleTouchStart = (i, e) => {
+    const el = bubbleRefs.current[i];
+    if (!el) return;
+    if (e.touches && e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx, dy) || 1;
+      pinchRef.current[i] = { d };
+      el.style.transition = "none";
+      el.style.willChange = "transform";
+      const rect = el.getBoundingClientRect();
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const ox = ((cx - rect.left) / rect.width) * 100;
+      const oy = ((cy - rect.top) / rect.height) * 100;
+      el.style.transformOrigin = `${ox}% ${oy}%`;
+    }
+  };
+  const onBubbleTouchMove = (i, e) => {
+    const el = bubbleRefs.current[i];
+    if (!el) return;
+    const st = pinchRef.current[i];
+    if (!st) return;
+    if (e.touches && e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx, dy) || st.d;
+      let s = d / st.d;
+      if (s < 1) s = 1;
+      if (s > 2.5) s = 2.5;
+      el.style.transform = `scale(${s})`;
+      e.preventDefault();
+    }
+  };
+  const onBubbleTouchEnd = (i) => {
+    const el = bubbleRefs.current[i];
+    if (!el) return;
+    pinchRef.current[i] = null;
+    el.style.transition = "transform 200ms ease-out";
+    el.style.transform = "scale(1)";
+  };
+
   return (
     <div
       className="relative flex flex-col w-full h-full p-5 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-xl"
@@ -960,6 +1004,10 @@ IMPORTANT RULES:
                       : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-bl-none pr-10"
                   }`}
                   style={{ whiteSpace: "pre-wrap" }}
+                  ref={(el) => (bubbleRefs.current[i] = el)}
+                  onTouchStart={(e) => onBubbleTouchStart(i, e)}
+                  onTouchMove={(e) => onBubbleTouchMove(i, e)}
+                  onTouchEnd={() => onBubbleTouchEnd(i)}
                 >
                   {msg.content === "__loading__" ? (
                     <div className="flex items-center gap-1">
