@@ -351,7 +351,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
       </div>
 
       {/* Scanner Area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center justify-center p-3 md:p-4 overflow-hidden">
         {error ? (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 max-w-md">
             <div className="flex items-start gap-3">
@@ -464,7 +464,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
                 }}
                 onUserMedia={handleCameraReady}
                 onUserMediaError={handleWebcamError}
-                className="w-full h-auto max-h-[50vh] object-cover"
+                className="w-full h-[55svh] object-cover"
                 style={{ width: "100%" }}
               />
 
