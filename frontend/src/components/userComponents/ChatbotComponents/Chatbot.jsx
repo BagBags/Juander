@@ -163,10 +163,8 @@ export default function Chatbot() {
     const vv = window.visualViewport;
     const updateKb = () => {
       if (!vv) return;
-      const gap = Math.max(
-        0,
-        window.innerHeight - vv.height - (vv.offsetTop || 0)
-      );
+      const topOffset = Math.max(0, vv.offsetTop || 0);
+      const gap = Math.max(0, window.innerHeight - vv.height - topOffset);
       setKbPadding(gap);
     };
     if (vv) {

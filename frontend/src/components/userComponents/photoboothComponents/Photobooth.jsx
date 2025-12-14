@@ -316,8 +316,8 @@ export default function Photobooth() {
     let destroyed = false;
 
     const preflightChooseMode = async () => {
-      if (facingMode !== "user") setFacingMode("user");
-      return "user";
+      // Keep current facingMode selection; do not override.
+      return facingMode;
     };
 
     preflightChooseMode()
@@ -475,17 +475,8 @@ export default function Photobooth() {
                       setJeelizReady(true);
                     },
                     callbackReady: function (errCode, spec) {
-                      if (destroyed) return;
                       if (errCode) {
                         console.error("Jeeliz init error:", errCode);
-                        try {
-                          if (facingMode === "environment") {
-                            setFacingMode("user");
-                          } else {
-                            setFacingMode("environment");
-                          }
-                          setCameraKey((k) => k + 1);
-                        } catch (e) {}
                         return;
                       }
                       setJeelizReady(true);
@@ -794,8 +785,23 @@ export default function Photobooth() {
     const ctx = out.getContext("2d");
 
     try {
-      // Draw video (already rendered in Jeeliz canvas)
-      ctx.drawImage(baseCanvas, 0, 0, width, height);
+      // Prefer drawing directly from the HTMLVideoElement to avoid the black
+      // frame that can happen when copying from a WebGL canvas with
+      // preserveDrawingBuffer disabled (common on mobile browsers).
+      const videoEl = fallbackVideoRef.current || videoElRef.current;
+      if (videoEl && videoEl.readyState >= 2) {
+        ctx.save();
+        // Mirror for front-facing camera
+        if (facingMode === "user") {
+          ctx.translate(width, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(videoEl, 0, 0, width, height);
+        ctx.restore();
+      } else {
+        // Fallback to the Jeeliz WebGL canvas if video element not ready
+        ctx.drawImage(baseCanvas, 0, 0, width, height);
+      }
 
       // Draw overlay using its current DOM position and transform (more robust at snap time)
       const img = overlayImgRef.current;

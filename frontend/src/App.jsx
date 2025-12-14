@@ -811,9 +811,8 @@ function CameraPermissionKeeper() {
       return (
         p.startsWith("/Photobooth") ||
         p.startsWith("/PhotoboothJeeliz") ||
-        p.startsWith("/TouristItineraryMap/") ||
-        p.startsWith("/GuestItineraryMap/") ||
-        p.startsWith("/ARScanner")
+        p.startsWith("/ARScanner") ||
+        p.startsWith("/ARExperience")
       );
     };
     const hasActiveStream = () => {

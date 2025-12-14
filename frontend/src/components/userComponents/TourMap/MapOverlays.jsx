@@ -70,6 +70,22 @@ const MapOverlays = ({ selectedPin, distance, onCloseCard }) => {
         document.body
       )}
       {/* Back Header - Rendered via Portal */}
+      {/* Bottom safe-area overlay for iOS home indicator */}
+      {createPortal(
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: "calc(env(safe-area-inset-bottom, 0px) + 32px)",
+            backgroundColor: "white",
+            zIndex: 9998,
+            pointerEvents: "none",
+          }}
+        />,
+        document.body
+      )}
       {createPortal(backHeader, document.body)}
 
       {/* Site card */}

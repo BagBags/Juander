@@ -4,7 +4,7 @@ import { Search } from "lucide-react";
 export default function TourMapControlButtons({ onOpenSearch }) {
   return (
     <div
-      className="fixed left-4 z-[10050] flex flex-col gap-2 items-start"
+      className="fixed left-4 z-[10050] flex flex-col gap-2 items-start mt-15"
       style={{
         top: "calc(env(safe-area-inset-top) + 16px)",
         touchAction: "none",
