@@ -66,10 +66,10 @@ export default function GuestLanguage() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col h-[calc(100dvh-4rem)] bg-white"
+      className="flex flex-col min-h-full bg-white overflow-hidden overscroll-contain touch-pan-y"
     >
       <PullToRefresh onRefresh={handleRefresh}>
-        <div className="flex-1 px-6 py-8 overflow-y-auto" key={refreshKey}>
+        <div className="flex-1 px-6 py-8" key={refreshKey}>
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-6">
               {t("chooseLanguage")}
@@ -97,7 +97,7 @@ export default function GuestLanguage() {
             </div>
           </div>
         </div>
-      </PullToRefresh>
+      
 
       {/* Bottom fixed button */}
       <div className="p-6 border-t bg-white">
@@ -111,6 +111,7 @@ export default function GuestLanguage() {
           {t("continue")}
         </button>
       </div>
+      </PullToRefresh>
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => {

@@ -692,20 +692,9 @@ export default function TouristItineraryMap() {
     fetchMask();
   }, []);
 
-  // Check if user is within Intramuros boundaries
+  // Check if user is within Intramuros boundaries (temporarily disabled)
   useEffect(() => {
-    if (!userLocation || !mask?.geometry) return;
-
-    const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
-
-    if (!withinBounds) {
-      console.warn("⚠️ User is outside Intramuros boundaries");
-      setIsOutsideBounds(true);
-      setShowLocationBlockModal(true);
-    } else {
-      setIsOutsideBounds(false);
-      setShowLocationBlockModal(false);
-    }
+    /* Geolock disabled as per temporary requirement (Dec 2025) */
   }, [userLocation, mask]);
 
   /** Fetch itinerary sites */
@@ -940,12 +929,10 @@ export default function TouristItineraryMap() {
               setSavedProgress(response.data);
 
               // Show modal as informational (optional) - state already restored
-              if (isGuidanceRunning) {
-                setTimeout(() => {
-                  setShowResumeModal(true);
-                  console.log("✅ Resume modal shown (state already restored)");
-                }, 100);
-              }
+              setTimeout(() => {
+                setShowResumeModal(true);
+                console.log("✅ Resume modal shown (state already restored)");
+              }, 100);
             } else {
               // No progress, start fresh
               if (restoredPins.length > 0) {
@@ -998,12 +985,10 @@ export default function TouristItineraryMap() {
             console.log("✅ Saved newly created optimizedOrder to database");
 
             // Show modal
-            if (isGuidanceRunning) {
-              setTimeout(() => {
-                setShowResumeModal(true);
-                console.log("✅ Resume modal shown");
-              }, 100);
-            }
+            setTimeout(() => {
+              setShowResumeModal(true);
+              console.log("✅ Resume modal shown");
+            }, 100);
           } else {
             // UserLocation not ready yet - will optimize when it becomes available
             console.log(
@@ -1080,12 +1065,10 @@ export default function TouristItineraryMap() {
       console.log("✅ Saved optimizedOrder to database for future refreshes");
 
       // Show modal
-      if (isGuidanceRunning) {
-        setTimeout(() => {
-          setShowResumeModal(true);
-          console.log("✅ Resume modal shown after userLocation ready");
-        }, 100);
-      }
+      setTimeout(() => {
+        setShowResumeModal(true);
+        console.log("✅ Resume modal shown after userLocation ready");
+      }, 100);
     }
   }, [userLocation, pins.length, optimizedPins.length, savedProgress]);
 
@@ -1134,8 +1117,15 @@ export default function TouristItineraryMap() {
   };
 
   const handleRestartProgress = async () => {
+    // Reset progress in-memory
+    setVisitedSites(new Set());
+    setSkippedSites(new Set());
+    setSavedProgress(null);
+
     if (userLocation && pins.length > 0) {
-      const optimized = optimizeRoute(userLocation, pins, visitedSites);
+      const emptyVisited = new Set();
+      const emptySkipped = new Set();
+      const optimized = optimizeRoute(userLocation, pins, emptyVisited);
       setOptimizedPins(optimized);
       setCurrentPinIndex(0);
       if (optimized.length > 0) {
@@ -1145,8 +1135,8 @@ export default function TouristItineraryMap() {
         buildRoute(userLocation, firstPin);
         await saveProgress(
           0,
-          visitedSites,
-          skippedSites,
+          emptyVisited,
+          emptySkipped,
           userLocation,
           optimized
         );
@@ -2126,12 +2116,68 @@ export default function TouristItineraryMap() {
       <GpsConsentModal
         isOpen={showGpsModal}
         errorMessage={gpsError}
-        onEnable={() => {
+        onEnable={async () => {
           if (gpsPermissionDenied) {
             setGpsError(
               "GPS permission was denied. Please enable location access in your browser/device settings, then refresh this page."
             );
             return;
+          }
+
+          // Request device orientation permission first (iOS 13+)
+          if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+          ) {
+            try {
+              const orientationPermission =
+                await DeviceOrientationEvent.requestPermission();
+              if (orientationPermission === "granted") {
+                const handleOrientation = (event) => {
+                  let heading = null;
+                  if (
+                    event.webkitCompassHeading !== undefined &&
+                    event.webkitCompassHeading !== null
+                  ) {
+                    heading = event.webkitCompassHeading;
+                  } else if (
+                    event.alpha !== null &&
+                    event.alpha !== undefined
+                  ) {
+                    const screenOrientation =
+                      window.screen?.orientation?.angle ||
+                      window.orientation ||
+                      0;
+                    let adjustedAlpha = event.alpha;
+                    if (screenOrientation === 90) {
+                      adjustedAlpha = (event.alpha + 90) % 360;
+                    } else if (
+                      screenOrientation === -90 ||
+                      screenOrientation === 270
+                    ) {
+                      adjustedAlpha = (event.alpha - 90 + 360) % 360;
+                    } else if (screenOrientation === 180) {
+                      adjustedAlpha = (event.alpha + 180) % 360;
+                    }
+                    heading = (360 - adjustedAlpha) % 360;
+                  }
+                  if (heading !== null) {
+                    const smoothHeading = normalizeHeading(heading);
+                    setUserHeading(smoothHeading);
+                  }
+                };
+                window.addEventListener(
+                  "deviceorientationabsolute",
+                  handleOrientation,
+                  { passive: true }
+                );
+                window.addEventListener("deviceorientation", handleOrientation, {
+                  passive: true,
+                });
+              }
+            } catch (error) {
+              console.error("Error requesting device orientation permission:", error);
+            }
           }
 
           if (navigator?.geolocation) {
@@ -2162,20 +2208,67 @@ export default function TouristItineraryMap() {
                 (async () => {
                   try {
                     setTourMode("original");
-                    const original = [...pins];
-                    setOptimizedPins(original);
-                    if (original.length > 0) {
-                      setCurrentPinIndex(0);
-                      setSelectedPin(original[0]);
-                      setActivePin(original[0]);
+
+                    // If previous progress exists, resume from there; otherwise start fresh
+                    let initialPins = [...pins];
+                    if (savedProgress?.optimizedOrder?.length > 0) {
+                      // Determine if optimizedOrder contains full pin objects with lat/lng
+                      const firstOpt = savedProgress.optimizedOrder[0];
+                      const hasCoords =
+                        firstOpt && typeof firstOpt.latitude === "number";
+                      if (hasCoords) {
+                        initialPins = savedProgress.optimizedOrder;
+                      } else {
+                        // optimizedOrder is an array of pin IDs – rebuild from current pins
+                        const idSequence = savedProgress.optimizedOrder;
+                        const idSet = new Set(idSequence);
+                        const reordered = [];
+                        idSequence.forEach((id) => {
+                          const found = pins.find((p) => p._id === id);
+                          if (found) reordered.push(found);
+                        });
+                        // Append any pins that are new or were missing
+                        pins.forEach((p) => {
+                          if (!idSet.has(p._id)) reordered.push(p);
+                        });
+                        if (reordered.length) initialPins = reordered;
+                      }
+                    }
+                    setOptimizedPins(initialPins);
+
+                    let startIdx =
+                      typeof savedProgress?.currentPinIndex === "number"
+                        ? savedProgress.currentPinIndex
+                        : 0;
+                    if (startIdx >= initialPins.length) startIdx = 0;
+
+                    if (initialPins.length > 0) {
+                      setCurrentPinIndex(startIdx);
+                      const startPin = initialPins[startIdx];
+                      setSelectedPin(startPin);
+                      setActivePin(startPin);
                       await saveProgress(
-                        0,
+                        startIdx,
                         visitedSites,
                         skippedSites,
                         loc,
-                        original
+                        initialPins
                       );
-                      buildRoute(loc, original[0]);
+                      // Ensure valid coordinates before route building
+                      if (
+                        startPin &&
+                        isFinite(startPin.latitude) &&
+                        isFinite(startPin.longitude) &&
+                        isFinite(loc.latitude) &&
+                        isFinite(loc.longitude)
+                      ) {
+                        buildRoute(loc, startPin);
+                      } else {
+                        console.warn("⚠️ Invalid coordinates – skipping buildRoute", {
+                          startPin,
+                          loc,
+                        });
+                      }
                     }
                     setIsPreviewMode(false);
                     setIsGuidanceRunning(true);
@@ -2494,6 +2587,7 @@ export default function TouristItineraryMap() {
             currentPinIndex={currentPinIndex}
             pinsLength={optimizedPins.length}
             goToNextStop={goToNextStop}
+            canReview={!isPreviewMode}
             siteReviews={siteReviews}
             reviewsLoading={reviewsLoading}
             simulateGoToNextSite={simulateGoToNextSite}
@@ -2554,77 +2648,10 @@ export default function TouristItineraryMap() {
               <button
                 type="button"
                 onClick={() => {
-                  try {
-                    if (navigator?.geolocation) {
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          const loc = {
-                            latitude: pos.coords.latitude,
-                            longitude: pos.coords.longitude,
-                          };
-                          setUserLocation(loc);
-                          setGpsApproved(true);
-                          const withinNow = mask?.geometry
-                            ? isUserWithinIntramuros(loc, mask.geometry)
-                            : true;
-                          if (!withinNow) {
-                            setShowLocationBlockModal(true);
-                            setIsBackdropActive(false);
-                            return;
-                          }
-                          (async () => {
-                            try {
-                              setTourMode("original");
-                              const original = [...pins];
-                              setOptimizedPins(original);
-                              if (original.length > 0) {
-                                setCurrentPinIndex(0);
-                                setSelectedPin(original[0]);
-                                setActivePin(original[0]);
-                                await saveProgress(
-                                  0,
-                                  visitedSites,
-                                  skippedSites,
-                                  loc,
-                                  original
-                                );
-                                buildRoute(loc, original[0]);
-                              }
-                              setIsPreviewMode(false);
-                              setIsGuidanceRunning(true);
-                            } catch {}
-                          })();
-                        },
-                        (err) => {
-                          setGpsPermissionDenied(
-                            err?.code === err.PERMISSION_DENIED
-                          );
-                          setGpsError(
-                            err?.code === err.PERMISSION_DENIED
-                              ? "Location access denied. Enable location in browser settings, then refresh."
-                              : "We couldn't access your location. Please enable GPS to start the tour."
-                          );
-                          setShowLocationBlockModal(true);
-                          setIsBackdropActive(false);
-                        },
-                        {
-                          enableHighAccuracy: true,
-                          maximumAge: 0,
-                          timeout: 5000,
-                        }
-                      );
-                    } else {
-                      setGpsError(
-                        "GPS is unavailable in this browser. Please enable location services to start the tour."
-                      );
-                      setShowLocationBlockModal(true);
-                      setIsBackdropActive(false);
-                    }
-                  } catch {
-                    setShowLocationBlockModal(true);
-                    setIsBackdropActive(false);
-                  }
+                  setIsBackdropActive(true);
+                  setShowGpsModal(true);
                 }}
+                
                 className="itinerary-start-tour-btn w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#f04e37] text-white font-semibold shadow-lg hover:bg-[#d63b2a] transition"
               >
                 <Navigation className="w-5 h-5" /> Start Tour

@@ -48,6 +48,7 @@ class ErrorBoundaryLocal extends React.Component {
 
 export default function SiteModalFullScreen({
   selectedPin,
+  canReview = false,
   onClose,
   distance,
   currentPinIndex,
@@ -1616,7 +1617,7 @@ export default function SiteModalFullScreen({
                       ))}
 
                     {/* Review Form */}
-                    {!isGuestMode && showReviewForm && (
+                    {!isGuestMode && canReview && showReviewForm && (
                       <form onSubmit={handleSubmitReview} className="space-y-3">
                         {/* Rating */}
                         <div>

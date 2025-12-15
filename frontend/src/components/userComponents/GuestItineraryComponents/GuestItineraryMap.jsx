@@ -227,20 +227,20 @@ export default function GuestItineraryMap() {
   }, []);
 
   // Check if user is within Intramuros boundaries
-  useEffect(() => {
-    if (!userLocation || !mask?.geometry) return;
+  // useEffect(() => {
+  //   if (!userLocation || !mask?.geometry) return;
 
-    const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
+  //   const withinBounds = isUserWithinIntramuros(userLocation, mask.geometry);
 
-    if (!withinBounds) {
-      console.warn("⚠️ User is outside Intramuros boundaries");
-      setIsOutsideBounds(true);
-      setShowLocationBlockModal(true);
-    } else {
-      setIsOutsideBounds(false);
-      setShowLocationBlockModal(false);
-    }
-  }, [userLocation, mask]);
+  //   if (!withinBounds) {
+  //     console.warn("⚠️ User is outside Intramuros boundaries");
+  //     setIsOutsideBounds(true);
+  //     setShowLocationBlockModal(true);
+  //   } else {
+  //     setIsOutsideBounds(false);
+  //     setShowLocationBlockModal(false);
+  //   }
+  // }, [userLocation, mask]);
 
   // Utility to resolve relative URLs into absolute URLs
   const resolveUrl = (url) => {
@@ -256,90 +256,109 @@ export default function GuestItineraryMap() {
   // GPS permission is requested only after user clicks Start Tour
 
   /** Continuous location tracking - gated by GPS approval and active tour */
-  useEffect(() => {
-    if (!(gpsApproved && isGuidanceRunning)) return;
-    let watchId = null;
-    const startLocationTracking = () => {
-      if (!navigator.geolocation) return;
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const newLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          const prevRaw = lastRawLocRef.current;
-          const toRad = (v) => (v * Math.PI) / 180;
-          const haversineMeters = (lat1, lng1, lat2, lng2) => {
-            const R = 6371000;
-            const dLat = toRad(lat2 - lat1);
-            const dLng = toRad(lng2 - lat1);
-            const a =
-              Math.sin(dLat / 2) ** 2 +
-              Math.cos(toRad(lat1)) *
-                Math.cos(toRad(lat2)) *
-                Math.sin(dLng / 2) ** 2;
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-          };
-          const acc = position.coords.accuracy || 10;
-          const dynamicThreshold = Math.min(5, Math.max(0.5, acc * 0.05));
-          const now = Date.now();
-          if (prevRaw) {
-            const jitter = haversineMeters(
-              prevRaw.latitude,
-              prevRaw.longitude,
-              newLocation.latitude,
-              newLocation.longitude
-            );
-            const recentlyUpdated =
-              now - (lastUpdateTimeRef.current || 0) < 1500;
-            if (jitter < dynamicThreshold && recentlyUpdated) {
-              lastRawLocRef.current = newLocation;
-              return;
+useEffect(() => {
+  if (!(gpsApproved && isGuidanceRunning)) return;
+
+  if (!navigator.geolocation) return;
+
+  let watchId = null;
+
+  const startLocationTracking = () => {
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const newLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        const prevRaw = lastRawLocRef.current;
+        const toRad = (v) => (v * Math.PI) / 180;
+
+        const haversineMeters = (lat1, lng1, lat2, lng2) => {
+          const R = 6371000;
+          const dLat = toRad(lat2 - lat1);
+          const dLng = toRad(lng2 - lng1); // ✅ FIXED
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) *
+              Math.cos(toRad(lat2)) *
+              Math.sin(dLng / 2) ** 2;
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          return R * c;
+        };
+
+        const acc = position.coords.accuracy || 10;
+        const dynamicThreshold = Math.min(5, Math.max(0.5, acc * 0.05));
+        const now = Date.now();
+
+        if (prevRaw) {
+          const jitter = haversineMeters(
+            prevRaw.latitude,
+            prevRaw.longitude,
+            newLocation.latitude,
+            newLocation.longitude
+          );
+
+          const recentlyUpdated =
+            now - (lastUpdateTimeRef.current || 0) < 1500;
+
+          if (jitter < dynamicThreshold && recentlyUpdated) {
+            lastRawLocRef.current = newLocation;
+            return;
+          }
+        }
+
+        const prevSmooth = smoothedLocRef.current;
+        const alpha = 0.35;
+
+        const smoothLocation = prevSmooth
+          ? {
+              latitude:
+                prevSmooth.latitude +
+                alpha * (newLocation.latitude - prevSmooth.latitude),
+              longitude:
+                prevSmooth.longitude +
+                alpha * (newLocation.longitude - prevSmooth.longitude),
             }
-          }
-          const prevSmooth = smoothedLocRef.current;
-          const alpha = 0.35;
-          const smoothLocation = prevSmooth
-            ? {
-                latitude:
-                  prevSmooth.latitude +
-                  alpha * (newLocation.latitude - prevSmooth.latitude),
-                longitude:
-                  prevSmooth.longitude +
-                  alpha * (newLocation.longitude - prevSmooth.longitude),
-              }
-            : newLocation;
-          smoothedLocRef.current = smoothLocation;
-          lastRawLocRef.current = newLocation;
-          lastUpdateTimeRef.current = now;
-          setUserLocation(smoothLocation);
-          if (
-            position.coords.heading !== null &&
-            position.coords.heading !== undefined
-          ) {
-            const smoothHeading = normalizeHeading(position.coords.heading);
-            setUserHeading(smoothHeading);
-          }
-        },
-        (error) => {
-          console.error("Location tracking error:", error);
-          if (error.code === error.PERMISSION_DENIED) {
-            setGpsError(
-              "Location access denied. Please enable location services."
-            );
-            setShowGpsModal(true);
-          }
-        },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-      );
-    };
-    const timeoutId = setTimeout(startLocationTracking, 500);
-    return () => {
-      clearTimeout(timeoutId);
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-    };
-  }, [gpsApproved, isGuidanceRunning]);
+          : newLocation;
+
+        smoothedLocRef.current = smoothLocation;
+        lastRawLocRef.current = newLocation;
+        lastUpdateTimeRef.current = now;
+
+        setUserLocation(smoothLocation);
+
+        if (position.coords.heading != null) {
+          setUserHeading(normalizeHeading(position.coords.heading));
+        }
+      },
+      (error) => {
+        console.error("Location tracking error:", error);
+        if (error.code === error.PERMISSION_DENIED) {
+          setGpsError(
+            "Location access denied. Please enable location services."
+          );
+          setShowGpsModal(true);
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0, // IMPORTANT for real GPS
+        timeout: 15000,
+      }
+    );
+  };
+
+  const timeoutId = setTimeout(startLocationTracking, 500);
+
+  return () => {
+    clearTimeout(timeoutId);
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+  };
+}, [gpsApproved, isGuidanceRunning]);
+
 
   /** Fetch mask */
   useEffect(() => {
@@ -1774,11 +1793,11 @@ export default function GuestItineraryMap() {
                 setGpsPermissionDenied(false);
                 setGpsApproved(true);
                 setIsBackdropActive(false);
-                if (!within) {
-                  setShowLocationBlockModal(true);
-                  setIsBackdropActive(false);
-                  return;
-                }
+                // if (!within) {
+                //   setShowLocationBlockModal(true);
+                //   setIsBackdropActive(false);
+                //   return;
+                // }
                 (async () => {
                   try {
                     setTourMode("original");
@@ -1875,7 +1894,7 @@ export default function GuestItineraryMap() {
         }}
         onDecline={() => {
           // Navigate back without logging out
-          navigate("/guest-homepage", { replace: true });
+          navigate("/GuestHomepage", { replace: true });
         }}
       />
 
