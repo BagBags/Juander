@@ -32,10 +32,43 @@ export default function ManageEmergency() {
 
   const toggleSidebar = () => setIsExpanded((prev) => !prev);
 
+  // Initial fetch for both active and archived hotlines
   useEffect(() => {
     fetchHotlines();
     fetchArchivedHotlines();
   }, []);
+
+  // Refetch the relevant list whenever the tab changes
+  useEffect(() => {
+    if (activeTab === "active") {
+      fetchHotlines();
+    } else if (activeTab === "archived") {
+      fetchArchivedHotlines();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Polling + Page Visibility to keep data fresh without full reload
+  useEffect(() => {
+    const POLL_MS = 30000;
+    const intervalId = setInterval(() => {
+      if (activeTab === "active") fetchHotlines();
+      else fetchArchivedHotlines();
+    }, POLL_MS);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        if (activeTab === "active") fetchHotlines();
+        else fetchArchivedHotlines();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const fetchHotlines = async () => {
     try {
@@ -123,24 +156,32 @@ export default function ManageEmergency() {
         setConfirmModal(prev => ({ ...prev, loading: true }));
         try {
           const token = localStorage.getItem("token");
+          let savedAgency;
           if (selectedAgency) {
-            await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency/${selectedAgency._id}`, agencyData, {
+            const res = await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency/${selectedAgency._id}`, agencyData, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "multipart/form-data",
               },
             });
+            savedAgency = res.data;
+            // Optimistically update local active list
+            setHotlines((prev) => prev.map((h) => (h._id === savedAgency._id ? savedAgency : h)));
           } else {
             agencyData.append("position", hotlines.length);
-            await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`, agencyData, {
+            const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency`, agencyData, {
               headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "multipart/form-data",
               },
             });
+            savedAgency = res.data;
+            // Optimistically add to active list
+            setHotlines((prev) => [...prev, savedAgency]);
           }
           setShowForm(false);
           setSelectedAgency(null);
+          // Keep lists in sync (in case of server adjustments)
           fetchHotlines();
           fetchArchivedHotlines();
           setFormErrors({}); // Clear errors
@@ -199,8 +240,16 @@ export default function ManageEmergency() {
           await axios.put(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/emergency/${id}/archive`, {}, {
             headers: { Authorization: `Bearer ${token}` },
           });
+          // Optimistically update local state for immediate UI feedback
+          setHotlines((prev) => prev.filter((h) => h._id !== id));
+          setArchivedHotlines((prev) => {
+            const archivedItem = hotlines.find((h) => h._id === id);
+            return archivedItem ? [...prev, { ...archivedItem, isArchived: true }] : prev;
+          });
+          // Refresh active list to remove archived item and adjust order
           fetchHotlines();
-          fetchArchivedHotlines();
+          // Switch tab so admin immediately sees the archived hotline
+          setActiveTab("archived");
           
           // Log the action
           try {

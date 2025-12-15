@@ -6,10 +6,10 @@ import BackHeader from "./BackButton";
 import {
   cancelCameraStop,
   scheduleCameraStop,
-  waitForCameraRelease,
 } from "../../utils/cameraLifecycle";
 
 const QRScannerSimple = ({ onScanSuccess, onClose }) => {
+  const scannedSuccessRef = useRef(false);
   const webcamRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
@@ -126,8 +126,10 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
       } catch (e) {
         void e;
       }
-      // Gracefully stop camera a moment after unmount
-      scheduleCameraStop(1000);
+      if (!scannedSuccessRef.current) {
+        // Gracefully stop camera a moment after unmount
+        scheduleCameraStop(1000);
+      }
     };
   }, []);
 
@@ -186,43 +188,14 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
       });
 
       if (code && code.data) {
+        scannedSuccessRef.current = true;
         console.log("QR Code detected:", code.data);
         setScannedUrl(code.data);
         stopScanning();
 
-        try {
-          const v = webcamRef.current?.video;
-          const s = webcamRef.current?.stream || v?.srcObject;
-          if (s && typeof s.getTracks === "function") {
-            s.getTracks().forEach((t) => {
-              try {
-                t.stop();
-              } catch (e) {
-                void e;
-              }
-            });
-          }
-          if (v) {
-            try {
-              v.pause();
-            } catch {}
-            try {
-              v.srcObject = null;
-            } catch {}
-            try {
-              v.removeAttribute("src");
-            } catch {}
-            try {
-              v.load();
-            } catch {}
-          }
-        } catch {}
-
-        // Call success callback after ensuring camera has fully shut down.
+        // Do NOT stop camera tracks here; AR page will request again.
         if (onScanSuccess) {
-          waitForCameraRelease().then(() => {
-            onScanSuccess(code.data);
-          });
+          onScanSuccess(code.data);
         }
       }
     }
@@ -268,33 +241,25 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
         });
       } else {
         stopScanning();
-        try {
-          const v = webcamRef.current?.video;
-          const s = webcamRef.current?.stream || v?.srcObject;
-          if (s && typeof s.getTracks === "function") {
-            s.getTracks().forEach((t) => {
-              try {
-                t.stop();
-              } catch (e) {
-                void e;
-              }
-            });
-          }
-          if (v) {
-            try {
-              v.pause();
-            } catch {}
-            try {
-              v.srcObject = null;
-            } catch {}
-            try {
-              v.removeAttribute("src");
-            } catch {}
-            try {
-              v.load();
-            } catch {}
-          }
-        } catch {}
+        if (!scannedSuccessRef.current) {
+          try {
+            const v = webcamRef.current?.video;
+            const s = webcamRef.current?.stream || v?.srcObject;
+            if (s && typeof s.getTracks === "function") {
+              s.getTracks().forEach((t) => {
+                try {
+                  t.stop();
+                } catch {}
+              });
+            }
+            if (v) {
+              try { v.pause(); } catch {}
+              try { v.srcObject = null; } catch {}
+              try { v.removeAttribute("src"); } catch {}
+              try { v.load(); } catch {}
+            }
+          } catch {}
+        }
       }
     };
     const onFocus = () => {

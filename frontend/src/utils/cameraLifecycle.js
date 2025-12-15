@@ -91,6 +91,17 @@ export function cancelCameraStop() {
   }
 }
 
+// Barrier utility: resolves after two animation frames so that Safari/iOS has time
+// to detach camera/GPU resources after tracks are stopped. This is much more
+// reliable than arbitrary timeouts and avoids starting a new stream too early.
+export function waitForCameraRelease() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    });
+  });
+}
+
 export function isPhotoboothRouteActive() {
   return photoboothRouteActive;
 }
