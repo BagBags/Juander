@@ -38,6 +38,18 @@ const INITIAL_VIEW = {
 export default function TourMap() {
   const mapRef = useRef(null);
   const isProgrammaticMoveRef = useRef(false);
+  const [mapKey, setMapKey] = useState(0);
+  const recreateMap = useCallback(() => setMapKey(k => k + 1), []);
+
+  // Recreate map when its WebGL context is lost (Safari/iOS frequently)
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    const canvas = map?.getCanvas?.();
+    if (!canvas) return;
+    const handleLost = () => requestAnimationFrame(recreateMap);
+    canvas.addEventListener('webglcontextlost', handleLost, { passive: true });
+    return () => canvas.removeEventListener('webglcontextlost', handleLost);
+  }, [mapKey, recreateMap]);
   const [selectedPin, setSelectedPin] = useState(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -68,6 +80,8 @@ export default function TourMap() {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
 
+    // Immediately block interactions
+    setIsAnimating(true);
     isProgrammaticMoveRef.current = true;
     map.flyTo({
       center: [pinData.longitude, pinData.latitude],
@@ -84,6 +98,8 @@ export default function TourMap() {
     map.once("moveend", () => {
       isProgrammaticMoveRef.current = false;
       callback?.();
+      // Release interaction lock when map finished moving
+      setIsAnimating(false);
     });
   };
 
@@ -122,27 +138,50 @@ export default function TourMap() {
   useEffect(() => {
     const map = mapRef.current?.getMap?.();
     if (!map) return;
-    const onZoomStart = () => setIsAnimating(true);
-    const onZoomEnd = () => setIsAnimating(false);
-    const onMoveStart = () => setIsAnimating(true);
-    const onMoveEnd = () => setIsAnimating(false);
-    const onRotateStart = () => setIsAnimating(true);
-    const onRotateEnd = () => setIsAnimating(false);
-    map.on("zoomstart", onZoomStart);
-    map.on("zoomend", onZoomEnd);
-    map.on("movestart", onMoveStart);
-    map.on("moveend", onMoveEnd);
-    map.on("rotatestart", onRotateStart);
-    map.on("rotateend", onRotateEnd);
+
+    const activeCountRef = { current: 0 };
+    const beginAnim = () => {
+      activeCountRef.current += 1;
+      setIsAnimating(true);
+    };
+    const endAnim = () => {
+      activeCountRef.current = Math.max(0, activeCountRef.current - 1);
+      if (activeCountRef.current === 0) {
+        setIsAnimating(false);
+      }
+    };
+
+    map.on("zoomstart", beginAnim);
+    map.on("zoomend", endAnim);
+    map.on("movestart", beginAnim);
+    map.on("moveend", endAnim);
+    map.on("rotatestart", beginAnim);
+    map.on("rotateend", endAnim);
+
     return () => {
-      map.off("zoomstart", onZoomStart);
-      map.off("zoomend", onZoomEnd);
-      map.off("movestart", onMoveStart);
-      map.off("moveend", onMoveEnd);
-      map.off("rotatestart", onRotateStart);
-      map.off("rotateend", onRotateEnd);
+      map.off("zoomstart", beginAnim);
+      map.off("zoomend", endAnim);
+      map.off("movestart", beginAnim);
+      map.off("moveend", endAnim);
+      map.off("rotatestart", beginAnim);
+      map.off("rotateend", endAnim);
     };
   }, []);
+
+  // Global lock of pointer events as fallback
+  useEffect(() => {
+    if (isAnimating) {
+      const prevBodyPe = document.body.style.pointerEvents;
+      const prevHtmlPe = document.documentElement.style.pointerEvents;
+      document.body.style.pointerEvents = "none";
+      document.documentElement.style.pointerEvents = "none";
+      return () => {
+        document.body.style.pointerEvents = prevBodyPe || "";
+        document.documentElement.style.pointerEvents = prevHtmlPe || "";
+      };
+    }
+    return undefined;
+  }, [isAnimating]);
 
   useEffect(() => {
     const list = pins || [];
@@ -194,7 +233,7 @@ export default function TourMap() {
 
       isProgrammaticMoveRef.current = true;
       map.flyTo({
-        center: [pin.longitude, pin.latitude],
+          center: [pin.longitude, pin.latitude],
         zoom: EXIT_UNZOOM_ZOOM,
         bearing: INITIAL_VIEW.bearing,
         pitch: INITIAL_VIEW.pitch,
@@ -216,6 +255,46 @@ export default function TourMap() {
       });
     }
   };
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap?.();
+    if (!map) return;
+
+    const refreshMap = () => {
+      try {
+        if (!map.isStyleLoaded()) {
+          map.setStyle("mapbox://styles/mapbox/streets-v11");
+        }
+        map.resize();
+        map.triggerRepaint?.();
+
+        requestAnimationFrame(() => {
+          try {
+            const canvas = map.getCanvas?.();
+            const gl = canvas?.getContext?.('webgl') || canvas?.getContext?.('experimental-webgl');
+            const contextLost = gl && typeof gl.isContextLost === "function" && gl.isContextLost();
+            if (contextLost || !map.areTilesLoaded()) {
+              recreateMap();
+            }
+          } catch {
+            recreateMap();
+          }
+        });
+      } catch {
+        recreateMap();
+      }
+    };
+
+    window.addEventListener("focus", refreshMap);
+    window.addEventListener("pageshow", refreshMap);
+    document.addEventListener("visibilitychange", refreshMap);
+
+    return () => {
+      window.removeEventListener("focus", refreshMap);
+      window.removeEventListener("pageshow", refreshMap);
+      document.removeEventListener("visibilitychange", refreshMap);
+    };
+  }, [recreateMap]);
 
   return (
     <div
@@ -241,6 +320,7 @@ export default function TourMap() {
         }}
       >
         <Map
+          key={mapKey}
           ref={mapRef}
           initialViewState={{ ...INITIAL_VIEW, minZoom: 15.5, maxZoom: 20 }}
           maxBounds={MAX_BOUNDS}
@@ -342,6 +422,26 @@ export default function TourMap() {
 
       {/* Floating Chatbot */}
       <FloatingChatbot />
+
+      {/* Input blocker during animations */}
+      {isAnimating && (
+        <div
+          className="fixed inset-0 z-[20000]"
+          style={{ touchAction: "none", pointerEvents: "auto" }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onPointerMove={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        />
+      )}
     </div>
   );
 }

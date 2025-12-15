@@ -6,6 +6,7 @@ import BackHeader from "./BackButton";
 import {
   cancelCameraStop,
   scheduleCameraStop,
+  waitForCameraRelease,
 } from "../../utils/cameraLifecycle";
 
 const QRScannerSimple = ({ onScanSuccess, onClose }) => {
@@ -31,23 +32,7 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
   }, []);
 
   useEffect(() => {
-    try {
-      const canvases = document.querySelectorAll("canvas");
-      canvases.forEach((canvas) => {
-        try {
-          const gl =
-            canvas.getContext("webgl2") ||
-            canvas.getContext("webgl") ||
-            canvas.getContext("experimental-webgl");
-          if (gl && typeof gl.getExtension === "function") {
-            const ext = gl.getExtension("WEBGL_lose_context");
-            if (ext && typeof ext.loseContext === "function") {
-              ext.loseContext();
-            }
-          }
-        } catch {}
-      });
-    } catch {}
+
     try {
       const tracked = window.__JUANDER_TRACKED_STREAMS;
       if (tracked && typeof tracked.forEach === "function") {
@@ -233,9 +218,11 @@ const QRScannerSimple = ({ onScanSuccess, onClose }) => {
           }
         } catch {}
 
-        // Call success callback
+        // Call success callback after ensuring camera has fully shut down.
         if (onScanSuccess) {
-          onScanSuccess(code.data);
+          waitForCameraRelease().then(() => {
+            onScanSuccess(code.data);
+          });
         }
       }
     }

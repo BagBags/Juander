@@ -19,46 +19,33 @@ export default function ARExperiencePage() {
   const [iframeSrc, setIframeSrc] = useState(null);
 
   useEffect(() => {
-    // Preflight GPU cleanup: lose any lingering WebGL contexts and stop top-level media streams
-    try {
-      const canvases = document.querySelectorAll("canvas");
-      canvases.forEach((canvas) => {
-        try {
-          const gl =
-            canvas.getContext("webgl2") ||
-            canvas.getContext("webgl") ||
-            canvas.getContext("experimental-webgl");
-          if (gl && typeof gl.getExtension === "function") {
-            const ext = gl.getExtension("WEBGL_lose_context");
-            if (ext && typeof ext.loseContext === "function") {
-              ext.loseContext();
-            }
+    (async () => {
+      // Ensure that any active media streams are stopped, freeing camera resources.
+      try {
+        const videos = document.querySelectorAll("video");
+        videos.forEach((v) => {
+          const s = v.srcObject;
+          if (s && typeof s.getTracks === "function") {
+            s.getTracks().forEach((t) => {
+              try {
+                t.stop();
+              } catch {}
+            });
           }
-        } catch {}
-      });
-    } catch {}
-
-    try {
-      const videos = document.querySelectorAll("video");
-      videos.forEach((v) => {
-        const s = v.srcObject;
-        if (s && typeof s.getTracks === "function") {
-          s.getTracks().forEach((t) => {
-            try {
-              t.stop();
-            } catch {}
-          });
           try {
             v.pause();
             v.srcObject = null;
             v.removeAttribute("src");
             v.load();
           } catch {}
-        }
-      });
-    } catch {}
+        });
+      } catch {}
 
-    // Delay iframe initialization to allow GPU and camera to settle
+      // Defer iframe mount slightly so the browser finalises context destruction.
+      try {
+        setIframeSrc(url);
+      } catch {}
+    })();
     const id = setTimeout(() => {
       try {
         setIframeSrc(url);

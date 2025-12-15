@@ -11,6 +11,8 @@ export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: -30, y: 550 }); // Start peeking from left
   const [draggedPosition, setDraggedPosition] = useState({ x: -30, y: 550 });
+  // Loader state to block interaction while chatbot loads
+  const [isLoading, setIsLoading] = useState(false);
 
   const nodeRef = useRef(null);
   const modalRef = useRef(null);
@@ -57,9 +59,16 @@ export default function FloatingChatbot() {
     if (wasDragged.current) return;
 
     if (!isOpen) {
+      // Show loader and open chatbot
+      setIsLoading(true);
       // When opening, move slightly inward from the left edge
       setPosition({ x: 10, y: draggedPosition.y });
       setIsOpen(true);
+
+      // Hide loader after a short delay
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 2000); // 2.0s loader duration
     } else {
       // When closing, snap back to hidden position on left
       setPosition(draggedPosition);
@@ -210,8 +219,13 @@ export default function FloatingChatbot() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
             ref={modalRef}
-            className="bg-white shadow-2xl flex flex-col w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem] sm:rounded-2xl"
+            className="relative bg-white shadow-2xl flex flex-col w-full h-full sm:w-[24rem] sm:h-[32rem] lg:w-[32rem] lg:h-[40rem] xl:w-[36rem] xl:h-[44rem] sm:rounded-2xl"
           >
+            {isLoading && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80">
+                <div className="border-4 border-t-transparent border-red-500 rounded-full w-12 h-12 animate-spin"></div>
+              </div>
+            )}
             <div
               className="bg-gradient-to-r from-[#f04e37] via-[#e03d2d] to-[#f04e37] h-14 flex justify-between items-center px-5 py-3 sm:rounded-t-2xl shadow-lg backdrop-blur-md border-b border-white/20"
               style={{
@@ -234,7 +248,7 @@ export default function FloatingChatbot() {
               className="flex-1 overflow-hidden"
               style={{ touchAction: "pinch-zoom pan-y pan-x", overscrollBehavior: "contain" }}
             >
-              <Chatbot />
+              {!isLoading && <Chatbot />}
             </div>
           </motion.div>
         </div>

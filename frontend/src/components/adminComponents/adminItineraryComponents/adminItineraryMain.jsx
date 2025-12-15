@@ -450,11 +450,21 @@ export default function AdminItineraryMain() {
     fetchPins();
   }, []);
 
-  // Fetch itineraries
+  // Initial fetch for both active and archived itineraries
   useEffect(() => {
     fetchItineraries();
     fetchArchivedItineraries();
   }, []);
+
+  // Refetch the relevant list whenever the tab changes
+  useEffect(() => {
+    if (activeTab === "active") {
+      fetchItineraries();
+    } else if (activeTab === "archived") {
+      fetchArchivedItineraries();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const fetchItineraries = async () => {
     try {
@@ -833,8 +843,10 @@ export default function AdminItineraryMain() {
             const archivedItem = itineraries.find((it) => it._id === id);
             return archivedItem ? [...prev, { ...archivedItem, isArchived: true }] : prev;
           });
+          // Refresh only the active list to remove the archived item
           fetchItineraries();
-          fetchArchivedItineraries();
+          // Switch tab so admin immediately sees the archived itinerary
+          setActiveTab("archived");
           setConfirmModal({
             isOpen: false,
             type: "warning",
